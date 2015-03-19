@@ -3,7 +3,6 @@
 
 
 #include "event_type.h"
-#include "queue.h"
 #include "time_util.h"
 
 
@@ -15,13 +14,6 @@ typedef struct __event_commit_synchronization
   timestamp_t minimum_timestamp_committed;
 
 } event_commit_synchronization;
-
-
-typedef struct __scheduler_data
-{
-  queue_t *event_queue;
-  
-} scheduler_data;
 
 
 void init(void);

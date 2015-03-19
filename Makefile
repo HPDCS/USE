@@ -7,7 +7,7 @@ TARGET = test_1
 
 
 CORE_SOURCES = core/core.c\
-		core/queue.c\
+		core/calqueue.c\
 		core/main.c\
 		core/time_util.c\
 		core/application.c

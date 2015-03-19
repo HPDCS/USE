@@ -5,6 +5,7 @@
 #include <string.h>
 #include <immintrin.h>
 
+#include "calqueue.h"
 #include "core.h"
 
 
@@ -16,7 +17,6 @@
 
 static event_commit_synchronization comm_data;
 
-static scheduler_data sched;
 
 //Gli LP non sono ancora stati mappati, quindi current_lp_id lo lascio nullo su tutti i thread per adesso
 __thread unsigned int current_lp_id = 0;
@@ -83,12 +83,15 @@ void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_ty
   comm_data.last_timestamp_activated = timestamp;
   
   // Solo se la transazione andrà in commit l'evento sarà effettivamente inserito nella coda
-  queue_insert(sched.event_queue, &new_event);
+  
+  //TODO IMPORTANTE: new_event va inserito (fisicamente) in una struttura dati dinamica --> creare apposita struttura dati con allocatore
+  //WARNING: timestamp_t è uint_64 - calqueue_put prende un tipo double
+  calqueue_put((double)new_event.timestamp, &new_event);
 }
 
 void init(void)
 {
-  sched.event_queue = queue_init();
+  calqueue_init();
   
   comm_data.last_timestamp_activated = 0;
   comm_data.minimum_timestamp_committed = 0;
@@ -121,7 +124,7 @@ static void process_init_event(void)
 
 void thread_loop(unsigned int thread_id)
 {
-  event_t evt;
+  event_t *evt;
   unsigned int cross_check_abort_counter = 0, conflict_abort_counter = 0;
   int status;
   
@@ -139,7 +142,7 @@ void thread_loop(unsigned int thread_id)
      * WARNING: L'accesso alle strutture dati della coda provoca un immediata abort a tutte le transazioni che tentano di inserire altri eventi nella coda;
      * Quindi, quando la coda è vuota il continuo accesso al metodo queue_min costringe tutte le transazioni in esecuzione ad abortire, con spiacevoli risultati sulle prestazioni
      */
-    if(queue_min(sched.event_queue, &evt) == 0)
+    if( (evt = calqueue_get()) == NULL)
     {
       // Per risolvere in modo molto provvisorio inserisco delle attese - TODO: Intervenire direttamente nelle strutture dati della coda di priorità (ad esempio isolando le rimozioni dagli inserimenti)
       wait = 10000;
@@ -153,21 +156,21 @@ void thread_loop(unsigned int thread_id)
       continue;
     }
 
-    current_lp_id = evt.receiver_id;
-    current_lvt  = evt.timestamp;
+    current_lp_id = evt->receiver_id;
+    current_lvt  = evt->timestamp;
     
     //Start transaction
     while(1)
     {
       if( (status = _xbegin()) == _XBEGIN_STARTED)
       {	
-	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL); //void *state => Attualmente nullo
+	ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL); //void *state => Attualmente nullo
 	
 	/* Se l'evento precedente a questo non ha ancora effettuato il commit devo abortire
 	 * In tal modo tutti gli eventi che ho lanciato non saranno mai eseguiti
 	 * In'oltre questa condizione fa si che le transazioni "committano in modo seriale"
 	 */
-	if(comm_data.minimum_timestamp_committed != evt.cross_check_timestamp)
+	if(comm_data.minimum_timestamp_committed != evt->cross_check_timestamp)
 	  _xabort(_ROLLBACK_CODE);
 	
 	_xend();
@@ -214,7 +217,7 @@ void thread_loop(unsigned int thread_id)
 
 void thread_loop(unsigned int thread_id)
 {
-  event_t evt;
+  event_t *evt;
   unsigned int cross_check_abort_counter = 0, conflict_abort_counter = 0, committed_transaction_counter = 0, serial_execution_counter = 0;
   int status;
   
@@ -223,7 +226,7 @@ void thread_loop(unsigned int thread_id)
   
   while(!stop)
   {
-    if(queue_min(sched.event_queue, &evt) == 0)
+    if( (evt = calqueue_get()) == NULL)
     {
       if(thread_id == _MAIN_PROCESS)
 	stop = StopSimulation();
@@ -233,9 +236,9 @@ void thread_loop(unsigned int thread_id)
     
     //printf("%u Estratto evento %lu\n", thread_id, evt.timestamp);
     
-    current_lp_id = evt.receiver_id;
-    current_lvt  = evt.timestamp;
-    local_cross_check_timestamp = evt.cross_check_timestamp;
+    current_lp_id = evt->receiver_id;
+    current_lvt  = evt->timestamp;
+    local_cross_check_timestamp = evt->cross_check_timestamp;
     
     while(1)
     {
@@ -243,7 +246,7 @@ void thread_loop(unsigned int thread_id)
       
       if(comm_data.minimum_timestamp_committed == local_cross_check_timestamp)
       {
-	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+	ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
 	serial_execution_counter++;
       }
       else
@@ -252,7 +255,7 @@ void thread_loop(unsigned int thread_id)
 	
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
-	  ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+	  ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
 	  
 	  if(transactional)
 	  {
