@@ -4,6 +4,7 @@
 // #include <sched.h>
 #include <pthread.h>
 #include <string.h>
+#include <stdbool.h>
 
 
 // -------------------
@@ -11,7 +12,7 @@
 // -------------------
 
 
-
+#include "event_type.h"
 #include "calqueue.h"
 #include "core.h"
 
@@ -30,16 +31,6 @@ typedef struct __event_commit_synchronization
   // Timestamp dell'ultimo evento committato
   timestamp_t minimum_timestamp_committed;
 } event_commit_synchronization;
-
-
-
-typedef struct __scheduler_data
-{
-  queue_t *event_queue;
-
-} scheduler_data;
-
-
 
 
 
@@ -98,17 +89,7 @@ void rootsim_error(bool fatal, const char *msg, ...) {
 	fflush(stderr);
 
 	if(fatal) {
-		if(rootsim_config.serial) {
-			abort();
-		} else {
-
-			if(!init_complete) {
-				exit(EXIT_FAILURE);
-			}
-
-			// Notify all KLT to shut down the simulation
-			sim_error = true;
-		}
+		abort();
 	}
 }
 
@@ -215,7 +196,7 @@ void thread_loop(unsigned int thread_id)
       continue;
     }
 
-    current_lp_id = evt->receiver_id;
+    current_lp = evt->receiver_id;
     current_lvt  = evt->timestamp;
     
     //Start transaction
@@ -295,7 +276,7 @@ void thread_loop(unsigned int thread_id)
     
     //printf("%u Estratto evento %lu\n", thread_id, evt.timestamp);
     
-    current_lp_id = evt->receiver_id;
+    current_lp = evt->receiver_id;
     current_lvt  = evt->timestamp;
     local_cross_check_timestamp = evt->cross_check_timestamp;
     
@@ -305,7 +286,7 @@ void thread_loop(unsigned int thread_id)
       
       if(comm_data.minimum_timestamp_committed == local_cross_check_timestamp)
       {
-	ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
+	ProcessEvent(current_lp, current_lvt, evt->type, evt->data, evt->data_size, NULL);
 	serial_execution_counter++;
       }
       else
@@ -314,7 +295,7 @@ void thread_loop(unsigned int thread_id)
 	
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
-	  ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
+	  ProcessEvent(current_lp, current_lvt, evt->type, evt->data, evt->data_size, NULL);
 	  
 	  if(transactional)
 	  {

@@ -16,9 +16,9 @@ static int error_flag = 0;
 static int counter;
 
 
-void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsigned int data_size, void *state)
+void ProcessEvent(int my_id, simtime_t now, int event_type, void *data, unsigned int data_size, void *state)
 {
-  timestamp_t new_time;
+  simtime_t new_time;
   
   switch(event_type)
   {
@@ -76,7 +76,7 @@ void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsign
   }
 }
 
-int StopSimulation(void)
+bool OnGVT(void)
 {
   if(error_flag)
   {
