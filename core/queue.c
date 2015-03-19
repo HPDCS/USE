@@ -46,12 +46,27 @@ queue_t* queue_init(void)
 
 int queue_insert(queue_t *q, event_t *msg)
 {
+#ifdef _TEST_2
+  while(__sync_lock_test_and_set(&q->lock, 1))
+    while(q->lock);
+#endif
+    
   if(q->size == MAX_SIZE)
+  {
+#ifdef _TEST_2
+    __sync_lock_release(&q->lock);
+#endif
+    
    return 0;
+  }
   
   memcpy((q->head + q->size), msg, sizeof(event_t));
   q->size++;
-    
+
+#ifdef _TEST_2
+  __sync_lock_release(&q->lock);
+#endif
+  
   return 1;
 }
 

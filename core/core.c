@@ -24,6 +24,18 @@ __thread unsigned int current_lp_id = 0;
 //Local virtual time dell'evento processato dal thread corrente
 __thread timestamp_t current_lvt;
 
+
+#ifdef _TEST_2 /***********************************************************************/
+
+// timestamp dell'evento dipendente
+__thread timestamp_t local_cross_check_timestamp;
+
+// 1 se l'evento processato nel relativo thread è eseguito mediante una transazione
+__thread int transactional;
+
+#endif
+
+
 //Flag per l'interruzione del loop - flag provvisorio - TODO: Se gli LPs non lanciano più eventi interrompi la simulazione
 static int stop = 0;
 
@@ -44,9 +56,18 @@ extern int StopSimulation(void);
 
 void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size)
 {
-  // Schedulo un nuovo evento - questa funzione viene chiamata all'interno di una transazione
-  
   event_t new_event;
+  
+#ifdef _TEST_2 /***********************************************************************/
+  
+  if(transactional && (comm_data.minimum_timestamp_committed == local_cross_check_timestamp))
+  {
+    _xend();
+    transactional = 0;
+  }
+  
+#endif
+  
   bzero(&new_event, sizeof(event_t));
   
   new_event.sender_id = current_lp_id;
@@ -82,15 +103,22 @@ static void process_init_event(void)
   //Init è il primo evento ad essere attivato
   comm_data.last_timestamp_activated = current_lvt;
   
+#ifdef _TEST_2 /***********************************************************************/
+  
+  local_cross_check_timestamp = 0;
+  transactional = 0;
+  
+#endif
+  
   //Andrà lanciata su tutti gli LP
   ProcessEvent(0, start_time, INIT, NULL, 0, NULL);
   //Init event scrive per primo "l'ultimo" timestamp committato
   comm_data.minimum_timestamp_committed = current_lvt;
 }
 
-/* Loop eseguito dai singoli thread - Ogni thread in una transazione processa l'evento a tempo minimo estratto dalla coda,
- * e quest'ultimo protrà effettuare il commit solo se il primo evento lanciato precedentemente a questo ha effettuato il commit, ovvero sarà l'ultimo evento ad aver committato.
- */
+
+#ifdef _TEST_1 /***********************************************************************/
+
 void thread_loop(unsigned int thread_id)
 {
   event_t evt;
@@ -179,3 +207,88 @@ void thread_loop(unsigned int thread_id)
   printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", thread_id, cross_check_abort_counter, conflict_abort_counter);
 }
 
+#endif
+
+
+#ifdef _TEST_2 /***********************************************************************/
+
+void thread_loop(unsigned int thread_id)
+{
+  event_t evt;
+  unsigned int cross_check_abort_counter = 0, conflict_abort_counter = 0, committed_transaction_counter = 0, serial_execution_counter = 0;
+  int status;
+  
+  if(thread_id == _MAIN_PROCESS)
+    process_init_event();
+  
+  while(!stop)
+  {
+    if(queue_min(sched.event_queue, &evt) == 0)
+    {
+      if(thread_id == _MAIN_PROCESS)
+	stop = StopSimulation();
+      
+      continue;
+    }
+    
+    //printf("%u Estratto evento %lu\n", thread_id, evt.timestamp);
+    
+    current_lp_id = evt.receiver_id;
+    current_lvt  = evt.timestamp;
+    local_cross_check_timestamp = evt.cross_check_timestamp;
+    
+    while(1)
+    {
+      transactional = 0;
+      
+      if(comm_data.minimum_timestamp_committed == local_cross_check_timestamp)
+      {
+	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+	serial_execution_counter++;
+      }
+      else
+      {
+	transactional = 1;
+	
+	if( (status = _xbegin()) == _XBEGIN_STARTED)
+	{
+	  ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+	  
+	  if(transactional)
+	  {
+	    if(comm_data.minimum_timestamp_committed != local_cross_check_timestamp)
+	      _xabort(_ROLLBACK_CODE);
+
+	    _xend();
+	    
+	    committed_transaction_counter++;
+	  }
+	}
+	else
+	{
+	  status = _XABORT_CODE(status);
+	  	  
+	  if(status == _ROLLBACK_CODE)
+	    cross_check_abort_counter++;
+	  else
+	    conflict_abort_counter++;
+	  
+	  continue;
+	}
+      }
+      
+      break;
+    }
+    
+    comm_data.minimum_timestamp_committed = current_lvt;
+    
+    //printf("%u: Completato evento %lu\n", thread_id, current_lvt);
+  }
+  
+  printf("Thread %u: Aborts for memory conflict  %u\n", thread_id, conflict_abort_counter);
+  printf("Thread %u: Aborts for check condition  %u\n", thread_id, cross_check_abort_counter);
+  printf("Thread %u: Transactions committed      %u\n", thread_id, committed_transaction_counter);
+  printf("Thread %u: Serials execution executed  %u\n", thread_id, serial_execution_counter);
+}
+
+#endif

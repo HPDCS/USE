@@ -1,7 +1,12 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
 
-CORE_SOURCES=core/core.c\
+CFLAGS = -D_TEST_1
+
+TARGET = test_1
+
+
+CORE_SOURCES = core/core.c\
 		core/queue.c\
 		core/main.c\
 		core/time_util.c\
@@ -9,4 +14,4 @@ CORE_SOURCES=core/core.c\
 			
 
 all:
-	gcc -Wall -o test $(CORE_SOURCES) -mrtm -pthread 
+	gcc -Wall -o $(TARGET) $(CORE_SOURCES) $(CFLAGS) -mrtm -pthread 
