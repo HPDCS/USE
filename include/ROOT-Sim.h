@@ -145,5 +145,6 @@ int Zipf(double skew, int limit);
 extern void (*ScheduleNewEvent)(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
 extern void (*SetState)(void *new_state);
 
+
 #endif /* __ROOT_Sim_H */
 

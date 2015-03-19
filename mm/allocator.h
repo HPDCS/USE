@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <pthread.h>
-#include <core/core.h>
 
 typedef struct _mem_map {
 	char* base;   //base address of the chain of meta-data tables for the memory map of the sobj	

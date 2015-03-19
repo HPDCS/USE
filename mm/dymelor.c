@@ -25,9 +25,11 @@
 * @author Alessandro Pellegrini
 */
 
-#include <mm/dymelor.h>
-#include <mm/allocator.h>
-#include <scheduler/scheduler.h>
+#include <core.h>
+#include <numerical.h>
+
+#include "dymelor.h"
+#include "allocator.h"
 
 
 /**
@@ -38,7 +40,7 @@
 *
 */
 void dymelor_init(void) {
-	allocator_init(n_prc);
+	allocator_init(n_prc_tot);
 	recoverable_init();
 	unrecoverable_init();
 }
@@ -128,7 +130,7 @@ void malloc_state_init(bool recoverable, malloc_state *state) {
 	state->timestamp = -1;
 	state->is_incremental = false;
 
-	state->areas = (malloc_area*)rsalloc(state->max_num_areas * sizeof(malloc_area));
+	state->areas = (malloc_area*)__real_malloc(state->max_num_areas * sizeof(malloc_area));
 	if(state->areas == NULL)
 		rootsim_error(true, "Unable to allocate memory at %s:%d\n", __FILE__, __LINE__);
 
@@ -249,7 +251,8 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 			mem_pool->max_num_areas = mem_pool->max_num_areas << 1;
 
 			rootsim_error(true, "To reimplement\n");
-//			tmp = (malloc_area *)pool_realloc_memory(mem_pool->areas, mem_pool->max_num_areas * sizeof(malloc_area));
+			//tmp = (malloc_area *)pool_realloc_memory(mem_pool->areas, mem_pool->max_num_areas * sizeof(malloc_area));a
+			tmp = NULL;
 			if(tmp == NULL){
 
 				/**
@@ -290,7 +293,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 		#ifdef HAVE_PARALLEL_ALLOCATOR
 		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size);
 		#else
-		m_area->self_pointer = rsalloc(area_size);
+		m_area->self_pointer = __real_malloc(area_size);
 		#endif
 
 		if(m_area->self_pointer == NULL){
@@ -370,11 +373,6 @@ void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
 	malloc_area * m_area;
 	int idx, bitmap_blocks;
 	size_t chunk_size;
-
-	if(rootsim_config.serial) {
-		rsfree(ptr);
-		return;
-	}
 
 	if(ptr == NULL)
 		return;

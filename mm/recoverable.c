@@ -31,10 +31,9 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include <core/core.h>
-#include <mm/dymelor.h>
-#include <scheduler/process.h>
-#include <scheduler/scheduler.h>
+#include <core.h>
+#include <numerical.h>
+#include "dymelor.h"
 
 
 /// Recoverable memory state for LPs
@@ -52,11 +51,11 @@ void recoverable_init(void) {
 	
 	register unsigned int i;
 	
-	recoverable_state = rsalloc(sizeof(malloc_state *) * n_prc);
+	recoverable_state = __real_malloc(sizeof(malloc_state *) * n_prc_tot);
 
-	for(i = 0; i < n_prc; i++){
+	for(i = 0; i < n_prc_tot; i++){
 
-		recoverable_state[i] = rsalloc(sizeof(malloc_state));
+		recoverable_state[i] = __real_malloc(sizeof(malloc_state));
 		if(recoverable_state[i] == NULL)
 			rootsim_error(true, "Unable to allocate memory on malloc init");
 
@@ -69,7 +68,7 @@ void recoverable_fini(void) {
 	unsigned int i, j;
 	malloc_area *current_area;
 
-	for(i = 0; i < n_prc; i++) {
+	for(i = 0; i < n_prc_tot; i++) {
 		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
 			current_area = &(recoverable_state[i]->areas[j]);
 			if (current_area != NULL) {
@@ -77,113 +76,15 @@ void recoverable_fini(void) {
 					#ifdef HAVE_PARALLEL_ALLOCATOR
 					pool_release_memory(i, current_area->self_pointer);
 					#else
-					rsfree(current_area->self_pointer);
+					__real_free(current_area->self_pointer);
 					#endif
 				}
 			}
 		}
-		rsfree(recoverable_state[i]->areas);
-		rsfree(recoverable_state[i]);
+		__real_free(recoverable_state[i]->areas);
+		__real_free(recoverable_state[i]);
 	}
-	rsfree(recoverable_state);
-
-	// Release as well memory used for remaining logs
-	for(i = 0; i < n_prc; i++) {
-		while(!list_empty(LPS[i]->queue_states)) {
-			rsfree(list_head(LPS[i]->queue_states)->log);
-			list_pop(i, LPS[i]->queue_states);
-		}
-	}
-}
-
-
-/**
-* This function marks a memory chunk as dirty.
-* It is invoked from assembly modules invoked by calls injected by the instrumentor, and from the
-* third-party library wrapper. Invocations from other parts of the kernel should be handled with
-* great care.
-*
-* @author Alessandro Pellegrini
-* @author Roberto Vitali
-*
-* @param base The initial to the start address of the update
-* @param size The number of bytes being updated
-*/
-void dirty_mem(void *base, int size) {
-
-
-	// TODO: Quando reintegriamo l'incrementale questo qui deve ricomparire!
-	(void)base;
-	(void)size;
-
-
-	return;
-
-#if 0
-//	unsigned long long current_cost;
-
-	// Sanity check on passed address
-/*	if(base == NULL) {
-		rootsim_error(false, "Trying to access NULL. Memory interception aborted\n");
-		return;
-	}
-*/
-/*	if (rootsim_config.snapshot == AUTONOMIC_SNAPSHOT ||
-	    rootsim_config.snapshot == AUTONOMIC_INC_SNAPSHOT ||
-	    rootsim_config.snapshot == AUTONOMIC_FULL_SNAPSHOT)
-		add_counter++;
-*/
-	int 	first_chunk,
-		last_chunk,
-		i,
-		chk_size,
-		bitmap_blocks;
-
-	malloc_area *m_area = get_area(base);
-
-	if(m_area != NULL){
-
-		chk_size = m_area->chunk_size;
-		RESET_BIT_AT(chk_size, 0);
-		RESET_BIT_AT(chk_size, 1);
-
-		// Compute the number of chunks affected by the write
-		first_chunk = (int)(((char *)base - (char *)m_area->area) / chk_size);
-
-		// If size == -1, then we adopt a conservative approach: dirty all the chunks from the base to the end
-		// of the actual malloc area base address belongs to.
-		// This has been inserted to support the wrapping of third-party libraries where the size of the
-		// update (or even the actual update) cannot be statically/dynamically determined.
-		if(size == -1)
-			last_chunk = m_area->num_chunks - 1;
-		else
-			last_chunk = (int)(((char *)base + size - 1 - (char *)m_area->area) / chk_size);
-
-		bitmap_blocks = m_area->num_chunks / NUM_CHUNKS_PER_BLOCK;
-                if(bitmap_blocks < 1)
-                       bitmap_blocks = 1;
-
-		if (m_area->state_changed == 1){
-                        if (m_area->dirty_chunks == 0)
-                                recoverable_state[current_lp]->dirty_bitmap_size += bitmap_blocks * BLOCK_SIZE;
-                } else {
-                        recoverable_state[current_lp]->dirty_areas++;
-                        recoverable_state[current_lp]->dirty_bitmap_size += bitmap_blocks * BLOCK_SIZE * 2;
-                        m_area->state_changed = 1;
-                }
-
-                for(i = first_chunk; i <= last_chunk; i++){
-
-                        // If it is dirtied a clean chunk, set it dirty and increase dirty object count for the malloc_area
-                        if (!CHECK_DIRTY_BIT(m_area, i)){
-                                SET_DIRTY_BIT(m_area, i);
-                                recoverable_state[current_lp]->total_inc_size += chk_size;
-
-                                m_area->dirty_chunks++;
-                        }
-                }
-	}
-#endif
+	__real_free(recoverable_state);
 }
 
 
@@ -231,17 +132,9 @@ size_t get_log_size(malloc_state *logged_state){
 void *__wrap_malloc(size_t size) {
 	void *ptr;
 
-	switch_to_platform_mode();
-
-	if(rootsim_config.serial) {
-		ptr = rsalloc(size);
-		goto out;
-	}
-
 	ptr = do_malloc(current_lp, recoverable_state[current_lp], size);
 
     out:
-	switch_to_application_mode();
 	return ptr;
 }
 
@@ -264,17 +157,7 @@ void *__wrap_malloc(size_t size) {
 *
 */
 void __wrap_free(void *ptr) {
-	switch_to_platform_mode();
-
-	if(rootsim_config.serial) {
-		rsfree(ptr);
-		goto out;
-	}
-
 	do_free(current_lp, recoverable_state[current_lp], ptr);
-
-    out:
-	switch_to_application_mode();
 }
 
 
@@ -295,10 +178,6 @@ void *__wrap_realloc(void *ptr, size_t size){
 	void *new_buffer;
 	size_t old_size;
 	malloc_area *m_area;
-
-	if(rootsim_config.serial) {
-		return rsrealloc(ptr, size);
-	}
 
 	// If ptr is NULL realloc is equivalent to the malloc
 	if (ptr == NULL) {
@@ -344,10 +223,6 @@ void *__wrap_calloc(size_t nmemb, size_t size){
 
 	void *buffer;
 
-	if(rootsim_config.serial) {
-		return rscalloc(nmemb, size);
-	}
-
 	if (nmemb == 0 || size == 0)
 		return NULL;
 
@@ -382,7 +257,7 @@ void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
 				#ifdef HAVE_PARALLEL_ALLOCATOR
 				pool_release_memory(lid, m_area->self_pointer);
 				#else
-				rsfree(m_area->self_pointer);
+				__real_free(m_area->self_pointer);
 				#endif
 
 				m_area->use_bitmap = NULL;

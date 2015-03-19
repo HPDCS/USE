@@ -1,9 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 // #include <sched.h>
 #include <pthread.h>
 #include <string.h>
+
+
+// -------------------
 #include <immintrin.h>
+// -------------------
+
+
 
 #include "core.h"
 
@@ -14,12 +21,34 @@
 #define _ROLLBACK_CODE		127
 
 
+
+typedef struct __event_commit_synchronization
+{
+  // Timestamp dell'ultimo evento generato
+  timestamp_t last_timestamp_activated;
+  // Timestamp dell'ultimo evento committato
+  timestamp_t minimum_timestamp_committed;
+} event_commit_synchronization;
+
+
+
+typedef struct __scheduler_data
+{
+  queue_t *event_queue;
+
+} scheduler_data;
+
+
+
+
+
+
 static event_commit_synchronization comm_data;
 
 static scheduler_data sched;
 
-//Gli LP non sono ancora stati mappati, quindi current_lp_id lo lascio nullo su tutti i thread per adesso
-__thread unsigned int current_lp_id = 0;
+//Gli LP non sono ancora stati mappati, quindi current_lp lo lascio nullo su tutti i thread per adesso
+__thread unsigned int current_lp = 0;
 
 //Local virtual time dell'evento processato dal thread corrente
 __thread timestamp_t current_lvt;
@@ -42,6 +71,36 @@ extern void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data,
 extern int StopSimulation(void);
 
 
+
+void rootsim_error(bool fatal, const char *msg, ...) {
+	char buf[1024];
+	va_list args;
+
+	va_start(args, msg);
+	vsnprintf(buf, 1024, msg, args);
+	va_end(args);
+
+	fprintf(stderr, (fatal ? "[FATAL ERROR] " : "[WARNING] "));
+
+	fprintf(stderr, "%s", buf);\
+	fflush(stderr);
+
+	if(fatal) {
+		if(rootsim_config.serial) {
+			abort();
+		} else {
+
+			if(!init_complete) {
+				exit(EXIT_FAILURE);
+			}
+
+			// Notify all KLT to shut down the simulation
+			sim_error = true;
+		}
+	}
+}
+
+
 void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size)
 {
   // Schedulo un nuovo evento - questa funzione viene chiamata all'interno di una transazione
@@ -49,7 +108,7 @@ void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_ty
   event_t new_event;
   bzero(&new_event, sizeof(event_t));
   
-  new_event.sender_id = current_lp_id;
+  new_event.sender_id = current_lp;
   new_event.receiver_id = receiver;
   new_event.timestamp = timestamp;
   new_event.sender_timestamp = current_lvt;
@@ -77,7 +136,7 @@ static void process_init_event(void)
 {  
   timestamp_t start_time = get_timestamp(); //WARNING: Attualmente il tempo iniziale non può essere nullo
   
-  current_lp_id = 0;
+  current_lp = 0;
   current_lvt  = start_time;
   //Init è il primo evento ad essere attivato
   comm_data.last_timestamp_activated = current_lvt;
@@ -125,7 +184,7 @@ void thread_loop(unsigned int thread_id)
       continue;
     }
 
-    current_lp_id = evt.receiver_id;
+    current_lp = evt.receiver_id;
     current_lvt  = evt.timestamp;
     
     //Start transaction
@@ -133,7 +192,7 @@ void thread_loop(unsigned int thread_id)
     {
       if( (status = _xbegin()) == _XBEGIN_STARTED)
       {	
-	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL); //void *state => Attualmente nullo
+	ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, NULL); //void *state => Attualmente nullo
 	
 	/* Se l'evento precedente a questo non ha ancora effettuato il commit devo abortire
 	 * In tal modo tutti gli eventi che ho lanciato non saranno mai eseguiti

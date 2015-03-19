@@ -35,7 +35,7 @@
 #include <math.h>
 #include <string.h>
 
-
+#include <ROOT-Sim.h>
 #include <timer.h>
 
 
@@ -177,18 +177,7 @@ typedef struct _malloc_state malloc_state;
  ***************/
 
 
-// Variables
-// TODO: quali sono realmente da esporre all'esterno?!
-
-extern int incremental_granularity;
-extern int force_full[MAX_LPs];
 extern malloc_state *m_state[MAX_LPs];
-extern double checkpoint_cost_per_byte;
-extern double recovery_cost_per_byte;
-extern unsigned long total_checkpoints;
-extern unsigned long total_recoveries;
-extern double checkpoint_bytes_total;
-
 
 
 // DyMeLoR API
@@ -211,40 +200,23 @@ extern void do_free(unsigned int, malloc_state *mem_pool, void *ptr);
 extern void *pool_get_memory(unsigned int lid, size_t size);
 extern void pool_release_memory(unsigned int lid, void *ptr);
 
-// Checkpointing API
-extern void *log_full(int);
-extern void *log_state(int);
-extern void log_restore(int, state_t *);
-extern void log_delete(void *);
-
 // Recoverable Memory API
 extern void *__wrap_malloc(size_t);
 extern void __wrap_free(void *);
 extern void *__wrap_realloc(void *, size_t);
 extern void *__wrap_calloc(size_t, size_t);
-extern void clean_buffers_on_gvt(unsigned int, simtime_t);
-
-
-// Unrecoverable Memory API
-extern void *umalloc(unsigned int, size_t);
-extern void ufree(unsigned int, void *);
-extern void *urealloc(unsigned int, void *, size_t);
-extern void *ucalloc(unsigned int, size_t nmemb, size_t size);
-
-
-/* Simulation Platform Memory APIs */
-extern inline void *rsalloc(size_t);
-extern inline void rsfree(void *);
-extern inline void *rsrealloc(void *, size_t);
-extern inline void *rscalloc(size_t, size_t);
-
-
+extern void *__real_malloc(size_t);
+extern void __real_free(void *);
+extern void *__real_realloc(void *, size_t);
+extern void *__real_calloc(size_t, size_t);
 
 
 extern malloc_state **recoverable_state;
 
 // This is used to help ensure that the platform is not using malloc.
 #pragma GCC poison malloc free realloc calloc
+
+
 
 
 

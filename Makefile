@@ -10,7 +10,8 @@ APP=test
 CORE_SOURCES=core/core.c\
 		core/queue.c\
 		core/main.c\
-		core/time_util.c
+		core/time_util.c\
+		core/numerical.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
@@ -26,26 +27,23 @@ CORE_OBJ=$(CORE_SOURCES:.c=.o)
 
 
 all: application mm core
-	@echo "Linking"
-	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc model/application.o -o model/application-wrap.o
-	ld -r model/application-wrap.o mm/mm.o -o application-mm.o
-	gcc -o $(APP) model/application.o core/core.o
+	@ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc model/__application.o -o model/application-wrap.o
+	@ld -r model/application-wrap.o mm/mm.o -o application-mm.o
+	@gcc -o $(APP) model/application-mm.o core/core.o
 
 mm: $(MM_OBJ)
-	@echo "Memory Manager"
-	ld -r $(MM_OBJ) -o mm/mm.o
+	@ld -r $(MM_OBJ) -o mm/mm.o
 
 application: $(APPLICATION_OBJ)
-	@echo "Application"
-	ld -r $(APPLICATION_OBJ) -o mm/mm.o
+	@ld -r $(APPLICATION_OBJ) -o model/__application.o
 
 core: $(CORE_OBJ)
-	@echo "Core"
-	ld -r $(CORE_OBJ) -o mm/mm.o
+	@ld -r $(CORE_OBJ) -o core/core.o
 
 %.o: %.c
-	$(CC) -c -o $@ $< $(CFLAGS) $(INCLUDE)
+	@echo "[CC] $@"
+	@$(CC) -c -o $@ $< $(CFLAGS) $(INCLUDE)
 
 
 clean:
-	find . -name "*.o" -exec rm {} \;
+	@find . -name "*.o" -exec rm {} \;
