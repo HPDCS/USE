@@ -7,8 +7,13 @@ APPLICATION_SOURCES=model/application.c
 
 APP=test
 
-CORE_SOURCES=core/core.c\
-		core/queue.c\
+CFLAGS = -D_TEST_1
+
+TARGET = test_1
+
+
+CORE_SOURCES = core/core.c\
+		core/calqueue.c\
 		core/main.c\
 		core/time_util.c\
 		core/numerical.c
