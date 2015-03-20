@@ -1,9 +1,9 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
 
-CFLAGS = -D_TEST_1
+CFLAGS =
 
-TARGET = test_1
+TARGET = test
 
 
 CORE_SOURCES = core/core.c\
