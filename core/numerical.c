@@ -34,14 +34,15 @@
 
 #include <ROOT-Sim.h>
 
-#include <communication/communication.h>
-#include <mm/dymelor.h>
-#include <core/core.h>
-#include <scheduler/process.h>
-#include <statistics/statistics.h> // To have _mkdir helper function
+#include <dymelor.h>
+#include <core.h>
+#include <numerical.h>
 
 
 static seed_type master_seed;
+
+
+seed_type *seeds;
 
 
 /**
@@ -57,13 +58,8 @@ double Random(void) {
 	uint32_t *seed1;
 	uint32_t *seed2;
 
-	if(rootsim_config.serial) {
-		seed1 = (uint32_t *)&master_seed;
-		seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
-	} else {
-		seed1 = (uint32_t *)&(LPS[current_lp]->seed);
-		seed2 = (uint32_t *)((char *)&(LPS[current_lp]->seed) + (sizeof(uint32_t)));
-	}
+	seed1 = (uint32_t *)&master_seed;
+	seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
 
 	*seed1 = 36969u * (*seed1 & 0xFFFFu) + (*seed1 >> 16u);
 	*seed2 = 18000u * (*seed2 & 0xFFFFu) + (*seed2 >> 16u);
@@ -325,7 +321,6 @@ seed_type sanitize_seed(seed_type cur_seed) {
 */
 static void load_seed(void) {
 
-	static bool single_print = false; // To print only once a message about manual initialization
 	seed_type new_seed;
 	char conf_file[512];
 	FILE *fp;
@@ -360,16 +355,6 @@ static void load_seed(void) {
 
 	}
 
-	// Is seed manually specified?
-	if(rootsim_config.set_seed > 0) {
-
-		if(!single_print) {
-			single_print = true;
-			printf("Manually setting master seed to %llu\n", (unsigned long long)rootsim_config.set_seed);
-		}
-		master_seed = rootsim_config.set_seed;
-	}
-
 	// Load the configuration for the numerical library
 	if ((fp = fopen(conf_file, "r+")) == NULL) {
 		rootsim_error(true, "Unable to load numerical distribution configuration: %s. Aborting...", conf_file);
@@ -380,13 +365,10 @@ static void load_seed(void) {
 	fscanf(fp, "%llu", (unsigned long long *)&master_seed);
 
 
-	// Replace the initial seed
-	if (rootsim_config.deterministic_seed == false) {
-		rewind(fp);
-		srandom(master_seed);
-		new_seed = random();
-		fprintf(fp, "%llu\n", (unsigned long long)new_seed);
-	}
+	rewind(fp);
+	srandom(master_seed);
+	new_seed = random();
+	fprintf(fp, "%llu\n", (unsigned long long)new_seed);
 
 	fclose(fp);
 }
@@ -403,12 +385,14 @@ void numerical_init(void) {
 
 	unsigned int i;
 
+	seeds = malloc(sizeof(seed_type) * n_prc_tot);
+
 	// Initialize the master seed
 	load_seed();
 
 	// Initialize the per-LP seed
-	for(i = 0; i < n_prc; i++) {
-		LPS[i]->seed = sanitize_seed(ROR((int64_t)master_seed, LidToGid(i) % RS_WORD_LENGTH));
+	for(i = 0; i < n_prc_tot; i++) {
+		seeds[i] = sanitize_seed(ROR((int64_t)master_seed, i % RS_WORD_LENGTH));
 	}
 
 }

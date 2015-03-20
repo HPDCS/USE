@@ -214,11 +214,6 @@ extern void *__real_calloc(size_t, size_t);
 
 extern malloc_state **recoverable_state;
 
-// This is used to help ensure that the platform is not using malloc.
-#pragma GCC poison malloc free realloc calloc
-
-
-
 
 
 #endif

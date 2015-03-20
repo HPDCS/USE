@@ -3,6 +3,4 @@
 
 #include <ROOT-Sim.h>
 
-void ProcessEvent(int my_id, simtime_t now, int event_type, void *data, unsigned int data_size, void *state);
-
 #endif

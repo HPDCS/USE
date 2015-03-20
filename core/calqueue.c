@@ -5,8 +5,7 @@
 #include <limits.h>
 #include <stdbool.h>
 
-#include <datatypes/calqueue.h>
-#include <mm/malloc.h>
+#include "calqueue.h"
 
 
 // Declare data structures needed for the schedulers
@@ -275,7 +274,7 @@ void calqueue_put(double timestamp, void *payload) {
 	calqueue_node *new_node, *traverse;
 
 	// Fill the node entry
-	new_node = rsalloc(sizeof(calqueue_node));
+	new_node = malloc(sizeof(calqueue_node));
 	new_node->timestamp = timestamp;
 	new_node->payload = payload;
 	new_node->next = NULL;
@@ -323,6 +322,6 @@ void *calqueue_get(void) {
 	}
 
 	payload = node->payload;
-	rsfree(node);
+	free(node);
 	return payload;
 }

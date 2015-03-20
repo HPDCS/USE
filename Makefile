@@ -1,18 +1,15 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
-CFLAGS=-Wall -mrtm -pthread
-INCLUDE=-I include/
+CC=gcc
+CFLAGS=-Wall -mrtm -pthread -lm -D_TEST_1
+INCLUDE=-I include/ -I mm/
 
 APPLICATION_SOURCES=model/application.c
 
-APP=test
+TARGET=test
 
-CFLAGS = -D_TEST_1
-
-TARGET = test_1
-
-
-CORE_SOURCES = core/core.c\
+CORE_SOURCES =  core/communication.c\
+		core/core.c\
 		core/calqueue.c\
 		core/main.c\
 		core/time_util.c\
@@ -32,18 +29,18 @@ CORE_OBJ=$(CORE_SOURCES:.c=.o)
 
 
 all: application mm core
-	@ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc model/__application.o -o model/application-wrap.o
-	@ld -r model/application-wrap.o mm/mm.o -o application-mm.o
-	@gcc -o $(APP) model/application-mm.o core/core.o
+	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc model/__application.o --whole-archive -o model/application-wrap.o
+	ld -r model/application-wrap.o mm/__mm.o --whole-archive -o model/application-mm.o
+	gcc -o $(APP) model/application-mm.o core/__core.o $(CFLAGS)
 
 mm: $(MM_OBJ)
-	@ld -r $(MM_OBJ) -o mm/mm.o
+	@ld -r $(MM_OBJ) -o mm/__mm.o
 
 application: $(APPLICATION_OBJ)
 	@ld -r $(APPLICATION_OBJ) -o model/__application.o
 
 core: $(CORE_OBJ)
-	@ld -r $(CORE_OBJ) -o core/core.o
+	@ld -r $(CORE_OBJ) -o core/__core.o
 
 %.o: %.c
 	@echo "[CC] $@"

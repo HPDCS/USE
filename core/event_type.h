@@ -28,7 +28,7 @@ typedef struct __event_t
 
 enum EVENT_SYS_TYPE
 {
-  INIT = 0
+  EVENT = 0
 };
 
 

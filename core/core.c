@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -5,12 +6,18 @@
 #include <pthread.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <errno.h>
 
 
 // -------------------
 #include <immintrin.h>
 // -------------------
 
+#include <ROOT-Sim.h>
 
 #include "event_type.h"
 #include "calqueue.h"
@@ -24,31 +31,33 @@
 
 
 
-typedef struct __event_commit_synchronization
-{
+#define  MAX_PATHLEN 512
+
+
+
+typedef struct __event_commit_synchronization {
   // Timestamp dell'ultimo evento generato
-  timestamp_t last_timestamp_activated;
+  simtime_t last_timestamp_activated;
   // Timestamp dell'ultimo evento committato
-  timestamp_t minimum_timestamp_committed;
+  simtime_t minimum_timestamp_committed;
 } event_commit_synchronization;
 
-
-
-
 static event_commit_synchronization comm_data;
+
+unsigned int n_prc_tot;
 
 
 //Gli LP non sono ancora stati mappati, quindi current_lp lo lascio nullo su tutti i thread per adesso
 __thread unsigned int current_lp = 0;
 
 //Local virtual time dell'evento processato dal thread corrente
-__thread timestamp_t current_lvt;
+__thread simtime_t current_lvt;
 
 
 #ifdef _TEST_2 /***********************************************************************/
 
 // timestamp dell'evento dipendente
-__thread timestamp_t local_cross_check_timestamp;
+__thread simtime_t local_cross_check_timestamp;
 
 // 1 se l'evento processato nel relativo thread è eseguito mediante una transazione
 __thread int transactional;
@@ -60,19 +69,47 @@ __thread int transactional;
 static int stop = 0;
 
 
-void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size);
-
 void init(void);
 
 //Processa l'evento/iniziale - Unico evento processato in modo non transazionale
 static void process_init_event(void);
 
-// Gli LP non sono ancora mappati tra i vari threads (l'esperimento prevede un solo LP, quindi 'my_id' per adesso sarà sempre 0)
-extern void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsigned int data_size, void *state);
 
-//Torna 1 in caso si verifica la condizione di fine simulazione - Metodo provvisorio
-extern int StopSimulation(void);
+void _mkdir(const char *path) {
 
+	char opath[MAX_PATHLEN];
+	char *p;
+	size_t len;
+
+	strncpy(opath, path, sizeof(opath));
+	len = strlen(opath);
+	if(opath[len - 1] == '/')
+		opath[len - 1] = '\0';
+
+	// opath plus 1 is a hack to allow also absolute path
+	for(p = opath + 1; *p; p++) {
+		if(*p == '/') {
+			*p = '\0';
+			if(access(opath, F_OK))
+				if (mkdir(opath, S_IRWXU))
+					if (errno != EEXIST) {
+						rootsim_error(true, "Could not create output directory", opath);
+					}
+			*p = '/';
+		}
+	}
+
+	// Path does not terminate with a slash
+	if(access(opath, F_OK)) {
+		if (mkdir(opath, S_IRWXU)) {
+			if (errno != EEXIST) {
+				if (errno != EEXIST) {
+					rootsim_error(true, "Could not create output directory", opath);
+				}
+			}
+		}
+	}
+}
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -94,7 +131,7 @@ void rootsim_error(bool fatal, const char *msg, ...) {
 }
 
 
-void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size)
+void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, int event_type, void *data, unsigned int data_size)
 {
   event_t new_event;
   
@@ -125,7 +162,7 @@ void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_ty
   // Solo se la transazione andrà in commit l'evento sarà effettivamente inserito nella coda
   
   //TODO IMPORTANTE: new_event va inserito (fisicamente) in una struttura dati dinamica --> creare apposita struttura dati con allocatore
-  //WARNING: timestamp_t è uint_64 - calqueue_put prende un tipo double
+  //WARNING: simtime_t è uint_64 - calqueue_put prende un tipo double
   calqueue_put((double)new_event.timestamp, &new_event);
 }
 
@@ -139,7 +176,7 @@ void init(void)
 
 static void process_init_event(void)
 {  
-  timestamp_t start_time = get_timestamp(); //WARNING: Attualmente il tempo iniziale non può essere nullo
+  simtime_t start_time = get_timestamp(); //WARNING: Attualmente il tempo iniziale non può essere nullo
   
   current_lp = 0;
   current_lvt  = start_time;
@@ -191,7 +228,7 @@ void thread_loop(unsigned int thread_id)
       
       //StopSimulation provvisorio: torna 1 se la simulazione è finita
       if(thread_id == _MAIN_PROCESS)
-	stop = StopSimulation();
+	stop = OnGVT(0, NULL);
       
       continue;
     }

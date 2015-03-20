@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <ROOT-Sim.h>
+
 
 /* SIMULATION TEST */
 
