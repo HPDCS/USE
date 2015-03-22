@@ -6,6 +6,10 @@
 #include <immintrin.h>
 
 #include "core.h"
+#include "calqueue.h"
+#include "message_state.h"
+#include "event_type.h"
+#include "datatypes.h"
 
 
 //id del processo principale
@@ -13,6 +17,9 @@
 //Le abort "volontarie" avranno questo codice
 #define _ROLLBACK_CODE		127
 
+
+// Local thread id
+__thread unsigned int tid;
 
 //Gli LP non sono ancora stati mappati, quindi current_lp_id lo lascio nullo su tutti i thread per adesso
 __thread unsigned int current_lp_id = 0;
@@ -37,6 +44,7 @@ extern int StopSimulation(void);
 
 void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size)
 {
+  /*
   event_t new_event;
   bzero(&new_event, sizeof(event_t));
   
@@ -47,11 +55,13 @@ void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_ty
   new_event.data = data;
   new_event.data_size = data_size;
   new_event.type = event_type;
+  */
 }
 
 void init(void)
 {
   calqueue_init();
+  message_state_init();
 }
 
 /* Loop eseguito dai singoli thread - Ogni thread in una transazione processa l'evento a tempo minimo estratto dalla coda,
@@ -62,11 +72,13 @@ void thread_loop(unsigned int thread_id)
   event_t *evt;
   int status;
   
+  tid = thread_id;
+  
   while(stop)
   {
-    if( (evt = calqueue_get(thread_id)) == NULL)
+    if( (evt = calqueue_get()) == NULL)
     {
-      if(thread_id == _MAIN_PROCESS)
+      if(tid == _MAIN_PROCESS)
 	stop = StopSimulation();
       
       continue;
@@ -75,13 +87,16 @@ void thread_loop(unsigned int thread_id)
     current_lp_id = evt->receiver_id;
     current_lvt  = evt->timestamp;
     
-    if(check_safety(evt->timestamp, thread_id))
+    //setta a current_lvt e azzera l'outgoing message
+    execution_time(current_lvt);
+    
+    if(check_safety(current_lvt))
     {
       ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
       
+      min_output_time( ... );//TODO (metti il timestamp minore uscente da Process event
+      commit_time();
       deliver_msgs();
-      
-      commit_time(thread_id);
     }
     else
     {
@@ -89,13 +104,13 @@ void thread_loop(unsigned int thread_id)
       {
 	ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
 	
-	if(check_safety(evt->timestamp, thread_id))
+	if(check_safety(evt->timestamp))
 	{	
 	  _xend();
 	  
+	  min_output_time();//TODO (metti il timestamp minore uscente da Process event
+	  commit_time();
 	  deliver_msgs();
-	  
-	  commit_time(thread_id);
 	}
 	else
 	  _xabort(_ROLLBACK_CODE);

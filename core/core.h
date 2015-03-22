@@ -1,10 +1,12 @@
+#pragma once
 #ifndef __CORE_H
 #define __CORE_H
 
 
-#include "event_type.h"
-#include "calqueue.h"
-#include "time_util.h"
+
+extern unsigned int n_cores;
+
+extern __thread unsigned int tid;
 
 
 void init(void);
