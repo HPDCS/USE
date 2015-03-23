@@ -7,10 +7,11 @@ TARGET = test
 
 
 CORE_SOURCES = core/core.c\
-		core/calqueue.c\
+		core/queue.c\
 		core/main.c\
 		core/time_util.c\
-		core/application.c
+		core/application.c\
+		core/message_state.c
 			
 
 all:
