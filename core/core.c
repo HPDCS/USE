@@ -100,23 +100,26 @@ void thread_loop(unsigned int thread_id)
     }
     else
     {
-      if( (status = _xbegin()) == _XBEGIN_STARTED)
+      while(1)
       {
-	ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
-	
-	if(check_safety(evt->timestamp))
-	{	
-	  _xend();
+	if( (status = _xbegin()) == _XBEGIN_STARTED)
+	{
+	  ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
 	  
-	  min_output_time();//TODO (metti il timestamp minore uscente da Process event
-	  commit_time();
-	  deliver_msgs();
+	  if(check_safety(evt->timestamp))
+	  {	
+	    _xend();
+	    
+	    min_output_time();//TODO (metti il timestamp minore uscente da Process event
+	    commit_time();
+	    deliver_msgs();
+	  }
+	  else
+	    _xabort(_ROLLBACK_CODE);
 	}
 	else
-	  _xabort(_ROLLBACK_CODE);
+	  continue;
       }
-      else
-	continue;
     }
   }
 }
