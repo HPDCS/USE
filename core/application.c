@@ -7,7 +7,7 @@
 #include "application.h"
 
 
-#define STOP_COUNTER	1024
+#define STOP_COUNTER	512
 #define PCK_EVENT 	1
 #define ERROR_EVENT	2
 

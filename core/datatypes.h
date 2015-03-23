@@ -4,7 +4,7 @@
 
 
 
-typedef double timestamp_t;
+typedef unsigned long int timestamp_t;
 
 
 #endif
