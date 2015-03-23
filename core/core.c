@@ -6,7 +6,7 @@
 #include <immintrin.h>
 
 #include "core.h"
-#include "calqueue.h"
+#include "queue.h"
 #include "message_state.h"
 #include "event_type.h"
 #include "datatypes.h"
@@ -27,13 +27,13 @@ __thread unsigned int current_lp_id = 0;
 //Local virtual time dell'evento processato dal thread corrente
 __thread timestamp_t current_lvt;
 
+unsigned int n_cores;
+
 //Flag per l'interruzione del loop - flag provvisorio - TODO: Se gli LPs non lanciano più eventi interrompi la simulazione
 static int stop = 0;
 
 
 void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size);
-
-void init(void);
 
 // Gli LP non sono ancora mappati tra i vari threads (l'esperimento prevede un solo LP, quindi 'my_id' per adesso sarà sempre 0)
 extern void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsigned int data_size, void *state);
@@ -44,7 +44,6 @@ extern int StopSimulation(void);
 
 void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size)
 {
-  /*
   event_t new_event;
   bzero(&new_event, sizeof(event_t));
   
@@ -55,12 +54,22 @@ void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_ty
   new_event.data = data;
   new_event.data_size = data_size;
   new_event.type = event_type;
-  */
+  
+  queue_insert(&new_event);
 }
 
-void init(void)
+static void process_init_event(void)
 {
-  calqueue_init();
+  ScheduleNewEvent(0, get_timestamp(), INIT, 0, 0);
+  queue_deliver_msgs();
+  
+}
+
+void init(unsigned int _thread_num)
+{
+  n_cores = _thread_num;
+  
+  queue_init();
   message_state_init();
 }
 
@@ -69,68 +78,105 @@ void init(void)
  */
 void thread_loop(unsigned int thread_id)
 {
-  event_t *evt;
+  event_t evt;
   int status;
   
-  tid = thread_id;
+  unsigned int abort_count_1 = 0, abort_count_2 = 0;
   
-  while(stop)
+#ifdef FINE_GRAIN_DEBUG
+  static unsigned int non_transaction_ex = 0;
+  static unsigned int transaction_ex = 0;
+#endif
+  
+  tid = thread_id;
+  queue_register_thread();
+  
+  if(tid == _MAIN_PROCESS)
+    process_init_event();
+  
+  while(!stop)
   {
-    if( (evt = calqueue_get()) == NULL)
+    if(queue_min(&evt) == 0)
     {
       if(tid == _MAIN_PROCESS)
 	stop = StopSimulation();
-      
+
       continue;
     }
     
-    current_lp_id = evt->receiver_id;
-    current_lvt  = evt->timestamp;
+    current_lp_id = evt.receiver_id;
+    current_lvt  = evt.timestamp;
     
     //setta a current_lvt e azzera l'outgoing message
     execution_time(current_lvt);
     
-    if(check_safety(current_lvt))
+    while(!stop)
     {
-      ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
+      /***** WARNING: L'Attuale modello usato nel test usa strutture dati condivise => Prima causa di eccesive abort *****/
+      int wait = 1000000;
+      while(wait--);
       
-      min_output_time( ... );//TODO (metti il timestamp minore uscente da Process event
-      commit_time();
-      deliver_msgs();
-    }
-    else
-    {
-      while(1)
+      if(check_safety(current_lvt))
+      {
+#ifdef FINE_GRAIN_DEBUG
+	__sync_fetch_and_add(&non_transaction_ex, 1);
+#endif
+	
+	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+	
+	min_output_time(queue_pre_min()->timestamp);//TODO (metti il timestamp minore uscente da Process event
+	commit_time();
+	queue_deliver_msgs();
+      }
+      else
       {
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
-	  ProcessEvent(current_lp_id, current_lvt, evt->type, evt->data, evt->data_size, NULL);
+	  ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
 	  
-	  if(check_safety(evt->timestamp))
+	  if(check_safety(evt.timestamp))
 	  {	
 	    _xend();
 	    
-	    min_output_time();//TODO (metti il timestamp minore uscente da Process event
+	    min_output_time(queue_pre_min()->timestamp);//TODO (metti il timestamp minore uscente da Process event
 	    commit_time();
-	    deliver_msgs();
+	    queue_deliver_msgs();
+	    
+#ifdef FINE_GRAIN_DEBUG
+	    __sync_fetch_and_add(&transaction_ex, 1);
+#endif
 	  }
 	  else
 	    _xabort(_ROLLBACK_CODE);
 	}
 	else
+	{
+	  status = _XABORT_CODE(status);
+	  if(status == _ROLLBACK_CODE)
+	    abort_count_1++;
+	  else
+	    abort_count_2++;
+	  
 	  continue;
+	}
       }
+      
+      break;
     }
+    
+    //printf("Timestamp %lu executed\n", evt.timestamp);
   }
+  
+  printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", 
+	 tid, abort_count_1, abort_count_2);
+
+#ifdef FINE_GRAIN_DEBUG
+  if(tid == _MAIN_PROCESS)
+    printf("Thread executed in non-transactional block: %d\n"
+    "Thread executed in transactional block: %d\n", 
+    non_transaction_ex, transaction_ex);
+#endif
+  
 }
-
-
-
-
-
-
-
-
-
 
 

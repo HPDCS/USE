@@ -49,7 +49,7 @@ void start_simulation(unsigned short int number_of_threads)
 
 int main(int argn, char *argv[])
 {
-  init();
+  init(_DEFAULT_CPU_NUM);
   
   printf("Start simulation\n");
   

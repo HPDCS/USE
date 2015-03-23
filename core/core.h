@@ -9,7 +9,7 @@ extern unsigned int n_cores;
 extern __thread unsigned int tid;
 
 
-void init(void);
+void init(unsigned int _thread_num);
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
