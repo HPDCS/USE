@@ -112,7 +112,7 @@ void thread_loop(unsigned int thread_id)
     
     while(!stop)
     {
-      /***** WARNING: L'Attuale modello usato nel test usa strutture dati condivise => Prima causa di eccesive abort *****/
+      /***** WARNING: L'Attuale modello usato nel test usa strutture dati condivise => Prima causa di eccessive abort *****/
       int wait = 1000000;
       while(wait--);
       
