@@ -112,9 +112,11 @@ void thread_loop(unsigned int thread_id)
     
     while(!stop)
     {
+
       /***** WARNING: L'Attuale modello usato nel test usa strutture dati condivise => Prima causa di eccessive abort *****/
-      int wait = 1000000;
+      int wait = 100000;
       while(wait--);
+
       
       if(check_safety(current_lvt))
       {
@@ -164,7 +166,7 @@ void thread_loop(unsigned int thread_id)
       break;
     }
     
-    //printf("Timestamp %lu executed\n", evt.timestamp);
+    printf("Timestamp %lu executed\n", evt.timestamp);
   }
   
   printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", 

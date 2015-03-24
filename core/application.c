@@ -7,13 +7,21 @@
 #include "application.h"
 
 
-#define STOP_COUNTER	512
+#define STOP_COUNTER	256
 #define PCK_EVENT 	1
+#ifdef TEST_2
 #define ERROR_EVENT	2
+#endif
+
+#ifdef TEST_1
+__thread int per_thread_counter = 0;
+#endif
 
 
+#ifdef TEST_2
 static int error_flag = 0;
 static int counter;
+#endif
 
 
 void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsigned int data_size, void *state)
@@ -24,6 +32,13 @@ void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsign
   {
     case INIT:
     {
+#ifdef TEST_1
+      new_time = get_timestamp();
+      ScheduleNewEvent(0, new_time, PCK_EVENT, NULL, 0);
+#endif
+      
+      
+#ifdef TEST_2
       unsigned long int *p = malloc(sizeof(long));
       
       counter = 0;
@@ -32,12 +47,24 @@ void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsign
       new_time = get_timestamp();
       *p = now;
       ScheduleNewEvent(0, new_time, PCK_EVENT, p, sizeof(long));
+#endif
       
       break;
     }
     
     case PCK_EVENT:
     {
+#ifdef TEST_1
+      if(per_thread_counter < STOP_COUNTER)
+      {
+	per_thread_counter++;
+	
+	ScheduleNewEvent(0, get_timestamp(), PCK_EVENT, NULL, 0);
+	ScheduleNewEvent(0, get_timestamp(), PCK_EVENT, NULL, 0);
+      }
+#endif
+      
+#ifdef TEST_2
       if(counter < STOP_COUNTER)
       {	
 	// p contiene il timestamp dell'ultimo evento eseguito la cui transazione è andata in commit
@@ -64,20 +91,29 @@ void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsign
 	}
 	
       }
+#endif
       
       break;
     }
     
+#ifdef TEST_2
     case ERROR_EVENT:
     {
       error_flag = 1;
       break;
     }
+#endif
   }
 }
 
 int StopSimulation(void)
 {
+#ifdef TEST_1
+  if(per_thread_counter >= STOP_COUNTER)
+    return 1;
+#endif
+  
+#ifdef TEST_2
   if(error_flag)
   {
     printf("Simulation error ------------ \n");
@@ -89,6 +125,7 @@ int StopSimulation(void)
     printf("count = %d\n", counter);
     return 1;
   }
+#endif
   
   return 0;
 }
