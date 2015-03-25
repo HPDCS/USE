@@ -18,8 +18,12 @@
 #define _ROLLBACK_CODE		127
 
 
+
+#ifdef FINE_GRAIN_DEBUG
+
 static int __tt_lock = 0;
 static timestamp_t __tt_comm = 0;
+
 #define CHECKER do{					\
     while(__sync_lock_test_and_set(&__tt_lock, 1))	\
       while(__tt_lock);					\
@@ -30,6 +34,7 @@ static timestamp_t __tt_comm = 0;
     }							\
     __tt_comm = current_lvt;				\
     __sync_lock_release(&__tt_lock); }while(0)
+#endif
 
 
 
@@ -94,6 +99,10 @@ void thread_loop(unsigned int thread_id)
   int status;
   unsigned int abort_count_1 = 0, abort_count_2 = 0;
   
+#ifdef FINE_GRAIN_DEBUG
+  unsigned int non_transactional_ex = 0, transactional_ex = 0;
+#endif
+  
   tid = thread_id;
   queue_register_thread();
   
@@ -116,7 +125,12 @@ void thread_loop(unsigned int thread_id)
     while(1)
     {
       if(check_safety(current_lvt))
+      {
 	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+#ifdef FINE_GRAIN_DEBUG
+	__sync_fetch_and_add(&non_transactional_ex, 1);
+#endif
+      }
       else
       {
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
@@ -124,7 +138,12 @@ void thread_loop(unsigned int thread_id)
 	  ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
 	  
 	  if(check_safety(current_lvt))
+	  {
 	    _xend();
+#ifdef FINE_GRAIN_DEBUG
+	__sync_fetch_and_add(&transactional_ex, 1);
+#endif
+	  }
 	  else
 	    _xabort(_ROLLBACK_CODE);
 	}
@@ -142,8 +161,10 @@ void thread_loop(unsigned int thread_id)
       break;
     }
 
+#ifdef FINE_GRAIN_DEBUG
     //CONTROLLO CONSISTENZA
     CHECKER;
+#endif
     
     if(queue_pending_message_size())
       min_output_time(queue_pre_min()->timestamp);
@@ -154,7 +175,15 @@ void thread_loop(unsigned int thread_id)
   }
   
   printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", 
-	 tid, abort_count_1, abort_count_2);  
+	 tid, abort_count_1, abort_count_2);
+  
+#ifdef FINE_GRAIN_DEBUG
+  if(tid == _MAIN_PROCESS)
+    printf("Thread executed in non-transactional block: %d\n"
+    "Thread executed in transactional block: %d\n", 
+    non_transactional_ex, transactional_ex);
+#endif
+  
 }
 
 

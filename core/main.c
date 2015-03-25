@@ -1,3 +1,11 @@
+
+#ifndef TEST_1
+#ifndef TEST_2
+#error "YOU MUST TO DEFINE TEST_1 OR TEST_2"
+#endif
+#endif
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -9,7 +17,7 @@
 
 
 //Numero default di core/cpu
-#define _DEFAULT_CPU_NUM	4
+#define _DEFAULT_CPU_NUM	2
 
 
 unsigned short int number_of_threads = 1;

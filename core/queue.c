@@ -65,7 +65,10 @@ void queue_register_thread(void)
 int queue_insert(event_t *msg)
 {
   if(_thr_pool->non_commit_size == THR_POOL_SIZE)
-   return 0;
+  {
+    printf("queue overflow\n");
+    abort();
+  }
   
   memcpy((_thr_pool->_tmp_mem + _thr_pool->non_commit_size), msg, sizeof(event_t));
   _thr_pool->non_commit_size++;
@@ -86,7 +89,9 @@ void queue_deliver_msgs(void)
   if(_queue.size == MAX_SIZE)
   {
     __sync_lock_release(&queue_lock);
-    return;
+    
+    printf("queue overflow\n");
+    abort();
   }
   
   memcpy((_queue.head + _queue.size), _thr_pool->_tmp_mem, (_thr_pool->non_commit_size * sizeof(event_t)));
