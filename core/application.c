@@ -113,7 +113,7 @@ int StopSimulation(void)
 #ifdef TEST_2
   if(error_flag)
   {
-    printf("Simulation error ------------ \n");
+    printf("Simulation error ----------------------------------------------------------------------------------------------------------------------------------- \n");
     return 1;
   }
   

@@ -37,7 +37,7 @@ typedef struct __temp_thread_pool
 queue_t _queue;
 __thread temp_thread_pool *_thr_pool = 0;
 
-static int queue_lock = 0;
+int queue_lock = 0;
 
 void queue_init(void)
 {    
@@ -131,7 +131,7 @@ int queue_min(event_t *ret_evt)
     memcpy(min, (_queue.head + (_queue.size - 1)), sizeof(event_t));
   
   _queue.size--;
-  
+    
   //setta a current_lvt e azzera l'outgoing message
   execution_time(ret_evt->timestamp, ret_evt->who_generated);
   

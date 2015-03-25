@@ -29,7 +29,7 @@ static timestamp_t __tt_comm = 0;
       while(__tt_lock);					\
     if(__tt_comm > current_lvt)				\
     {							\
-      printf("simulation error --------\n");		\
+      printf("simulation error  -----------------------------------------------------------------------------------------------------------------------------------\n");\
       abort();						\
     }							\
     __tt_comm = current_lvt;				\
