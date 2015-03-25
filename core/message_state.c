@@ -27,13 +27,16 @@ void message_state_init(void)
   }
 }
 
-void execution_time(timestamp_t time)
+void execution_time(timestamp_t time, unsigned int input_tid)
 {
   while(__sync_lock_test_and_set(&message_lock, 1))
     while(message_lock);
     
   outgoing_time_vector[tid] = ULONG_MAX;
   current_time_vector[tid] = time;
+  
+  if(input_tid != tid && outgoing_time_vector[input_tid] == time)
+    outgoing_time_vector[input_tid] = ULONG_MAX;
     
   __sync_lock_release(&message_lock);
 }

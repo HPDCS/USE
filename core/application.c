@@ -26,15 +26,12 @@ static int counter;
 
 void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsigned int data_size, void *state)
 {
-  timestamp_t new_time;
-  
   switch(event_type)
   {
     case INIT:
     {
 #ifdef TEST_1
-      new_time = get_timestamp();
-      ScheduleNewEvent(0, new_time, PCK_EVENT, NULL, 0);
+      ScheduleNewEvent(0, get_timestamp(), PCK_EVENT, NULL, 0);
 #endif
       
       
@@ -44,9 +41,8 @@ void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsign
       counter = 0;
             
       //Sending new event
-      new_time = get_timestamp();
       *p = now;
-      ScheduleNewEvent(0, new_time, PCK_EVENT, p, sizeof(long));
+      ScheduleNewEvent(0, get_timestamp(), PCK_EVENT, p, sizeof(long));
 #endif
       
       break;
@@ -65,6 +61,7 @@ void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsign
 #endif
       
 #ifdef TEST_2
+
       if(counter < STOP_COUNTER)
       {	
 	// p contiene il timestamp dell'ultimo evento eseguito la cui transazione è andata in commit

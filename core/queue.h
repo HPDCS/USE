@@ -21,6 +21,8 @@ void queue_register_thread(void);
 
 int queue_min(event_t *ret_evt);
 
+int queue_pending_message_size(void);
+
 void queue_deliver_msgs(void);
 
 void queue_destroy(void);

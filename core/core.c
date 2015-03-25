@@ -18,6 +18,21 @@
 #define _ROLLBACK_CODE		127
 
 
+static int __tt_lock = 0;
+static timestamp_t __tt_comm = 0;
+#define CHECKER do{					\
+    while(__sync_lock_test_and_set(&__tt_lock, 1))	\
+      while(__tt_lock);					\
+    if(__tt_comm > current_lvt)				\
+    {							\
+      printf("simulation error --------\n");		\
+      abort();						\
+    }							\
+    __tt_comm = current_lvt;				\
+    __sync_lock_release(&__tt_lock); }while(0)
+
+
+
 // Local thread id
 __thread unsigned int tid;
 
@@ -54,6 +69,7 @@ void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_ty
   new_event.data = data;
   new_event.data_size = data_size;
   new_event.type = event_type;
+  new_event.who_generated = tid;
   
   queue_insert(&new_event);
 }
@@ -61,8 +77,7 @@ void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_ty
 static void process_init_event(void)
 {
   ScheduleNewEvent(0, get_timestamp(), INIT, 0, 0);
-  queue_deliver_msgs();
-  
+  queue_deliver_msgs();  
 }
 
 void init(unsigned int _thread_num)
@@ -73,20 +88,11 @@ void init(unsigned int _thread_num)
   message_state_init();
 }
 
-/* Loop eseguito dai singoli thread - Ogni thread in una transazione processa l'evento a tempo minimo estratto dalla coda,
- * e quest'ultimo protrà effettuare il commit solo se il primo evento lanciato precedentemente a questo ha effettuato il commit, ovvero sarà l'ultimo evento ad aver committato.
- */
 void thread_loop(unsigned int thread_id)
 {
   event_t evt;
   int status;
-  
   unsigned int abort_count_1 = 0, abort_count_2 = 0;
-  
-#ifdef FINE_GRAIN_DEBUG
-  static unsigned int non_transaction_ex = 0;
-  static unsigned int transaction_ex = 0;
-#endif
   
   tid = thread_id;
   queue_register_thread();
@@ -107,47 +113,18 @@ void thread_loop(unsigned int thread_id)
     current_lp_id = evt.receiver_id;
     current_lvt  = evt.timestamp;
     
-    //setta a current_lvt e azzera l'outgoing message
-    execution_time(current_lvt);
-    
-    while(!stop)
+    while(1)
     {
-
-      /***** WARNING: L'Attuale modello usato nel test usa strutture dati condivise => Prima causa di eccessive abort *****/
-      int wait = 100000;
-      while(wait--);
-
-      
       if(check_safety(current_lvt))
-      {
-#ifdef FINE_GRAIN_DEBUG
-	__sync_fetch_and_add(&non_transaction_ex, 1);
-#endif
-	
 	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
-	
-	min_output_time(queue_pre_min()->timestamp);//TODO (metti il timestamp minore uscente da Process event
-	commit_time();
-	queue_deliver_msgs();
-      }
       else
       {
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
 	  ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
 	  
-	  if(check_safety(evt.timestamp))
-	  {	
+	  if(check_safety(current_lvt))
 	    _xend();
-	    
-	    min_output_time(queue_pre_min()->timestamp);//TODO (metti il timestamp minore uscente da Process event
-	    commit_time();
-	    queue_deliver_msgs();
-	    
-#ifdef FINE_GRAIN_DEBUG
-	    __sync_fetch_and_add(&transaction_ex, 1);
-#endif
-	  }
 	  else
 	    _xabort(_ROLLBACK_CODE);
 	}
@@ -158,27 +135,39 @@ void thread_loop(unsigned int thread_id)
 	    abort_count_1++;
 	  else
 	    abort_count_2++;
-	  
 	  continue;
 	}
       }
       
       break;
     }
+
+    //CONTROLLO CONSISTENZA
+    CHECKER;
     
-    printf("Timestamp %lu executed\n", evt.timestamp);
+    if(queue_pending_message_size())
+      min_output_time(queue_pre_min()->timestamp);
+    commit_time();    
+    queue_deliver_msgs();
+        
+    //printf("Timestamp %lu executed\n", evt.timestamp);
   }
   
   printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", 
-	 tid, abort_count_1, abort_count_2);
-
-#ifdef FINE_GRAIN_DEBUG
-  if(tid == _MAIN_PROCESS)
-    printf("Thread executed in non-transactional block: %d\n"
-    "Thread executed in transactional block: %d\n", 
-    non_transaction_ex, transaction_ex);
-#endif
-  
+	 tid, abort_count_1, abort_count_2);  
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

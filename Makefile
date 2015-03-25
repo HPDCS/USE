@@ -1,7 +1,7 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
 
-CFLAGS =
+CFLAGS = -DTEST_1
 
 TARGET = test
 

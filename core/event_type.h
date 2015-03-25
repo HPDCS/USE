@@ -11,11 +11,13 @@ typedef struct __event_t
 
   timestamp_t timestamp;
   timestamp_t sender_timestamp; //Potrebbe non servire
-  
+
   void *data;
-  unsigned int data_size;
+  unsigned int data_size;  
   
   int type;
+    
+  unsigned int who_generated;
   
 } event_t;
 

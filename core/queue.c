@@ -12,6 +12,7 @@
 
 #include "event_type.h"
 #include "queue.h" 
+#include "message_state.h"
 
 
 #define MAX_SIZE		8192
@@ -126,9 +127,17 @@ int queue_min(event_t *ret_evt)
   
   _queue.size--;
   
+  //setta a current_lvt e azzera l'outgoing message
+  execution_time(ret_evt->timestamp, ret_evt->who_generated);
+  
   __sync_lock_release(&queue_lock);
   
   return 1;
+}
+
+int queue_pending_message_size(void)
+{
+  return _thr_pool->non_commit_size;
 }
 
 void queue_destroy(void)
