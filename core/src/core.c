@@ -78,7 +78,7 @@ void thread_loop(unsigned int thread_id)
   unsigned int abort_count_1 = 0, abort_count_2 = 0;
   
 #ifdef FINE_GRAIN_DEBUG
-  unsigned int non_transactional_ex = 0, transactional_ex = 0;
+   unsigned int non_transactional_ex = 0, transactional_ex = 0;
 #endif
   
   tid = thread_id;
@@ -105,7 +105,7 @@ void thread_loop(unsigned int thread_id)
       {
 	ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, NULL);
 #ifdef FINE_GRAIN_DEBUG
-	__sync_fetch_and_add(&non_transactional_ex, 1);
+	non_transactional_ex++;
 #endif
       }
       else
@@ -118,7 +118,7 @@ void thread_loop(unsigned int thread_id)
 	  {
 	    _xend();
 #ifdef FINE_GRAIN_DEBUG
-	__sync_fetch_and_add(&transactional_ex, 1);
+	transactional_ex++;
 #endif
 	  }
 	  else
@@ -153,10 +153,10 @@ void thread_loop(unsigned int thread_id)
 	 tid, abort_count_1, abort_count_2);
   
 #ifdef FINE_GRAIN_DEBUG
-  if(tid == _MAIN_PROCESS)
-    printf("Thread executed in non-transactional block: %d\n"
+  
+    printf("Thread %d executed in non-transactional block: %d\n"
     "Thread executed in transactional block: %d\n", 
-    non_transactional_ex, transactional_ex);
+    tid, non_transactional_ex, transactional_ex);
 #endif
   
 }
