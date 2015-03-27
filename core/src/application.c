@@ -24,11 +24,11 @@ static int counter;
 #endif
 
 
-void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsigned int data_size, void *state)
+void ProcessEvent(int my_id, simtime_t now, int event_type, void *data, unsigned int data_size, void *state)
 {
   switch(event_type)
   {
-    case INIT:
+    case 0:
     {
 #ifdef TEST_1
       ScheduleNewEvent(0, get_timestamp(), PCK_EVENT, NULL, 0);

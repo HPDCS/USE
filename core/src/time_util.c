@@ -11,7 +11,8 @@ static __inline__ unsigned long int rdtsc(void)
   return ((unsigned long int)lo) | ( ((unsigned long int)hi) << 32 );
 }
 
-timestamp_t get_timestamp(void)
+simtime_t get_timestamp(void)
 {
-  return rdtsc();
+  double ret = (double) rdtsc();
+  return ret;
 } 

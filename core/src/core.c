@@ -6,11 +6,12 @@
 #include <immintrin.h>
 
 #include "core.h"
-#include "queue.h"
+#include "calqueue.h"
 #include "message_state.h"
-#include "event_type.h"
-#include "datatypes.h"
+#include "communication.h"
+#include "simtypes.h"
 
+#include "time_util.h"
 
 //id del processo principale
 #define _MAIN_PROCESS		0
@@ -22,7 +23,7 @@
 #ifdef FINE_GRAIN_DEBUG
 
 static int __tt_lock = 0;
-static timestamp_t __tt_comm = 0;
+static simtime_t __tt_comm = 0;
 
 #define CHECKER do{					\
     while(__sync_lock_test_and_set(&__tt_lock, 1))	\
@@ -34,68 +35,45 @@ static timestamp_t __tt_comm = 0;
     }							\
     __tt_comm = current_lvt;				\
     __sync_lock_release(&__tt_lock); }while(0)
+
 #endif
 
 
 
-// Local thread id
+__thread simtime_t current_lvt;
+
+__thread unsigned int current_lp = 0;
+
 __thread unsigned int tid;
 
-//Gli LP non sono ancora stati mappati, quindi current_lp_id lo lascio nullo su tutti i thread per adesso
-__thread unsigned int current_lp_id = 0;
-
-//Local virtual time dell'evento processato dal thread corrente
-__thread timestamp_t current_lvt;
-
+/* Total number of cores required for simulation */
 unsigned int n_cores;
+/* Total number of logical processes running in the simulation */
+unsigned int n_prc_tot;
 
-//Flag per l'interruzione del loop - flag provvisorio - TODO: Se gli LPs non lanciano più eventi interrompi la simulazione
+
+/****************************** TODO: REMOVE THIS **********************************************************************************/
 static int stop = 0;
-
-
-void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size);
-
-// Gli LP non sono ancora mappati tra i vari threads (l'esperimento prevede un solo LP, quindi 'my_id' per adesso sarà sempre 0)
-extern void ProcessEvent(int my_id, timestamp_t now, int event_type, void *data, unsigned int data_size, void *state);
-
-//Torna 1 in caso si verifica la condizione di fine simulazione - Metodo provvisorio
 extern int StopSimulation(void);
+/***********************************************************************************************************************************/
 
-
-void ScheduleNewEvent(unsigned int receiver, timestamp_t timestamp, int event_type, void *data, unsigned int data_size)
-{
-  event_t new_event;
-  bzero(&new_event, sizeof(event_t));
-  
-  new_event.sender_id = current_lp_id;
-  new_event.receiver_id = receiver;
-  new_event.timestamp = timestamp;
-  new_event.sender_timestamp = current_lvt;
-  new_event.data = data;
-  new_event.data_size = data_size;
-  new_event.type = event_type;
-  new_event.who_generated = tid;
-  
-  queue_insert(&new_event);
-}
 
 static void process_init_event(void)
 {
-  ScheduleNewEvent(0, get_timestamp(), INIT, 0, 0);
-  queue_deliver_msgs();  
+  ScheduleNewEvent(0, get_timestamp(), 0, 0, 0);
+  send_local_outgoing_msgs();  
 }
 
 void init(unsigned int _thread_num)
 {
   n_cores = _thread_num;
   
-  queue_init();
-  message_state_init();
+  init_communication();
 }
 
 void thread_loop(unsigned int thread_id)
 {
-  event_t evt;
+  msg_t evt;
   int status;
   unsigned int abort_count_1 = 0, abort_count_2 = 0;
   
@@ -104,14 +82,13 @@ void thread_loop(unsigned int thread_id)
 #endif
   
   tid = thread_id;
-  queue_register_thread();
   
   if(tid == _MAIN_PROCESS)
     process_init_event();
   
   while(!stop)
   {
-    if(queue_min(&evt) == 0)
+    if(get_next_message(&evt) == 0)
     {
       if(tid == _MAIN_PROCESS)
 	stop = StopSimulation();
@@ -119,14 +96,14 @@ void thread_loop(unsigned int thread_id)
       continue;
     }
     
-    current_lp_id = evt.receiver_id;
+    current_lp = evt.receiver_id;
     current_lvt  = evt.timestamp;
     
     while(1)
     {
       if(check_safety(current_lvt))
       {
-	ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+	ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, NULL);
 #ifdef FINE_GRAIN_DEBUG
 	__sync_fetch_and_add(&non_transactional_ex, 1);
 #endif
@@ -135,7 +112,7 @@ void thread_loop(unsigned int thread_id)
       {
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
-	  ProcessEvent(current_lp_id, current_lvt, evt.type, evt.data, evt.data_size, NULL);
+	  ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, NULL);
 	  
 	  if(check_safety(current_lvt))
 	  {
@@ -166,12 +143,10 @@ void thread_loop(unsigned int thread_id)
     CHECKER;
 #endif
     
-    if(queue_pending_message_size())
-      min_output_time(queue_pre_min()->timestamp);
-    commit_time();    
-    queue_deliver_msgs();
+    register_local_safe_time();
+    send_local_outgoing_msgs();
         
-    //printf("Timestamp %lu executed\n", evt.timestamp);
+    //printf("Timestamp %f executed\n", evt.timestamp);
   }
   
   printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", 

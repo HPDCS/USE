@@ -5,24 +5,20 @@
 #include <limits.h>
 #include <stdbool.h>
 
-#include "calqueue.h"
+#include "message_state.h"
 
+#include "calqueue.h"
 
 
 // Declare data structures needed for the schedulers
 static calqueue_node *calq[CALQSPACE];	// Array of linked lists of items
 static calqueue_node **calendar;		// Pointer to use as a sub-array to calq
 
-static unsigned long int *minimum_timestamp_vector;
-
 // Global variables for the calendar queueing routines
 static int 	firstsub,
 		nbuckets,
 		qsize,
-		lastbucket,
-		lock,
-		number_of_threads;
-		
+		lastbucket;
 static bool	resize_enabled;
 static double	top_threshold,
 		bot_threshold,
@@ -54,8 +50,7 @@ static void localinit(int qbase, int nbucks, double bwidth, double startprio) {
 	calendar = calq + qbase;
 	cwidth = bwidth;
 	nbuckets = nbucks;
-	lock = 0;
-		
+
 	// Init as empty
 	qsize = 0;
 	for(i = 0; i < nbuckets; i++) {
@@ -258,119 +253,78 @@ static calqueue_node *calqueue_deq(void) {
 
 }
 
+
+
+
+
 // This function initializes the messaging queue.
-void calqueue_init(unsigned int threads) 
-{
-  int i;
-  
-  localinit(0, 2, 1.0, 0.0);
-  resize_enabled = true;
-  
-  minimum_timestamp_vector = malloc(threads * sizeof(unsigned long int));
-  for(i = 0; i < threads; i++)
-    minimum_timestamp_vector[i] = ULONG_MAX;
-  
-  number_of_threads = threads;
+void calqueue_init(void) {
+
+	localinit(0, 2, 1.0, 0.0);
+	resize_enabled = true;
 }
 
-void calqueue_put(double timestamp, void *payload) 
-{
-  int i;
-  calqueue_node *new_node, *traverse;
-  
-  while(__sync_lock_and_test(&lock, 1))
-    while(lock);
-
-  // Fill the node entry
-  new_node = rsalloc(sizeof(calqueue_node));
-  new_node->timestamp = timestamp;
-  new_node->payload = payload;
-  new_node->next = NULL;
 
 
-  // Calculate the number of the bucket in which to place the new entry
-  i = (int)(timestamp / (double)cwidth); // Virtual bucket
-  i = i % nbuckets; // Actual bucket
 
-  // Grab the head of events list in bucket i
-  traverse = calendar[i];
 
-  // Put at the head of the list, if appropriate
-  if(traverse == NULL || traverse->timestamp > timestamp)
-  {
-    new_node->next = traverse;
-    calendar[i] = new_node;
-  }
-  else
-  {
-    // Find the correct place in list
-    while(traverse->next != NULL && traverse->next->timestamp <= timestamp)
-      traverse = traverse->next;
+void calqueue_put(double timestamp, void *payload) {
 
-    // Place the new event
-    new_node->next = traverse->next;
-    traverse->next = new_node;
-  }
+	int i;
+	calqueue_node *new_node, *traverse;
 
-  // Update queue size
-  qsize++;
+	// Fill the node entry
+	new_node = malloc(sizeof(calqueue_node));
+	new_node->timestamp = timestamp;
+	new_node->payload = payload;
+	new_node->next = NULL;
 
-  // Double the calendar size if needed
-  if(qsize > top_threshold && nbuckets < MAXNBUCKETS) 
-    resize(2 * nbuckets);
-  
-  __sync_lock_release(&lock);
+
+	// Calculate the number of the bucket in which to place the new entry
+	i = (int)(timestamp / (double)cwidth); // Virtual bucket
+	i = i % nbuckets; // Actual bucket
+
+	// Grab the head of events list in bucket i
+	traverse = calendar[i];
+
+	// Put at the head of the list, if appropriate
+	if(traverse == NULL || traverse->timestamp > timestamp) {
+		new_node->next = traverse;
+		calendar[i] = new_node;
+	} else {
+		// Find the correct place in list
+		while(traverse->next != NULL && traverse->next->timestamp <= timestamp)
+			traverse = traverse->next;
+
+		// Place the new event
+		new_node->next = traverse->next;
+		traverse->next = new_node;
+	}
+
+	// Update queue size
+	qsize++;
+
+	// Double the calendar size if needed
+	if(qsize > top_threshold && nbuckets < MAXNBUCKETS) {
+		resize(2 * nbuckets);
+	}
 }
 
-void *calqueue_get(unsigned int thread_id) 
-{
+
+
+void *calqueue_get(void) {
+  
   calqueue_node *node;
   void *payload;
   
-  while(__sync_lock_and_test(&lock, 1))
-    while(lock);
-
   node = calqueue_deq();
-  if(node == NULL)
-  {
-    __sync_lock_release(&lock);
+  
+  if(node == NULL) {
     return NULL;
   }
-
-  minimum_timestamp_vector[thread_id] = node->timestamp;
+  
   payload = node->payload;
-  
-  rsfree(node);
-  
-  __sync_lock_release(&lock);
+  free(node);
   
   return payload;
-}
-
-int check_safety(double timestamp, unsigned int thread_id)
-{
-  int i;
-  
-  while(__sync_lock_and_test(&lock, 1))
-    while(lock);
-  
-  for(i = 0; i < number_of_threads; i++)
-  {
-    if((i != thread_id) && minimum_timestamp_vector[i] < timestamp)
-      return 0;
-  }
-  
-  __sync_lock_release(&lock);
-  
-  return 1;
-}
-
-void commit_time(unsigned int thread_id)
-{
-  while(__sync_lock_and_test(&lock, 1))
-    while(lock);
-
-  minimum_timestamp_vector[thread_id] = ULONG_MAX;
-
-  __sync_lock_release(&lock);
 }
