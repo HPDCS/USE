@@ -38,8 +38,6 @@
 extern void *__real_malloc(size_t);
 extern void __real_free(void *);
 
-static int *numa_nodes;
-
 #define AUDIT if(0)
 
 mem_map maps[MAX_SOBJS];
@@ -160,7 +158,6 @@ void* allocate_segment(unsigned int sobj, size_t size) {
 	mdt_entry* mdt;
 	char* segment;
 	int numpages;
-	int ret;
 
 	if( ((int)sobj >= handled_sobjs) ) goto bad_allocate; 
 
@@ -317,8 +314,6 @@ int allocator_init(unsigned int sobjs) {
 	init_move(sobjs);
 #endif
 
-	set_BH_map(maps);
-	init_BH();
 
 #ifdef HAVE_NUMA
 	setup_numa_nodes();

@@ -134,7 +134,6 @@ void *__wrap_malloc(size_t size) {
 
 	ptr = do_malloc(current_lp, recoverable_state[current_lp], size);
 
-    out:
 	return ptr;
 }
 

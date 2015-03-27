@@ -193,8 +193,6 @@ extern int get_granularity(void);
 extern size_t dirty_size(unsigned int, void *, double *);
 extern void recoverable_init(void);
 extern void recoverable_fini(void);
-extern void unrecoverable_init(void);
-extern void unrecoverable_fini(void);
 extern void malloc_state_init(bool recoverable, malloc_state *state);
 extern void *do_malloc(unsigned int, malloc_state * mem_pool, size_t size);
 extern void do_free(unsigned int, malloc_state *mem_pool, void *ptr);

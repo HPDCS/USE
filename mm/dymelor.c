@@ -42,7 +42,6 @@
 void dymelor_init(void) {
 	allocator_init(n_prc_tot);
 	recoverable_init();
-	unrecoverable_init();
 }
 
 
@@ -57,7 +56,6 @@ void dymelor_init(void) {
 */
 void dymelor_fini(void){
 	recoverable_fini();
-	unrecoverable_fini();
 }
 
 
@@ -228,7 +226,18 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 	}
 
 	j = (int)log2(size) - (int)log2(MIN_CHUNK_SIZE);
+	if(mem_pool == NULL) {
+		printf("PANICO 1\n");
+		fflush(stdout);
+		abort();
+	}
 	m_area = &mem_pool->areas[j];
+	if(m_area == NULL) {
+		printf("PANICO\n");
+		fflush(stdout);
+		abort();
+	}
+		
 	is_recoverable = m_area->is_recoverable;
 
 	while(m_area != NULL && m_area->alloc_chunks == m_area->num_chunks){

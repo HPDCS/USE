@@ -1,19 +1,21 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
 CC=gcc
-CFLAGS=-Wall -mrtm -pthread -lm -DTEST_1
-INCLUDE=-I include/ -I mm/
+CFLAGS=-g -Wall -mrtm -pthread -lm -DTEST_1
+INCLUDE=-I include/ -I mm/ -I core/include/
 
-APPLICATION_SOURCES=model/application.c
+APPLICATION_SOURCES=model/pcs/application.c\
+		    model/pcs/functions_app.c
 
 TARGET=test
 
-CORE_SOURCES =  core/src/communication.c\
-		core/src/core.c\
-		core/src/calqueue.c\
-		core/src/main.c\
-		core/src/time_util.c\
-		core/src/numerical.c
+CORE_SOURCES =  core/communication.c\
+		core/message_state.c\
+		core/core.c\
+		core/topology.c\
+		core/calqueue.c\
+		core/main.c\
+		core/numerical.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
@@ -29,22 +31,21 @@ CORE_OBJ=$(CORE_SOURCES:.c=.o)
 
 
 all: application mm core
-	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc model/__application.o --whole-archive -o model/application-wrap.o
-	ld -r model/application-wrap.o mm/__mm.o --whole-archive -o model/application-mm.o
-	gcc -o $(APP) model/application-mm.o core/__core.o $(CFLAGS)
+	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
+	gcc -g -o $(TARGET) model/application-mm.o core/__core.o $(CFLAGS)
 
 mm: $(MM_OBJ)
-	@ld -r $(MM_OBJ) -o mm/__mm.o
+	@ld -r -g $(MM_OBJ) -o mm/__mm.o
 
 application: $(APPLICATION_OBJ)
-	@ld -r $(APPLICATION_OBJ) -o model/__application.o
+	@ld -r -g $(APPLICATION_OBJ) -o model/__application.o
 
 core: $(CORE_OBJ)
-	@ld -r $(CORE_OBJ) -o core/__core.o
+	@ld -r -g $(CORE_OBJ) -o core/__core.o
 
 %.o: %.c
 	@echo "[CC] $@"
-	@$(CC) -c -o $@ $< $(CFLAGS) $(INCLUDE)
+	@$(CC) -g -c -o $@ $< $(CFLAGS) $(INCLUDE)
 
 
 clean:
