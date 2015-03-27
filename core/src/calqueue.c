@@ -6,7 +6,6 @@
 #include <stdbool.h>
 
 #include "message_state.h"
-
 #include "calqueue.h"
 
 
@@ -313,18 +312,15 @@ void calqueue_put(double timestamp, void *payload) {
 
 
 void *calqueue_get(void) {
-  
-  calqueue_node *node;
-  void *payload;
-  
-  node = calqueue_deq();
-  
-  if(node == NULL) {
-    return NULL;
-  }
-  
-  payload = node->payload;
-  free(node);
-  
-  return payload;
+	calqueue_node *node;
+	void *payload;
+
+	node = calqueue_deq();
+	if(node == NULL) {
+		return NULL;
+	}
+
+	payload = node->payload;
+	free(node);
+	return payload;
 }

@@ -17,7 +17,7 @@
 
 
 //Numero default di core/cpu
-#define _DEFAULT_CPU_NUM	2
+#define _DEFAULT_CPU_NUM	8
 
 
 unsigned short int number_of_threads = 1;
