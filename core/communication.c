@@ -70,7 +70,7 @@ void register_local_safe_time(void)
 {
   if(outgoing_queue[tid].size)
     min_output_time(outgoing_queue[tid].min_in_transit);
-  commit_time();
+//  commit_time();
 }
 
 // Deliver outgoing messages from thread

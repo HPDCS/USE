@@ -28,6 +28,8 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 	lp_state_type *state;
 	state = (lp_state_type*)ptr;
 
+	printf("Executing %d at %d at %f state %p\n", event_type, me, now, ptr);
+
 	if(state != NULL) {
 		state->lvt = now;
 		state->executed_events++;
@@ -45,7 +47,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 				exit(EXIT_FAILURE);
 			}
 
-//			SetState(state);
+			SetState(state);
 
 			bzero(state, sizeof(lp_state_type));
 			state->channel_counter = CHANNELS_PER_CELL;
@@ -72,12 +74,14 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			// Start the simulation
 			timestamp = (simtime_t) (20 * Random());
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
+			printf("INIT %d: START at %f\n", me, timestamp);
 
 			// If needed, start the first fading recheck
 //			if (state->fading_recheck) {
 				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * Random());
 				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
 //			}
+			printf("INIT %d: RECHECK at %f\n", me, timestamp);
 
 			break;
 

@@ -32,8 +32,8 @@ void execution_time(simtime_t time, unsigned int generator_tid)
   outgoing_time_vector[tid] = INFTY;
   current_time_vector[tid] = time;
   
-  if(generator_tid != tid && outgoing_time_vector[generator_tid] == time)
-    outgoing_time_vector[generator_tid] = INFTY;
+//  if(generator_tid != tid && outgoing_time_vector[generator_tid] == time)
+//    outgoing_time_vector[generator_tid] = INFTY;
 }
 
 void min_output_time(simtime_t time)
@@ -55,8 +55,8 @@ int check_safety(simtime_t time)
   
   for(i = 0; i < n_cores; i++)
   {
-    if( (i != tid) && ((time > current_time_vector[i]) || 
-	(time > outgoing_time_vector[i])) )
+    if( (i != tid) && ((time >= current_time_vector[i]) || 
+	(time >= outgoing_time_vector[i])) )
     {
       __sync_lock_release(&comm_lock);
       return 0;

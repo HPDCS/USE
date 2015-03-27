@@ -204,6 +204,7 @@ void thread_loop(unsigned int thread_id)
     {
       if(check_safety(current_lvt))
       {
+	printf("Event is safe\n");
 	ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, states[current_lp]);
 #ifdef FINE_GRAIN_DEBUG
 	non_transactional_ex++;
@@ -213,6 +214,7 @@ void thread_loop(unsigned int thread_id)
       {
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
+	  printf("Executing in transaction\n");
 	  ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, states[current_lp]);
 	  
 	  if(check_safety(current_lvt))
@@ -246,6 +248,7 @@ void thread_loop(unsigned int thread_id)
     
     register_local_safe_time();
     send_local_outgoing_msgs();
+    commit_time();
 
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
         
