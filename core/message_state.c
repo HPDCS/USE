@@ -32,8 +32,8 @@ void execution_time(simtime_t time, unsigned int generator_tid)
   outgoing_time_vector[tid] = INFTY;
   current_time_vector[tid] = time;
   
-//  if(generator_tid != tid && outgoing_time_vector[generator_tid] == time)
-//    outgoing_time_vector[generator_tid] = INFTY;
+  if(generator_tid != tid && outgoing_time_vector[generator_tid] == time)
+    outgoing_time_vector[generator_tid] = INFTY;
 }
 
 void min_output_time(simtime_t time)

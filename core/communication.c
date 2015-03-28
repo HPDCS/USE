@@ -37,12 +37,24 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 {
   msg_t new_event;
   bzero(&new_event, sizeof(msg_t));
+    
+  /************************************** FIX (grezzissimo, temporaneo ma funzionante) ***********************************/
+  static int a = 0;
+  void *ptr;
+  while(__sync_lock_test_and_set(&a, 1))
+    while(a);
+    
+  ptr = malloc(event_size);
+  memcpy(ptr, event_content, event_size);
+  
+  __sync_lock_release(&a);
+  /************************************ END FIX ***********************************/
   
   new_event.sender_id = current_lp;
   new_event.receiver_id = receiver;
   new_event.timestamp = timestamp;
   new_event.sender_timestamp = current_lvt;
-  new_event.data = event_content;
+  new_event.data = ptr;
   new_event.data_size = event_size;
   new_event.type = event_type;
   new_event.who_generated = tid;

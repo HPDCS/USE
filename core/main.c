@@ -55,17 +55,20 @@ void start_simulation(unsigned short int number_of_threads)
 
 int main(int argn, char *argv[]) {
 
+  int cores;
+  
   if(argn < 3) {
     fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
     exit(EXIT_FAILURE);
 
   } else {
-    init(atoi(argv[1]), atoi(argv[2]));
+    cores = atoi(argv[1]);
+    init(cores, atoi(argv[2]));
   }
   
   printf("Start simulation\n");
   
-  start_simulation(_DEFAULT_CPU_NUM);
+  start_simulation(cores);
   
   printf("Simulation ended\n");
     
