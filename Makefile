@@ -1,7 +1,7 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
 CC=gcc
-CFLAGS=-g -Wall -mrtm -pthread -lm -DTEST_1
+CFLAGS=-g -Wall -mrtm -pthread -lm
 INCLUDE=-I include/ -I mm/ -I core/include/
 
 APPLICATION_SOURCES=model/pcs/application.c\
@@ -9,11 +9,10 @@ APPLICATION_SOURCES=model/pcs/application.c\
 
 TARGET=test
 
-CORE_SOURCES =  core/communication.c\
-		core/message_state.c\
+CORE_SOURCES =  core/message_state.c\
 		core/core.c\
 		core/topology.c\
-		core/calqueue.c\
+		core/queue.c\
 		core/main.c\
 		core/numerical.c
 

@@ -1,8 +1,3 @@
-
-#if !defined(TEST_1) && !defined(TEST_2)
-#error "YOU MUST TO DEFINE TEST_1 OR TEST_2"
-#endif
-
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,9 +8,6 @@
 
 #include <core.h>
 
-
-//Numero default di core/cpu
-#define _DEFAULT_CPU_NUM	8
 
 
 unsigned short int number_of_threads = 1;
@@ -55,20 +47,21 @@ void start_simulation(unsigned short int number_of_threads)
 
 int main(int argn, char *argv[]) {
 
-  int cores;
+  unsigned int n;
   
   if(argn < 3) {
     fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
     exit(EXIT_FAILURE);
 
-  } else {
-    cores = atoi(argv[1]);
-    init(cores, atoi(argv[2]));
+  } else 
+  {
+    n = atoi(argv[1]);
+    init(n, atoi(argv[2]));
   }
   
   printf("Start simulation\n");
   
-  start_simulation(cores);
+  start_simulation(n);
   
   printf("Simulation ended\n");
     

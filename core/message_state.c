@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <limits.h>
 
 #include "core.h"
 #include "message_state.h"
@@ -9,8 +10,7 @@ static simtime_t *current_time_vector;
 
 static simtime_t *outgoing_time_vector;
 
-
-extern int comm_lock;
+extern int queue_lock;
 
 
 void message_state_init(void)
@@ -23,17 +23,17 @@ void message_state_init(void)
   for(i = 0; i < n_cores; i++)
   {
     current_time_vector[i] = INFTY;
-    outgoing_time_vector[i] = INFTY; 
+    outgoing_time_vector[i] = INFTY; //TODO: Oppure a 0 ? riguardare...
   }
 }
 
-void execution_time(simtime_t time, unsigned int generator_tid)
+void execution_time(simtime_t time, unsigned int input_tid)
 {    
   outgoing_time_vector[tid] = INFTY;
   current_time_vector[tid] = time;
   
-  if(generator_tid != tid && outgoing_time_vector[generator_tid] == time)
-    outgoing_time_vector[generator_tid] = INFTY;
+  if(input_tid != tid && outgoing_time_vector[input_tid] == time)
+    outgoing_time_vector[input_tid] = INFTY;
 }
 
 void min_output_time(simtime_t time)
@@ -50,24 +50,23 @@ int check_safety(simtime_t time)
 {
   int i;
   
-  while(__sync_lock_test_and_set(&comm_lock, 1))
-    while(comm_lock);
+  while(__sync_lock_test_and_set(&queue_lock, 1))
+    while(queue_lock);
   
   for(i = 0; i < n_cores; i++)
   {
     if( (i != tid) && ((time >= current_time_vector[i]) || 
 	(time >= outgoing_time_vector[i])) )
     {
-      __sync_lock_release(&comm_lock);
+      __sync_lock_release(&queue_lock);
       return 0;
     }
   }
   
-  __sync_lock_release(&comm_lock);
+  __sync_lock_release(&queue_lock);
   
   return 1;
 }
-
 
 
 

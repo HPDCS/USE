@@ -6,19 +6,19 @@
 #include "simtypes.h"
 
 
-extern void message_state_init(void);
+void message_state_init(void);
 
 // It sets the actual execution time in the current thread
-extern void execution_time(simtime_t time, unsigned int generator_tid);
+void execution_time(simtime_t time, unsigned int input_tid);
 
 // It sets the minimum outgoing time from the current thread
-extern void min_output_time(simtime_t time);
+void min_output_time(simtime_t time);
 
 // Commit the actual execution time in the current thread
-extern void commit_time(void);
+void commit_time(void);
 
 // It returns 1 if there is not any other timestamp less than "time" in the timestamps executed and in all outgoing messages.
-extern int check_safety(simtime_t time);
+int check_safety(simtime_t time);
 
 
 #endif
