@@ -21,6 +21,7 @@ TARGET=test
 
 CORE_SOURCES =  core/message_state.c\
 		core/core.c\
+		core/calqueue.c\
 		core/topology.c\
 		core/queue.c\
 		core/main.c\

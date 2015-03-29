@@ -15,7 +15,7 @@ void queue_init(void);
 
 int queue_insert(msg_t *msg);
 
-msg_t *queue_pre_min(void);
+double queue_pre_min(void);
 
 void queue_register_thread(void);
 

@@ -12,7 +12,6 @@ typedef struct __calqueue_node {
 	struct __calqueue_node 	*next;		// Pointers to other nodes
 } calqueue_node;
 
-typedef struct __calqueue_node * calendar_queue;
 
 
 

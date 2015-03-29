@@ -257,7 +257,7 @@ void thread_loop(unsigned int thread_id)
     }
     
     if(queue_pending_message_size())
-      min_output_time(queue_pre_min()->timestamp);
+      min_output_time(queue_pre_min());
     commit_time();    
     queue_deliver_msgs();
 

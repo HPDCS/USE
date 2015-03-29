@@ -12,16 +12,23 @@
 
 #include "queue.h" 
 #include "message_state.h"
+#include "calqueue.h"
 #include "core.h"
 
 
-#define MAX_SIZE		30000
-#define THR_POOL_SIZE		4096
+#define MAX_SIZE		65536
+#define THR_POOL_SIZE		20000
 
+typedef struct __event_pool_node
+{
+  msg_t message;
+  calqueue_node *calqueue_node_reference;
+  
+} event_pool_node;
 
 typedef struct __queue_t 
 {
-  msg_t *head;
+  event_pool_node *head;
   unsigned int size;
   
 } queue_t;
@@ -29,6 +36,7 @@ typedef struct __queue_t
 typedef struct __temp_thread_pool
 {
   msg_t *_tmp_mem;
+  simtime_t min_time;
   unsigned int non_commit_size;
   
 } temp_thread_pool;
@@ -40,8 +48,10 @@ __thread temp_thread_pool *_thr_pool = 0;
 int queue_lock = 0;
 
 void queue_init(void)
-{    
-  _queue.head = malloc(sizeof(msg_t) * MAX_SIZE);
+{  
+  calqueue_init();
+  
+ /* _queue.head = malloc(sizeof(msg_t) * MAX_SIZE);
   
   if(_queue.head == 0)
   {
@@ -49,7 +59,7 @@ void queue_init(void)
     abort();
   }
   
-  _queue.size = 0;
+  _queue.size = 0;*/
 }
 
 void queue_register_thread(void)
@@ -60,6 +70,7 @@ void queue_register_thread(void)
   _thr_pool = malloc(sizeof(temp_thread_pool));
   _thr_pool->_tmp_mem = malloc(sizeof(msg_t) * THR_POOL_SIZE);
   _thr_pool->non_commit_size = 0;
+  _thr_pool->min_time = INFTY;
 }
 
 int queue_insert(msg_t *msg)
@@ -67,68 +78,106 @@ int queue_insert(msg_t *msg)
   if(_thr_pool->non_commit_size == THR_POOL_SIZE)
   {
     printf("queue overflow\n");
+    printf("-----------------------------------------------------------------\n");
     abort();
   }
   
   memcpy((_thr_pool->_tmp_mem + _thr_pool->non_commit_size), msg, sizeof(msg_t));
+  
+  if(msg->timestamp < _thr_pool->min_time)
+    _thr_pool->min_time = msg->timestamp;
+  
   _thr_pool->non_commit_size++;
     
   return 1;
 }
 
-msg_t *queue_pre_min(void)
+double queue_pre_min(void)
 {
-  return _thr_pool->_tmp_mem;
+  return _thr_pool->min_time;
 }
 
 void queue_deliver_msgs(void)
 {
   while(__sync_lock_test_and_set(&queue_lock, 1))
     while(queue_lock);
+  
+  msg_t *new_hole;
+  int i;
+  for(i = 0; i < _thr_pool->non_commit_size; i++)
+  {
+    new_hole = malloc(sizeof(msg_t));
+    memcpy(new_hole, _thr_pool->_tmp_mem + i, sizeof(msg_t));
+    calqueue_put(new_hole->timestamp, new_hole);
+  }
+  
+  _thr_pool->non_commit_size = 0;
+  _thr_pool->min_time = INFTY;
+    
+  /*event_pool_node *new_hole;
+  unsigned int i;
     
   if(_queue.size == MAX_SIZE)
   {
     __sync_lock_release(&queue_lock);
     
     printf("queue overflow\n");
+    printf("-----------------------------------------------------------------\n");
     abort();
   }
   
-  memcpy((_queue.head + _queue.size), _thr_pool->_tmp_mem, (_thr_pool->non_commit_size * sizeof(msg_t)));
+  for(i = 0; i < _thr_pool->non_commit_size; i++)
+  {
+    new_hole = (_queue.head + _queue.size);
+    memcpy(&(new_hole->message), _thr_pool->_tmp_mem + i, sizeof(msg_t));
+    new_hole->calqueue_node_reference = calqueue_put(new_hole->message.timestamp, new_hole);
+    _queue.size++;
+  }
   
-  _queue.size += _thr_pool->non_commit_size;
-  _thr_pool->non_commit_size = 0;
+  _thr_pool->non_commit_size = 0;*/
   
   __sync_lock_release(&queue_lock);
 }
 
 int queue_min(msg_t *ret_evt)
 {
-  msg_t *aux;
-  msg_t *min = _queue.head;
-  unsigned int i = 1;
+  //event_pool_node *node_ret;
 
   while(__sync_lock_test_and_set(&queue_lock, 1))
     while(queue_lock);
-    
+  
+  msg_t *node_ret;
+  node_ret = calqueue_get();
+  if(node_ret == NULL)
+  {
+    __sync_lock_release(&queue_lock);
+    return 0;
+  }
+  
+  memcpy(ret_evt, node_ret, sizeof(msg_t));
+  free(node_ret);
+  
+  execution_time(ret_evt->timestamp, ret_evt->who_generated);
+  
+  __sync_lock_release(&queue_lock);
+  
+  return 1;
+  
+    /*
   if(_queue.size == 0)
   {
     __sync_lock_release(&queue_lock);
     return 0;
   }
 
-  while(i < _queue.size)
+  node_ret = calqueue_get();
+  memcpy(ret_evt, &(node_ret->message), sizeof(msg_t));
+  
+  if((_queue.head + (_queue.size - 1)) != node_ret)
   {
-    aux = (_queue.head + i);
-    if(aux->timestamp < min->timestamp)
-      min = aux;
-    i++;
+    memcpy(node_ret, (_queue.head + (_queue.size - 1)), sizeof(event_pool_node));
+    node_ret->calqueue_node_reference->payload = node_ret;
   }
-  
-  memcpy(ret_evt, min, sizeof(msg_t));
-  
-  if(_queue.size > 1)
-    memcpy(min, (_queue.head + (_queue.size - 1)), sizeof(msg_t));
   
   _queue.size--;
     
@@ -137,7 +186,7 @@ int queue_min(msg_t *ret_evt)
   
   __sync_lock_release(&queue_lock);
   
-  return 1;
+  return 1;*/
 }
 
 int queue_pending_message_size(void)

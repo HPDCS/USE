@@ -5,7 +5,6 @@
 #include <limits.h>
 #include <stdbool.h>
 
-#include "message_state.h"
 #include "calqueue.h"
 
 
@@ -29,6 +28,8 @@ static double	buckettop,
 
 
 static calqueue_node *calqueue_deq(void);
+
+
 
 
 
@@ -306,6 +307,12 @@ void calqueue_put(double timestamp, void *payload) {
 	// Double the calendar size if needed
 	if(qsize > top_threshold && nbuckets < MAXNBUCKETS) {
 		resize(2 * nbuckets);
+	}
+	
+	if(timestamp < lastprio) {
+	  lastprio = timestamp;
+	  lastbucket = i;
+	  buckettop = (double)(i + 1) * cwidth + 0.5 * cwidth;
 	}
 }
 
