@@ -6,8 +6,9 @@
 // Event types
 #define LOOP		1
 
-#define LOOP_COUNT 50
+#define LOOP_COUNT 2
 #define COMPLETE_EVENTS 10000
+#define TAU 100
 
 
 // This is the events' payload which is exchanged across LPs

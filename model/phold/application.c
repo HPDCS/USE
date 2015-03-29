@@ -39,7 +39,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			case LOOP:
 			for(i = 0; i < LOOP_COUNT; i++) {
-				pow(i, j);
+			//	pow(i, j);
+				j = i*i;
 			}
 			state_ptr->events++;
 			timestamp = now + (simtime_t)(Expent(TAU));
