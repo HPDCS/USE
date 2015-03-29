@@ -37,6 +37,8 @@ __thread unsigned int current_lp = 0;
 
 __thread unsigned int tid = 0;
 
+unsigned long long tid0_evt_count = 0;
+
 /* Total number of cores required for simulation */
 unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
@@ -260,6 +262,12 @@ void thread_loop(unsigned int thread_id)
     queue_deliver_msgs();
 
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
+
+    if(tid == _MAIN_PROCESS) {
+	tid0_evt_count++;
+	if(tid0_evt_count % 10000 == 0)
+		printf("TIME: %f\n", current_lvt);
+    }
         
     //printf("Timestamp %f executed\n", evt.timestamp);
   }
