@@ -17,7 +17,7 @@
 
 
 #define MAX_SIZE		65536
-#define MAX_DATA_SIZE		2048
+#define MAX_DATA_SIZE		4096
 #define THR_POOL_SIZE		1024
 
 typedef struct __event_pool_node
@@ -70,7 +70,7 @@ void queue_register_thread(void)
   if(_thr_pool != 0)
     return;
   
-  _thr_pool = malloc(sizeof(temp_thread_pool));
+  _thr_pool = malloc(sizeof(temp_thread_pool)); //TODO: Togliere malloc
   _thr_pool->_tmp_mem = malloc(sizeof(msg_t) * THR_POOL_SIZE);
   _thr_pool->_tmp_msg_data = malloc(MAX_DATA_SIZE);
   _thr_pool->curr_msg_data = _thr_pool->_tmp_msg_data;
@@ -90,6 +90,9 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     abort();
   }
   
+  if(timestamp < _thr_pool->min_time)
+    _thr_pool->min_time = timestamp;
+  
   msg_ptr = _thr_pool->_tmp_mem + _thr_pool->non_commit_size;
   bzero(msg_ptr, sizeof(msg_t));
   
@@ -108,12 +111,9 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
   msg_ptr->who_generated = tid;
   
   _thr_pool->non_commit_size++;
-    
+      
   /*memcpy((_thr_pool->_tmp_mem + _thr_pool->non_commit_size), msg, sizeof(msg_t));
-  
-  if(msg->timestamp < _thr_pool->min_time)
-    _thr_pool->min_time = msg->timestamp;
-  
+    
   _thr_pool->non_commit_size++;*/
 }
 
