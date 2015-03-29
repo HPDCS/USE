@@ -13,7 +13,7 @@ typedef struct __msg_t msg_t;
 
 void queue_init(void);
 
-int queue_insert(msg_t *msg);
+void queue_insert(unsigned int receiver, double timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
 
 double queue_pre_min(void);
 

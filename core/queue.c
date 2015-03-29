@@ -17,7 +17,8 @@
 
 
 #define MAX_SIZE		65536
-#define THR_POOL_SIZE		20000
+#define MAX_DATA_SIZE		2048
+#define THR_POOL_SIZE		1024
 
 typedef struct __event_pool_node
 {
@@ -36,6 +37,8 @@ typedef struct __queue_t
 typedef struct __temp_thread_pool
 {
   msg_t *_tmp_mem;
+  void *_tmp_msg_data;
+  void *curr_msg_data;
   simtime_t min_time;
   unsigned int non_commit_size;
   
@@ -69,12 +72,17 @@ void queue_register_thread(void)
   
   _thr_pool = malloc(sizeof(temp_thread_pool));
   _thr_pool->_tmp_mem = malloc(sizeof(msg_t) * THR_POOL_SIZE);
-  _thr_pool->non_commit_size = 0;
+  _thr_pool->_tmp_msg_data = malloc(MAX_DATA_SIZE);
+  _thr_pool->curr_msg_data = _thr_pool->_tmp_msg_data;
   _thr_pool->min_time = INFTY;
+  _thr_pool->non_commit_size = 0;
 }
 
-int queue_insert(msg_t *msg)
+void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size)
 {
+  msg_t *msg_ptr;
+  void *data_ptr;
+  
   if(_thr_pool->non_commit_size == THR_POOL_SIZE)
   {
     printf("queue overflow\n");
@@ -82,14 +90,31 @@ int queue_insert(msg_t *msg)
     abort();
   }
   
-  memcpy((_thr_pool->_tmp_mem + _thr_pool->non_commit_size), msg, sizeof(msg_t));
+  msg_ptr = _thr_pool->_tmp_mem + _thr_pool->non_commit_size;
+  bzero(msg_ptr, sizeof(msg_t));
+  
+  data_ptr = _thr_pool->curr_msg_data;
+  bzero(data_ptr, event_size);
+  memcpy(data_ptr, event_content, event_size);
+  _thr_pool->curr_msg_data += event_size;
+  
+  msg_ptr->sender_id = current_lp;
+  msg_ptr->receiver_id = receiver;
+  msg_ptr->timestamp = timestamp;
+  msg_ptr->sender_timestamp = current_lvt;
+  msg_ptr->data = data_ptr;
+  msg_ptr->data_size = event_size;
+  msg_ptr->type = event_type;
+  msg_ptr->who_generated = tid;
+  
+  _thr_pool->non_commit_size++;
+    
+  /*memcpy((_thr_pool->_tmp_mem + _thr_pool->non_commit_size), msg, sizeof(msg_t));
   
   if(msg->timestamp < _thr_pool->min_time)
     _thr_pool->min_time = msg->timestamp;
   
-  _thr_pool->non_commit_size++;
-    
-  return 1;
+  _thr_pool->non_commit_size++;*/
 }
 
 double queue_pre_min(void)
@@ -103,16 +128,27 @@ void queue_deliver_msgs(void)
     while(queue_lock);
   
   msg_t *new_hole;
+  void *_data;
   int i;
+  
+  _thr_pool->curr_msg_data = _thr_pool->_tmp_msg_data;
+  
   for(i = 0; i < _thr_pool->non_commit_size; i++)
   {
     new_hole = malloc(sizeof(msg_t));
     memcpy(new_hole, _thr_pool->_tmp_mem + i, sizeof(msg_t));
     calqueue_put(new_hole->timestamp, new_hole);
+    
+    _data = malloc(new_hole->data_size);
+    memcpy(_data, _thr_pool->curr_msg_data, new_hole->data_size);
+    new_hole->data = _data;
+    _thr_pool->curr_msg_data += new_hole->data_size;
   }
   
+  _thr_pool->curr_msg_data = _thr_pool->_tmp_msg_data;
   _thr_pool->non_commit_size = 0;
   _thr_pool->min_time = INFTY;
+  
     
   /*event_pool_node *new_hole;
   unsigned int i;

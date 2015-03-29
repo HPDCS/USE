@@ -161,17 +161,14 @@ bool check_termination(void) {
 	return ret;
 }
 
-static int a = 0;
-
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size)
 {
-  void *ptr;
-  msg_t new_event;
+  /*msg_t new_event;
   bzero(&new_event, sizeof(msg_t));
-  
+ 
   while(__sync_lock_test_and_set(&a, 1))
     while(a);
-    
+  void *ptr;   
   ptr = malloc(event_size);
   memcpy(ptr, event_content, event_size);
   
@@ -185,8 +182,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
   new_event.data_size = event_size;
   new_event.type = event_type;
   new_event.who_generated = tid;
+  */
   
-  queue_insert(&new_event);
+  queue_insert(receiver, timestamp, event_type, event_content, event_size);
 }
 
 void thread_loop(unsigned int thread_id)
@@ -260,6 +258,9 @@ void thread_loop(unsigned int thread_id)
       min_output_time(queue_pre_min());
     commit_time();    
     queue_deliver_msgs();
+    
+    //Libero la memoria allocata per i dati dell'evento
+    free(evt.data);
 
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 
