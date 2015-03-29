@@ -16,9 +16,9 @@
 #include "core.h"
 
 
-#define MAX_SIZE		65536
-#define MAX_DATA_SIZE		4096
-#define THR_POOL_SIZE		1024
+//#define MAX_SIZE		65536
+#define MAX_DATA_SIZE		65536
+#define THR_POOL_SIZE		65536
 
 typedef struct __event_pool_node
 {
