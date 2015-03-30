@@ -48,7 +48,7 @@ void commit_time(void)
 
 int check_safety(simtime_t time)
 {
-  int i, ret = 1;
+  int i;
   
   while(__sync_lock_test_and_set(&queue_lock, 1))
     while(queue_lock);
@@ -58,18 +58,14 @@ int check_safety(simtime_t time)
     if( (i != tid) && ((time >= current_time_vector[i]) || 
 	(time >= outgoing_time_vector[i])) )
     {
-      if(time == current_time_vector[i] && tid < i)
-	ret = 1;
-      else
-	ret = 0;
-      
-      break;
+      __sync_lock_release(&queue_lock);
+      return 0;
     }
   }
   
   __sync_lock_release(&queue_lock);
   
-  return ret;
+  return 1;
 }
 
 
