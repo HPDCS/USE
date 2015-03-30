@@ -9,7 +9,7 @@
 void message_state_init(void);
 
 // It sets the actual execution time in the current thread
-void execution_time(simtime_t time, unsigned int input_tid);
+void execution_time(simtime_t time);
 
 // It sets the minimum outgoing time from the current thread
 void min_output_time(simtime_t time);

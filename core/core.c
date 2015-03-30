@@ -129,9 +129,9 @@ static void process_init_event(void) {
     current_lp = i;
     current_lvt = 0;
     ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+    queue_deliver_msgs(); 
   }
   
-  queue_deliver_msgs(); 
 }
 
 void init(unsigned int _thread_num, unsigned int lps_num)
@@ -147,7 +147,7 @@ void init(unsigned int _thread_num, unsigned int lps_num)
   message_state_init();
   numerical_init();
   
-  queue_register_thread();
+//  queue_register_thread();
   process_init_event();
 }
 
@@ -189,7 +189,6 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 
 void thread_loop(unsigned int thread_id)
 {
-  msg_t evt;
   int status;
   unsigned int abort_count_1 = 0, abort_count_2 = 0;
   
@@ -199,12 +198,12 @@ void thread_loop(unsigned int thread_id)
   
   tid = thread_id;
   
-  if(tid != _MAIN_PROCESS)
-    queue_register_thread();
+//  if(tid != _MAIN_PROCESS)
+//    queue_register_thread();
   
   while(!stop && !sim_error)
   {
-    if(queue_min(&evt) == 0)
+    if(queue_min() == 0)
     {
       continue;
     }
@@ -212,14 +211,14 @@ void thread_loop(unsigned int thread_id)
     if(tid == _MAIN_PROCESS)
 	stop = check_termination();
 
-    current_lp = evt.receiver_id;
-    current_lvt  = evt.timestamp;
+    current_lp = current_msg.receiver_id;
+    current_lvt  = current_msg.timestamp;
 
     while(1)
     {
       if(check_safety(current_lvt))
       {
-	ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, states[current_lp]);
+	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 #ifdef FINE_GRAIN_DEBUG
 	__sync_fetch_and_add(&non_transactional_ex, 1);
 #endif
@@ -228,7 +227,7 @@ void thread_loop(unsigned int thread_id)
       {
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
-	  ProcessEvent(current_lp, current_lvt, evt.type, evt.data, evt.data_size, states[current_lp]);
+	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 	  
 	  if(check_safety(current_lvt))
 	  {
@@ -263,7 +262,7 @@ void thread_loop(unsigned int thread_id)
     queue_deliver_msgs();
   */  
     //Libero la memoria allocata per i dati dell'evento
-    free(evt.data);
+//    free(current_msg.data);
 
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 

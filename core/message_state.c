@@ -28,7 +28,7 @@ void message_state_init(void)
   }
 }
 
-void execution_time(simtime_t time, unsigned int input_tid)
+void execution_time(simtime_t time)
 {    
   current_time_vector[tid] = time;
   outgoing_time_vector[tid] = INFTY;

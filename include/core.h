@@ -15,22 +15,19 @@
 
 #define MAX_LPs	2048
 
+#define MAX_DATA_SIZE		4096
+#define THR_POOL_SIZE		20
+
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
 typedef struct __msg_t
 {  
   unsigned int sender_id;
   unsigned int receiver_id;
-
   simtime_t timestamp;
-  simtime_t sender_timestamp;
-
-  void *data;
-  unsigned int data_size;  
-  
   int type;
-    
-  unsigned int who_generated;
+  unsigned int data_size;  
+  unsigned char data[MAX_DATA_SIZE];
   
 } msg_t;
 
