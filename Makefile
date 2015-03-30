@@ -1,8 +1,21 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
 CC=gcc
-CFLAGS=-g -Wall -mrtm -pthread -lm
+FLAGS=-g -Wall -mrtm -pthread -lm
 INCLUDE=-I include/ -I mm/ -I core/include/
+
+
+ifdef MALLOC
+CFLAGS=$(FLAGS) -DNO_DYMELOR
+else
+CFLAGS=$(FLAGS)
+endif
+
+
+PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
+		    model/pcs-prealloc/functions_app.c\
+		    model/pcs-prealloc/topology.c
+
 
 PCS_SOURCES=model/pcs/application.c\
 		    model/pcs/functions_app.c
@@ -36,6 +49,7 @@ MM_OBJ=$(MM_SOURCES:.c=.o)
 CORE_OBJ=$(CORE_SOURCES:.c=.o)
 
 PCS_OBJ=$(PCS_SOURCES:.c=.o)
+PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
 TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 
@@ -44,14 +58,20 @@ all: pcs
 
 pcs: _pcs mm core link
 
+pcs-prealloc: _pcs_prealloc mm core link
+
 traffic: _traffic mm core link
 
 phold: _phold mm core link
 
 
 link:
+ifdef MALLOC
+	gcc -g -o $(TARGET) model/__application.o core/__core.o $(CFLAGS)
+else
 	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
 	gcc -g -o $(TARGET) model/application-mm.o core/__core.o $(CFLAGS)
+endif
 
 mm: $(MM_OBJ)
 	@ld -r -g $(MM_OBJ) -o mm/__mm.o
@@ -62,6 +82,9 @@ core: $(CORE_OBJ)
 %.o: %.c
 	@echo "[CC] $@"
 	@$(CC) -g -c -o $@ $< $(CFLAGS) $(INCLUDE)
+
+_pcs_prealloc: $(PCS_PREALLOC_OBJ)
+	@ld -r -g $(PCS_PREALLOC_OBJ) -o model/__application.o
 
 _pcs: $(PCS_OBJ)
 	@ld -r -g $(PCS_OBJ) -o model/__application.o
