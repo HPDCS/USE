@@ -23,9 +23,10 @@ int queue_min(msg_t *ret_evt);
 
 int queue_pending_message_size(void);
 
-void queue_deliver_msgs(void);
+double queue_deliver_msgs(void);
 
 void queue_destroy(void);
+
 
 
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include <queue.h>
 #include "core.h"
 #include "message_state.h"
 
@@ -29,11 +30,11 @@ void message_state_init(void)
 
 void execution_time(simtime_t time, unsigned int input_tid)
 {    
-  outgoing_time_vector[tid] = INFTY;
   current_time_vector[tid] = time;
+  outgoing_time_vector[tid] = INFTY;
   
-  if(input_tid != tid && outgoing_time_vector[input_tid] == time)
-    outgoing_time_vector[input_tid] = INFTY;
+//  if(input_tid != tid && outgoing_time_vector[input_tid] == time)
+//    outgoing_time_vector[input_tid] = INFTY;
 }
 
 void min_output_time(simtime_t time)
@@ -49,23 +50,50 @@ void commit_time(void)
 int check_safety(simtime_t time)
 {
   int i;
-  
+  unsigned int min_tid;
+  double min = INFTY;
+  int ret = 0;
+
   while(__sync_lock_test_and_set(&queue_lock, 1))
     while(queue_lock);
   
   for(i = 0; i < n_cores; i++)
   {
-    if( (i != tid) && ((time >= current_time_vector[i]) || 
-	(time >= outgoing_time_vector[i])) )
+    if( (i != tid) && ((current_time_vector[i] < min) || (outgoing_time_vector[i] < min)) )
     {
-      __sync_lock_release(&queue_lock);
-      return 0;
+      min = ( current_time_vector[i] < outgoing_time_vector[i] ?  current_time_vector[i] : outgoing_time_vector[i]  );
+      min_tid = i;
     }
   }
+
+  if(current_time_vector[i] < min) {
+	ret = 1;
+	goto out;
+  }
+
+  if(current_time_vector[i] == min && tid < min_tid) {
+       ret = 1;
+  }
+
   
+ out:
   __sync_lock_release(&queue_lock);
   
-  return 1;
+  return ret;
+}
+
+
+void flush(void) {
+  double t_min;
+  while(__sync_lock_test_and_set(&queue_lock, 1))
+    while(queue_lock);
+
+  t_min = queue_deliver_msgs();
+
+  current_time_vector[tid] = INFTY;
+  outgoing_time_vector[tid] = t_min;
+
+  __sync_lock_release(&queue_lock);
 }
 
 

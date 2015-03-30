@@ -70,5 +70,6 @@ extern void _mkdir(const char *path);
 extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 
+extern void flush(void);
 
 #endif

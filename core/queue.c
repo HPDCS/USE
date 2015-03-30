@@ -122,14 +122,15 @@ double queue_pre_min(void)
   return _thr_pool->min_time;
 }
 
-void queue_deliver_msgs(void)
+double queue_deliver_msgs(void)
 {
-  while(__sync_lock_test_and_set(&queue_lock, 1))
-    while(queue_lock);
+//  while(__sync_lock_test_and_set(&queue_lock, 1))
+//    while(queue_lock);
   
   msg_t *new_hole;
   void *_data;
   int i;
+  double mintime;
   
   _thr_pool->curr_msg_data = _thr_pool->_tmp_msg_data;
   
@@ -144,12 +145,14 @@ void queue_deliver_msgs(void)
     new_hole->data = _data;
     _thr_pool->curr_msg_data += new_hole->data_size;
   }
+
+  mintime = _thr_pool->min_time;
   
   _thr_pool->curr_msg_data = _thr_pool->_tmp_msg_data;
   _thr_pool->non_commit_size = 0;
   _thr_pool->min_time = INFTY;
   
-    
+  return mintime;
   /*event_pool_node *new_hole;
   unsigned int i;
     
@@ -172,7 +175,7 @@ void queue_deliver_msgs(void)
   
   _thr_pool->non_commit_size = 0;*/
   
-  __sync_lock_release(&queue_lock);
+//  __sync_lock_release(&queue_lock);
 }
 
 int queue_min(msg_t *ret_evt)

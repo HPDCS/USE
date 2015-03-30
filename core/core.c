@@ -253,12 +253,15 @@ void thread_loop(unsigned int thread_id)
       
       break;
     }
-    
-    if(queue_pending_message_size())
+   
+
+    flush();
+ 
+/*    if(queue_pending_message_size())
       min_output_time(queue_pre_min());
     commit_time();    
     queue_deliver_msgs();
-    
+  */  
     //Libero la memoria allocata per i dati dell'evento
     free(evt.data);
 

@@ -6,7 +6,7 @@
 // Event types
 #define LOOP		1
 
-#define LOOP_COUNT 200
+#define LOOP_COUNT 500
 #define COMPLETE_EVENTS 10000
 #define TAU 100
 
