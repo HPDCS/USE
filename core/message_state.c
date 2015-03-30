@@ -56,8 +56,8 @@ int check_safety(simtime_t time, unsigned int *events)
 
   *events = 0;
 
-  while(__sync_lock_test_and_set(&queue_lock, 1))
-    while(queue_lock);
+//  while(__sync_lock_test_and_set(&queue_lock, 1))
+//    while(queue_lock);
   
   for(i = 0; i < n_cores; i++)
   {
@@ -81,7 +81,7 @@ int check_safety(simtime_t time, unsigned int *events)
 
   
  out:
-  __sync_lock_release(&queue_lock);
+//  __sync_lock_release(&queue_lock);
   
   return ret;
 }

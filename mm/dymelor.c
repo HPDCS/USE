@@ -299,11 +299,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 		area_size = sizeof(malloc_area *) + bitmap_blocks * BLOCK_SIZE * 2 + num_chunks * size;
 
-		#ifdef HAVE_PARALLEL_ALLOCATOR
 		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size);
-		#else
-		m_area->self_pointer = __real_malloc(area_size);
-		#endif
 
 		if(m_area->self_pointer == NULL){
 			rootsim_error(true, "DyMeLoR: error allocating space\n");

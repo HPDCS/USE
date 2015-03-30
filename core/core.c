@@ -15,6 +15,7 @@
 #include <ROOT-Sim.h>
 #include <dymelor.h>
 #include <numerical.h>
+#include <timer.h>
 
 #include "core.h"
 #include "queue.h"
@@ -31,13 +32,23 @@
 #define MAX_PATHLEN	512
 
 
+#define HILL_EPSILON_GREEDY	0.05
+#define HILL_CLIMB_EVALUATE	1000
+#define DELTA 500  // tick count
+__thread int delta_count = 0;
+__thread double abort_percent = 1.0;
+
+
 __thread simtime_t current_lvt = 0;
 
 __thread unsigned int current_lp = 0;
 
 __thread unsigned int tid = 0;
 
-unsigned long long tid0_evt_count = 0;
+
+__thread unsigned long long evt_count = 0;
+__thread unsigned long long evt_try_count = 0;
+__thread unsigned int abort_count_conflict = 0, abort_count_safety = 0;
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
@@ -117,6 +128,34 @@ void _mkdir(const char *path) {
 }
 
 
+void throttling(unsigned int events) {
+  long long tick_count;
+  register int i;
+
+  if(delta_count == 0)
+	return;
+//  for(i = 0; i < 1000; i++);
+
+  tick_count = CLOCK_READ();
+  while(true) {
+	if(CLOCK_READ() > tick_count + 	events * DELTA * delta_count)
+		break;
+  }
+}
+
+void hill_climbing(void) {
+	if((double)abort_count_safety / (double)evt_count < abort_percent) {
+		delta_count++;
+//		printf("Incrementing delta_count to %d\n", delta_count);
+	} else {
+/*		if(random() / RAND_MAX < HILL_EPSILON_GREEDY) {
+			delta_count /= (random() / RAND_MAX) * 10 + 1;
+		}
+*/	}
+
+	abort_percent = (double)abort_count_safety / (double)evt_count;
+}
+
 
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
@@ -142,7 +181,9 @@ void init(unsigned int _thread_num, unsigned int lps_num)
   states = malloc(sizeof(void *) * n_prc_tot);
   can_stop = malloc(sizeof(bool) * n_prc_tot);
  
+#ifndef NO_DYMELOR
   dymelor_init();
+#endif
   queue_init();
   message_state_init();
   numerical_init();
@@ -190,7 +231,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 void thread_loop(unsigned int thread_id)
 {
   int status;
-  unsigned int abort_count_1 = 0, abort_count_2 = 0;
+  unsigned int events;
   
 #ifdef FINE_GRAIN_DEBUG
    unsigned int non_transactional_ex = 0, transactional_ex = 0;
@@ -203,20 +244,19 @@ void thread_loop(unsigned int thread_id)
   
   while(!stop && !sim_error)
   {
+
     if(queue_min() == 0)
     {
       continue;
     }
     
-    if(tid == _MAIN_PROCESS)
-	stop = check_termination();
 
     current_lp = current_msg.receiver_id;
     current_lvt  = current_msg.timestamp;
 
     while(1)
     {
-      if(check_safety(current_lvt))
+      if(check_safety(current_lvt, &events))
       {
 	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 #ifdef FINE_GRAIN_DEBUG
@@ -225,11 +265,14 @@ void thread_loop(unsigned int thread_id)
       }
       else
       {
+	evt_try_count++;
 	if( (status = _xbegin()) == _XBEGIN_STARTED)
 	{
 	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+
+          throttling(events);
 	  
-	  if(check_safety(current_lvt))
+	  if(check_safety(current_lvt, &events))
 	  {
 	    _xend();
 #ifdef FINE_GRAIN_DEBUG
@@ -243,9 +286,9 @@ void thread_loop(unsigned int thread_id)
 	{
 	  status = _XABORT_CODE(status);
 	  if(status == _ROLLBACK_CODE)
-	    abort_count_1++;
+	    abort_count_conflict++;
 	  else
-	    abort_count_2++;
+	    abort_count_safety++;
 	  continue;
 	}
       }
@@ -265,18 +308,22 @@ void thread_loop(unsigned int thread_id)
 //    free(current_msg.data);
 
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
+    stop = check_termination();
+
+
+    if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
+	    hill_climbing();
 
     if(tid == _MAIN_PROCESS) {
-	tid0_evt_count++;
-	if(tid0_evt_count % 10000 == 0)
+    	evt_count++;
+	if(evt_count % 10000 == 0)
 		printf("TIME: %f\n", current_lvt);
     }
         
     //printf("Timestamp %f executed\n", evt.timestamp);
   }
   
-  printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", 
-	 tid, abort_count_1, abort_count_2);
+  printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
   
 #ifdef FINE_GRAIN_DEBUG
   

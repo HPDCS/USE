@@ -18,7 +18,7 @@ void min_output_time(simtime_t time);
 void commit_time(void);
 
 // It returns 1 if there is not any other timestamp less than "time" in the timestamps executed and in all outgoing messages.
-int check_safety(simtime_t time);
+int check_safety(simtime_t time, unsigned int *);
 
 
 #endif

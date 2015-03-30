@@ -67,8 +67,8 @@
 				// malloc_areas are filled at runtime, subsequent malloc() requests
 				// by the application level software will fail.
 #define MAX_LIMIT_NUM_AREAS 100
-#define MIN_NUM_CHUNKS 4096	// Minimum number of chunks per malloc_area
-#define MAX_NUM_CHUNKS 4096	// Maximum number of chunks per malloc_area
+#define MIN_NUM_CHUNKS 2*4096	// Minimum number of chunks per malloc_area
+#define MAX_NUM_CHUNKS 4*4096	// Maximum number of chunks per malloc_area
 
 #define MAX_LOG_THRESHOLD 1.7	// Threshold to check if a malloc_area is underused TODO: retest
 #define MIN_LOG_THRESHOLD 1.7	// Threshold to check if a malloc_area is overused TODO: retest

@@ -96,6 +96,11 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     printf("-----------------------------------------------------------------\n");
     abort();
   }
+
+  if(event_size > MAX_DATA_SIZE) {
+	printf("Error: requested a message of size %d, max allowed is %d\n", event_size, MAX_DATA_SIZE);
+	abort();
+  }
   
   if(timestamp < _thr_pool.min_time)
     _thr_pool.min_time = timestamp;

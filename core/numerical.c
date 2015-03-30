@@ -367,8 +367,8 @@ static void load_seed(void) {
 
 	rewind(fp);
 	srandom(master_seed);
-	new_seed = random();
-	fprintf(fp, "%llu\n", (unsigned long long)new_seed);
+//	new_seed = random();
+//	fprintf(fp, "%llu\n", (unsigned long long)new_seed);
 
 	fclose(fp);
 }

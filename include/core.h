@@ -15,7 +15,7 @@
 
 #define MAX_LPs	2048
 
-#define MAX_DATA_SIZE		4096
+#define MAX_DATA_SIZE		64
 #define THR_POOL_SIZE		20
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
