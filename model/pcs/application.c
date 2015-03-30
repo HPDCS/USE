@@ -35,6 +35,8 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 		state->executed_events++;
 	}
 
+	unsigned char *p[CHANNELS_PER_CELL];
+
 
 	switch(event_type) {
 
@@ -57,6 +59,22 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			state->ta_change = TA_CHANGE;
 			state->channels_per_cell = CHANNELS_PER_CELL;
 
+			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+				p[w] = malloc(sizeof(channel));
+				*p[w] = 'x';
+			}
+			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+				free(p[w]);
+			}
+			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+				p[w] = malloc(sizeof(sir_data_per_cell));
+				*p[w] = 'x';
+			}
+			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+				free(p[w]);
+			}
+
+
 			// Show current configuration, only once
 			if(me == 0) {
 				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
@@ -78,8 +96,8 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			// If needed, start the first fading recheck
 //			if (state->fading_recheck) {
-				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * Random());
-				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
+//				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * Random());
+//				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
 //			}
 //			printf("INIT %d: RECHECK at %f\n", me, timestamp);
 
@@ -96,7 +114,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 				state->channel_counter--;
 
-				new_event_content.channel = allocation(state);
+//				new_event_content.channel = allocation(state);
 				new_event_content.from = me;
 				new_event_content.sent_at = now;
 
@@ -132,11 +150,12 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 				}
 
-				if(new_event_content.call_term_time <=  handoff_time) {
+				if(new_event_content.call_term_time <= handoff_time) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
 					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
+					ScheduleNewEvent(new_event_content.cell, handoff_time, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 				}
 			}
 
@@ -168,7 +187,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			state->channel_counter++;
 			state->complete_calls++;
-			deallocation(me, state, event_content->channel, event_content, now);
+//			deallocation(me, state, event_content->channel, event_content, now);
 
 			break;
 
@@ -176,10 +195,9 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			state->channel_counter++;
 			state->leaving_handoffs++;
-			deallocation(me, state, event_content->channel, event_content, now);
+//			deallocation(me, state, event_content->channel, event_content, now);
 
 			new_event_content.call_term_time =  event_content->call_term_time;
-			ScheduleNewEvent(event_content->cell, now, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 			break;
 
         	case HANDOFF_RECV:
@@ -191,7 +209,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			else {
 				state->channel_counter--;
 
-				new_event_content.channel = allocation(state);
+//				new_event_content.channel = allocation(state);
 				new_event_content.call_term_time = event_content->call_term_time;
 
 				switch (CELL_CHANGE_DISTRIBUTION) {
@@ -213,6 +231,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
 					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
+					ScheduleNewEvent(new_event_content.cell, handoff_time, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 				}
 			}
 

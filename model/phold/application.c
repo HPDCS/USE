@@ -26,14 +26,17 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			// Explicitly tell ROOT-Sim this is our LP's state
                         SetState(state_ptr);
 
-			timestamp = (simtime_t) (20 * Random());
 
 			state_ptr->events = 0;
 
 			if(me == 0) {
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP\n", LOOP_COUNT, COMPLETE_EVENTS);
 			}
-			ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+			
+			for(i = 0; i < 10; i++) {
+				timestamp = (simtime_t) (20 * Random());
+				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+			}
 
 			break;
 
@@ -45,8 +48,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			state_ptr->events++;
 			timestamp = now + (simtime_t)(Expent(TAU));
 			ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-			if(Random() < 0.2)
+			if(Random() < 0.2) {
 				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, LOOP, NULL, 0);
+			}
 			break;
 
 
