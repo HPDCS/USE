@@ -47,31 +47,35 @@ void commit_time(void)
   current_time_vector[tid] = INFTY;
 }
 
-int check_safety(simtime_t time)
+int check_safety(simtime_t time, unsigned int *events)
 {
   int i;
-  unsigned int min_tid;
+  unsigned int min_tid = n_cores + 1;
   double min = INFTY;
   int ret = 0;
+
+  *events = 0;
 
   while(__sync_lock_test_and_set(&queue_lock, 1))
     while(queue_lock);
   
   for(i = 0; i < n_cores; i++)
   {
+
     if( (i != tid) && ((current_time_vector[i] < min) || (outgoing_time_vector[i] < min)) )
     {
       min = ( current_time_vector[i] < outgoing_time_vector[i] ?  current_time_vector[i] : outgoing_time_vector[i]  );
       min_tid = i;
+      *events++;
     }
   }
 
-  if(current_time_vector[i] < min) {
+  if(current_time_vector[tid] < min) {
 	ret = 1;
 	goto out;
   }
 
-  if(current_time_vector[i] == min && tid < min_tid) {
+  if(current_time_vector[tid] == min && tid < min_tid) {
        ret = 1;
   }
 
