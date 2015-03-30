@@ -54,7 +54,7 @@ typedef struct __temp_thread_pool {
 	simtime_t min_time;
 } __temp_thread_pool;
 
-__temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
+__thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 int queue_lock = 0;
 
