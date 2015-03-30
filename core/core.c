@@ -23,6 +23,10 @@
 #include "simtypes.h"
 
 
+#define THROTTLING
+
+
+
 //id del processo principale
 #define _MAIN_PROCESS		0
 //Le abort "volontarie" avranno questo codice
@@ -33,8 +37,9 @@
 
 
 #define HILL_EPSILON_GREEDY	0.05
-#define HILL_CLIMB_EVALUATE	1000
+#define HILL_CLIMB_EVALUATE	500
 #define DELTA 500  // tick count
+#define HIGHEST_COUNT	5
 __thread int delta_count = 0;
 __thread double abort_percent = 1.0;
 
@@ -48,7 +53,7 @@ __thread unsigned int tid = 0;
 
 __thread unsigned long long evt_count = 0;
 __thread unsigned long long evt_try_count = 0;
-__thread unsigned int abort_count_conflict = 0, abort_count_safety = 0;
+__thread unsigned long long abort_count_conflict = 0, abort_count_safety = 0;
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
@@ -144,7 +149,7 @@ void throttling(unsigned int events) {
 }
 
 void hill_climbing(void) {
-	if((double)abort_count_safety / (double)evt_count < abort_percent) {
+	if((double)abort_count_safety / (double)evt_count < abort_percent && delta_count < HIGHEST_COUNT) {
 		delta_count++;
 //		printf("Incrementing delta_count to %d\n", delta_count);
 	} else {
@@ -270,7 +275,9 @@ void thread_loop(unsigned int thread_id)
 	{
 	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
+	  #ifdef THROTTLING
           throttling(events);
+	  #endif 
 	  
 	  if(check_safety(current_lvt, &events))
 	  {
@@ -310,13 +317,14 @@ void thread_loop(unsigned int thread_id)
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
     stop = check_termination();
 
-
+    #ifdef THROTTLING
     if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
 	    hill_climbing();
+    #endif
 
     if(tid == _MAIN_PROCESS) {
     	evt_count++;
-	if(evt_count % 10000 == 0)
+	if((evt_count - 10000 * (evt_count / 10000)) == 0)
 		printf("TIME: %f\n", current_lvt);
     }
         
