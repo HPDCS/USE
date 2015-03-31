@@ -23,6 +23,8 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
+TCAR_SOURCES=model/tcar/application.c
+
 TRAFFIC_SOURCES=model/traffic/application.c\
 		    model/traffic/functions.c\
 		    model/traffic/init.c\
@@ -51,6 +53,7 @@ CORE_OBJ=$(CORE_SOURCES:.c=.o)
 PCS_OBJ=$(PCS_SOURCES:.c=.o)
 PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
 TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
+TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 
 
@@ -61,6 +64,8 @@ pcs: _pcs mm core link
 pcs-prealloc: _pcs_prealloc mm core link
 
 traffic: _traffic mm core link
+
+tcar: _tcar mm core link
 
 phold: _phold mm core link
 
@@ -88,6 +93,9 @@ _pcs_prealloc: $(PCS_PREALLOC_OBJ)
 
 _pcs: $(PCS_OBJ)
 	@ld -r -g $(PCS_OBJ) -o model/__application.o
+
+_tcar: $(TCAR_OBJ)
+	@ld -r -g $(TCAR_OBJ) -o model/__application.o
 
 _phold: $(PHOLD_OBJ)
 	@ld -r -g $(PHOLD_OBJ) -o model/__application.o
