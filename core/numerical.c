@@ -366,6 +366,10 @@ static void load_seed(void) {
 
 
 	rewind(fp);
+
+	// Override the master seed
+	master_seed = 1234567;
+	
 	srandom(master_seed);
 //	new_seed = random();
 //	fprintf(fp, "%llu\n", (unsigned long long)new_seed);
