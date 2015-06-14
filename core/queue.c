@@ -185,12 +185,12 @@ int queue_min(void)
     return 0;
   }
   
-  memcpy(&current_msg, node_ret, sizeof(msg_t));
-  free(node_ret);
-  
-  execution_time(current_msg.timestamp);
+  execution_time(current_msg.timestamp, current_msg.receiver_id);
   
   __sync_lock_release(&queue_lock);
+
+  memcpy(&current_msg, node_ret, sizeof(msg_t));
+  free(node_ret);
   
   return 1;
   
