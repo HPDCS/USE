@@ -48,6 +48,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			break;
 
+		case EXTERNAL_LOOP:
 		case LOOP:
 			for(i = 0; i < LOOP_COUNT; i++) {
 				pow(i, j);
@@ -61,10 +62,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				delta += LOOKAHEAD;
 			timestamp = now + delta;
 
-			ScheduleNewEvent(me, timestamp + LOOKAHEAD, LOOP, NULL, 0);
+			if(event_type == LOOP)
+				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 
-			if(Random() < 0.2) {
-				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp + delta, LOOP, NULL, 0);
+			if(event_type == LOOP && Random() < 0.2) {
+				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
 			}
 			break;
 
@@ -74,7 +76,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			break;
 	}
 }
-
+	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 
