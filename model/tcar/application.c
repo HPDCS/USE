@@ -18,7 +18,7 @@
 #define THRESHOLD 0.7
 
 #define PROCESSING_TIME 1.0
-#define AUDIT_PERIOD    10 // number of server jobs
+#define AUDIT_PERIOD    20 // number of server jobs
 
 
 typedef struct _lp_state_type 
@@ -40,7 +40,7 @@ unsigned  model_seed=464325;
 //#define BIAS 0.001
 #define BIAS 0.0
 
-#define MAX_REGION	30000
+#define MAX_REGION	40000
 #define MAX_TIME	10.0
 
 typedef struct _model_data
