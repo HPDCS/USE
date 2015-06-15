@@ -5,11 +5,14 @@
 
 #include "simtypes.h"
 
+/*MAURO, DA ELIMINARE*/
+simtime_t get_processing(unsigned int i);
+simtime_t get_intransit(unsigned int i);
 
 void message_state_init(void);
 
 // It sets the actual execution time in the current thread
-void execution_time(simtime_t time, unsigned int);
+void execution_time(simtime_t time);
 
 // It sets the minimum outgoing time from the current thread
 void min_output_time(simtime_t time);
@@ -18,7 +21,7 @@ void min_output_time(simtime_t time);
 void commit_time(void);
 
 // It returns 1 if there is not any other timestamp less than "time" in the timestamps executed and in all outgoing messages.
-int check_safety(simtime_t time, unsigned int *);
-
+unsigned int check_safety();
+int check_safety_old(unsigned int *events);
 
 #endif

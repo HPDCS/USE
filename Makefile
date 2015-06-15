@@ -1,6 +1,7 @@
 #Versione test - non uso ottimizzazioni del compilatore
 
 CC=gcc
+#FLAGS=-g -Wall -pthread -lm
 FLAGS=-g -Wall -mrtm -pthread -lm
 INCLUDE=-I include/ -I mm/ -I core/include/
 
@@ -40,7 +41,8 @@ CORE_SOURCES =  core/message_state.c\
 		core/topology.c\
 		core/queue.c\
 		core/main.c\
-		core/numerical.c
+		core/numerical.c\
+		core/reverse.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
@@ -57,7 +59,7 @@ TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 
 
-all: tcar
+all: pcs
 
 pcs: _pcs mm core link
 
@@ -71,12 +73,14 @@ phold: _phold mm core link
 
 
 link:
+	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 ifdef MALLOC
-	gcc -g -o $(TARGET) model/__application.o core/__core.o $(CFLAGS)
+	gcc -g -o $(TARGET) model/__application_hijacked.o core/__core.o $(CFLAGS)
 else
-	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
+	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
 	gcc -g -o $(TARGET) model/application-mm.o core/__core.o $(CFLAGS)
 endif
+
 
 mm: $(MM_OBJ)
 	@ld -r -g $(MM_OBJ) -o mm/__mm.o

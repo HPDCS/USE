@@ -14,7 +14,9 @@ int complete_calls = COMPLETE_CALLS;
 
 void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
 
-	int w;
+    //printf("MYDEBUG-   pcs/application.c/ProcessEvent: Inizio\n");
+
+    int w;
 
 	event_content_type new_event_content;
 
@@ -41,6 +43,8 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 	switch(event_type) {
 
 		case INIT:
+
+            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: INIT inizio\n");
 
 			// Initialize the LP's state
 			state = (lp_state_type *)malloc(sizeof(lp_state_type));
@@ -101,10 +105,14 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 //			}
 //			printf("INIT %d: RECHECK at %f\n", me, timestamp);
 
+            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: INIT fine\n");
+
 			break;
 
 
 		case START_CALL:
+
+            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: START_CALL inizio\n");
 
 			state->arriving_calls++;
 
@@ -154,11 +162,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
-					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
+					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));  //ERRORE QUI!!!
 					ScheduleNewEvent(new_event_content.cell, handoff_time, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 				}
 			}
-
 
 			if (state->variable_ta)
 				state->ta = recompute_ta(state->ref_ta, now);
@@ -180,6 +187,8 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			}
 
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
+
+            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: START_CALL fine\n");
 
 			break;
 

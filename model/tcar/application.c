@@ -2,8 +2,6 @@
 
 #include <ROOT-Sim.h>
 
-#include <lookahead.h>
-
 
 #define AGENT_ARRIVAL	1
 #define AGENT_DEPARTURE	2
@@ -18,7 +16,7 @@
 #define THRESHOLD 0.7
 
 #define PROCESSING_TIME 1.0
-#define AUDIT_PERIOD    20 // number of server jobs
+#define AUDIT_PERIOD    10 // number of server jobs
 
 
 typedef struct _lp_state_type 
@@ -40,7 +38,7 @@ unsigned  model_seed=464325;
 //#define BIAS 0.001
 #define BIAS 0.0
 
-#define MAX_REGION	40000
+#define MAX_REGION	30000
 #define MAX_TIME	10.0
 
 typedef struct _model_data
@@ -99,7 +97,6 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
   int target_center;
   simtime_t new_time;
   double value;
-  double delta;
   void *the_state;
 
   if(my_state != NULL)
@@ -130,10 +127,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 		      if(new_msg.x >= SIZE) new_msg.x = SIZE-1;
 		      new_msg.y = (int)(Expent(/*&model_seed,*/SIZE/2));
 		      if(new_msg.y >= SIZE) new_msg.y = SIZE-1;
-			delta = 0.01 * INCREMENT;
-			if(delta < LOOKAHEAD)
-				delta += LOOKAHEAD;
-		      new_time = now + delta;
+		      new_time = now + 0.01*INCREMENT; 
 		      TRACE
 		      printf("schedule agent in (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
 		      recv = coord_to_LP(new_msg.x, new_msg.y);
@@ -167,12 +161,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 
 	      new_msg.x = x;
 	      new_msg.y = y;
-
-	     
-		delta = Expent(/*&model_seed,*/INCREMENT);
-		if(delta < LOOKAHEAD)
-			delta += LOOKAHEAD;
-	      new_time = now + delta;
+	      new_time = now + Expent(/*&model_seed,*/INCREMENT); 
 	      TRACE
 	      printf("schedule agent out (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
 	      
@@ -202,14 +191,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 
 	      if(new_msg.x <0 || new_msg.x >= SIZE) new_msg.x = x;
 	      if(new_msg.y <0 || new_msg.y >= SIZE) new_msg.y = y;
-
-		delta = 0.001 * Expent(/*&model_seed,*/INCREMENT);
-		if(delta < LOOKAHEAD)
-			delta += LOOKAHEAD;
-	
-	      new_time = now + delta;
-
-	
+	      new_time = now + 0.001*Expent(/*&model_seed,*/INCREMENT); 
 
 	      TRACE
 	      printf("schedule agent in (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
