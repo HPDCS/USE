@@ -57,7 +57,7 @@ TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 
 
-all: phold
+all: tcar
 
 pcs: _pcs mm core link
 

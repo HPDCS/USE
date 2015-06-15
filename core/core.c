@@ -23,7 +23,7 @@
 #include "simtypes.h"
 
 
-//#define THROTTLING
+#define THROTTLING
 
 
 

@@ -2,6 +2,8 @@
 
 #include <ROOT-Sim.h>
 
+#include <lookahead.h>
+
 
 #define AGENT_ARRIVAL	1
 #define AGENT_DEPARTURE	2
@@ -97,6 +99,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
   int target_center;
   simtime_t new_time;
   double value;
+  double delta;
   void *the_state;
 
   if(my_state != NULL)
@@ -127,7 +130,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 		      if(new_msg.x >= SIZE) new_msg.x = SIZE-1;
 		      new_msg.y = (int)(Expent(/*&model_seed,*/SIZE/2));
 		      if(new_msg.y >= SIZE) new_msg.y = SIZE-1;
-		      new_time = now + 0.01*INCREMENT; 
+			delta = 0.01 * INCREMENT;
+			if(delta < LOOKAHEAD)
+				delta += LOOKAHEAD;
+		      new_time = now + delta;
 		      TRACE
 		      printf("schedule agent in (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
 		      recv = coord_to_LP(new_msg.x, new_msg.y);
@@ -161,7 +167,12 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 
 	      new_msg.x = x;
 	      new_msg.y = y;
-	      new_time = now + Expent(/*&model_seed,*/INCREMENT); 
+
+	     
+		delta = Expent(/*&model_seed,*/INCREMENT);
+		if(delta < LOOKAHEAD)
+			delta += LOOKAHEAD;
+	      new_time = now + delta;
 	      TRACE
 	      printf("schedule agent out (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
 	      
@@ -191,7 +202,14 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 
 	      if(new_msg.x <0 || new_msg.x >= SIZE) new_msg.x = x;
 	      if(new_msg.y <0 || new_msg.y >= SIZE) new_msg.y = y;
-	      new_time = now + 0.001*Expent(/*&model_seed,*/INCREMENT); 
+
+		delta = 0.001 * Expent(/*&model_seed,*/INCREMENT);
+		if(delta < LOOKAHEAD)
+			delta += LOOKAHEAD;
+	
+	      new_time = now + delta;
+
+	
 
 	      TRACE
 	      printf("schedule agent in (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
