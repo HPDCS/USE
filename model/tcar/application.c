@@ -11,8 +11,9 @@
 #define INITIAL_AGENTS 2
 
 #define INITIAL_JOBS 32
-#define INCREMENT 1.0
+#define INCREMENT 100
 #define TRACE if(0)
+
 #define THRESHOLD 0.7
 
 #define PROCESSING_TIME 1.0
@@ -123,9 +124,9 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 	      printf("INIT on all regions done\n");
 
 	      for(i=0;i<INITIAL_AGENTS;i++){
-		      new_msg.x = (int)(Expent(/*&model_seed,*/SIZE/2));
+		      new_msg.x = (int)(Expent(/*&model_seed,*/INCREMENT));
 		      if(new_msg.x >= SIZE) new_msg.x = SIZE-1;
-		      new_msg.y = (int)(Expent(/*&model_seed,*/SIZE/2));
+		      new_msg.y = (int)(Expent(/*&model_seed,*/INCREMENT));
 		      if(new_msg.y >= SIZE) new_msg.y = SIZE-1;
 		      new_time = now + 0.01*INCREMENT; 
 		      TRACE
@@ -179,12 +180,12 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void 
 	      state[x][y].agents_in--;
 	      state[x][y].agents_passed_through++;
 
-	      if(Expent(/*&model_seed,*/THRESHOLD)>0.5) 
+	      if(Random(/*&model_seed,*/)>0.5) 
 		      new_msg.x = x+1;
 	      else
 		      new_msg.x = x-1;
 		      
-	      if(Expent(/*&model_seed,*/THRESHOLD)>0.4) 
+	      if(Random(/*&model_seed,*/)>0.5) 
 		      new_msg.y = y+1;
 	      else
 		      new_msg.y = y-1;
