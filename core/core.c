@@ -71,12 +71,7 @@ void **states;
 bool *can_stop;
 
 /*
-mauro: puntatore ad array di interi. Viene usato per prendere il lock sul singolo LP
-Questa variabile viene gestita come fosse un lock in cui:
-  0  = free
-  -1 = lock esclusivo
-  n  = lock condiviso tra n processi
-la variabile deve essere gestita in cas
+mauro
 */
 int *lp_lock;
 
@@ -86,12 +81,11 @@ int *wait_time_lk;
 
 bool abbiamounproblema = false; //da cancellare
 
+unsigned int reverse_execution_threshold = 2; //ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+
 
 #define FINE_GRAIN_DEBUG
-/*
-mauro: valore che indica la soglia oltre la quale il throttling perde di efficienza
-*/
-unsigned int reverse_execution_threshold = 2; //ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+
 
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
@@ -191,19 +185,18 @@ void SetState(void *ptr) {
 }
 
 static void process_init_event(void) {
-  unsigned int i;
+    unsigned int i;
 
-  for(i = 0; i < n_prc_tot; i++) {
-    current_lp = i;
-    current_lvt = 0;
-    ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
-    queue_deliver_msgs();
-  }
-
+    ///ma questo lo fa tutto il processo zero?
+    for(i = 0; i < n_prc_tot; i++) {
+        current_lp = i;
+        current_lvt = 0;
+        ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+        queue_deliver_msgs();
+    }
 }
 
-void init(unsigned int _thread_num, unsigned int lps_num)
-{
+void init(unsigned int _thread_num, unsigned int lps_num){
     unsigned int i;
 
     printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
@@ -246,31 +239,12 @@ bool check_termination(void) {
 	return ret;
 }
 
-void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size)
-{
-
-  /*msg_t new_event;
-  bzero(&new_event, sizeof(msg_t));
-
-  while(__sync_lock_test_and_set(&a, 1))
-    while(a);
-  void *ptr;
-  ptr = malloc(event_size);
-  memcpy(ptr, event_content, event_size);
-
-  __sync_lock_release(&a);
-
-  new_event.sender_id = current_lp;
-  new_event.receiver_id = receiver;
-  new_event.timestamp = timestamp;
-  new_event.sender_timestamp = current_lvt;
-  new_event.data = ptr;
-  new_event.data_size = event_size;
-  new_event.type = event_type;
-  new_event.who_generated = tid;
-  */
-
-  queue_insert(receiver, timestamp, event_type, event_content, event_size);
+void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size){
+    if(timestamp<current_lvt){ //da cancellare
+            printf("Ma allora me stai prendendo in giro!!!!\n");
+            abort();
+    }
+    queue_insert(receiver, timestamp, event_type, event_content, event_size);
 }
 
 /**
@@ -303,7 +277,6 @@ int get_lp_lock(unsigned int mode, unsigned int bloc){
 
             if( (old_lk = lp_lock[current_lp]) == 0){
                 if( __sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1)==0 ){
-                    //printf("Io processo %u ho preso il lock esclusivo al tempo %f",tid, current_lvt);
                     return 1;
                }
             }
@@ -394,18 +367,14 @@ void release_lp_lock(){
     }
     old_lk = lp_lock[current_lp];
 
-    if(old_lk == 0) printf("C'è qualche problema con il lock!!!\n");
-
     //metto questo fuori dal ciclo per evitarmi ogni volta il controllo
-    if(old_lk == -1){ //attenzione, se faatto nel momento sbagliato, chiunque puo rilasciare un lock
-         __sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, 0); //non dovrebbe poter fallire perche vorrebbe dire che qualcuno ha toccato un lock gia esclusivo
+    if(old_lk == -1){
+         __sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, 0); ///posso anche non fare il cas perche tanto solo uno alla volta rilascia il lock esclusivo
     }
     else{
          do{
-            if(old_lk > 0){ //questo if si puo evitare se sappiamo che tutto viene usato correttamente
-                    //printf("rilascio lock provo lp_lock[%u]=%d\n",current_lp, old_lk);//da cancellare
+            if(old_lk > 0){///<-non serve questo controllo perche se mi trovo qui sara sempre maggiore di zero
                 if(__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk-1)==old_lk){
-                    //printf("rilascio lock avvenuto  lp_lock[%u]=%d new_lk=%d\n",current_lp, lp_lock[current_lp], new_lk);//da cancellare
                     return;
                 }
             }
@@ -430,11 +399,10 @@ void thread_loop(unsigned int thread_id){
     #endif
 
     tid = thread_id;
-    int cont = 0;///
+    int cont = 0;// da cancellare
 
     while(!stop && !sim_error){
 
-        //printf("il processo %u sta per fare il fetch al tempo %f\n",tid, current_lvt);
         /*FETCH*/
         if(queue_min() == 0){ //while(fetch()==0);
             continue;
@@ -443,34 +411,51 @@ void thread_loop(unsigned int thread_id){
         current_lp = current_msg.receiver_id;   //lp
         current_lvt  = current_msg.timestamp;   //local virtual time
 
-        cont = 0;
+        cont = 0; //da cancellare
 
-        //printf("il processo %u ha preso un evento con tempo %f\n",tid, current_lvt);
 
         while(1){
 
-                cont++;
+                if(current_lvt>105){
+                    printf("W: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti.\n", tid, current_lvt, check_safety());
+                    for(int k; k < n_cores; k++){
+                        printf("W: porcessing[%d] =%e, in_transit[%d]=%e\n", k,get_processing(k),k, get_intransit(k));
+                    }
+                }
+/*
+                cont++;//da cancellare
                 if(0 &&cont!=0 && cont%1000==0){
                     printf("A: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
                     abbiamounproblema = true;
-                    printf("A: porcessing[0] =%f, in_transit[0]=%f\n", get_processing(0), get_intransit(0));
-                    printf("A: porcessing[1] =%f, in_transit[1]=%f\n", get_processing(1), get_intransit(1));
-                    printf("A: porcessing[2] =%f, in_transit[2]=%f\n", get_processing(2), get_intransit(2));
+                    printf("A: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
+                    for(int i; i < n_cores; i++){
+                        printf("A: porcessing[%d] =%f, in_transit[%d]=%f\n", i,get_processing(i),i, get_intransit(i));
+                    }
                     fflush(stdout);
                 }
                 if(0&&abbiamounproblema && cont<100){
                     printf("B: il processo con id %u e tempo %f, è abbiamounproblema\n", tid, current_lvt);
                     abbiamounproblema=false;
-                    printf("B: porcessing[0] =%f, in_transit[0]=%f\n", get_processing(0), get_intransit(0));
-                    printf("B: porcessing[1] =%f, in_transit[1]=%f\n", get_processing(1), get_intransit(1));
-                    printf("B: porcessing[2] =%f, in_transit[2]=%f\n", get_processing(2), get_intransit(2));
+                    printf("B: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
+                    for(int i; i < n_cores; i++){
+                        printf("B: porcessing[%d] =%f, in_transit[%d]=%f\n", i,get_processing(i),i, get_intransit(i));
+                    }
                 }
-
-            //pending_events=check_safety();
+*/
+            //printf("pedn_evt: %u", pending_events);
 
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
-            if(check_safety_old(&pending_events)){//if(pending_events==0){//
+            //if(check_safety_old(&pending_events)){//
+            if((pending_events=check_safety())==0){
+                for(int i; i < n_cores; i++) if(current_lvt > get_processing(i) || current_lvt> get_intransit(i)){
+                    printf("======MA MICA PO ESSE CHE STO QUI====\n");
+                    printf("======il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
+                    for(int i; i < n_cores; i++){
+                    printf("======porcessing[%d] =%f, in_transit[%d]=%e\n", i,get_processing(i),i, get_intransit(i));
+                    }printf("\n");
+                    fflush(stdout);
+                }
                 get_lp_lock(0,1);
 
                 ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
@@ -491,9 +476,8 @@ void thread_loop(unsigned int thread_id){
                     ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
                     throttling(pending_events);
-
-
-                    if(check_safety_old(&pending_events)){//if(check_safety()==0){//
+                    //if(check_safety_old(&pending_events)){//
+                    if(check_safety()==0){
                         _xend();
                         #ifdef FINE_GRAIN_DEBUG
                         __sync_fetch_and_add(&transactional_ex, 1);
@@ -518,25 +502,23 @@ void thread_loop(unsigned int thread_id){
 ///ESECUZIONE REVERSIBILE:
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
             else{
-                //printf("sono in rev 1 con id %u\n", tid);
+                    printf("CHE CAZZO CI FACCIO QUI!!!\n");
                 get_lp_lock(1,1);
 
-                window = create_new_revwin(0);
+                window = create_new_revwin(0); //<-da mettere una volta sola ad inizio esecuzione
                 ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-                finalize_revwin();
+                finalize_revwin();//<- va tolto con il nuovo reverse perche lo fa da solo
 
                 //qui c'era del throttling ma credo abbia poco senso
 
                 continua = false;
 
-                while(!check_safety_old(&pending_events)) {//while(check_safety()!=0) {
+                while(check_safety()!=0) {
+                //while(!check_safety_old(&pending_events)) {//
                     if(wait_time[current_lp]<current_lvt || (wait_time[current_lp]==current_lvt && tid>wait_time_id[current_lp]) ){
-                        //printf("eventi in coda prima dell'undo: %u\n", queue_pool_size());
                         execute_undo_event(window);
-                        queue_clean(); ///<--DA ELIMINARE, E' UNA PROVA
+                        queue_clean();
                         abort_count_reverse++;
-                        //printf("Io processo id=%u rilascio il lock con tempo %f, perche ho letto %f di %u\n. In coda ho %u eventi\n",
-                        //       tid,current_lvt,wait_time[current_lp],wait_time_id[current_lp],queue_pool_size());
                         continua=true;
                         break;
                     }
@@ -545,9 +527,7 @@ void thread_loop(unsigned int thread_id){
                 #ifdef FINE_GRAIN_DEBUG
                 if(!continua)__sync_fetch_and_add(&reversible_ex, 1);
                 #endif
-                free_revwin(window); // <--dove va? Secondo me alla fine dell'ultimo else
-                //printf("Io processo id=%u ho rilasciato il lock con tempo %f\n",tid,current_lvt);
-                //printf("Io processo id=%u il lock ha valore %d\n",tid,lp_lock[current_lp]);
+                free_revwin(window); //<-da spostare a fine esecuzione
 
                 if(continua) continue;
             }

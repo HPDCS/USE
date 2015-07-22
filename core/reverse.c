@@ -337,6 +337,8 @@ void execute_undo_event(void *w) {
 	revcode = win->pointer;
 	((void(*)(void))revcode)();
 
+	///mauro: potremmo svuotare il thread pool qui
+
 	//TODO: gestione dei permessi di esecuzione
 /*	ret = mprotect(revcode, window->size, PROT_WRITE);
 	if(ret < 0) {
