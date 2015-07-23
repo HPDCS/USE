@@ -400,6 +400,8 @@ void thread_loop(unsigned int thread_id){
 
     tid = thread_id;
     int cont = 0;// da cancellare
+    
+    queue_clean();
 
     while(!stop && !sim_error){
 
@@ -415,7 +417,7 @@ void thread_loop(unsigned int thread_id){
 
 
         while(1){
-
+/*
                 if(current_lvt>105){
                     printf("W: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti.\n", tid, current_lvt, check_safety());
                     for(int k; k < n_cores; k++){
@@ -555,16 +557,18 @@ void thread_loop(unsigned int thread_id){
             hill_climbing();
         #endif
 
-        if(tid == _MAIN_PROCESS) {
+        //if(tid == _MAIN_PROCESS) {
             evt_count++;
-            if((evt_count - 100 * (evt_count / 100)) == 0){ //10000
-                printf("TIME: %f", current_lvt);
+            if((evt_count - 10000 * (evt_count / 10000)) == 0){ //10000
+                printf("[%u] TIME: %f",tid, current_lvt);
                 printf(" \tsafety=%d \ttransactional=%d \treversible=%d\n", non_transactional_ex, transactional_ex, reversible_ex);
             }
-        }
+        //}
 
         //printf("Timestamp %f executed\n", evt.timestamp);
     }
+    
+    execution_time(INFTY);
 
     #ifndef FINE_GRAIN_DEBUG
     printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);

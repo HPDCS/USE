@@ -43,7 +43,7 @@ void execution_time(simtime_t time){
 unsigned int check_safety(){
     unsigned int i;
     unsigned int events = 0;
-    simtime_t ctv, otv, min;
+    simtime_t ctv, gvt_temp;
 /*
     check_safety_old(&events);
     return events;
@@ -58,25 +58,26 @@ unsigned int check_safety(){
             //    while(queue_lock);
 
             ctv=current_time_vector[i];
-            otv=outgoing_time_vector[i];
+            //otv=outgoing_time_vector[i];	///l'outgoing_time_vector può essere tolto
 
             //__sync_lock_release(&queue_lock);
 
-            min = (ctv<otv ? ctv : otv);
+            //min = (ctv<otv ? ctv : otv);
 
-            if( current_lvt > min || (current_lvt==min && tid > i) )
+            if( current_lvt > ctv || (current_lvt==ctv && tid > i) )
                 events++;
         }
     }
 
     if(events==0){ ///da cancellare: mi serve solo per dei controlli qui
 		
-		printf("commit: %d\n",current_lvt);
+		//printf("commit: %fn",current_lvt);
 
         if(current_lvt>105 && current_lvt<106){
-            for(int k; k < n_cores; k++){
+            for(int k=0; k < n_cores; k++){
                         printf("G: porcessing[%d] =%e, in_transit[%d]=%e\n", k,get_processing(k),k, get_intransit(k));
                     }
+            fflush(stdout);
         }
         if(gvt>current_lvt){
             printf("NEW: il gvt è %f, il thread %u al tempo %f lo sta violando\n", gvt, tid, current_lvt);
@@ -86,7 +87,13 @@ unsigned int check_safety(){
             printf("-----------------------------------------------------------------\n");
             abort();
         }
-        gvt = current_lvt;
+        //gvt = current_lvt;
+        do{ //aggiornamento del gvt, se non serve si può togliere
+			gvt_temp = gvt;	
+			if(current_lvt<gvt_temp)
+				break; 
+		}while(double_cas(&gvt, gvt_temp, current_lvt)==gvt_temp);
+		
     } //da cancellare
 
     __sync_lock_release(&queue_lock);
@@ -150,18 +157,12 @@ void flush(void) {
     double t_min;
     while(__sync_lock_test_and_set(&queue_lock, 1))
         while(queue_lock);
+        
+	t_min = queue_deliver_msgs();
 
-    unsigned int temp=queue_pool_size();//da cancellare
+	///current_time_vector[tid] += lookahead; //da implementare il lookahead
+	outgoing_time_vector[tid] = t_min;
 
-    t_min = queue_deliver_msgs();
-
-    if(t_min<current_lvt){//da cancellare: mi serve solo per dei controlli qui
-        printf("il thread %u at time %f ha generato %u evento con tempo%f\n", tid, current_lvt,temp,t_min);
-        printf("-----------------------------------------------------------------\n");
-        abort();
-    }
-    outgoing_time_vector[tid] = t_min; //in_transit///ATTENZIONE: LI HO INVERTITI!!!!
-    current_time_vector[tid] = INFTY;  //processing
 
     __sync_lock_release(&queue_lock);
 }

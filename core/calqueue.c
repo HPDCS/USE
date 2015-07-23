@@ -29,7 +29,6 @@ static double	buckettop,
 
 static calqueue_node *calqueue_deq(void);
 
-double minimo_preso=-1;//da cancellare
 
 
 
@@ -272,7 +271,7 @@ void calqueue_init(void) {
 
 void calqueue_put(double timestamp, void *payload) {
 	
-	printf("Sto inserendo nella calqueue un evento con ts %f\n", timestamp);
+	//printf("Sto inserendo nella calqueue un evento con ts %f\n", timestamp);
 
 	int i;
 	calqueue_node *new_node, *traverse;
@@ -334,13 +333,8 @@ void *calqueue_get(void) {
 	payload = node->payload;
 	
 	
-	printf("Sto prendendo dalla calqueue un evento con ts %f\n", node->timestamp);
+	//printf("Sto prendendo dalla calqueue un evento con ts %f\n", node->timestamp);
 
-	if(minimo_preso > node->timestamp){
-        printf("LA CALQUEUE HA TORNATO TS=%f QUANDO PRIMA AVEVA TORNATO %f\n", node->timestamp, minimo_preso);
-        abort();
-    }
-    minimo_preso = node->timestamp;
 
 	free(node);
 

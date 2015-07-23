@@ -58,6 +58,7 @@ void queue_init(void) {
     //queue_clean();
     calqueue_init();
 }
+
 /*
 void queue_register_thread(void)
 {
@@ -123,8 +124,7 @@ double queue_deliver_msgs(void) {
     }
 
     mintime = _thr_pool.min_time;
-    if(_thr_pool._thr_pool_count>0 && mintime==0) mintime=INFTY; ///da risolvere in altro modo
-
+	
     _thr_pool._thr_pool_count = 0;
     _thr_pool.min_time = INFTY;
 
