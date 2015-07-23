@@ -41,7 +41,7 @@ void execution_time(simtime_t time){
 /* autore: Mauro Ianni */
 //da rivedere se cosi va bene rispetto all'originale
 unsigned int check_safety(){
-    unsigned int i;
+    unsigned int i, k;
     unsigned int events = 0;
     simtime_t ctv, gvt_temp;
 /*
@@ -74,15 +74,15 @@ unsigned int check_safety(){
 		//printf("commit: %fn",current_lvt);
 
         if(current_lvt>105 && current_lvt<106){
-            for(int k=0; k < n_cores; k++){
+            for(k=0; k < n_cores; k++){
                         printf("G: porcessing[%d] =%e, in_transit[%d]=%e\n", k,get_processing(k),k, get_intransit(k));
                     }
             fflush(stdout);
         }
         if(gvt>current_lvt){
             printf("NEW: il gvt è %f, il thread %u al tempo %f lo sta violando\n", gvt, tid, current_lvt);
-            for(int k; k < n_cores; k++){
-                        printf("GV: porcessing[%d] =%e, in_transit[%d]=%e\n", k,get_processing(k),k, get_intransit(k));
+            for(k=0; k < n_cores; k++){
+                        printf("GV: processing[%d] =%e, in_transit[%d]=%e\n", k,get_processing(k),k, get_intransit(k));
                     }
             printf("-----------------------------------------------------------------\n");
             abort();
