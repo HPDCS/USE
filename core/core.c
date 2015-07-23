@@ -407,6 +407,7 @@ void thread_loop(unsigned int thread_id){
 
         /*FETCH*/
         if(queue_min() == 0){ //while(fetch()==0);
+			execution_time(INFTY);
             continue;
         }
 
