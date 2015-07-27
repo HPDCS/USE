@@ -62,7 +62,7 @@ static inline revwin *allocate_reverse_window (size_t size) {
 
 	current_revwin = malloc(sizeof(revwin));
 	if(current_revwin == NULL) {
-		perror("Out of memroy!");
+		perror("Out of memroy!\n");
 		abort();
 	}
 

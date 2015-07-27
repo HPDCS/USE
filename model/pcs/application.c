@@ -6,7 +6,7 @@
 #include "application.h"
 
 bool pcs_statistics = false;
-int complete_calls = COMPLETE_CALLS;
+unsigned int complete_calls = COMPLETE_CALLS;//int complete_calls = COMPLETE_CALLS;
 
 
 #define DUMMY_TA 500
@@ -14,9 +14,7 @@ int complete_calls = COMPLETE_CALLS;
 
 void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
 
-    //printf("MYDEBUG-   pcs/application.c/ProcessEvent: Inizio\n");
-
-    int w;
+    unsigned int w;
 
 	event_content_type new_event_content;
 
@@ -44,8 +42,6 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 		case INIT:
 
-            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: INIT inizio\n");
-
 			// Initialize the LP's state
 			state = (lp_state_type *)malloc(sizeof(lp_state_type));
 			if (state == NULL){
@@ -64,7 +60,11 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			state->channels_per_cell = CHANNELS_PER_CELL;
 
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-				p[w] = malloc(sizeof(channel));
+				p[w] = malloc(sizeof(channel));	
+				if(p[w] == NULL){
+					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+					abort();		
+				}
 				*p[w] = 'x';
 			}
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
@@ -72,6 +72,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			}
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
 				p[w] = malloc(sizeof(sir_data_per_cell));
+				if(p[w] == NULL){
+					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+					abort();		
+				}
 				*p[w] = 'x';
 			}
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
@@ -81,7 +85,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			// Show current configuration, only once
 			if(me == 0) {
-				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
+				printf("CURRENT CONFIGURATION:\ncomplete calls: %u\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
 					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
 				fflush(stdout);
 			}
@@ -90,6 +94,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			// Setup channel state
 			state->channel_state = malloc(sizeof(unsigned int) * 2 * (CHANNELS_PER_CELL / BITS + 1));
+			if(state->channel_state == NULL){
+				printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+				abort();		
+			}
 			for (w = 0; w < state->channel_counter / (sizeof(int) * 8) + 1; w++)
 				state->channel_state[w] = 0;
 
@@ -105,14 +113,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 //			}
 //			printf("INIT %d: RECHECK at %f\n", me, timestamp);
 
-            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: INIT fine\n");
-
 			break;
 
 
 		case START_CALL:
-
-            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: START_CALL inizio\n");
 
 			state->arriving_calls++;
 
@@ -187,8 +191,6 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			}
 
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
-
-            //printf("MYDEBUG-   pcs/application.c/ProcessEvent: START_CALL fine\n");
 
 			break;
 
@@ -277,5 +279,6 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 
 	if (snapshot->complete_calls < complete_calls)
 		return false;
+	printf("---SS.CS = %d, CS = %d\n",snapshot->complete_calls, complete_calls);
 	return true;
 }

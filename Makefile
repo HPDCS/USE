@@ -2,7 +2,7 @@
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
-FLAGS=-g -Wall -mrtm -pthread -lm
+FLAGS=-g -Wall -Wextra -mrtm -pthread -lm
 INCLUDE=-I include/ -I mm/ -I core/include/
 
 

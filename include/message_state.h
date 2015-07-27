@@ -7,7 +7,6 @@
 
 /*MAURO, DA ELIMINARE*/
 simtime_t get_processing(unsigned int i);
-simtime_t get_intransit(unsigned int i);
 
 void message_state_init(void);
 
@@ -21,7 +20,6 @@ void min_output_time(simtime_t time);
 void commit_time(void);
 
 // It returns 1 if there is not any other timestamp less than "time" in the timestamps executed and in all outgoing messages.
-unsigned int check_safety();
-int check_safety_old(unsigned int *events);
+unsigned int check_safety(simtime_t time);
 
 #endif

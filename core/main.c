@@ -36,7 +36,7 @@ void start_simulation(unsigned short int number_of_threads)
   printf("MYDEBUG-   main.c/start_simulation: Inizio\n");
   #endif // MYDEBUG
 
-  pthread_t tid[number_of_threads - 1];
+  pthread_t p_tid[number_of_threads - 1];
   int ret, i;
 
   #ifdef MYDEBUG
@@ -46,7 +46,7 @@ void start_simulation(unsigned short int number_of_threads)
   //Child thread
   for(i = 0; i < number_of_threads - 1; i++)
   {
-    if( (ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0)
+    if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0)
     {
       fprintf(stderr, "%s\n", strerror(errno));
       abort();
@@ -61,7 +61,7 @@ void start_simulation(unsigned short int number_of_threads)
   thread_loop(0);
 
   for(i = 0; i < number_of_threads - 1; i++)
-    pthread_join(tid[i], NULL);
+    pthread_join(p_tid[i], NULL);
 
   #ifdef MYDEBUG
   printf("MYDEBUG-   main.c/start_simulation: Fine\n");

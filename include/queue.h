@@ -10,7 +10,6 @@
 
 typedef struct __msg_t msg_t;
 
-
 void queue_init(void);
 
 void queue_insert(unsigned int receiver, double timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
@@ -27,7 +26,7 @@ int fetch(void);
 
 int queue_pending_message_size(void);
 
-double queue_deliver_msgs(void);
+void queue_deliver_msgs(void);
 
 void queue_destroy(void);
 

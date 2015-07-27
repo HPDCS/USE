@@ -71,8 +71,6 @@ simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
-bool abbiamounproblema = false;	//da cancellare
-
 unsigned int reverse_execution_threshold = 2;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
@@ -149,7 +147,7 @@ void throttling(unsigned int events) {
 
 	tick_count = CLOCK_READ();
 	while (true) {
-		if (CLOCK_READ() > tick_count + events * DELTA * delta_count)
+		if (CLOCK_READ() > (tick_count + events * DELTA * delta_count))
 			break;
 	}
 }
@@ -174,7 +172,6 @@ void SetState(void *ptr) {
 static void process_init_event(void) {
 	unsigned int i;
 
-	///ma questo lo fa tutto il processo zero?
 	for (i = 0; i < n_prc_tot; i++) {
 		current_lp = i;
 		current_lvt = 0;
@@ -192,18 +189,24 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	states = malloc(sizeof(void *) * n_prc_tot);
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
 
-	 /*MAURO*/ lp_lock = malloc(sizeof(int) * lps_num);	//mauro: inizializzazione array. Questo dovrebbe bastare a portare tutto a 0
-	wait_time = malloc(sizeof(simtime_t) * lps_num);	//mauro: inizializzazione array. Questo dovrebbe bastare a portare tutto a 0
+	lp_lock = malloc(sizeof(int) * lps_num);
+	wait_time = malloc(sizeof(simtime_t) * lps_num);
 	wait_time_id = malloc(sizeof(unsigned int) * lps_num);
 	wait_time_lk = malloc(sizeof(int) * lps_num);
+		
+	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || wait_time_id == NULL || wait_time_lk == NULL){
+		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+		abort();		
+	}
+	
 	for (i = 0; i < lps_num; i++) {
 		lp_lock[i] = 0;
 		wait_time_id[i] = _thread_num + 1;
 		wait_time[i] = INFTY;
 		wait_time_lk[i] = 0;
+		can_stop[i] = false; //<--non c'era, serve? secondo me si
 	}
 
-	 /*MAURO*/
 #ifndef NO_DYMELOR
 	    dymelor_init();
 #endif
@@ -211,24 +214,19 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	message_state_init();
 	numerical_init();
 
-	//  queue_register_thread();
 	process_init_event();
 }
 
 bool check_termination(void) {
-	int i;
+	unsigned int i;
 	bool ret = true;
 	for (i = 0; i < n_prc_tot; i++) {
-		ret &= can_stop[i];
+		ret &= can_stop[i]; 
 	}
 	return ret;
 }
 
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
-	if (timestamp < current_lvt) {	//da cancellare
-		printf("Ma allora me stai prendendo in giro!!!!\n");
-		abort();
-	}
 	queue_insert(receiver, timestamp, event_type, event_content, event_size);
 }
 
@@ -255,27 +253,25 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 	unsigned int old_tm_id;
 	//cosi facendo il controllo sul "mode" viene fatto una volta sola
 
-	//esclusivo
+///LOCK ESCLUSIVO
 	if (mode) {
 		do {
-			while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) ;	//aspetto di diventare il min
-
 			if ((old_lk = lp_lock[current_lp]) == 0) {
 				if (__sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1) == 0) {
 					return 1;
 				}
 			} else {	//voglio prendere il lock esclusivo ma non posso perche non è libero
 				while (1) {	//PER VEDERE VECCHIA IMPLEMENTAZIONE, ANDARE ALLE VERSIONI PRECEDENTE AL 19 LUGLIO
+					if(wait_time_id[current_lp]==tid)
+						break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
+						
 					while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
 						while (wait_time_lk[current_lp]) ;
 
 					old_tm_id = wait_time_id[current_lp];
-					old_tm = wait_time[current_lp];	//vedo su quell'lp
+					old_tm = wait_time[current_lp];	//può avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
 
-					if (tid == old_tm_id) {
-						__sync_lock_release(&wait_time_lk[current_lp]);
-						break;
-					} else if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
+					if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
 						wait_time[current_lp] = current_lvt;
 						wait_time_id[current_lp] = tid;
 						__sync_lock_release(&wait_time_lk[current_lp]);
@@ -283,34 +279,33 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 					}
 					__sync_lock_release(&wait_time_lk[current_lp]);
 
+					while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) ;	//aspetto di diventare il min
+
 				}
 			}
-			//qui forse devo farlo temporeggiare
 		} while (bloc);
 	}
-	//condiviso
+
+///LOCK CONDIVISO
 	else {
 		do {
 			if ((old_lk = lp_lock[current_lp]) >= 0) {
 				if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk + 1) == old_lk) {
-					//printf("Io processo %u ho preso il lock condiviso al tempo %f",tid, current_lvt);
 					return 1;
 				}
 
-			} else {	//voglio prendere il lock esclusivo ma non posso perche non è libero
-				while (1) {
+			} else {	//voglio prendere il lock condiviso ma non posso perche non è libero
+				while (1) {	//PER VEDERE VECCHIA IMPLEMENTAZIONE, ANDARE ALLE VERSIONI PRECEDENTE AL 19 LUGLIO
+					if(wait_time_id[current_lp]==tid)
+						break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
+						
 					while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
 						while (wait_time_lk[current_lp]) ;
 
 					old_tm_id = wait_time_id[current_lp];
-					old_tm = wait_time[current_lp];	//vedo su quell'lp
+					old_tm = wait_time[current_lp];	//può avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
 
-					if (tid == old_tm_id) {
-						__sync_lock_release(&wait_time_lk[current_lp]);
-						break;
-					}
-
-					else if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
+					if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
 						wait_time[current_lp] = current_lvt;
 						wait_time_id[current_lp] = tid;
 						__sync_lock_release(&wait_time_lk[current_lp]);
@@ -318,9 +313,10 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 					}
 					__sync_lock_release(&wait_time_lk[current_lp]);
 
+					while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) ;	//aspetto di diventare il min
+
 				}
 			}
-			//qui forse devo farlo temporeggiare
 		} while (bloc);
 	}
 
@@ -335,12 +331,12 @@ void release_lp_lock() {
 
 	int old_lk;
 
-	if (wait_time_id[current_lp] == tid) {	//forse posso fare direttamente i cas
+	if (wait_time_id[current_lp] == tid) {
 		while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
 			while (wait_time_lk[current_lp]) ;
 
 		if (wait_time_id[current_lp] == tid) {
-			wait_time_id[current_lp] = n_cores + 1;
+			wait_time_id[current_lp] = n_cores;
 			wait_time[current_lp] = INFTY;
 		}
 		__sync_lock_release(&wait_time_lk[current_lp]);
@@ -350,13 +346,11 @@ void release_lp_lock() {
 
 	//metto questo fuori dal ciclo per evitarmi ogni volta il controllo
 	if (old_lk == -1) {
-		__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, 0);	///posso anche non fare il cas perche tanto solo uno alla volta rilascia il lock esclusivo
+		lp_lock[current_lp] = 0;	///posso anche non fare il cas perche tanto solo uno alla volta rilascia il lock esclusivo
 	} else {
 		do {
-			if (old_lk > 0) {	///<-non serve questo controllo perche se mi trovo qui sara sempre maggiore di zero
-				if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk - 1) == old_lk) {
-					return;
-				}
+			if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk - 1) == old_lk) {
+				return;
 			}
 			old_lk = lp_lock[current_lp];	//mettendono alla fine risparmio una lettura
 		} while (1);
@@ -365,8 +359,7 @@ void release_lp_lock() {
 }
 
 void thread_loop(unsigned int thread_id) {
-	int i;
-	int status;
+	unsigned int status;
 	unsigned int pending_events;
 
 	bool continua;
@@ -374,17 +367,17 @@ void thread_loop(unsigned int thread_id) {
 	revwin *window;
 
 #ifdef FINE_GRAIN_DEBUG
-	unsigned int non_transactional_ex = 0, transactional_ex = 0, reversible_ex = 0;
+	unsigned int non_transactional_ex = 0; 
+	unsigned int transactional_ex = 0;
+	unsigned int reversible_ex = 0;
 #endif
 
 	tid = thread_id;
-	int cont = 0;		// da cancellare
-
-	queue_clean();
 
 	while (!stop && !sim_error) {
 
-		 /*FETCH*/ if (queue_min() == 0) {	//while(fetch()==0);
+		/*FETCH*/
+		if (queue_min() == 0) {
 			execution_time(INFTY);
 			continue;
 		}
@@ -392,53 +385,11 @@ void thread_loop(unsigned int thread_id) {
 		current_lp = current_msg.receiver_id;	//lp
 		current_lvt = current_msg.timestamp;	//local virtual time
 
-		cont = 0;	//da cancellare
-
 		while (1) {
-/*
-                if(current_lvt>105){
-                    printf("W: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti.\n", tid, current_lvt, check_safety());
-                    for(int k; k < n_cores; k++){
-                        printf("W: porcessing[%d] =%e, in_transit[%d]=%e\n", k,get_processing(k),k, get_intransit(k));
-                    }
-                }
-/*
-                cont++;//da cancellare
-                if(0 &&cont!=0 && cont%1000==0){
-                    printf("A: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
-                    abbiamounproblema = true;
-                    printf("A: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
-                    for(int i; i < n_cores; i++){
-                        printf("A: porcessing[%d] =%f, in_transit[%d]=%f\n", i,get_processing(i),i, get_intransit(i));
-                    }
-                    fflush(stdout);
-                }
-                if(0&&abbiamounproblema && cont<100){
-                    printf("B: il processo con id %u e tempo %f, è abbiamounproblema\n", tid, current_lvt);
-                    abbiamounproblema=false;
-                    printf("B: il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
-                    for(int i; i < n_cores; i++){
-                        printf("B: porcessing[%d] =%f, in_transit[%d]=%f\n", i,get_processing(i),i, get_intransit(i));
-                    }
-                }
-*/
-			//printf("pedn_evt: %u", pending_events);
 
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
-			//if(check_safety_old(&pending_events)){//
-			if ((pending_events = check_safety()) == 0) {
-				for (i = 0; i < n_cores; i++) {
-					if (current_lvt > get_processing(i) || current_lvt > get_intransit(i)) {
-						printf("======MA MICA PO ESSE CHE STO QUI====\n");
-						printf("======il processo con id %u e tempo %f, è bloccato nel loop, con %u eventi avanti\n", tid, current_lvt, check_safety());
-						for (i = 0; i < n_cores; i++) {
-							printf("======porcessing[%d] =%f, in_transit[%d]=%e\n", i, get_processing(i), i, get_intransit(i));
-						}
-						printf("\n");
-						fflush(stdout);
-					}
-				}
+			if ((pending_events = check_safety(current_lvt)) == 0) {
 				get_lp_lock(0, 1);
 
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
@@ -459,8 +410,8 @@ void thread_loop(unsigned int thread_id) {
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 					throttling(pending_events);
-					//if(check_safety_old(&pending_events)){//
-					if (check_safety() == 0) {
+					
+					if (check_safety(current_lvt) == 0) {
 						_xend();
 #ifdef FINE_GRAIN_DEBUG
 						__sync_fetch_and_add(&transactional_ex, 1);
@@ -483,19 +434,15 @@ void thread_loop(unsigned int thread_id) {
 ///ESECUZIONE REVERSIBILE:
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 			else {
-				printf("CHE CAZZO CI FACCIO QUI!!!\n");
 				get_lp_lock(1, 1);
 
 				window = create_new_revwin(0);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				finalize_revwin();	//<- va tolto con il nuovo reverse perche lo fa da solo
 
-				//qui c'era del throttling ma credo abbia poco senso
-
 				continua = false;
 
-				while (check_safety() != 0) {
-					//while(!check_safety_old(&pending_events)) {//
+				while (check_safety(current_lvt) != 0) {
 					if (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) {
 						execute_undo_event(window);
 						queue_clean();
@@ -517,18 +464,14 @@ void thread_loop(unsigned int thread_id) {
 
 			break;
 		}
-		 /*FLUSH*/ flush();
+		 /*FLUSH*/ 
+		 flush();
 
-/*    if(queue_pending_message_size())
-      min_output_time(queue_pre_min());
-    commit_time();
-    queue_deliver_msgs();
-  */
 		//Libero la memoria allocata per i dati dell'evento
-//    free(current_msg.data);
+		//    free(current_msg.data);
 
-		can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
-		stop = check_termination();
+		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
+			stop = check_termination();
 
 #ifdef THROTTLING
 		if ((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
@@ -537,23 +480,28 @@ void thread_loop(unsigned int thread_id) {
 
 		//if(tid == _MAIN_PROCESS) {
 		evt_count++;
-		if ((evt_count - 10000 * (evt_count / 10000)) == 0) {	//10000
+		if ((evt_count - 100 * (evt_count / 100)) == 0) {	//10000
 			printf("[%u] TIME: %f", tid, current_lvt);
-			printf(" \tsafety=%d \ttransactional=%d \treversible=%d\n", non_transactional_ex, transactional_ex, reversible_ex);
+			printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", non_transactional_ex, transactional_ex, reversible_ex);
 		}
 		//}
 
-		//printf("Timestamp %f executed\n", evt.timestamp);
 	}
 
 	execution_time(INFTY);
-
-#ifndef FINE_GRAIN_DEBUG
-	printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
-#endif
+	
+	if(sim_error){
+		printf("\n[%u] The execution is ended for an error during the execution\n\n", tid);
+	}else if (stop){
+		printf("\n[%u] The execution is ended correctly\n\n", tid);
+	}
 
 #ifdef FINE_GRAIN_DEBUG
-	printf("Thread %d aborted %llu times for cross check condition, %llu for memory conflicts, and %llu times for waiting thread\n" "Thread %d executed in non-transactional block: %d\n" "Thread %d executed in transactional block: %d\n", tid, abort_count_conflict, abort_count_safety, abort_count_reverse, tid, non_transactional_ex, tid, transactional_ex);
+	printf("Thread %d aborted %llu times for cross check condition, %llu for memory conflicts, and %llu times for waiting thread\n" 
+	"Thread %d executed in non-transactional block: %u\n" 
+	"Thread %d executed in transactional block: %u\n"
+	"Thread %d executed in reversible block: %u\n" 
+	, tid, abort_count_conflict, abort_count_safety, abort_count_reverse, tid, non_transactional_ex, tid, transactional_ex, tid, reversible_ex);
 #endif
 
 }

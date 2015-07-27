@@ -74,4 +74,6 @@ extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int ev
 
 extern void flush(void);
 
+double double_cas(double *addr, double old_val, double new_val);
+
 #endif
