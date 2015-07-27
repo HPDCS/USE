@@ -3,38 +3,34 @@
 
 #include <sys/types.h>
 
-#define REVERSE_WIN_SIZE 1024 * 1024 * 10	//! Defalut size of the reverse window which will contain the reverse code
-#define HMAP_SIZE		32768				//! Default size ot the address hash map to handle colliding mov addresses
+#define REVERSE_WIN_SIZE 1024 * 1024 * 50	//! Defalut size of the reverse window which will contain the reverse code
+#define HMAP_SIZE		32768	//! Default size ot the address hash map to handle colliding mov addresses
 
-#define HMAP_INDEX_MASK		0xffffffc0		//! Most significant 10 bits are used to index quad-word which contains address bit
-#define HMAP_OFFSET_MASK	0x3f			//! Least significant 6 bits are used to intercept address presence
+#define HMAP_INDEX_MASK		0xffffffc0	//! Most significant 10 bits are used to index quad-word which contains address bit
+#define HMAP_OFFSET_MASK	0x3f	//! Least significant 6 bits are used to intercept address presence
 #define HMAP_OFF_MASK_SIZE	6
 
-
 typedef struct _revwin {
-	int size;			//! The actual size of the reverse window
-	int flags;			//! Creation flags
-	int prot;			//! Creation protection flags
+	int size;		//! The actual size of the reverse window
+	int flags;		//! Creation flags
+	int prot;		//! Creation protection flags
 	void *address;		//! Address to which it resides
 	void *pointer;		//! Pointer to the new actual free address memory location
 } revwin;
-
 
 // Hash map to handle repeted MOV-targeted addresses
 typedef struct _addrmap {
 	unsigned long long map[HMAP_SIZE];
 } addrmap;
 
-
 // History of all the reverse windows allocated since the first execution
 typedef struct _eras {
 	revwin *era[1024];	//! Array of the windows
-//	int size;		//! Current size of the history
+//      int size;               //! Current size of the history
 	int last_free;		//! Index of the last available slot
 } eras;
 
-
-extern __thread revwin *current_revwin;		//! Represents the pointer to the current active reverse window
+extern __thread revwin *current_revwin;	//! Represents the pointer to the current active reverse window
 
 /**
  * This will allocate a window on the HEAP of the exefutable file in order
@@ -56,10 +52,10 @@ extern void *create_new_revwin(size_t size);
  *
  * @param window A pointer to a reverse window
  */
-extern void free_revwin (void *window);
+extern void free_revwin(void *window);
 
 extern void execute_undo_event(void *w);
 
-extern void finalize_revwin(void);///MAURO, l'ho aggiunto io ma non so se serve, chiedi ad alessandro
+extern void reset_window(void *window);
 
-#endif //__REVERSE__
+#endif				//__REVERSE__

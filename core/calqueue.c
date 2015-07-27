@@ -298,7 +298,7 @@ void calqueue_put(double timestamp, void *payload) {
 	if (timestamp < lastprio) {
 		lastprio = timestamp;
 		lastbucket = i;
-		buckettop = (double)(i + 1) * cwidth + 0.5 * cwidth;// (double)(i_bt + 1) * cwidth + 0.5 * cwidth;//
+		buckettop = (double)(i_bt + 1) * cwidth + 0.5 * cwidth;//
 	}
 
 	// Double the calendar size if needed

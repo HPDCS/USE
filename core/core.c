@@ -373,6 +373,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 	tid = thread_id;
+	window = create_new_revwin(0);
 
 	while (!stop && !sim_error) {
 
@@ -394,7 +395,7 @@ void thread_loop(unsigned int thread_id) {
 
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 #ifdef FINE_GRAIN_DEBUG
-				__sync_fetch_and_add(&non_transactional_ex, 1);
+				non_transactional_ex++;
 #endif
 				release_lp_lock();
 
@@ -414,7 +415,7 @@ void thread_loop(unsigned int thread_id) {
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 #ifdef FINE_GRAIN_DEBUG
-						__sync_fetch_and_add(&transactional_ex, 1);
+						transactional_ex++;
 #endif
 						release_lp_lock();
 					} else {
@@ -434,11 +435,11 @@ void thread_loop(unsigned int thread_id) {
 ///ESECUZIONE REVERSIBILE:
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 			else {
-				get_lp_lock(1, 1);
+				if(get_lp_lock(1, 0)==0)
+					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
-				window = create_new_revwin(0);	//<-da mettere una volta sola ad inizio esecuzione
+				reset_window(window);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-				finalize_revwin();	//<- va tolto con il nuovo reverse perche lo fa da solo
 
 				continua = false;
 
@@ -454,10 +455,8 @@ void thread_loop(unsigned int thread_id) {
 				release_lp_lock();
 #ifdef FINE_GRAIN_DEBUG
 				if (!continua)
-					__sync_fetch_and_add(&reversible_ex, 1);
+					reversible_ex++;
 #endif
-				free_revwin(window);	//<-da spostare a fine esecuzione
-
 				if (continua)
 					continue;
 			}
@@ -500,8 +499,8 @@ void thread_loop(unsigned int thread_id) {
 	printf("Thread %d aborted %llu times for cross check condition, %llu for memory conflicts, and %llu times for waiting thread\n" 
 	"Thread %d executed in non-transactional block: %u\n" 
 	"Thread %d executed in transactional block: %u\n"
-	"Thread %d executed in reversible block: %u\n" 
-	, tid, abort_count_conflict, abort_count_safety, abort_count_reverse, 
+	"Thread %d executed in reversible block: %u\n", 
+	tid, abort_count_conflict, abort_count_safety, abort_count_reverse, 
 	tid, non_transactional_ex, 
 	tid, transactional_ex, 
 	tid, reversible_ex);
