@@ -153,7 +153,7 @@ void throttling(unsigned int events) {
 }
 
 void hill_climbing(void) {
-	if ((double)abort_count_safety / (double)evt_count < abort_percent && delta_count < HIGHEST_COUNT) {
+	if ( ((double)abort_count_safety / (double)evt_count) < abort_percent && delta_count < HIGHEST_COUNT) {
 		delta_count++;
 		//printf("Incrementing delta_count to %d\n", delta_count);
 	} else {
@@ -501,7 +501,10 @@ void thread_loop(unsigned int thread_id) {
 	"Thread %d executed in non-transactional block: %u\n" 
 	"Thread %d executed in transactional block: %u\n"
 	"Thread %d executed in reversible block: %u\n" 
-	, tid, abort_count_conflict, abort_count_safety, abort_count_reverse, tid, non_transactional_ex, tid, transactional_ex, tid, reversible_ex);
+	, tid, abort_count_conflict, abort_count_safety, abort_count_reverse, 
+	tid, non_transactional_ex, 
+	tid, transactional_ex, 
+	tid, reversible_ex);
 #endif
 
 }

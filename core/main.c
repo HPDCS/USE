@@ -12,89 +12,56 @@
 
 unsigned short int number_of_threads = 1;
 
-void *start_thread(void *args)
-{
-  #ifdef MYDEBUG
-  printf("MYDEBUG-   main.c/start_thread: Inizio\n");
-  #endif // MYDEBUG
+void *start_thread(void *args) {
+	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+	
+	//START THREAD (definita in core.c)
+	thread_loop(tid);
+	
+    printf("Thread %d arrivato a fine start_thread\n", tid);//da cancellare
+	
+	pthread_exit(NULL);
 
-  int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
-
-  //START THREAD (definita in core.c)
-  thread_loop(tid);
-
-  pthread_exit(NULL);
-
-  #ifdef MYDEBUG
-  printf("MYDEBUG-   main.c/start_thread: Fine\n");
-  #endif // MYDEBUG
 }
 
-void start_simulation(unsigned short int number_of_threads)
-{
-  #ifdef MYDEBUG
-  printf("MYDEBUG-   main.c/start_simulation: Inizio\n");
-  #endif // MYDEBUG
+void start_simulation(unsigned short int number_of_threads) {
+    pthread_t p_tid[number_of_threads - 1];
+    int ret, i;
 
-  pthread_t p_tid[number_of_threads - 1];
-  int ret, i;
-
-  #ifdef MYDEBUG
-  printf("MYDEBUG-   main.c/start_simulation: inizio fork\n");
-  #endif // MYDEBUG
-
-  //Child thread
-  for(i = 0; i < number_of_threads - 1; i++)
-  {
-    if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0)
-    {
-      fprintf(stderr, "%s\n", strerror(errno));
-      abort();
+    //Child thread
+    for(i = 0; i < number_of_threads - 1; i++) {
+        if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
+            fprintf(stderr, "%s\n", strerror(errno));
+            abort();
+        }
     }
-  }
 
-  #ifdef MYDEBUG
-  printf("MYDEBUG-   main.c/start_simulation: fine fork\n");
-  #endif // MYDEBUG
+    //Main thread
+    thread_loop(0);
 
-  //Main thread
-  thread_loop(0);
-
-  for(i = 0; i < number_of_threads - 1; i++)
-    pthread_join(p_tid[i], NULL);
-
-  #ifdef MYDEBUG
-  printf("MYDEBUG-   main.c/start_simulation: Fine\n");
-  #endif // MYDEBUG
+    for(i = 0; i < number_of_threads - 1; i++){
+        pthread_join(p_tid[i], NULL);
+    }
 }
 
 int main(int argn, char *argv[]) {
-    #ifdef MYDEBUG
-    printf("MYDEBUG-   main.c/main: Inizio main\n");
-    #endif // MYDEBUG
+    unsigned int n;
 
-  unsigned int n;
+    if(argn < 3) {
+        fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
+        exit(EXIT_FAILURE);
 
-  if(argn < 3) {
-    fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
-    exit(EXIT_FAILURE);
+    } else {
+        n = atoi(argv[1]);
+        init(n, atoi(argv[2]));
+    }
 
-  } else
-  {
-    n = atoi(argv[1]);
-    init(n, atoi(argv[2]));
-  }
+    printf("Start simulation\n");
 
-  printf("Start simulation\n");
+    start_simulation(n);
 
-  start_simulation(n);
+    printf("Simulation ended\n");
 
-  printf("Simulation ended\n");
-
-  #ifdef MYDEBUG
-  printf("MYDEBUG-   main.c/main: Fine main\n");
-  #endif // MYDEBUG
-
-  return 0;
+    return 0;
 }
 
