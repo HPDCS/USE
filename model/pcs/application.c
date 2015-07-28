@@ -5,8 +5,9 @@
 
 #include "application.h"
 
+
+unsigned int limit_complete_calls = COMPLETE_CALLS;//int complete_calls = COMPLETE_CALLS;
 bool pcs_statistics = false;
-unsigned int complete_calls = COMPLETE_CALLS;//int complete_calls = COMPLETE_CALLS;
 
 
 #define DUMMY_TA 500
@@ -86,7 +87,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			// Show current configuration, only once
 			if(me == 0) {
 				printf("CURRENT CONFIGURATION:\ncomplete calls: %u\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
-					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
+					COMPLETE_CALLS, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
 				fflush(stdout);
 			}
 
@@ -198,6 +199,9 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			state->channel_counter++;
 			state->complete_calls++;
+			
+			
+//			printf("%u\n", state->channel_counter);
 //			deallocation(me, state, event_content->channel, event_content, now);
 
 			break;
@@ -276,9 +280,11 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
+	printf("°°°SS.CS = %u\n",snapshot->complete_calls);
 
-	if (snapshot->complete_calls < complete_calls)
+	if (snapshot->complete_calls < COMPLETE_CALLS){
 		return false;
-	printf("---SS.CS = %d, CS = %d\n",snapshot->complete_calls, complete_calls);
+	}
+	printf("---SS.CS = %u, CS = %u\n",snapshot->complete_calls, COMPLETE_CALLS);
 	return true;
 }

@@ -55,9 +55,6 @@ void thread_loop(unsigned int thread_id);
 extern void rootsim_error(bool fatal, const char *msg, ...);
 
 
-
-extern unsigned int n_prc_tot;
-
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
 
@@ -75,5 +72,7 @@ extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int ev
 extern void flush(void);
 
 double double_cas(double *addr, double old_val, double new_val);
+
+void print_report(void);
 
 #endif

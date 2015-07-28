@@ -75,6 +75,14 @@ unsigned int reverse_execution_threshold = 2;	//ho messo un valore a caso, ma sa
 
 #define FINE_GRAIN_DEBUG
 
+//forse da cancellare
+unsigned int * committed_safe;
+unsigned int * committed_htm;
+unsigned int * committed_reverse;
+unsigned int * abort_unsafety;
+unsigned int * abort_conflict;
+unsigned int * abort_waiting;
+
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
 	va_list args;
@@ -153,7 +161,7 @@ void throttling(unsigned int events) {
 }
 
 void hill_climbing(void) {
-	if ( ((double)abort_count_safety / (double)evt_count) < abort_percent && delta_count < HIGHEST_COUNT) {
+	if ( ((double)abort_unsafety[tid] / (double)evt_count) < abort_percent && delta_count < HIGHEST_COUNT) {
 		delta_count++;
 		//printf("Incrementing delta_count to %d\n", delta_count);
 	} else {
@@ -162,7 +170,7 @@ void hill_climbing(void) {
 		}
 */ }
 
-	abort_percent = (double)abort_count_safety / (double)evt_count;
+	abort_percent = (double)abort_unsafety[tid] / (double)evt_count;
 }
 
 void SetState(void *ptr) {
@@ -193,10 +201,30 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	wait_time = malloc(sizeof(simtime_t) * lps_num);
 	wait_time_id = malloc(sizeof(unsigned int) * lps_num);
 	wait_time_lk = malloc(sizeof(int) * lps_num);
+	
+	//forse non servono
+	committed_safe = malloc(sizeof(unsigned int) * n_cores);
+	committed_htm = malloc(sizeof(unsigned int) * n_cores);
+	committed_reverse = malloc(sizeof(unsigned int) * n_cores);
+	abort_unsafety = malloc(sizeof(unsigned int) * n_cores);
+	abort_waiting = malloc(sizeof(unsigned int) * n_cores);
+	abort_conflict = malloc(sizeof(unsigned int) * n_cores);
 		
-	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || wait_time_id == NULL || wait_time_lk == NULL){
+	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || 
+		wait_time_id == NULL || wait_time_lk == NULL ||
+		committed_htm == NULL || committed_reverse == NULL || committed_safe == NULL || 
+		abort_conflict == NULL || abort_unsafety == NULL || abort_waiting == NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();		
+	}
+	
+	for (i = 0; i < n_cores; i++) {
+		committed_safe[i] = 0;
+		committed_htm[i] = 0;
+		committed_reverse[i] = 0;
+		abort_unsafety[i] = 0;
+		abort_waiting[i] = 0;
+		abort_conflict[i] = 0;
 	}
 	
 	for (i = 0; i < lps_num; i++) {
@@ -228,6 +256,79 @@ bool check_termination(void) {
 
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 	queue_insert(receiver, timestamp, event_type, event_content, event_size);
+}
+
+void print_report(void){
+	unsigned int i;
+	unsigned int tot_committed = 0;
+	unsigned int tot_committed_safe = 0;
+	unsigned int tot_committed_htm = 0;
+	unsigned int tot_committed_reverse = 0;
+			
+	unsigned int tot_abort = 0;
+	unsigned int tot_abort_unsafety = 0;
+	unsigned int tot_abort_conflict = 0;
+	unsigned int tot_abort_waiting = 0;
+			
+	printf("\n\n|\tTID\t|\tSafe\t|\tHtm\t|\tRevers\t|\tTOTAL\t|\n");
+	printf("|---------------|---------------|---------------|---------------|---------------|\n");
+	for(i = 0; i < n_cores; i++){
+		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n", i, committed_safe[i], committed_htm[i], committed_reverse[i], (committed_safe[i]+committed_htm[i]+committed_reverse[i]) );
+		tot_committed += (committed_safe[i]+committed_htm[i]+committed_reverse[i]);
+		tot_committed_safe += committed_safe[i];
+		tot_committed_htm += committed_htm[i];
+		tot_committed_reverse += committed_reverse[i];
+	}
+	printf("|---------------|---------------|---------------|---------------|---------------|\n");
+	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
+	
+	printf("\n\n|\tTID\t|\tUnsafe\t|\tConfl\t|\tWait\t|\tTOTAL\t|\n");
+	printf("|---------------|---------------|---------------|---------------|---------------|\n");
+	for(i = 0; i < n_cores; i++){
+		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n", i, abort_unsafety[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
+		tot_abort_unsafety += abort_unsafety[i];
+		tot_abort_conflict += abort_conflict[i];
+		tot_abort_waiting += abort_waiting[i];
+	}
+	printf("|---------------|---------------|---------------|---------------|---------------|\n");
+	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n\n", tot_abort_unsafety, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
+}
+
+//per ora non viene usato:
+//L'idea è di mettere un unico thread con lo scopo di regolare le variabili
+void *tuning(void *args){
+	unsigned int committed, old_committed, throughput, old_throughput, last_op, i;
+	
+	
+	while(!stop && !sim_error){
+		sleep(1);
+		throughput=0;
+		for(i = 0; i <	n_cores; i++)
+			committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
+		throughput = committed - old_committed;
+		if(throughput > old_throughput){
+			if(last_op==1)
+				delta_count++;
+			else
+				delta_count--;
+		}else if(throughput < old_throughput){
+			if(last_op==1){
+				delta_count--;
+				last_op=0;
+			}
+			else{
+				delta_count++;
+				last_op=1;
+			}	
+		}
+		old_committed = committed;
+		old_throughput = throughput;
+		
+		printf("Delta ha raggiunto il valore %u", delta_count);
+	}
+	
+	
+	pthread_exit(NULL);
 }
 
 /**
@@ -359,18 +460,11 @@ void release_lp_lock() {
 }
 
 void thread_loop(unsigned int thread_id) {
-	unsigned int status;
-	unsigned int pending_events;
+	unsigned int status, pending_events, i;
 
 	bool continua;
 
-	revwin *window;
-
-#ifdef FINE_GRAIN_DEBUG
-	unsigned int non_transactional_ex = 0; 
-	unsigned int transactional_ex = 0;
-	unsigned int reversible_ex = 0;
-#endif
+	revwin *window; //fallo diventare un array di reverse window istanziato nell'init
 
 	tid = thread_id;
 	window = create_new_revwin(0);
@@ -392,11 +486,8 @@ void thread_loop(unsigned int thread_id) {
 ///non ci sono problemi quindi eseguo normalmente*/
 			if ((pending_events = check_safety(current_lvt)) == 0) {
 				get_lp_lock(0, 1);
-
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-#ifdef FINE_GRAIN_DEBUG
-				non_transactional_ex++;
-#endif
+				committed_safe[tid]++;
 				release_lp_lock();
 
 			}
@@ -414,9 +505,7 @@ void thread_loop(unsigned int thread_id) {
 					
 					if (check_safety(current_lvt) == 0) {
 						_xend();
-#ifdef FINE_GRAIN_DEBUG
-						transactional_ex++;
-#endif
+						committed_htm[tid]++;
 						release_lp_lock();
 					} else {
 						_xabort(_ROLLBACK_CODE);
@@ -424,9 +513,9 @@ void thread_loop(unsigned int thread_id) {
 				} else {	//se il commit della transazione fallisce, finisce qui
 					status = _XABORT_CODE(status);
 					if (status == _ROLLBACK_CODE)
-						abort_count_conflict++;
+						abort_conflict[tid]++;
 					else
-						abort_count_safety++;
+						abort_unsafety[tid]++;
 					release_lp_lock();
 					continue;
 				}
@@ -443,11 +532,11 @@ void thread_loop(unsigned int thread_id) {
 
 				continua = false;
 
-				while (check_safety(current_lvt) != 0) {
+				while (check_safety(current_lvt) > 0) {
 					if (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) {
 						execute_undo_event(window);
 						queue_clean();
-						abort_count_reverse++;
+						abort_waiting[tid]++;
 						continua = true;
 						break;
 					}
@@ -455,7 +544,7 @@ void thread_loop(unsigned int thread_id) {
 				release_lp_lock();
 #ifdef FINE_GRAIN_DEBUG
 				if (!continua)
-					reversible_ex++;
+					committed_reverse[tid]++;
 #endif
 				if (continua)
 					continue;
@@ -481,7 +570,7 @@ void thread_loop(unsigned int thread_id) {
 		evt_count++;
 		if ((evt_count - 100 * (evt_count / 100)) == 0) {	//10000
 			printf("[%u] TIME: %f", tid, current_lvt);
-			printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", non_transactional_ex, transactional_ex, reversible_ex);
+			printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
 		}
 		//}
 
@@ -490,20 +579,21 @@ void thread_loop(unsigned int thread_id) {
 	execution_time(INFTY);
 	
 	if(sim_error){
-		printf("\n[%u] The execution is ended for an error during the execution\n\n", tid);
+		printf("\n[%u] Execution ended for an error\n\n", tid);
 	}else if (stop){
-		printf("\n[%u] The execution is ended correctly\n\n", tid);
+		printf("\n[%u] Execution ended correctly\n\n", tid);
 	}
 
-#ifdef FINE_GRAIN_DEBUG
-	printf("Thread %d aborted %llu times for cross check condition, %llu for memory conflicts, and %llu times for waiting thread\n" 
+/*
+	printf("Thread %d aborted %u times for cross check condition, %u for memory conflicts, and %u times for waiting thread\n" 
 	"Thread %d executed in non-transactional block: %u\n" 
 	"Thread %d executed in transactional block: %u\n"
 	"Thread %d executed in reversible block: %u\n", 
-	tid, abort_count_conflict, abort_count_safety, abort_count_reverse, 
-	tid, non_transactional_ex, 
-	tid, transactional_ex, 
-	tid, reversible_ex);
-#endif
+	tid, abort_conflict[tid], abort_unsafety[tid], abort_waiting[tid], 
+	tid, committed_safe[tid], 
+	tid, committed_htm[tid], 
+	tid, committed_reverse[tid]);
+*/
 
+	if(tid==0) print_report();
 }

@@ -61,6 +61,8 @@ int main(int argn, char *argv[]) {
     start_simulation(n);
 
     printf("Simulation ended\n");
+    
+    print_report();
 
     return 0;
 }
