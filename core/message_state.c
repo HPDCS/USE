@@ -43,30 +43,12 @@ unsigned int check_safety(simtime_t time){
     unsigned int events;
     
     events = 0;
-    //while(__sync_lock_test_and_set(&queue_lock, 1)) while(queue_lock); // da cancellare
 
     for(i = 0; i < n_cores; i++){
         if(i!=tid && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i)))
             events++;
     }
-/*
-    if(events==0){ ///da cancellare: mi serve solo per dei controlli qui
-		
-		if(gvt>current_lvt){
-            printf("GVT: il gvt e' %f, il thread %u al tempo %f lo sta violando\n", gvt, tid, current_lvt);
-            for(i=0; i < n_cores; i++){
-                        printf("GVT: processing[%d] =%e\n",get_processing(i),i);
-                    }
-            printf("GVT: -----------------------------------------------------------------\n");
-            abort();
-        }
-        gvt=current_lvt;
 
-    } //da cancellare
-
-    __sync_lock_release(&queue_lock); // da cancellare
-
-*/
     return events;
 }
 

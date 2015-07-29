@@ -71,7 +71,7 @@ simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
-unsigned int reverse_execution_threshold = 2;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 0;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
@@ -259,13 +259,10 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 }
 
 void print_report(void){
-	unsigned int i;
-	unsigned int tot_committed = 0;
+	unsigned int i;;
 	unsigned int tot_committed_safe = 0;
 	unsigned int tot_committed_htm = 0;
 	unsigned int tot_committed_reverse = 0;
-			
-	unsigned int tot_abort = 0;
 	unsigned int tot_abort_unsafety = 0;
 	unsigned int tot_abort_conflict = 0;
 	unsigned int tot_abort_waiting = 0;
@@ -274,7 +271,6 @@ void print_report(void){
 	printf("|---------------|---------------|---------------|---------------|---------------|\n");
 	for(i = 0; i < n_cores; i++){
 		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n", i, committed_safe[i], committed_htm[i], committed_reverse[i], (committed_safe[i]+committed_htm[i]+committed_reverse[i]) );
-		tot_committed += (committed_safe[i]+committed_htm[i]+committed_reverse[i]);
 		tot_committed_safe += committed_safe[i];
 		tot_committed_htm += committed_htm[i];
 		tot_committed_reverse += committed_reverse[i];
@@ -460,7 +456,7 @@ void release_lp_lock() {
 }
 
 void thread_loop(unsigned int thread_id) {
-	unsigned int status, pending_events, i;
+	unsigned int status, pending_events;
 
 	bool continua;
 
@@ -484,7 +480,7 @@ void thread_loop(unsigned int thread_id) {
 
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
-			if ((pending_events = check_safety(current_lvt)) == 0) {
+			if ((pending_events = check_safety(current_lvt)) == -1) {
 				get_lp_lock(0, 1);
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				committed_safe[tid]++;

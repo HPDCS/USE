@@ -200,6 +200,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			state->channel_counter++;
 			state->complete_calls++;
 			
+			printf("%u\n",state->complete_calls);
 			
 //			printf("%u\n", state->channel_counter);
 //			deallocation(me, state, event_content->channel, event_content, now);
@@ -280,8 +281,6 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
-	printf("°°°SS.CS = %u\n",snapshot->complete_calls);
-
 	if (snapshot->complete_calls < COMPLETE_CALLS){
 		return false;
 	}

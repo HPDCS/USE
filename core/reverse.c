@@ -23,6 +23,8 @@ static __thread addrmap hashmap;	//! Map of the referenced addresses
  * @param size Instruction's size (in bytes)
  */
 static inline void add_reverse_insn(revwin * win, unsigned char *bytes, size_t size) {
+	
+	int i;
 
 	// since the structure is used as a stack, it is needed to create room for the instruction
 	win->pointer = (void *)((char *)win->pointer - size);
@@ -30,10 +32,14 @@ static inline void add_reverse_insn(revwin * win, unsigned char *bytes, size_t s
 	// printf("=> Attempt to write on the window heap at <%#08lx> (%d bytes)\n", win->pointer, size);
 
 	if (win->pointer < win->address) {
-		perror("insufficent reverse window memory heap!");
+		fprintf(stderr, "insufficent reverse window memory heap!");
 		exit(-ENOMEM);
 	}
 	// TODO: add timestamp conditional selector
+	
+	for(i = 0; i < size; i++)
+		printf("%02x ", bytes[i]);
+	printf("\n");
 
 	// copy the instructions to the heap
 	memcpy(win->pointer, bytes, size);
@@ -113,10 +119,9 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 
 	// create the MOV to store the destination address movabs $0x11223344aabbccdd,%rax: 48 b8 dd cc bb aa 44 33 22 11
 	memcpy(movabs + 2, &address, 8);
-	add_reverse_insn(w, movabs, 10);
 
 	// create the new MOV instruction accordingly to the data size
-	mov[0] = (uint64_t) 0;
+//	mov[0] = (uint64_t) 0;
 	switch (size) {
 	case 1:		// BYTE
 		// this is the case of the movb $0x00,(%rax): c6 00 00
@@ -151,34 +156,35 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 		// more than 32 bits width; therefore we need two successive mov instructions
 		// to transfer the upper and bottom part of the value through the 32 bits immediate
 		// movq: 48 c7 00 25  00 00 00 00  00 00 00 00
-		mov[0] = mov2[0] = 0x48;
-		mov[1] = mov2[1] = 0xc7;
-		mov[2] = mov2[2] = 0x00;
+		mov[0] = mov2[0] = 0xc7;
+		mov[1] = mov2[1] = 0x00;
 
 		least_significant_bits = (uint32_t) value;
 
 		//mov[4] = (uint32_t) value;
-		memcpy(mov + 3, &least_significant_bits, 4);
+		memcpy(mov + 2, &least_significant_bits, 4);
 
 		// second part
-		least_significant_bits = (value >> 32) & 0x0000FFFF;
-		memcpy(mov2 + 3, &least_significant_bits, 4);
-		mov_size = 7;
+		least_significant_bits = (value >> 32) & 0x0FFFFFFFF;
+		memcpy(mov2 + 2, &least_significant_bits, 4);
+		mov_size = 6;
 		break;
 
 	default:
 		// mmmm....
+		abort();
 		return;
 	}
 
 	// now 'mov' contains the bytes that represents the reverse MOV
 	// hence it has to be written on the heap reverse window
 	add_reverse_insn(w, mov, mov_size);
+	add_reverse_insn(w, movabs, 10);
 	if (size == 8) {
 		address += 4;
 		memcpy(movabs + 2, &address, 8);
-		add_reverse_insn(w, movabs, 10);
 		add_reverse_insn(w, mov2, mov_size);
+		add_reverse_insn(w, movabs, 10);
 	}
 }
 
@@ -193,7 +199,7 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 static inline int is_address_referenced(void *address) {
 	int idx;
 	char offset;
-
+	
 	// TODO: how to handle full map?
 
 	idx = ((unsigned long long)address & HMAP_INDEX_MASK) >> HMAP_OFF_MASK_SIZE;
@@ -224,9 +230,7 @@ void reverse_code_generator(void *address, unsigned int size) {
 	double revgen_time;
 	timer reverse_instruction_generation;
 
-	//printf("reverse_code_generator at <%#08llx> (%d bytes)\n", address, size);
-
-	timer_start(reverse_instruction_generation);
+//	timer_start(reverse_instruction_generation);
 
 	// check if the address is already be referenced, in that case it is not necessary
 	// to compute again the reverse instruction, since the former MOV is the one
@@ -254,6 +258,8 @@ void reverse_code_generator(void *address, unsigned int size) {
 		value = *((uint64_t *) address);
 		break;
 	}
+	
+//	printf("reverse_code_generator at <%p> %d bytes value %lx\n", address, size, value);
 
 	// now the idea is to generate the reverse MOV instruction that will
 	// restore the previous value 'value' stored in the memory address
@@ -284,7 +290,7 @@ void free_revwin(void *w) {
 }
 
 void execute_undo_event(void *w) {
-	char push = 0x50;
+	unsigned char push = 0x50;
 	revwin *win = (revwin *) w;
 	void *revcode;
 
