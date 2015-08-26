@@ -36,11 +36,11 @@ static inline void add_reverse_insn(revwin * win, unsigned char *bytes, size_t s
 		exit(-ENOMEM);
 	}
 	// TODO: add timestamp conditional selector
-	
+/*	
 	for(i = 0; i < size; i++)
 		printf("%02x ", bytes[i]);
 	printf("\n");
-
+*/
 	// copy the instructions to the heap
 	memcpy(win->pointer, bytes, size);
 }
@@ -200,14 +200,17 @@ static inline int is_address_referenced(void *address) {
 	int idx;
 	char offset;
 	
+	return 0;//da cancellare
+	
 	// TODO: how to handle full map?
 
 	idx = ((unsigned long long)address & HMAP_INDEX_MASK) >> HMAP_OFF_MASK_SIZE;
+	//idx = ((unsigned long long)address & 0xffffffffffffffc0) >> HMAP_OFF_MASK_SIZE;
 	offset = (unsigned long long)address & HMAP_OFFSET_MASK;
 
 	// Closure
 	idx %= HMAP_SIZE;
-	offset %= 64;
+	offset %= 64; //address non può essere al piu 63? che senso ha questa operazione?
 
 	// if the address is not reference yet, insert it and return 0 (false)
 	if ((hashmap.map[idx] >> offset) == 0) {
@@ -229,6 +232,8 @@ void reverse_code_generator(void *address, unsigned int size) {
 	uint64_t value;
 	double revgen_time;
 	timer reverse_instruction_generation;
+	
+	//printf("+++++++%p\n", address);
 
 //	timer_start(reverse_instruction_generation);
 

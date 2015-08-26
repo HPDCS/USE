@@ -35,15 +35,14 @@
 
 #define HILL_EPSILON_GREEDY	0.05
 #define HILL_CLIMB_EVALUATE	500
-#define DELTA 500		// tick count
-#define HIGHEST_COUNT	5
-__thread int delta_count = 0;
-__thread double abort_percent = 1.0;
+//#define DELTA 300		// tick count = 500
+//#define HIGHEST_COUNT	5
+
+//int delta_count = 0;//__thread int delta_count = 0;
+//__thread double abort_percent = 1.0;
 
 __thread simtime_t current_lvt = 0;
-
 __thread unsigned int current_lp = 0;
-
 __thread unsigned int tid = 0;
 
 __thread unsigned long long evt_count = 0;
@@ -71,7 +70,7 @@ simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
-unsigned int reverse_execution_threshold = 0;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 2;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
@@ -82,6 +81,9 @@ unsigned int * committed_reverse;
 unsigned int * abort_unsafety;
 unsigned int * abort_conflict;
 unsigned int * abort_waiting;
+
+//Durata media di un evento in cicli di clock
+__thread unsigned long long event_clocks; //Questo poteva essere un valore globale, ma in questo modo ci evitiamo l'aggiornamento atomico, con prestazioni comunque simili
 
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
@@ -147,19 +149,16 @@ void _mkdir(const char *path) {
 
 void throttling(unsigned int events) {
 	long long tick_count;
-	//register int i;
-
-	if (delta_count == 0)
-		return;
-	//for(i = 0; i < 1000; i++);
-
-	tick_count = CLOCK_READ();
+	
+	//tick_count = CLOCK_READ()+ events * DELTA * delta_count;
+	tick_count = CLOCK_READ()+ (events-1) * event_clocks; //in questo modo sto 
 	while (true) {
-		if (CLOCK_READ() > (tick_count + events * DELTA * delta_count))
+		if (CLOCK_READ() > tick_count)
 			break;
 	}
 }
 
+/*
 void hill_climbing(void) {
 	if ( ((double)abort_unsafety[tid] / (double)evt_count) < abort_percent && delta_count < HIGHEST_COUNT) {
 		delta_count++;
@@ -168,10 +167,10 @@ void hill_climbing(void) {
 /*		if(random() / RAND_MAX < HILL_EPSILON_GREEDY) {
 			delta_count /= (random() / RAND_MAX) * 10 + 1;
 		}
-*/ }
-
+*//* }
 	abort_percent = (double)abort_unsafety[tid] / (double)evt_count;
 }
+*/
 
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
@@ -196,6 +195,8 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	n_prc_tot = lps_num;
 	states = malloc(sizeof(void *) * n_prc_tot);
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
+	
+	event_clocks = 0;
 
 	lp_lock = malloc(sizeof(int) * lps_num);
 	wait_time = malloc(sizeof(simtime_t) * lps_num);
@@ -267,62 +268,72 @@ void print_report(void){
 	unsigned int tot_abort_conflict = 0;
 	unsigned int tot_abort_waiting = 0;
 			
-	printf("\n\n|\tTID\t|\tSafe\t|\tHtm\t|\tRevers\t|\tTOTAL\t|\n");
-	printf("|---------------|---------------|---------------|---------------|---------------|\n");
+	printf("\n\n|\tTID\t|\tSafe\t|\tHtm\t|\tRevers\t||\tTOTAL\t|\n");
+	printf("|---------------|---------------|---------------|---------------||--------------|\n");
 	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n", i, committed_safe[i], committed_htm[i], committed_reverse[i], (committed_safe[i]+committed_htm[i]+committed_reverse[i]) );
+		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, committed_safe[i], committed_htm[i], committed_reverse[i], (committed_safe[i]+committed_htm[i]+committed_reverse[i]) );
 		tot_committed_safe += committed_safe[i];
 		tot_committed_htm += committed_htm[i];
 		tot_committed_reverse += committed_reverse[i];
 	}
-	printf("|---------------|---------------|---------------|---------------|---------------|\n");
-	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
+	printf("|---------------|---------------|---------------|---------------||--------------|\n");
+	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
 	
-	printf("\n\n|\tTID\t|\tUnsafe\t|\tConfl\t|\tWait\t|\tTOTAL\t|\n");
-	printf("|---------------|---------------|---------------|---------------|---------------|\n");
+	printf("\n\n|\tTID\t|\tUnsafe\t|\tConfl\t|\tWait\t||\tTOTAL\t|\n");
+	printf("|---------------|---------------|---------------|---------------||--------------|\n");
 	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n", i, abort_unsafety[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
+		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, abort_unsafety[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
 		tot_abort_unsafety += abort_unsafety[i];
 		tot_abort_conflict += abort_conflict[i];
 		tot_abort_waiting += abort_waiting[i];
 	}
-	printf("|---------------|---------------|---------------|---------------|---------------|\n");
-	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\n\n", tot_abort_unsafety, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
+	printf("|---------------|---------------|---------------|---------------||--------------|\n");
+	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n\n", tot_abort_unsafety, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
 }
+
+
 
 //per ora non viene usato:
 //L'idea è di mettere un unico thread con lo scopo di regolare le variabili
+/*
 void *tuning(void *args){
 	unsigned int committed, old_committed, throughput, old_throughput, last_op, i;
+	old_throughput = 0;
+	last_op=0;
+	unsigned int delta = 1;
 	
 	
 	while(!stop && !sim_error){
-		sleep(1);
-		throughput=0;
+		sleep(2);
+		throughput = 0;
+		committed = 0;
+		
 		for(i = 0; i <	n_cores; i++)
 			committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
 		throughput = committed - old_committed;
 		if(throughput > old_throughput){
 			if(last_op==1)
-				delta_count++;
+				delta_count+=delta;
 			else
-				delta_count--;
+				delta_count-=delta;
 		}else if(throughput < old_throughput){
 			if(last_op==1){
-				delta_count--;
+				delta_count-=delta;
 				last_op=0;
 			}
 			else{
-				delta_count++;
+				delta_count+=delta;
 				last_op=1;
 			}	
 		}
 		old_committed = committed;
 		old_throughput = throughput;
 		
-		printf("Delta ha raggiunto il valore %u", delta_count);
+		if(delta_count<0) delta_count=0;
+		
+		printf("Throughput %u : Delta : %d\n", throughput, delta_count);
 	}
-	
+	printf("Esecuzione del tuning terminata\n");
 	
 	pthread_exit(NULL);
 }
@@ -457,6 +468,8 @@ void release_lp_lock() {
 
 void thread_loop(unsigned int thread_id) {
 	unsigned int status, pending_events;
+	
+	long long t_pre, t_post;// per throttling
 
 	bool continua;
 
@@ -480,10 +493,16 @@ void thread_loop(unsigned int thread_id) {
 
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
-			if ((pending_events = check_safety(current_lvt)) == -1) {
-				get_lp_lock(0, 1);
+			if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+				if(check_safety(current_lvt)==0)
+					get_lp_lock(0, 1);
+				else
+					get_lp_lock(1, 1);
+				t_pre = CLOCK_READ();// per throttling
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+				t_post = CLOCK_READ();// per throttling
 				committed_safe[tid]++;
+				event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
 				release_lp_lock();
 
 			}
@@ -528,7 +547,7 @@ void thread_loop(unsigned int thread_id) {
 
 				continua = false;
 
-				while (check_safety(current_lvt) > 0) {
+				while (check_safety_lookahead(current_lvt) > 0) {
 					if (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) {
 						execute_undo_event(window);
 						queue_clean();
@@ -557,14 +576,14 @@ void thread_loop(unsigned int thread_id) {
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
-#ifdef THROTTLING
-		if ((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
-			hill_climbing();
-#endif
+//#ifdef THROTTLING
+//		if ((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
+//			hill_climbing();
+//#endif
 
 		//if(tid == _MAIN_PROCESS) {
 		evt_count++;
-		if ((evt_count - 100 * (evt_count / 100)) == 0) {	//10000
+		if ((evt_count - 500 * (evt_count / 500)) == 0) {	//10000
 			printf("[%u] TIME: %f", tid, current_lvt);
 			printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
 		}
@@ -579,17 +598,4 @@ void thread_loop(unsigned int thread_id) {
 	}else if (stop){
 		printf("\n[%u] Execution ended correctly\n\n", tid);
 	}
-
-/*
-	printf("Thread %d aborted %u times for cross check condition, %u for memory conflicts, and %u times for waiting thread\n" 
-	"Thread %d executed in non-transactional block: %u\n" 
-	"Thread %d executed in transactional block: %u\n"
-	"Thread %d executed in reversible block: %u\n", 
-	tid, abort_conflict[tid], abort_unsafety[tid], abort_waiting[tid], 
-	tid, committed_safe[tid], 
-	tid, committed_htm[tid], 
-	tid, committed_reverse[tid]);
-*/
-
-	if(tid==0) print_report();
 }

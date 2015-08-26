@@ -75,4 +75,6 @@ double double_cas(double *addr, double old_val, double new_val);
 
 void print_report(void);
 
+void *tuning(void *args);
+
 #endif

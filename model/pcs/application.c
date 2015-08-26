@@ -196,13 +196,14 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			break;
 
 		case END_CALL:
+		
+			//printf(" state è all'indirizzo              \t%p  =========================================\n", state);
+			//printf(" channel_counte = %u all'indirizzo  \t%p  =========================================\n", state->channel_counter, &(state->channel_counter));
+			//printf(" complete_calls = %u all'indirizzo  \t%p  =========================================\n", state->complete_calls, &(state->complete_calls));
 
 			state->channel_counter++;
 			state->complete_calls++;
 			
-			printf("%u\n",state->complete_calls);
-			
-//			printf("%u\n", state->channel_counter);
 //			deallocation(me, state, event_content->channel, event_content, now);
 
 			break;

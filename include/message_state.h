@@ -22,4 +22,6 @@ void commit_time(void);
 // It returns 1 if there is not any other timestamp less than "time" in the timestamps executed and in all outgoing messages.
 unsigned int check_safety(simtime_t time);
 
+unsigned int check_safety_lookahead(simtime_t time);
+
 #endif

@@ -43,12 +43,28 @@ unsigned int check_safety(simtime_t time){
     unsigned int events;
     
     events = 0;
-
+    
     for(i = 0; i < n_cores; i++){
         if(i!=tid && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i)))
             events++;
     }
+    
+    return events;
+}
 
+unsigned int check_safety_lookahead(simtime_t time){
+    unsigned int i;
+    unsigned int events;
+    double lookahead = 0; //questo dovrebbe essere un valore della simulazione
+    
+    time-=lookahead;//invece di sommarlo ogni volta al tempo che sto studiando, lo sottraggo a time una volta sola
+    events = 0;
+    
+    for(i = 0; i < n_cores; i++){
+        if(i!=tid && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i)))
+            events++;
+    }
+    
     return events;
 }
 
