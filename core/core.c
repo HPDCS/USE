@@ -38,7 +38,7 @@
 //#define DELTA 300		// tick count = 500
 //#define HIGHEST_COUNT	5
 
-//int delta_count = 0;//__thread int delta_count = 0;
+double delta_count = 0.5;//__thread int delta_count = 0;
 //__thread double abort_percent = 1.0;
 
 __thread simtime_t current_lvt = 0;
@@ -151,7 +151,7 @@ void throttling(unsigned int events) {
 	long long tick_count;
 	
 	//tick_count = CLOCK_READ()+ events * DELTA * delta_count;
-	tick_count = CLOCK_READ()+ (events-1) * event_clocks; //in questo modo sto 
+	tick_count = CLOCK_READ()+ events * event_clocks * delta_count; //in questo modo sto 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
 			break;
@@ -295,44 +295,82 @@ void print_report(void){
 
 //per ora non viene usato:
 //L'idea è di mettere un unico thread con lo scopo di regolare le variabili
-/*
+
 void *tuning(void *args){
-	unsigned int committed, old_committed, throughput, old_throughput, last_op, i;
+	unsigned int committed, old_committed, throughput, old_throughput, last_op, field, i;
 	old_throughput = 0;
-	last_op=0;
-	unsigned int delta = 1;
+	last_op = 1;
+	field = 1; // 0 sta per delta_count ed 1 sta per reverse_execution_threshold 
+	double delta = 0.1;
+	unsigned int change_direction = 0;
+	unsigned int right_direction = 0;
 	
 	
 	while(!stop && !sim_error){
-		sleep(2);
+		sleep(5);
 		throughput = 0;
 		committed = 0;
 		
 		for(i = 0; i <	n_cores; i++)
 			committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
 		throughput = committed - old_committed;
+		
+		//gestisco eventuali cambi di direzione
 		if(throughput > old_throughput){
-			if(last_op==1)
-				delta_count+=delta;
-			else
-				delta_count-=delta;
-		}else if(throughput < old_throughput){
-			if(last_op==1){
-				delta_count-=delta;
-				last_op=0;
-			}
-			else{
-				delta_count+=delta;
-				last_op=1;
-			}	
+			right_direction++;
+			if(right_direction>1) 
+				change_direction = 0;	
+		}else{ //poichè ho visto un peggioramento, inverto la direzione
+			last_op=~last_op; 
+			change_direction++;
+			right_direction = 0;	
 		}
+		
+		/* UNDO THRESHOLD */
+		if(field == 1){
+			if(last_op==1) 
+				reverse_execution_threshold++;
+			else 
+				reverse_execution_threshold--; 
+			if(reverse_execution_threshold < 1){ 
+				reverse_execution_threshold = 1;
+				change_direction++;
+				right_direction = 0;
+			}
+			else if(reverse_execution_threshold > n_cores){ 
+				reverse_execution_threshold = n_cores;
+				change_direction++;
+				right_direction = 0;
+			}
+			printf("Throughput %u : Threshold : %u\n", throughput, reverse_execution_threshold);
+		}
+		/* DELTA THROTTLING */
+		else{
+			if(last_op==1) 
+				delta_count+=delta;
+			else 
+				delta_count-=delta;
+			if(delta_count<0){ 
+				delta_count=0;
+				change_direction++;
+				right_direction = 0;
+			}	
+			printf("Throughput %u : Delta : %f\n", throughput, delta_count);
+		}
+		
+		//gestisco stabilizzazione
+		if(change_direction >= 3){
+			printf("Mi sono stabilizzato\n");
+			change_direction = 0;
+			right_direction = 0;
+			last_op=0; //dovrei fare in modo che sia coerente con quella vista prima
+			field=~field;			
+		}	
+				
 		old_committed = committed;
 		old_throughput = throughput;
-		
-		if(delta_count<0) delta_count=0;
-		
-		printf("Throughput %u : Delta : %d\n", throughput, delta_count);
 	}
+
 	printf("Esecuzione del tuning terminata\n");
 	
 	pthread_exit(NULL);
@@ -486,7 +524,8 @@ void thread_loop(unsigned int thread_id) {
 			continue;
 		}
 
-		current_lp = current_msg.receiver_id;	//lp
+		//lvt ed lp dell'evento corrente
+		current_lp = current_msg.receiver_id;	//identificatore lp
 		current_lvt = current_msg.timestamp;	//local virtual time
 
 		while (1) {

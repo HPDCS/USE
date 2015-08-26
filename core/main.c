@@ -25,7 +25,7 @@ void *start_thread(void *args) {
 }
 
 void start_simulation(unsigned short int number_of_threads) {
-    pthread_t p_tid[number_of_threads - 1];//pthread_t p_tid[number_of_threads];//
+    pthread_t p_tid[number_of_threads];//pthread_t p_tid[number_of_threads - 1];//
     int ret, i;
 
     //Child thread
@@ -36,10 +36,10 @@ void start_simulation(unsigned short int number_of_threads) {
         }
     }
     
-   // if( (ret = pthread_create(&p_tid[number_of_threads - 1], NULL, tuning, NULL)) != 0) {
-   //     fprintf(stderr, "%s\n", strerror(errno));
-   //     abort();
-   // }
+   if( (ret = pthread_create(&p_tid[number_of_threads - 1], NULL, tuning, NULL)) != 0) {
+       fprintf(stderr, "%s\n", strerror(errno));
+       abort();
+   }
 
     //Main thread
     thread_loop(0);
