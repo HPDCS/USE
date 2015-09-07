@@ -70,7 +70,7 @@ simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
-unsigned int reverse_execution_threshold = 2;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 20;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
@@ -425,7 +425,7 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 					}
 					__sync_lock_release(&wait_time_lk[current_lp]);
 
-					while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) ;	//aspetto di diventare il min
+					while (bloc &&( wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]))) ;	//aspetto di diventare il min
 
 				}
 			}
@@ -459,7 +459,7 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 					}
 					__sync_lock_release(&wait_time_lk[current_lp]);
 
-					while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) ;	//aspetto di diventare il min
+					while (bloc &&( wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]))) ;	//aspetto di diventare il min
 
 				}
 			}
@@ -477,7 +477,7 @@ void release_lp_lock() {
 
 	int old_lk;
 
-	if (wait_time_id[current_lp] == tid) {
+	if (wait_time_id[current_lp] == tid) { //rifaccio questo controllo anche prima del lock, in modo da evitarlo nel caso non sia necessario
 		while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
 			while (wait_time_lk[current_lp]) ;
 
@@ -596,11 +596,10 @@ void thread_loop(unsigned int thread_id) {
 					}
 				}
 				release_lp_lock();
-#ifdef FINE_GRAIN_DEBUG
+
 				if (!continua)
 					committed_reverse[tid]++;
-#endif
-				if (continua)
+				else
 					continue;
 			}
 

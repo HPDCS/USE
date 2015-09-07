@@ -285,6 +285,6 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	if (snapshot->complete_calls < COMPLETE_CALLS){
 		return false;
 	}
-	printf("---SS.CS = %u, CS = %u\n",snapshot->complete_calls, COMPLETE_CALLS);
+	//printf("---SS.CS = %u, CS = %u\n",snapshot->complete_calls, COMPLETE_CALLS);
 	return true;
 }
