@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
 
 #include <ROOT-Sim.h>
 #include <dymelor.h>
@@ -70,7 +71,7 @@ simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
-unsigned int reverse_execution_threshold = 20;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 2;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
@@ -150,7 +151,6 @@ void _mkdir(const char *path) {
 void throttling(unsigned int events) {
 	long long tick_count;
 	
-	//tick_count = CLOCK_READ()+ events * DELTA * delta_count;
 	tick_count = CLOCK_READ()+ events * event_clocks * delta_count; //in questo modo sto 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
@@ -406,6 +406,7 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 				if (__sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1) == 0) {
 					return 1;
 				}
+				
 			} else {	//voglio prendere il lock esclusivo ma non posso perche non è libero
 				while (1) {	//PER VEDERE VECCHIA IMPLEMENTAZIONE, ANDARE ALLE VERSIONI PRECEDENTE AL 19 LUGLIO
 					if(wait_time_id[current_lp]==tid)
@@ -425,7 +426,7 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 					}
 					__sync_lock_release(&wait_time_lk[current_lp]);
 
-					while (bloc &&( wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]))) ;	//aspetto di diventare il min
+					while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]));//aspetto di diventare il min
 
 				}
 			}
@@ -438,7 +439,7 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 			if ((old_lk = lp_lock[current_lp]) >= 0) {
 				if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk + 1) == old_lk) {
 					return 1;
-				}
+				}				
 
 			} else {	//voglio prendere il lock condiviso ma non posso perche non è libero
 				while (1) {	//PER VEDERE VECCHIA IMPLEMENTAZIONE, ANDARE ALLE VERSIONI PRECEDENTE AL 19 LUGLIO
@@ -458,8 +459,10 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 						break;
 					}
 					__sync_lock_release(&wait_time_lk[current_lp]);
-
-					while (bloc &&( wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]))) ;	//aspetto di diventare il min
+					
+					
+					while ( wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]));	//aspetto di diventare il min
+					//printf("\e[31m:%u: waiting B %u con tempo %f\033[0m;\n", tid, current_lp, current_lvt);
 
 				}
 			}
@@ -474,21 +477,7 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 * @author Mauro Ianni
 */
 void release_lp_lock() {
-
-	int old_lk;
-
-	if (wait_time_id[current_lp] == tid) { //rifaccio questo controllo anche prima del lock, in modo da evitarlo nel caso non sia necessario
-		while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
-			while (wait_time_lk[current_lp]) ;
-
-		if (wait_time_id[current_lp] == tid) {
-			wait_time_id[current_lp] = n_cores;
-			wait_time[current_lp] = INFTY;
-		}
-		__sync_lock_release(&wait_time_lk[current_lp]);
-
-	}
-	old_lk = lp_lock[current_lp];
+	int old_lk = lp_lock[current_lp];
 
 	//metto questo fuori dal ciclo per evitarmi ogni volta il controllo
 	if (old_lk == -1) {
@@ -501,13 +490,28 @@ void release_lp_lock() {
 			old_lk = lp_lock[current_lp];	//mettendono alla fine risparmio una lettura
 		} while (1);
 	}
+}
 
+void release_waiting_ticket(){
+	if (wait_time_id[current_lp] == tid) { //rifaccio questo controllo anche prima del lock, in modo da evitarlo nel caso non sia necessario
+		while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
+			while (wait_time_lk[current_lp]) ;
+
+		if (wait_time_id[current_lp] == tid) {
+			wait_time_id[current_lp] = UINT_MAX;
+			wait_time[current_lp] = INFTY;
+		}
+		__sync_lock_release(&wait_time_lk[current_lp]);
+
+	}
 }
 
 void thread_loop(unsigned int thread_id) {
 	unsigned int status, pending_events;
 	
 	long long t_pre, t_post;// per throttling
+	
+	int riprovo=0;
 
 	bool continua;
 
@@ -527,14 +531,16 @@ void thread_loop(unsigned int thread_id) {
 		//lvt ed lp dell'evento corrente
 		current_lp = current_msg.receiver_id;	//identificatore lp
 		current_lvt = current_msg.timestamp;	//local virtual time
-
+		
 		while (1) {
+			
 
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
 			if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+				//printf("%u SAF \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 				if(check_safety(current_lvt)==0)
-					get_lp_lock(0, 1);
+					get_lp_lock(0, 1); //get_lp_lock(0, 1);
 				else
 					get_lp_lock(1, 1);
 				t_pre = CLOCK_READ();// per throttling
@@ -548,6 +554,7 @@ void thread_loop(unsigned int thread_id) {
 ///ESECUZNE HTM:
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
 			else if (pending_events < reverse_execution_threshold) {	//questo controllo è da migliorare
+				//printf("%u HTM \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 
 				get_lp_lock(0, 1);
 
@@ -578,6 +585,7 @@ void thread_loop(unsigned int thread_id) {
 ///ESECUZIONE REVERSIBILE:
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 			else {
+				//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 				if(get_lp_lock(1, 0)==0)
 					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
@@ -595,29 +603,25 @@ void thread_loop(unsigned int thread_id) {
 						break;
 					}
 				}
+				
 				release_lp_lock();
+				
 
 				if (!continua)
 					committed_reverse[tid]++;
 				else
 					continue;
+				
 			}
 
 			break;
 		}
-		 /*FLUSH*/ 
-		 flush();
-
-		//Libero la memoria allocata per i dati dell'evento
-		//    free(current_msg.data);
-
+		release_waiting_ticket();
+		/*FLUSH*/ 
+		flush();
+		
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
-
-//#ifdef THROTTLING
-//		if ((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
-//			hill_climbing();
-//#endif
 
 		//if(tid == _MAIN_PROCESS) {
 		evt_count++;
