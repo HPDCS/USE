@@ -587,13 +587,13 @@ void thread_loop(unsigned int thread_id) {
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
-		//if(tid == _MAIN_PROCESS) {
+		if(tid == _MAIN_PROCESS) {
 		evt_count++;
-		if ((evt_count - 500 * (evt_count / 500)) == 0) {	//10000
-			printf("[%u] TIME: %f", tid, current_lvt);
-			printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
+			if ((evt_count - 1000 * (evt_count / 1000)) == 0) {	//10000
+				printf("[%u] TIME: %f", tid, current_lvt);
+				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
+			}
 		}
-		//}
 
 	}
 
