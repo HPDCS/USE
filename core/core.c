@@ -71,7 +71,7 @@ simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
-unsigned int reverse_execution_threshold = 10;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 5;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
@@ -397,79 +397,43 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 	int old_lk;
 	simtime_t old_tm;
 	unsigned int old_tm_id;
-	//cosi facendo il controllo sul "mode" viene fatto una volta sola
-
-///LOCK ESCLUSIVO
-	if (mode) {
-		do {
-			if ((old_lk = lp_lock[current_lp]) == 0) {
-				if (__sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1) == 0) {
-					return 1;
-				}
+	
+	do{
+		///ESCLUSIVO
+		if (mode && (old_lk = lp_lock[current_lp]) == 0) {
+			if (__sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1) == 0)
+				return 1;		
+		
+		///CONDIVISO
+		}else if (!mode && (old_lk = lp_lock[current_lp]) >= 0) {
+			if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk + 1) == old_lk)
+				return 1;
+		
+		///PRENOTAZIONE
+		}else {	//voglio prendere il lock ma non posso perche non è libero
+			if(wait_time_id[current_lp]==tid)
+				break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
+					
+			while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
+				while (wait_time_lk[current_lp]) ;
 				
-			} else {	//voglio prendere il lock esclusivo ma non posso perche non è libero
-				while (1) {	//PER VEDERE VECCHIA IMPLEMENTAZIONE, ANDARE ALLE VERSIONI PRECEDENTE AL 19 LUGLIO
-					if(wait_time_id[current_lp]==tid)
-						break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
-						
-					while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
-						while (wait_time_lk[current_lp]) ;
-
-					old_tm_id = wait_time_id[current_lp];
-					old_tm = wait_time[current_lp];	//può avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
-
-					if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
-						wait_time[current_lp] = current_lvt;
-						wait_time_id[current_lp] = tid;
-						__sync_lock_release(&wait_time_lk[current_lp]);
-						break;
-					}
-					__sync_lock_release(&wait_time_lk[current_lp]);
-
-					while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]));//aspetto di diventare il min
-
-				}
+			old_tm_id = wait_time_id[current_lp];
+			old_tm = wait_time[current_lp];	//può avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
+			
+			if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
+				wait_time[current_lp] = current_lvt;
+				wait_time_id[current_lp] = tid;
+				__sync_lock_release(&wait_time_lk[current_lp]);
+				break;
 			}
-		} while (bloc);
-	}
-
-///LOCK CONDIVISO
-	else {
-		do {
-			if ((old_lk = lp_lock[current_lp]) >= 0) {
-				if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk + 1) == old_lk) {
-					return 1;
-				}				
-
-			} else {	//voglio prendere il lock condiviso ma non posso perche non è libero
-				while (1) {	//PER VEDERE VECCHIA IMPLEMENTAZIONE, ANDARE ALLE VERSIONI PRECEDENTE AL 19 LUGLIO
-					if(wait_time_id[current_lp]==tid)
-						break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
-						
-					while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
-						while (wait_time_lk[current_lp]) ;
-
-					old_tm_id = wait_time_id[current_lp];
-					old_tm = wait_time[current_lp];	//può avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
-
-					if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
-						wait_time[current_lp] = current_lvt;
-						wait_time_id[current_lp] = tid;
-						__sync_lock_release(&wait_time_lk[current_lp]);
-						break;
-					}
-					__sync_lock_release(&wait_time_lk[current_lp]);
-					
-					
-					while ( wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp]));	//aspetto di diventare il min
-					//printf("\e[31m:%u: waiting B %u con tempo %f\033[0m;\n", tid, current_lp, current_lvt);
-
-				}
-			}
-		} while (bloc);
-	}
-
-	return 0;		//arriva qui solo se il lock è non bloccante e non ha potuto prenderlo
+			__sync_lock_release(&wait_time_lk[current_lp]);
+			
+			while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && wait_time_id[current_lp] < tid) );//aspetto di diventare il min
+		}
+		
+	}while(bloc);
+	
+	return 0;
 
 }
 
@@ -553,7 +517,7 @@ void thread_loop(unsigned int thread_id) {
 			}
 ///ESECUZNE HTM:
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
-			else if (pending_events < reverse_execution_threshold) {	//questo controllo è da migliorare
+			else if (pending_events < reverse_execution_threshold) {	
 				//printf("%u HTM \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 
 				get_lp_lock(0, 1);
