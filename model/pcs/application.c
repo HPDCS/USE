@@ -283,7 +283,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	if (snapshot->complete_calls < COMPLETE_CALLS){
-		printf("%u: ---SS.CS = %u, CS = %u\n",me,snapshot->complete_calls, COMPLETE_CALLS);
+		//printf("%u: ---SS.CS = %u, CS = %u\n",me,snapshot->complete_calls, COMPLETE_CALLS);
 		return false;
 	}
 	//printf("---SS.CS = %u, CS = %u\n",snapshot->complete_calls, COMPLETE_CALLS);
