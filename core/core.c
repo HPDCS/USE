@@ -376,9 +376,7 @@ void *tuning(void *args){
 	pthread_exit(NULL);
 }
 
-/**
-* @author Mauro Ianni
-*/
+
 
 double double_cas(double *addr, double old_val, double new_val) {
 	long long res;
@@ -388,9 +386,11 @@ double double_cas(double *addr, double old_val, double new_val) {
 	return UNION_CAST(res, double);
 }
 
-/**
-* @author Mauro Ianni
-*/
+int check_waiting(){
+	return (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && wait_time_id[current_lp] < tid));
+		
+}
+
 int get_lp_lock(unsigned int mode, unsigned int bloc) {
 //mode  0=condiviso      1=esclusivo
 //bloc  0=non bloccante  1=bloccante
@@ -428,7 +428,8 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 			}
 			__sync_lock_release(&wait_time_lk[current_lp]);
 			
-			while (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && wait_time_id[current_lp] < tid) );//aspetto di diventare il min
+			if(bloc)	
+				while ( check_waiting() );//aspetto di diventare il min
 		}
 		
 	}while(bloc);
@@ -437,9 +438,7 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 
 }
 
-/**
-* @author Mauro Ianni
-*/
+
 void release_lp_lock() {
 	int old_lk = lp_lock[current_lp];
 
@@ -559,7 +558,7 @@ void thread_loop(unsigned int thread_id) {
 				continua = false;
 
 				while (check_safety_lookahead(current_lvt) > 0) {
-					if (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && tid > wait_time_id[current_lp])) {
+					if ( check_waiting() ) {
 						execute_undo_event(window);
 						queue_clean();
 						abort_waiting[tid]++;
