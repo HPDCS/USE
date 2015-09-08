@@ -472,7 +472,7 @@ void release_waiting_ticket(){
 void thread_loop(unsigned int thread_id) {
 	unsigned int status, pending_events;
 	
-	long long t_pre, t_post;// per throttling
+	unsigned long long t_pre, t_post;// per throttling
 	
 	int riprovo=0;
 
@@ -572,6 +572,7 @@ void thread_loop(unsigned int thread_id) {
 
 				if (!continua)
 					committed_reverse[tid]++;
+
 				else
 					continue;
 				
