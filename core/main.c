@@ -7,6 +7,7 @@
 #include <errno.h>
 
 #include <core.h>
+#include <timer.h>
 
 
 
@@ -51,6 +52,7 @@ void start_simulation(unsigned short int number_of_threads) {
 
 int main(int argn, char *argv[]) {
     unsigned int n;
+    timer exec_time;
 
     if(argn < 3) {
         fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
@@ -63,9 +65,10 @@ int main(int argn, char *argv[]) {
 
     printf("Start simulation\n");
 
+    timer_start(exec_time);
     start_simulation(n);
 
-    printf("Simulation ended\n");
+    printf("Simulation ended: %f seconds\n", timer_value_seconds(exec_time));
     
     print_report();
 
