@@ -5,7 +5,7 @@
 #include <sched.h>
 #include <pthread.h>
 #include <string.h>
-#include <immintrin.h>
+#include <immintrin.h> //supporto transazionale
 #include <stdarg.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -84,6 +84,8 @@ unsigned int * abort_conflict;
 unsigned int * abort_waiting;
 unsigned int * abort_cachefull;
 unsigned int * abort_debug;
+unsigned int * abort_generic;
+unsigned int * abort_nested;
 
 //Durata media di un evento in cicli di clock
 __thread unsigned long long event_clocks; //Questo poteva essere un valore globale, ma in questo modo ci evitiamo l'aggiornamento atomico, con prestazioni comunque simili
@@ -214,6 +216,8 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	abort_conflict = malloc(sizeof(unsigned int) * n_cores);
 	abort_cachefull = malloc(sizeof(unsigned int) * n_cores);
 	abort_debug = malloc(sizeof(unsigned int) * n_cores);
+	abort_generic = malloc(sizeof(unsigned int) * n_cores);
+	abort_nested = malloc(sizeof(unsigned int) * n_cores);
 		
 	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || 
 		wait_time_id == NULL || wait_time_lk == NULL ||
@@ -232,6 +236,8 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 		abort_conflict[i] = 0;
 		abort_cachefull[i] = 0;
 		abort_debug[i] = 0;
+		abort_generic[i] = 0;
+		abort_nested[i] = 0;
 	}
 	
 	for (i = 0; i < lps_num; i++) {
@@ -275,6 +281,8 @@ void print_report(void){
 	unsigned int tot_abort_waiting = 0;
 	unsigned int tot_abort_cahcefull = 0;
 	unsigned int tot_abort_debug = 0;
+	unsigned int tot_abort_generic = 0;
+	unsigned int tot_abort_nested = 0;
 			
 	printf("\n\n|\tTID\t||\tSafe\t|\tHtm\t|\tRevers\t||\tTOTAL\t|\n");
 	printf("|---------------||--------------|---------------|---------------||--------------|\n");
@@ -287,18 +295,20 @@ void print_report(void){
 	printf("|---------------||--------------|---------------|---------------||--------------|\n");
 	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
 	
-	printf("\n\n|\tTID\t||\tUnsafe\t|\tCacFull\t|\tDebug\t|\tGenerc\t||\tWait\t|   |\tTOTAL\t|\n");
-	printf("|---------------||--------------|---------------|---------------|---------------||--------------|   |-----------|\n");
+	printf("\n\n|\tTID\t||\tUnsafe\t|\tCacFull\t|\tDebug\t|\tConfli\t|\tNested\t|\tGenric\t||\tWait\t|   |\tTOTAL\t|\n");
+	printf("|---------------||--------------|---------------|---------------|---------------|---------------|---------------||--------------|   |-----------|\n");
 	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n", i, abort_unsafety[i], abort_cachefull[i], abort_debug[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
+		printf("|\t[%u]\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n", i, abort_unsafety[i], abort_cachefull[i], abort_debug[i], abort_conflict[i],abort_nested[i], abort_generic[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
 		tot_abort_unsafety += abort_unsafety[i];
 		tot_abort_conflict += abort_conflict[i];
 		tot_abort_waiting += abort_waiting[i];
 		tot_abort_cahcefull += abort_cachefull[i];
 		tot_abort_debug += abort_debug[i];
+		tot_abort_nested += abort_nested[i];
+		tot_abort_generic += abort_generic[i];
 	}
-	printf("|---------------||--------------|---------------|---------------|---------------||--------------|   |-----------|\n");
-	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
+	printf("|---------------||--------------|---------------|---------------|---------------|---------------|---------------||--------------|   |-----------|\n");
+	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_nested, tot_abort_generic, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
 }
 
 
@@ -481,7 +491,7 @@ void release_waiting_ticket(){
 
 void thread_loop(unsigned int thread_id) {
 	unsigned int status, pending_events;
-	
+		
 	unsigned long long t_pre, t_post;// per throttling
 	
 	bool continua;
@@ -543,15 +553,18 @@ void thread_loop(unsigned int thread_id) {
 						_xabort(_ROLLBACK_CODE);
 					}
 				} else {	//se il commit della transazione fallisce, finisce qui
-					status = _XABORT_CODE(status);
-					if (status == _ROLLBACK_CODE)
-						abort_unsafety[tid]++;
-					if (status == _XABORT_CAPACITY)
+					if (status & _XABORT_CAPACITY)
 						abort_cachefull[tid]++;
-					if (status == _XABORT_DEBUG)
+					else if (status & _XABORT_DEBUG)
 						abort_debug[tid]++;
-					else //generico
+					else if (status & _XABORT_CONFLICT) //generico
 						abort_conflict[tid]++;
+					else if (_XABORT_CODE(status) == _ROLLBACK_CODE)
+						abort_unsafety[tid]++;
+					else{
+						//printf("%u ", status);
+						abort_generic[tid]++;
+					}
 					release_lp_lock();
 					continue;
 				}
