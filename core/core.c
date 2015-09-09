@@ -82,6 +82,8 @@ unsigned int * committed_reverse;
 unsigned int * abort_unsafety;
 unsigned int * abort_conflict;
 unsigned int * abort_waiting;
+unsigned int * abort_cachefull;
+unsigned int * abort_debug;
 
 //Durata media di un evento in cicli di clock
 __thread unsigned long long event_clocks; //Questo poteva essere un valore globale, ma in questo modo ci evitiamo l'aggiornamento atomico, con prestazioni comunque simili
@@ -210,6 +212,8 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	abort_unsafety = malloc(sizeof(unsigned int) * n_cores);
 	abort_waiting = malloc(sizeof(unsigned int) * n_cores);
 	abort_conflict = malloc(sizeof(unsigned int) * n_cores);
+	abort_cachefull = malloc(sizeof(unsigned int) * n_cores);
+	abort_debug = malloc(sizeof(unsigned int) * n_cores);
 		
 	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || 
 		wait_time_id == NULL || wait_time_lk == NULL ||
@@ -226,6 +230,8 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 		abort_unsafety[i] = 0;
 		abort_waiting[i] = 0;
 		abort_conflict[i] = 0;
+		abort_cachefull[i] = 0;
+		abort_debug[i] = 0;
 	}
 	
 	for (i = 0; i < lps_num; i++) {
@@ -267,6 +273,8 @@ void print_report(void){
 	unsigned int tot_abort_unsafety = 0;
 	unsigned int tot_abort_conflict = 0;
 	unsigned int tot_abort_waiting = 0;
+	unsigned int tot_abort_cahcefull = 0;
+	unsigned int tot_abort_debug = 0;
 			
 	printf("\n\n|\tTID\t|\tSafe\t|\tHtm\t|\tRevers\t||\tTOTAL\t|\n");
 	printf("|---------------|---------------|---------------|---------------||--------------|\n");
@@ -279,16 +287,18 @@ void print_report(void){
 	printf("|---------------|---------------|---------------|---------------||--------------|\n");
 	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
 	
-	printf("\n\n|\tTID\t|\tUnsafe\t|\tConfl\t|\tWait\t||\tTOTAL\t|\n");
-	printf("|---------------|---------------|---------------|---------------||--------------|\n");
+	printf("\n\n|\tTID\t|\tUnsafe\t|\tCacheFull\t|\tConfl\t|\tWait\t||\tTOTAL\t|\n");
+	printf("|---------------|---------------|---------------|---------------|---------------|---------------||--------------|\n");
 	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, abort_unsafety[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
+		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, abort_unsafety[i], abort_cachefull[i], abort_debug[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
 		tot_abort_unsafety += abort_unsafety[i];
 		tot_abort_conflict += abort_conflict[i];
 		tot_abort_waiting += abort_waiting[i];
+		tot_abort_cahcefull += abort_cachefull[i];
+		tot_abort_debug += abort_debug[i];
 	}
-	printf("|---------------|---------------|---------------|---------------||--------------|\n");
-	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n\n", tot_abort_unsafety, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
+	printf("|---------------|---------------|---------------|---------------|---------------||--------------|\n");
+	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
 }
 
 
@@ -474,8 +484,6 @@ void thread_loop(unsigned int thread_id) {
 	
 	unsigned long long t_pre, t_post;// per throttling
 	
-	int riprovo=0;
-
 	bool continua;
 
 	revwin *window; //fallo diventare un array di reverse window istanziato nell'init
@@ -538,7 +546,11 @@ void thread_loop(unsigned int thread_id) {
 					status = _XABORT_CODE(status);
 					if (status == _ROLLBACK_CODE)
 						abort_unsafety[tid]++;
-					else
+					else if(status == _XABORT_CAPACITY)
+						abort_cachefull[tid]++;
+					else if(status == _XABORT_DEBUG)
+						abort_debug[tid]++;
+					else //generico
 						abort_conflict[tid]++;
 					release_lp_lock();
 					continue;
