@@ -39,7 +39,7 @@
 //#define DELTA 300		// tick count = 500
 //#define HIGHEST_COUNT	5
 
-double delta_count = 0.5;//__thread int delta_count = 0;
+double delta_count = 0.3;//__thread int delta_count = 0;
 //__thread double abort_percent = 1.0;
 
 __thread simtime_t current_lvt = 0;
@@ -149,9 +149,9 @@ void _mkdir(const char *path) {
 }
 
 void throttling(unsigned int events) {
-	long long tick_count;
+	unsigned long long tick_count;
 	
-	tick_count = CLOCK_READ()+ events * event_clocks * delta_count; //in questo modo sto 
+	tick_count = CLOCK_READ()+ events * (event_clocks * delta_count); //in questo modo sto 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
 			break;
@@ -506,11 +506,11 @@ void thread_loop(unsigned int thread_id) {
 					get_lp_lock(0, 1); //get_lp_lock(0, 1);
 				else
 					get_lp_lock(1, 1);
-				//t_pre = CLOCK_READ();// per throttling
+				t_pre = CLOCK_READ();// per throttling
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-				//t_post = CLOCK_READ();// per throttling
+				t_post = CLOCK_READ();// per throttling
 				committed_safe[tid]++;
-				//event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
+				event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
 				release_lp_lock();
 
 			}
@@ -525,7 +525,7 @@ void thread_loop(unsigned int thread_id) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-					//throttling(pending_events);
+					throttling(pending_events);
 					
 					if (check_safety(current_lvt) == 0) {
 						_xend();
@@ -537,9 +537,9 @@ void thread_loop(unsigned int thread_id) {
 				} else {	//se il commit della transazione fallisce, finisce qui
 					status = _XABORT_CODE(status);
 					if (status == _ROLLBACK_CODE)
-						abort_conflict[tid]++;
-					else
 						abort_unsafety[tid]++;
+					else
+						abort_conflict[tid]++;
 					release_lp_lock();
 					continue;
 				}
@@ -589,7 +589,7 @@ void thread_loop(unsigned int thread_id) {
 
 		if(tid == _MAIN_PROCESS) {
 		evt_count++;
-			if ((evt_count - 1000 * (evt_count / 1000)) == 0) {	//10000
+			if ((evt_count - 100000 * (evt_count / 100000)) == 0) {	//10000
 				printf("[%u] TIME: %f", tid, current_lvt);
 				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
 			}

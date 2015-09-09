@@ -26,7 +26,7 @@ void *start_thread(void *args) {
 }
 
 void start_simulation(unsigned short int number_of_threads) {
-    pthread_t p_tid[number_of_threads];//pthread_t p_tid[number_of_threads - 1];//
+    pthread_t p_tid[number_of_threads - 1];//pthread_t p_tid[number_of_threads];//
     int ret, i;
 
     //Child thread
