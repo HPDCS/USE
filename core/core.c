@@ -276,29 +276,29 @@ void print_report(void){
 	unsigned int tot_abort_cahcefull = 0;
 	unsigned int tot_abort_debug = 0;
 			
-	printf("\n\n|\tTID\t|\tSafe\t|\tHtm\t|\tRevers\t||\tTOTAL\t|\n");
-	printf("|---------------|---------------|---------------|---------------||--------------|\n");
+	printf("\n\n|\tTID\t||\tSafe\t|\tHtm\t|\tRevers\t||\tTOTAL\t|\n");
+	printf("|---------------||--------------|---------------|---------------||--------------|\n");
 	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, committed_safe[i], committed_htm[i], committed_reverse[i], (committed_safe[i]+committed_htm[i]+committed_reverse[i]) );
+		printf("|\t[%u]\t||\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, committed_safe[i], committed_htm[i], committed_reverse[i], (committed_safe[i]+committed_htm[i]+committed_reverse[i]) );
 		tot_committed_safe += committed_safe[i];
 		tot_committed_htm += committed_htm[i];
 		tot_committed_reverse += committed_reverse[i];
 	}
-	printf("|---------------|---------------|---------------|---------------||--------------|\n");
-	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
+	printf("|---------------||--------------|---------------|---------------||--------------|\n");
+	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
 	
-	printf("\n\n|\tTID\t|\tUnsafe\t|\tCacFull\t|\tConfl\t|\tWait\t||\tTOTAL\t|\n");
-	printf("|---------------|---------------|---------------|---------------|---------------|---------------||--------------|\n");
+	printf("\n\n|\tTID\t||\tUnsafe\t|\tCacFull\t|\tDebug\t|\tGenerc\t||\tWait\t|   |\tTOTAL\t|\n");
+	printf("|---------------||--------------|---------------|---------------|---------------||--------------|   |-----------|\n");
 	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, abort_unsafety[i], abort_cachefull[i], abort_debug[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
+		printf("|\t[%u]\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n", i, abort_unsafety[i], abort_cachefull[i], abort_debug[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
 		tot_abort_unsafety += abort_unsafety[i];
 		tot_abort_conflict += abort_conflict[i];
 		tot_abort_waiting += abort_waiting[i];
 		tot_abort_cahcefull += abort_cachefull[i];
 		tot_abort_debug += abort_debug[i];
 	}
-	printf("|---------------|---------------|---------------|---------------|---------------||--------------|\n");
-	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
+	printf("|---------------||--------------|---------------|---------------|---------------||--------------|   |-----------|\n");
+	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
 }
 
 
