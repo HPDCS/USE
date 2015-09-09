@@ -287,7 +287,7 @@ void print_report(void){
 	printf("|---------------|---------------|---------------|---------------||--------------|\n");
 	printf("|\tTOT\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
 	
-	printf("\n\n|\tTID\t|\tUnsafe\t|\tCacheFull\t|\tConfl\t|\tWait\t||\tTOTAL\t|\n");
+	printf("\n\n|\tTID\t|\tUnsafe\t|\tCacFull\t|\tConfl\t|\tWait\t||\tTOTAL\t|\n");
 	printf("|---------------|---------------|---------------|---------------|---------------|---------------||--------------|\n");
 	for(i = 0; i < n_cores; i++){
 		printf("|\t[%u]\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, abort_unsafety[i], abort_cachefull[i], abort_debug[i], abort_conflict[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
@@ -546,9 +546,9 @@ void thread_loop(unsigned int thread_id) {
 					status = _XABORT_CODE(status);
 					if (status == _ROLLBACK_CODE)
 						abort_unsafety[tid]++;
-					else if(status == _XABORT_CAPACITY)
+					if (status == _XABORT_CAPACITY)
 						abort_cachefull[tid]++;
-					else if(status == _XABORT_DEBUG)
+					if (status == _XABORT_DEBUG)
 						abort_debug[tid]++;
 					else //generico
 						abort_conflict[tid]++;
