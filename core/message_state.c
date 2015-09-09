@@ -2,6 +2,7 @@
 #include <limits.h>
 
 #include <queue.h>
+#include <lookahead.h>
 #include "core.h"
 #include "message_state.h"
 
@@ -55,9 +56,8 @@ unsigned int check_safety(simtime_t time){
 unsigned int check_safety_lookahead(simtime_t time){
     unsigned int i;
     unsigned int events;
-    double lookahead = 0; //questo dovrebbe essere un valore della simulazione
     
-    time-=lookahead;//invece di sommarlo ogni volta al tempo che sto studiando, lo sottraggo a time una volta sola
+    time -= LOOKAHEAD;//invece di sommarlo ogni volta al tempo che sto studiando, lo sottraggo a time una volta sola
     events = 0;
     
     for(i = 0; i < n_cores; i++){

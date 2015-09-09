@@ -5,6 +5,7 @@
 
 // Event types
 #define LOOP		1
+#define EXTERNAL_LOOP	2
 
 #define LOOP_COUNT 10
 #define COMPLETE_EVENTS 10000

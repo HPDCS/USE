@@ -2,12 +2,14 @@
 #include <stdio.h>
 #include <ROOT-Sim.h>
 
+#include <lookahead.h>
+
 #include "application.h"
 
 
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
-	simtime_t timestamp;
+	simtime_t timestamp, delta;
 	int 	i, j = 123;
 	event_content_type new_event;
 
@@ -34,26 +36,37 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			state_ptr->events = 0;
 
 			if(me == 0) {
-				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP\n", LOOP_COUNT, COMPLETE_EVENTS);
+				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
 //			for(i = 0; i < 10; i++) {
 				timestamp = (simtime_t) (20 * Random());
+				if(timestamp < LOOKAHEAD)
+					timestamp += LOOKAHEAD;
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 //			}
 
 			break;
 
-			case LOOP:
+		case EXTERNAL_LOOP:
+		case LOOP:
 			for(i = 0; i < LOOP_COUNT; i++) {
 				pow(i, j);
 			//	j = i*i;
 			}
+
 			state_ptr->events++;
-			timestamp = now + (simtime_t)(Expent(TAU));
-			ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-			if(Random() < 0.2) {
-				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, LOOP, NULL, 0);
+
+			delta = (simtime_t)(Expent(TAU));
+			if(delta < LOOKAHEAD)
+				delta += LOOKAHEAD;
+			timestamp = now + delta;
+
+			if(event_type == LOOP)
+				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+
+			if(event_type == LOOP && Random() < 0.2) {
+				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
 			}
 			break;
 
@@ -63,7 +76,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			break;
 	}
 }
-
+	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 
