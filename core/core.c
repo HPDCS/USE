@@ -71,7 +71,7 @@ simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
-unsigned int reverse_execution_threshold = 5;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 10;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
@@ -506,11 +506,11 @@ void thread_loop(unsigned int thread_id) {
 					get_lp_lock(0, 1); //get_lp_lock(0, 1);
 				else
 					get_lp_lock(1, 1);
-				t_pre = CLOCK_READ();// per throttling
+				//t_pre = CLOCK_READ();// per throttling
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-				t_post = CLOCK_READ();// per throttling
+				//t_post = CLOCK_READ();// per throttling
 				committed_safe[tid]++;
-				event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
+				//event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
 				release_lp_lock();
 
 			}
@@ -525,7 +525,7 @@ void thread_loop(unsigned int thread_id) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-					throttling(pending_events);
+					//throttling(pending_events);
 					
 					if (check_safety(current_lvt) == 0) {
 						_xend();
