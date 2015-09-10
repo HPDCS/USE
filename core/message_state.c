@@ -10,8 +10,6 @@
 
 static simtime_t *current_time_vector;
 
-static simtime_t gvt; //da cancellare
-
 extern int queue_lock;
 
 /*MAURO, DA ELIMINARE*/
@@ -22,8 +20,6 @@ simtime_t get_processing(unsigned int i){
 
 void message_state_init(void){
     unsigned int i;
-
-    gvt = 0;// da cancellare
 
     current_time_vector = malloc(sizeof(simtime_t) * n_cores);
     if(current_time_vector == NULL){

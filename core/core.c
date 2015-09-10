@@ -408,7 +408,6 @@ double double_cas(double *addr, double old_val, double new_val) {
 
 int check_waiting(){
 	return (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && wait_time_id[current_lp] < tid));
-		
 }
 
 int get_lp_lock(unsigned int mode, unsigned int bloc) {
@@ -417,23 +416,23 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 	int old_lk;
 	simtime_t old_tm;
 	unsigned int old_tm_id;
-	
+
 	do{
 		///ESCLUSIVO
 		if (mode && (old_lk = lp_lock[current_lp]) == 0) {
 			if (__sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1) == 0)
-				return 1;		
-		
+				return 1;
+
 		///CONDIVISO
 		}else if (!mode && (old_lk = lp_lock[current_lp]) >= 0) {
 			if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk + 1) == old_lk)
 				return 1;
-		
+
 		///PRENOTAZIONE
 		}else {	//voglio prendere il lock ma non posso perche non è libero
 			if(wait_time_id[current_lp]==tid)
 				break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
-					
+
 			while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
 				while (wait_time_lk[current_lp]) ;
 				
@@ -534,7 +533,7 @@ void thread_loop(unsigned int thread_id) {
 			}
 ///ESECUZNE HTM:
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
-			else if (pending_events < reverse_execution_threshold) {	
+			else if (pending_events < reverse_execution_threshold) {
 				//printf("%u HTM \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 
 				get_lp_lock(0, 1);
@@ -544,7 +543,7 @@ void thread_loop(unsigned int thread_id) {
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 					throttling(pending_events);
-					
+
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 						committed_htm[tid]++;
@@ -562,10 +561,11 @@ void thread_loop(unsigned int thread_id) {
 					else if (_XABORT_CODE(status) == _ROLLBACK_CODE)
 						abort_unsafety[tid]++;
 					else{
-						//printf("%u ", status);
 						abort_generic[tid]++;
 					}
+
 					release_lp_lock();
+					//goto reversible;
 					continue;
 				}
 
@@ -573,7 +573,7 @@ void thread_loop(unsigned int thread_id) {
 ///ESECUZIONE REVERSIBILE:
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 			else {
-				//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
+reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 				if(get_lp_lock(1, 0)==0)
 					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
