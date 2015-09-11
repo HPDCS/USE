@@ -39,7 +39,7 @@
 //#define DELTA 300		// tick count = 500
 //#define HIGHEST_COUNT	5
 
-double delta_count = 0.3;//__thread int delta_count = 0;
+double delta_count = 0.1;//__thread int delta_count = 0;
 //__thread double abort_percent = 1.0;
 
 __thread simtime_t current_lvt = 0;
