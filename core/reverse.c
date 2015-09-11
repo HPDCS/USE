@@ -16,6 +16,9 @@ __thread revwin *current_win = NULL;
 static __thread unsigned int revgen_count;	//! ??
 static __thread addrmap hashmap;	//! Map of the referenced addresses
 
+__thread void *original_stack = NULL;
+__thread void *stack = NULL;
+
 /**
  * Writes the reverse instruction passed on the heap reverse window.
  *
