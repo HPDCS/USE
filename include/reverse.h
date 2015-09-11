@@ -4,11 +4,13 @@
 #include <sys/types.h>
 
 #define REVERSE_WIN_SIZE 1024 * 1024 * 50	//! Defalut size of the reverse window which will contain the reverse code
-#define HMAP_SIZE		/*4294967295*/32768	//! Default size ot the address hash map to handle colliding mov addresses
+#define HMAP_SIZE		32768	//! Default size ot the address hash map to handle colliding mov addresses
 
 #define HMAP_INDEX_MASK		0xffffffc0	//! Most significant 10 bits are used to index quad-word which contains address bit
 #define HMAP_OFFSET_MASK	0x3f	//! Least significant 6 bits are used to intercept address presence
 #define HMAP_OFF_MASK_SIZE	6
+
+#define EMULATED_STACK_SIZE 1024	//! Default size of the emultated reverse stack window on the heap space
 
 typedef struct _revwin {
 	int size;		//! The actual size of the reverse window
@@ -30,7 +32,14 @@ typedef struct _eras {
 	int last_free;		//! Index of the last available slot
 } eras;
 
-extern __thread revwin *current_revwin;	//! Represents the pointer to the current active reverse window
+// Emulated stack window descriptor
+typedef struct _stackwin {
+	void *base;			// Base of the stack
+	void *pointer;		// Current top pointer
+	size_t size;		// Size of the window
+	void *original_base;		// Origninal base pointer of the real stack
+	void *original_pointer;		// Original stack pointer of the real one
+} stackwin;
 
 /**
  * This will allocate a window on the HEAP of the exefutable file in order
