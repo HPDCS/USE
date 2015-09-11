@@ -47,8 +47,6 @@ __thread unsigned int current_lp = 0;
 __thread unsigned int tid = 0;
 
 __thread unsigned long long evt_count = 0;
-__thread unsigned long long evt_try_count = 0;
-__thread unsigned long long abort_count_conflict = 0, abort_count_safety = 0, abort_count_reverse = 0;
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
@@ -65,12 +63,16 @@ bool *can_stop;
 /*
 mauro
 */
+
+//lock su LP
 int *lp_lock;
 
+//variabili per gestire le segnalazioni di priorità
 simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
 
+//Soglia dopo la quale gli eventi vengono eseguiti in modalità reversibile
 unsigned int reverse_execution_threshold = 10;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
@@ -493,7 +495,7 @@ void thread_loop(unsigned int thread_id) {
 		
 	unsigned long long t_pre, t_post;// per throttling
 	
-	bool continua;
+	bool retry_event;
 
 	revwin *window; //fallo diventare un array di reverse window istanziato nell'init
 
@@ -526,9 +528,10 @@ void thread_loop(unsigned int thread_id) {
 				t_pre = CLOCK_READ();// per throttling
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				t_post = CLOCK_READ();// per throttling
+				release_lp_lock();
 				committed_safe[tid]++;
 				event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
-				release_lp_lock();
+				
 
 			}
 ///ESECUZNE HTM:
@@ -556,7 +559,7 @@ void thread_loop(unsigned int thread_id) {
 						abort_cachefull[tid]++;
 					else if (status & _XABORT_DEBUG)
 						abort_debug[tid]++;
-					else if (status & _XABORT_CONFLICT) //generico
+					else if (status & _XABORT_CONFLICT)
 						abort_conflict[tid]++;
 					else if (_XABORT_CODE(status) == _ROLLBACK_CODE)
 						abort_unsafety[tid]++;
@@ -580,14 +583,14 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 				reset_window(window);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-				continua = false;
+				retry_event = false;
 
 				while (check_safety_lookahead(current_lvt) > 0) {
 					if ( check_waiting() ) {
 						execute_undo_event(window);
 						queue_clean();
 						abort_waiting[tid]++;
-						continua = true;
+						retry_event = true;
 						break;
 					}
 				}
@@ -595,11 +598,10 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 				release_lp_lock();
 				
 
-				if (!continua)
-					committed_reverse[tid]++;
-
-				else
+				if (retry_event)
 					continue;
+				
+				committed_reverse[tid]++;
 				
 			}
 
