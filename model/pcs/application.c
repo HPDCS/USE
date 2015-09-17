@@ -5,8 +5,9 @@
 
 #include "application.h"
 
+
+unsigned int limit_complete_calls = COMPLETE_CALLS;//int complete_calls = COMPLETE_CALLS;
 bool pcs_statistics = false;
-int complete_calls = COMPLETE_CALLS;
 
 
 #define DUMMY_TA 500
@@ -14,7 +15,7 @@ int complete_calls = COMPLETE_CALLS;
 
 void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
 
-	int w;
+    unsigned int w;
 
 	event_content_type new_event_content;
 
@@ -60,7 +61,11 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			state->channels_per_cell = CHANNELS_PER_CELL;
 
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-				p[w] = malloc(sizeof(channel));
+				p[w] = malloc(sizeof(channel));	
+				if(p[w] == NULL){
+					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+					abort();		
+				}
 				*p[w] = 'x';
 			}
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
@@ -68,6 +73,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			}
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
 				p[w] = malloc(sizeof(sir_data_per_cell));
+				if(p[w] == NULL){
+					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+					abort();		
+				}
 				*p[w] = 'x';
 			}
 			for(w = 0; w < CHANNELS_PER_CELL; w++) {
@@ -77,8 +86,8 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			// Show current configuration, only once
 			if(me == 0) {
-				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
-					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
+				printf("CURRENT CONFIGURATION:\ncomplete calls: %u\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
+					COMPLETE_CALLS, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
 				fflush(stdout);
 			}
 
@@ -86,6 +95,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			// Setup channel state
 			state->channel_state = malloc(sizeof(unsigned int) * 2 * (CHANNELS_PER_CELL / BITS + 1));
+			if(state->channel_state == NULL){
+				printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+				abort();		
+			}
 			for (w = 0; w < state->channel_counter / (sizeof(int) * 8) + 1; w++)
 				state->channel_state[w] = 0;
 
@@ -154,11 +167,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
-					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
+					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));  //ERRORE QUI!!!
 					ScheduleNewEvent(new_event_content.cell, handoff_time, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 				}
 			}
-
 
 			if (state->variable_ta)
 				state->ta = recompute_ta(state->ref_ta, now);
@@ -184,9 +196,14 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			break;
 
 		case END_CALL:
+		
+			//printf(" state è all'indirizzo              \t%p  =========================================\n", state);
+			//printf(" channel_counte = %u all'indirizzo  \t%p  =========================================\n", state->channel_counter, &(state->channel_counter));
+			//printf(" complete_calls = %u all'indirizzo  \t%p  =========================================\n", state->complete_calls, &(state->complete_calls));
 
 			state->channel_counter++;
 			state->complete_calls++;
+			
 //			deallocation(me, state, event_content->channel, event_content, now);
 
 			break;
@@ -265,8 +282,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
-
-	if (snapshot->complete_calls < complete_calls)
+	if (snapshot->complete_calls < COMPLETE_CALLS){
+		//printf("%u: ---SS.CS = %u, CS = %u\n",me,snapshot->complete_calls, COMPLETE_CALLS);
 		return false;
+	}
+	//printf("---SS.CS = %u, CS = %u\n",snapshot->complete_calls, COMPLETE_CALLS);
 	return true;
 }

@@ -40,9 +40,7 @@
 
 
 static seed_type master_seed;
-
-
-seed_type *seeds;
+static __thread seed_type thread_seed = 0;
 
 
 /**
@@ -58,8 +56,11 @@ double Random(void) {
 	uint32_t *seed1;
 	uint32_t *seed2;
 
-	seed1 = (uint32_t *)&master_seed;
-	seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
+	if(thread_seed == 0)
+		thread_seed = master_seed;
+
+	seed1 = (uint32_t *)&thread_seed;
+	seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
 
 	*seed1 = 36969u * (*seed1 & 0xFFFFu) + (*seed1 >> 16u);
 	*seed2 = 18000u * (*seed2 & 0xFFFFu) + (*seed2 >> 16u);
@@ -332,11 +333,11 @@ static void load_seed(void) {
 	if ((fp = fopen(conf_file, "r+")) == NULL) {
 
 		// Try to build the path to the configuration folder.
-		sprintf(conf_file, "%s/.rootsim", getenv("HOME"));
+		sprintf(conf_file, "%s/.htmpdes", getenv("HOME"));
 		_mkdir(conf_file);
 
 		// Create and initialize the file
-		sprintf(conf_file, "%s/.rootsim/numerical.conf", getenv("HOME"));
+		sprintf(conf_file, "%s/.htmpdes/numerical.conf", getenv("HOME"));
 		if ((fp = fopen(conf_file, "w")) == NULL) {
 			rootsim_error(true, "Unable to create the numerical library configuration file %s. Aborting...", conf_file);
 		}
@@ -366,10 +367,6 @@ static void load_seed(void) {
 
 
 	rewind(fp);
-
-	// Override the master seed
-	master_seed = 987654321;
-	
 	srandom(master_seed);
 //	new_seed = random();
 //	fprintf(fp, "%llu\n", (unsigned long long)new_seed);
@@ -389,15 +386,9 @@ void numerical_init(void) {
 
 	unsigned int i;
 
-	seeds = malloc(sizeof(seed_type) * n_prc_tot);
-
 	// Initialize the master seed
 	load_seed();
-
-	// Initialize the per-LP seed
-	for(i = 0; i < n_prc_tot; i++) {
-		seeds[i] = sanitize_seed(ROR((int64_t)master_seed, i % RS_WORD_LENGTH));
-	}
+	master_seed = sanitize_seed(master_seed);
 
 }
 #undef RS_WORD_LENGTH

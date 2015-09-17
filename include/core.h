@@ -15,20 +15,24 @@
 
 #define MAX_LPs	2048
 
-#define MAX_DATA_SIZE		16
+#define MAX_DATA_SIZE		128
 #define THR_POOL_SIZE		3
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
+#define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
+
+//#define MYDEBUG
+
 typedef struct __msg_t
-{  
+{
   unsigned int sender_id;
   unsigned int receiver_id;
   simtime_t timestamp;
   int type;
-  unsigned int data_size;  
+  unsigned int data_size;
   unsigned char data[MAX_DATA_SIZE];
-  
+
 } msg_t;
 
 
@@ -51,9 +55,6 @@ void thread_loop(unsigned int thread_id);
 extern void rootsim_error(bool fatal, const char *msg, ...);
 
 
-
-extern unsigned int n_prc_tot;
-
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
 
@@ -66,7 +67,14 @@ extern void _mkdir(const char *path);
 
 extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
+//extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 
 extern void flush(void);
+
+double double_cas(double *addr, double old_val, double new_val);
+
+void print_report(void);
+
+void *tuning(void *args);
 
 #endif

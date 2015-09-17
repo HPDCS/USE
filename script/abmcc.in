@@ -1,0 +1,194 @@
+#!/bin/bash
+#
+# ABM-Sim CC - Copyright (C) HPDCS Group @ Sapienza, University of Rome
+# Released under the GNU GPL v3
+#
+# CHANGELOG:
+#   May, 11th 2015 - Alessandro Pellegrini <pellegrini@dis.uniroma1.it>
+#	Created the first version of this script
+#
+# This is just a gcc/mpicc wrapper which follows through the
+# various steps in order to correctly compile a simulation model against
+# the static ROOT-Sim Library
+
+
+##############################################################################
+# Global configuration variables
+##############################################################################
+CC=@CC@
+CFLAGS="@CFLAGS@"
+VERSION=@VERSION@
+ARCH=@ARCH@
+bindir=@bindir@
+libdir=@libdir@
+includedir=@includedir@
+datadir=@datadir@
+SCRIPT_LINES=@scriptlines@
+HIJACKER_CONF_LINES=@hijacker_conf_lines@
+
+
+##############################################################################
+# usage(): print usage of this script
+##############################################################################
+usage()
+{
+cat << EOF
+$0 version $VERSION
+usage: $0 [options] sources
+
+This is the ROOT-Sim compiler.
+It allows compiling C sources against the ROOT-Sim library.
+
+OPTIONS:
+   -h    Print this help screen
+   -c    Do not link against the ROOT-Sim library (multistage compilation)
+   -o N  Specify N as output name
+   
+Please note that any other option supported by the underlying compiler (gcc)
+can be safely passed to rootsim-cc
+EOF
+}
+
+
+
+##############################################################################
+# Handle temporary files
+##############################################################################
+extract_support_data()
+{
+START_LINES=$SCRIPT_LINES
+(( START_LINES += 1 ))
+tail -n +$START_LINES "$0" | head -n +$HIJACKER_CONF_LINES > $$.xml
+(( START_LINES += $HIJACKER_CONF_LINES ))
+}
+
+build_cleanup()
+{
+rm $$.xml
+#rm *.o
+#rm *.o.rs
+echo "process done"
+}
+
+
+##############################################################################
+# Check for termination of the intermediate steps, if failed cleanup the system
+##############################################################################
+check_term()
+{
+if [ $? -ne 0 ]; then
+	build_cleanup
+	exit 1
+fi
+}
+
+
+##############################################################################
+# The ROOT-Sim CC script begins here
+##############################################################################
+CC="$CC -L $libdir -I $includedir"   # This is how we will call the compiler.
+LD=ld
+PARTIAL=0
+OUTNAME=a.out
+SOURCES=
+
+next_in_cflags="no"
+next_in_outname="no"
+for word in "$@"
+do
+	case "$word" in
+		-c)
+			if [[ $PARTIAL = 0 ]]; then
+				CFLAGS="$CFLAGS -c"
+				PARTIAL=1
+			fi
+			;;
+		-o)
+			next_in_outname="yes"
+			;;
+		-MT)
+			CFLAGS="$CFLAGS -MT"
+			next_in_cflags="yes"
+			;;
+		-MF)
+			CFLAGS="$CFLAGS -MF"
+			next_in_cflags="yes"
+			;;
+		*)
+			if [ "$next_in_cflags" = "yes" ]; then
+				CFLAGS="$CFLAGS $word"
+				next_in_cflags="no"
+			elif [ "$next_in_outname" = "yes" ]; then
+				OUTNAME="$word"
+				next_in_outname="no"
+			elif [ "${word:0:1}" = "-" ]; then
+				CFLAGS="$CFLAGS $word"
+			else
+				SOURCES="$SOURCES $word"
+			fi
+			;;
+	esac
+done
+
+
+# Check if no source file was specified
+if [ ! -n "$SOURCES" ]; then
+	echo "No source files specified."
+	exit 1
+fi
+
+
+# If partial compilation is invoked, simply call the compiler.
+# -c is actually included into CFLAGS
+if [[ $PARTIAL = 1 ]]; then
+	$CC $CFLAGS $SOURCES -o $OUTNAME
+	exit 0
+fi
+
+
+####
+#### Ok, no partial compilation. Now start the loooong compilation procedure for ROOT-Sim
+####
+
+
+# Generate linker scripts
+extract_support_data
+
+
+###
+### Compile all the sources into a single object, which we will later mangle
+###
+OBJECTS=${SOURCES//.c/.o}
+echo "Compiling $SOURCES..."
+for f in $SOURCES; do
+	if [ "${f: -2:2}" = ".o" ]; then
+		mv $f $f.rs
+	else
+		$CC $CFLAGS -c $f -o ${f/.c/.o.rs}
+	fi
+	check_term
+done
+
+$LD -r ${OBJECTS//.o/.o.rs} -o APP.o
+
+# Now instrument the code, if required
+
+echo "Instrumenting the application code..."
+hijacker -i APP.o -c "$$.xml" -o APP-instrumented.o
+check_term
+
+echo "Linking..."
+#$LD -r -L $libdir --wrap strcpy --wrap strncpy --wrap strcat --wrap strncat --wrap memcpy --wrap memmove --wrap memset --wrap strdup --wrap strndup -o APP-lib-wrapped.o  APP-instrumented.o -lwrapperl
+$LD -r -L $libdir --wrap malloc --wrap free --wrap realloc --wrap calloc -o APP-dym-wrapped.o APP-instrumented.o --whole-archive -labm_mm
+check_term
+#$CC -Xlinker --no-check-sections -Xlinker -T -Xlinker $$.ld-final -Xlinker --section-start -Xlinker .warp=$APPLICATION_START_POINT -Xlinker --section-start -Xlinker .warl=$APPLICATION_START_POINT_LIGHT  APP-dym-wrapped.o -lrootsim -lm -DGATHER_DATA -o $OUTNAME
+$CC $CFLAGS APP-dym-wrapped.o -labm -lm -o $OUTNAME
+check_term
+
+
+# Clean temporary files
+build_cleanup
+
+exit 0
+
+# Raw support scripts start here!
