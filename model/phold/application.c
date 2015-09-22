@@ -6,6 +6,7 @@
 
 #include "application.h"
 
+//#include <timer.h>
 
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
@@ -14,7 +15,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	event_content_type new_event;
 
 	lp_state_type *state_ptr = (lp_state_type*)state;
-
+	
+	//timer tm_ex;
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
@@ -50,10 +52,13 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		case EXTERNAL_LOOP:
 		case LOOP:
-			for(i = 0; i < LOOP_COUNT; i++) {
-				pow(i, j);
-			//	j = i*i;
+			//timer_start(tm_ex);
+
+			for(i = 0; i < LOOP_COUNT*29; i++) {
+				//for(k = 0; k < 30 ; k++)
+					j = i*i;
 			}
+			//printf("timer: %d\n", timer_value_micro(tm_ex));
 
 			state_ptr->events++;
 

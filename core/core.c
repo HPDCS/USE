@@ -580,7 +580,7 @@ void thread_loop(unsigned int thread_id) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-					//throttling(pending_events);
+					throttling(pending_events);
 
 					if (check_safety(current_lvt) == 0) {
 						_xend();
