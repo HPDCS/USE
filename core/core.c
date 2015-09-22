@@ -311,6 +311,8 @@ void print_report(void){
 	}
 	printf("|---------------||--------------|---------------|---------------|---------------|---------------|---------------||--------------|   |-----------|\n");
 	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_nested, tot_abort_generic, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
+
+	printf("\n\n%u\t\t%u\t\t&u\t\t%u\t\t%u\t\t%u\n", tot_committed_safe, tot_committed_htm,tot_abort_unsafety,tot_abort_cahcefull,tot_abort_conflict,tot_abort_generic);
 }
 
 
@@ -545,7 +547,7 @@ void thread_loop(unsigned int thread_id) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-					throttling(pending_events);
+					//throttling(pending_events);
 
 					if (check_safety(current_lvt) == 0) {
 						_xend();
