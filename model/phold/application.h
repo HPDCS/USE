@@ -7,7 +7,7 @@
 #define LOOP		1
 #define EXTERNAL_LOOP	2
 
-#define LOOP_COUNT 10
+#define LOOP_COUNT 200
 #define COMPLETE_EVENTS 10000
 #define COMPLETE_TIME 200000
 #define TAU 100

@@ -1,4 +1,4 @@
 #pragma once
 
-#define LOOKAHEAD 5
+#define LOOKAHEAD 0.2
 
