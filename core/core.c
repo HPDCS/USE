@@ -324,14 +324,44 @@ void *tuning(void *args){
 	unsigned int committed, old_committed, throughput, old_throughput, last_op, field, i;
 	old_throughput = 0;
 	last_op = 1;
-	field = 1; // 0 sta per delta_count ed 1 sta per reverse_execution_threshold 
+	//field = 1; // 0 sta per delta_count ed 1 sta per reverse_execution_threshold 
 	double delta = 0.1;
-	unsigned int change_direction = 0;
-	unsigned int right_direction = 0;
-	
+	//unsigned int change_direction = 0;
+	//unsigned int right_direction = 0;
 	
 	while(!stop && !sim_error){
-		sleep(5);
+		sleep(3);
+		throughput = 0;
+		committed = 0;
+		
+		for(i = 0; i <	n_cores; i++)
+			committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
+		throughput = committed - old_committed;
+	
+		if(throughput < old_throughput)//poichè ho visto un peggioramento, inverto la direzione
+			last_op=~last_op;	
+			
+		if(last_op==1) 
+			delta_count+=delta;
+		else 
+			delta_count-=delta;
+			
+			
+		if(delta_count<0) 
+			delta_count=0;
+		if(delta_count>1)
+			delta_count=1;
+				
+		printf("Throughput %u : Delta : %f\n", throughput, delta_count);
+		
+		old_committed = committed;
+		old_throughput = throughput;
+	}
+
+
+/*
+	while(!stop && !sim_error){
+		sleep(2);
 		throughput = 0;
 		committed = 0;
 		
@@ -350,7 +380,8 @@ void *tuning(void *args){
 			right_direction = 0;	
 		}
 		
-		/* UNDO THRESHOLD */
+		
+		//* UNDO THRESHOLD 
 		if(field == 1){
 			if(last_op==1) 
 				reverse_execution_threshold++;
@@ -368,7 +399,8 @@ void *tuning(void *args){
 			}
 			printf("Throughput %u : Threshold : %u\n", throughput, reverse_execution_threshold);
 		}
-		/* DELTA THROTTLING */
+		
+		//* DELTA THROTTLING 
 		else{
 			if(last_op==1) 
 				delta_count+=delta;
@@ -376,8 +408,8 @@ void *tuning(void *args){
 				delta_count-=delta;
 			if(delta_count<0){ 
 				delta_count=0;
-				change_direction++;
-				right_direction = 0;
+				//change_direction++;
+				//right_direction = 0;
 			}	
 			printf("Throughput %u : Delta : %f\n", throughput, delta_count);
 		}
@@ -394,6 +426,7 @@ void *tuning(void *args){
 		old_committed = committed;
 		old_throughput = throughput;
 	}
+	*/
 
 	printf("Esecuzione del tuning terminata\n");
 	
@@ -547,7 +580,7 @@ void thread_loop(unsigned int thread_id) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-					//throttling(pending_events);
+					throttling(pending_events);
 
 					if (check_safety(current_lvt) == 0) {
 						_xend();
