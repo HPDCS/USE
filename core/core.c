@@ -25,8 +25,6 @@
 
 #include "reverse.h"
 
-#define THROTTLING
-
 //id del processo principale
 #define _MAIN_PROCESS		0
 //Le abort "volontarie" avranno questo codice
@@ -36,11 +34,8 @@
 
 #define HILL_EPSILON_GREEDY	0.05
 #define HILL_CLIMB_EVALUATE	500
-//#define DELTA 300		// tick count = 500
-//#define HIGHEST_COUNT	5
 
-double delta_count = 0.3;//__thread int delta_count = 0;
-//__thread double abort_percent = 1.0;
+double delta_count = 0.3;
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -157,26 +152,12 @@ void _mkdir(const char *path) {
 void throttling(unsigned int events) {
 	unsigned long long tick_count;
 	
-	tick_count = CLOCK_READ()+ events * (event_clocks * delta_count); //in questo modo sto 
+	tick_count = CLOCK_READ() + events * (event_clocks * delta_count); 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
 			break;
 	}
 }
-
-/*
-void hill_climbing(void) {
-	if ( ((double)abort_unsafety[tid] / (double)evt_count) < abort_percent && delta_count < HIGHEST_COUNT) {
-		delta_count++;
-		//printf("Incrementing delta_count to %d\n", delta_count);
-	} else {
-/*		if(random() / RAND_MAX < HILL_EPSILON_GREEDY) {
-			delta_count /= (random() / RAND_MAX) * 10 + 1;
-		}
-*//* }
-	abort_percent = (double)abort_unsafety[tid] / (double)evt_count;
-}
-*/
 
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
@@ -312,7 +293,11 @@ void print_report(void){
 	printf("|---------------||--------------|---------------|---------------|---------------|---------------|---------------||--------------|   |-----------|\n");
 	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_nested, tot_abort_generic, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
 
-	printf("\n\n%u\t\t%u\t\t%u\t\t%u\t\t%u\t\t%u\n", tot_committed_safe, tot_committed_htm,tot_abort_unsafety,tot_abort_cahcefull,tot_abort_conflict,tot_abort_generic);
+#ifdef THROTTLING
+	printf("\n\n%u\t%u\t\t%u\t\t%u\t\t%u\t\t%u\t%f\n", tot_committed_safe, tot_committed_htm,tot_abort_unsafety,tot_abort_cahcefull,tot_abort_conflict,tot_abort_generic, delta_count);
+#else
+	printf("\n\n%u\t%u\t\t%u\t\t%u\t\t%u\t\t%u\n", tot_committed_safe, tot_committed_htm,tot_abort_unsafety,tot_abort_cahcefull,tot_abort_conflict,tot_abort_generic);
+#endif
 }
 
 
@@ -565,8 +550,13 @@ void thread_loop(unsigned int thread_id) {
 				t_post = CLOCK_READ();// per throttling
 				release_lp_lock();
 				committed_safe[tid]++;
-				event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
-				
+#ifdef THROTTLING
+				//guarda se si può migliorare
+				if(event_clocks > 0)
+					event_clocks = (event_clocks*0.9) + ((t_post-t_pre)*0.1);// per throttling
+				else 
+					event_clocks = (t_post-t_pre);// per throttling
+#endif				
 
 			}
 ///ESECUZNE HTM:
@@ -579,9 +569,9 @@ void thread_loop(unsigned int thread_id) {
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-
+#ifdef THROTTLING
 					throttling(pending_events);
-
+#endif
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 						committed_htm[tid]++;

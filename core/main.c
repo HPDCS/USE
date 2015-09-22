@@ -19,14 +19,12 @@ void *start_thread(void *args) {
 	//START THREAD (definita in core.c)
 	thread_loop(tid);
 	
-    printf("Thread %d arrivato a fine start_thread\n", tid);//da cancellare
-	
 	pthread_exit(NULL);
 
 }
 
 void start_simulation(unsigned short int number_of_threads) {
-    pthread_t p_tid[number_of_threads];//pthread_t p_tid[number_of_threads];//
+    pthread_t p_tid[number_of_threads-1];//pthread_t p_tid[number_of_threads];//
     int ret, i;
 
     //Child thread
@@ -37,15 +35,20 @@ void start_simulation(unsigned short int number_of_threads) {
         }
     }
     
-   if( (ret = pthread_create(&p_tid[number_of_threads - 1], NULL, tuning, NULL)) != 0) {
-       fprintf(stderr, "%s\n", strerror(errno));
-       abort();
-   }
+#ifdef THROTTLING     
+	if(number_of_threads>1){	
+		pthread_t p_tun;
+		if( (ret = pthread_create(&p_tun, NULL, tuning, NULL)) != 0) {
+			fprintf(stderr, "%s\n", strerror(errno));
+			abort();
+		}
+	}
+#endif
 
     //Main thread
     thread_loop(0);
 
-    for(i = 0; i < number_of_threads-1; i++){//for(i = 0; i < number_of_threads - 1; i++){
+    for(i = 0; i < number_of_threads-1; i++){
         pthread_join(p_tid[i], NULL);
     }
 }

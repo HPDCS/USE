@@ -55,7 +55,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			//timer_start(tm_ex);
 
 			for(i = 0; i < LOOP_COUNT*29; i++) {
-				//for(k = 0; k < 30 ; k++)
 					j = i*i;
 			}
 			//printf("timer: %d\n", timer_value_micro(tm_ex));
