@@ -32,6 +32,8 @@ TRAFFIC_SOURCES=model/traffic/application.c\
 		    model/traffic/init.c\
 		    model/traffic/normal_cdf.c
 
+ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
+		    model/robot_explore/neighbours.c
 
 
 TARGET=test
@@ -58,9 +60,10 @@ PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
 TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
+ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
 
-all: tcar
+all: robot_explore
 
 pcs: _pcs mm core link
 
@@ -71,6 +74,8 @@ traffic: _traffic mm core link
 tcar: _tcar mm core link
 
 phold: _phold mm core link
+
+robot_explore: _robot_explore mm core link
 
 
 link:
@@ -109,6 +114,9 @@ _phold: $(PHOLD_OBJ)
 
 _traffic: $(TRAFFIC_OBJ)
 	@ld -r -g $(TRAFFIC_OBJ) -o model/__application.o
+
+_robot_explore: $(ROBOT_EXPLORE_OBJ)
+	@ld -r -g $(ROBOT_EXPLORE_OBJ) -o model/__application.o
 	
 
 
