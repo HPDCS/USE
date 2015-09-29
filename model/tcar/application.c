@@ -32,7 +32,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				printf("%s:%d: Unable to allocate memory!\n", __FILE__, __LINE__);
 			}
 			SetState(pointer);
-			pointer->trails;
+			pointer->trails = 0;
 
 			if(NUM_CELLE_OCCUPATE > n_prc_tot){
 				printf("%s:%d: Require more cell than available LPs\n", __FILE__, __LINE__);
@@ -163,7 +163,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 // per stabilire se la simulazione e' terminata
 int OnGVT(unsigned int me, lp_state_type *snapshot) {
 	
-	printf("value %d ", snapshot->trails);
+	//printf("value %d ", snapshot->trails);
 
  	if(snapshot->trails > VISITE_MINIME)
 		return true;
