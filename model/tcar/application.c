@@ -13,12 +13,15 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	new_event_content.cell = -1;
 	new_event_content.new_trails = -1;
 
-	int i;
+	int i, j;
 	int receiver, TEMP;
 	int trails;
 
 	simtime_t timestamp=0;
 	simtime_t delta=0;
+	
+	for ( i = 0 ; i < 10000 ; i++) 
+		j= i*i;
 
 	switch(event_type) {
 
@@ -29,6 +32,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				printf("%s:%d: Unable to allocate memory!\n", __FILE__, __LINE__);
 			}
 			SetState(pointer);
+			pointer->trails;
 
 			if(NUM_CELLE_OCCUPATE > n_prc_tot){
 				printf("%s:%d: Require more cell than available LPs\n", __FILE__, __LINE__);
