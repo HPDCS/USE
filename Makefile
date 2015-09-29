@@ -24,7 +24,8 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
-TCAR_SOURCES=model/tcar/application.c
+TCAR_SOURCES=model/tcar/application.c\
+	            model/tcar/neighbours.c
 
 TRAFFIC_SOURCES=model/traffic/application.c\
 		    model/traffic/functions.c\
@@ -59,7 +60,7 @@ TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 
 
-all: phold
+all: tcar
 
 pcs: _pcs mm core link
 

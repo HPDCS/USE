@@ -1,230 +1,164 @@
-#include <stdio.h>
-
 #include <ROOT-Sim.h>
-
+#include <stdio.h>
+#include <limits.h>
 #include <lookahead.h>
 
-
-#define AGENT_ARRIVAL	1
-#define AGENT_DEPARTURE	2
-
-#define SIZE 45
-
-#define INITIAL_AGENTS 2
-
-#define INITIAL_JOBS 32
-#define INCREMENT 100
-#define TRACE if(0)
-
-#define THRESHOLD 0.7
-
-#define PROCESSING_TIME 1.0
-#define AUDIT_PERIOD    20 // number of server jobs
+#include "application.h"
 
 
-typedef struct _lp_state_type 
-{
-  simtime_t current_simulation_time;
-  unsigned int agents_in;
-  unsigned int agents_passed_through;
-  simtime_t lvt;
-  
-} lp_state_type;
+void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, int event_size, lp_state_type *pointer) {
 
-lp_state_type state[SIZE][SIZE];
+	event_content_type new_event_content;
 
+	new_event_content.cell = -1;
+	new_event_content.new_trails = -1;
 
-unsigned  model_seed=464325;
+	int i;
+	int receiver, TEMP;
+	int trails;
 
+	simtime_t timestamp=0;
+	simtime_t delta=0;
 
-//#define BIAS 0.012
-//#define BIAS 0.001
-#define BIAS 0.0
+	switch(event_type) {
 
-#define MAX_REGION	40000
-#define MAX_TIME	10.0
+		case INIT:
 
-typedef struct _model_data
-{
-  int x;
-  int y;
-  
-} model_data;
+			pointer = (lp_state_type *)malloc(sizeof(lp_state_type));
+			if(pointer == NULL){
+				printf("%s:%d: Unable to allocate memory!\n", __FILE__, __LINE__);
+			}
+			SetState(pointer);
 
-#define coord_to_LP(nx, ny) (ny * SIZE + nx)
+			if(NUM_CELLE_OCCUPATE > n_prc_tot){
+				printf("%s:%d: Require more cell than available LPs\n", __FILE__, __LINE__);
+			}
 
-void audit_all(void){
-
-	int i,j;
-	system("clear");
-	for (i=0;i<SIZE;i++){
-		for(j=0;j<SIZE;j++) 
-		{
-			if(state[i][j].agents_in > 0) printf("| ");
-			else printf("  "); 
-		}
-		printf("\n");
-	}
-	printf("\n----------total visits in region---------- \n");
-	for (i=0;i<SIZE;i++){
-		for(j=0;j<SIZE;j++) 
-		{
-			printf("%d ",state[i][j].agents_passed_through); 
-		}
-		printf("\n");
-	}
-}
-
-static int counter_region = 0;
-
-bool OnGVT(unsigned int me, lp_state_type *snapshot) 
-{
+			if((NUM_CELLE_OCCUPATE % 2) == 0){
+				//Occupo le "prime" e "ultime" celle
+				if(me < (NUM_CELLE_OCCUPATE/2) || me >= ((n_prc_tot)-(NUM_CELLE_OCCUPATE/2))) {
+					for(i = 0; i < ROBOT_PER_CELLA; i++) {
+						// genero un evento di REGION_IN
+						delta = (simtime_t)(20 * Random());
+						if(delta < LOOKAHEAD)
+							delta += LOOKAHEAD;
+						ScheduleNewEvent(me, now + delta, REGION_IN, NULL, 0);
+					}
+				}
+			} else {
+				if(me <= (NUM_CELLE_OCCUPATE / 2) || me >= ((n_prc_tot) - (NUM_CELLE_OCCUPATE / 2))){
+					for(i = 0; i < ROBOT_PER_CELLA; i++){
+						// genero un evento di REGION_IN
+						delta = (simtime_t)(20 * Random());
+						if(delta < LOOKAHEAD)
+							delta += LOOKAHEAD;
+						ScheduleNewEvent(me, now + delta, REGION_IN, NULL, 0);
+					}
+				}
+			}
 
 
-  if(snapshot->lvt > MAX_TIME)
-	return true;
+			// Set the values for neighbours. If one is non valid, then set it to -1
+			for(i = 0; i < 6; i++) {
+				if(isValidNeighbour(me, i)) {
+					pointer->neighbour_trails[i] = 0;
+				} else {
+					pointer->neighbour_trails[i] = -1;
+				}
+			}
 
-  if(snapshot->agents_passed_through > MAX_REGION)
-    return true;
-  return false;
-}
+			break;
 
-void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, void *event, unsigned int size, lp_state_type *my_state)
-{
 
-  int i, j;
-  int x = 0, y = 0;
-  int recv;
-  model_data new_msg;
-  model_data *msg = (model_data*)event;
-  int target_center;
-  simtime_t new_time;
-  double value;
-  double delta;
-  void *the_state;
+		case REGION_IN:
 
-  if(my_state != NULL)
-	my_state->lvt = now;
+			pointer->trails++;
 
-    switch(event_type)
-    {
+			new_event_content.cell = me;
+			new_event_content.new_trails = pointer->trails;
 
-      case INIT:
-	
-	      the_state  = malloc(sizeof(lp_state_type));
-		SetState(the_state);
-	
-	      TRACE
-	      printf("INIT on all regions\n");
-	      for (i=0;i<SIZE;i++){
-		      for(j=0;j<SIZE;j++) {
-			      state[x][y].current_simulation_time =  0.0;
-			      state[x][y].agents_in = 0;
-			      state[x][y].agents_passed_through = 0;
-		      }
-	      }
-               TRACE
-	      printf("INIT on all regions done\n");
+			for (i = 0; i < 6; i++) {
+				if(pointer->neighbour_trails[i] != -1) {
+					receiver = GetNeighbourId(me, i);
+					if(receiver >= n_prc_tot || receiver < 0)
+						printf("%s:%d: %d -> %d\n", __FILE__, __LINE__, me, receiver);						
+					delta = TIME_STEP/100000;
+					if(delta < LOOKAHEAD)
+						delta += LOOKAHEAD;
+					ScheduleNewEvent(receiver, now + delta, UPDATE_NEIGHBORS, &new_event_content, sizeof(new_event_content));
+				}
+			}
 
-	      for(i=0;i<INITIAL_AGENTS;i++){
-		      new_msg.x = (int)(Expent(/*&model_seed,*/INCREMENT));
-		      if(new_msg.x >= SIZE) new_msg.x = SIZE-1;
-		      new_msg.y = (int)(Expent(/*&model_seed,*/INCREMENT));
-		      if(new_msg.y >= SIZE) new_msg.y = SIZE-1;
-			delta = 0.01 * INCREMENT;
-			if(delta < LOOKAHEAD)
+			// genero un evento di REGION_OUT
+			ScheduleNewEvent(me, now + TIME_STEP/100000, REGION_OUT, NULL, 0);
+
+			break;
+
+
+		case UPDATE_NEIGHBORS:
+
+			for (i = 0; i < 6; i++) {
+				if(event_content->cell == GetNeighbourId(me, i)) {
+					pointer->neighbour_trails[i] = event_content->new_trails;
+				}
+			}
+
+			break;
+
+
+		case REGION_OUT:
+
+			// Go to the neighbour who has the smallest trails count
+			trails = INT_MAX;
+			for(i = 0; i < 6; i++) {
+				if(pointer->neighbour_trails[i] != -1) {
+					if(pointer->neighbour_trails[i] < trails) {
+						trails = pointer->neighbour_trails[i];
+						receiver = i;
+					}
+				}
+			}
+			TEMP = receiver;
+			receiver = GetNeighbourId(me, receiver);
+
+			switch (DISTRIBUZIONE) {
+
+				case UNIFORME:
+					delta = (simtime_t) (TIME_STEP * Random());
+					break;
+
+				case ESPONENZIALE:
+					delta = (simtime_t)(Expent(TIME_STEP));
+					break;
+
+				default:
+					delta = (simtime_t)(TIME_STEP * Random());
+		   			break;
+
+			}
+
+			if(receiver >= n_prc_tot || receiver < 0)
+				printf("%s:%d: %d -> %d\n", __FILE__, __LINE__, me, receiver);
+				
+			if (delta < LOOKAHEAD)
 				delta += LOOKAHEAD;
-		      new_time = now + delta;
-		      TRACE
-		      printf("schedule agent in (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
-		      recv = coord_to_LP(new_msg.x, new_msg.y);
-		      ScheduleNewEvent(recv, new_time, AGENT_ARRIVAL, &new_msg, sizeof(model_data));
-	      }
-      break;
+			timestamp = now + delta;			
+			ScheduleNewEvent(receiver, timestamp, REGION_IN, NULL, 0);
+			break;
 
-
-      case AGENT_ARRIVAL:
-	
-	  x = msg->x;
-	  y = msg->y;
-	  state[x][y].current_simulation_time = now;
-
-	      TRACE
-	      printf("AGENT ARRIVAL IN region (%d,%d) - time %e - agents in %d - agents passed through %d\n",
-			      x,
-			      y,
-			      state[x][y].current_simulation_time,
-			      state[x][y].agents_in,
-			      state[x][y].agents_passed_through
-		      );
-	      
-	   /************************/   
-	      //counter_region++;
-	      my_state->agents_passed_through++;
-
-	      state[x][y].agents_in++;
-
-	      //audit_all();
-
-	      new_msg.x = x;
-	      new_msg.y = y;
-
-	     
-		delta = Expent(/*&model_seed,*/INCREMENT);
-		if(delta < LOOKAHEAD)
-			delta += LOOKAHEAD;
-	      new_time = now + delta;
-	      TRACE
-	      printf("schedule agent out (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
-	      
-	      ScheduleNewEvent(me, new_time, AGENT_DEPARTURE, &new_msg, sizeof(model_data));
-
-      break;
-
-
-      case AGENT_DEPARTURE:
-	
-	  x = msg->x;
-	  y = msg->y;
-	  state[x][y].current_simulation_time = now;
-
-	      state[x][y].agents_in--;
-	      state[x][y].agents_passed_through++;
-
-	      if(Random(/*&model_seed,*/)>0.5) 
-		      new_msg.x = x+1;
-	      else
-		      new_msg.x = x-1;
-		      
-	      if(Random(/*&model_seed,*/)>0.5) 
-		      new_msg.y = y+1;
-	      else
-		      new_msg.y = y-1;
-
-	      if(new_msg.x <0 || new_msg.x >= SIZE) new_msg.x = x;
-	      if(new_msg.y <0 || new_msg.y >= SIZE) new_msg.y = y;
-
-		delta = 0.001 * Expent(/*&model_seed,*/INCREMENT);
-		if(delta < LOOKAHEAD)
-			delta += LOOKAHEAD;
-	
-	      new_time = now + delta;
-
-	
-
-	      TRACE
-	      printf("schedule agent in (%d,%d) - time %e\n",new_msg.x,new_msg.y,new_time);
-	      recv = coord_to_LP(new_msg.x, new_msg.y);
-	      ScheduleNewEvent(recv, new_time, AGENT_ARRIVAL, &new_msg, sizeof(model_data));
-
-      break;
-
-
-
+      		default:
+			printf("Error: unsupported event: %d\n", event_type);
+			break;
 	}
-	//audit_all();
-
-
-
 }
 
+
+// funzione dell'applicazione invocata dalla piattaforma
+// per stabilire se la simulazione e' terminata
+int OnGVT(unsigned int me, lp_state_type *snapshot) {
+
+ 	if(snapshot->trails > VISITE_MINIME)
+		return true;
+
+	return false;
+}
