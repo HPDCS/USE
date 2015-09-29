@@ -76,21 +76,23 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			new_event_content.cell = me;
 			new_event_content.new_trails = pointer->trails;
+			
+			delta = TIME_STEP/100000; //qui voglio indicare che l'evento è immediatamente successivo, ma con il LA questo non succede
+					if(delta < LOOKAHEAD)
+						delta += LOOKAHEAD;
 
 			for (i = 0; i < 6; i++) {
 				if(pointer->neighbour_trails[i] != -1) {
 					receiver = GetNeighbourId(me, i);
 					if(receiver >= n_prc_tot || receiver < 0)
 						printf("%s:%d: %d -> %d\n", __FILE__, __LINE__, me, receiver);						
-					delta = TIME_STEP/100000;
-					if(delta < LOOKAHEAD)
-						delta += LOOKAHEAD;
+					
 					ScheduleNewEvent(receiver, now + delta, UPDATE_NEIGHBORS, &new_event_content, sizeof(new_event_content));
 				}
 			}
 
 			// genero un evento di REGION_OUT
-			ScheduleNewEvent(me, now + TIME_STEP/100000, REGION_OUT, NULL, 0);
+			ScheduleNewEvent(me, now + delta, REGION_OUT, NULL, 0);
 
 			break;
 
@@ -156,6 +158,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 // funzione dell'applicazione invocata dalla piattaforma
 // per stabilire se la simulazione e' terminata
 int OnGVT(unsigned int me, lp_state_type *snapshot) {
+	
+	printf("value %d ", snapshot->trails);
 
  	if(snapshot->trails > VISITE_MINIME)
 		return true;

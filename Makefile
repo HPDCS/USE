@@ -74,11 +74,13 @@ phold: _phold mm core link
 
 
 link:
-	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+#	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 ifdef MALLOC
-	gcc -g -o $(TARGET) model/__application_hijacked.o core/__core.o $(CFLAGS)
+#	gcc -g -o $(TARGET) model/__application_hijacked.o core/__core.o $(CFLAGS)
+	gcc -g -o $(TARGET) model/__application.o core/__core.o $(CFLAGS)
 else
-	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
+#	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
+	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
 	gcc -g -o $(TARGET) model/application-mm.o core/__core.o $(CFLAGS)
 endif
 
