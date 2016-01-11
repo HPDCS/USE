@@ -110,7 +110,7 @@ int queue_min(void) {
     memcpy(&current_msg, node_ret, sizeof(msg_t));
     free(node_ret);
 
-    execution_time(current_msg.timestamp);
+    execution_time(current_msg.timestamp, current_msg.receiver_id);
 
     __sync_lock_release(&queue_lock);
 

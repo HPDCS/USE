@@ -9,6 +9,7 @@
 
 
 static simtime_t *current_time_vector;
+static int *current_region;
 
 extern int queue_lock;
 
@@ -28,14 +29,16 @@ void message_state_init(void){
 	}
     for(i = 0; i < n_cores; i++){
         current_time_vector[i] = INFTY;     //processing
+		current_region[i]=0;
     }
 }
 
-void execution_time(simtime_t time){
+void execution_time(simtime_t time, int clp){
     current_time_vector[tid] = time;      //processing
+    current_region[tid] = clp;
 }
 
-unsigned int check_safety(simtime_t time){
+unsigned int check_safety_no_lookahead(simtime_t time){
     unsigned int i;
     unsigned int events;
     
@@ -64,13 +67,30 @@ unsigned int check_safety_lookahead(simtime_t time){
     return events;
 }
 
+unsigned int check_safety(simtime_t time){
+    unsigned int i;
+    unsigned int events;
+    
+    events = 0;
+    
+    for(i = 0; i < n_cores; i++){
+		
+        if(i!=tid && (
+			(   (time > (current_time_vector[i]+LOOKAHEAD)) || (time==(current_time_vector[i]+LOOKAHEAD) && tid > i))
+			||
+			( (current_lp==current_region[i]) && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i) ) )
+		  ))
+            events++;
+    }
+    
+    return events;
+}
+
 void flush(void) {
     while(__sync_lock_test_and_set(&queue_lock, 1))
         while(queue_lock);
 
 	queue_deliver_msgs();
-
-	///current_time_vector[tid] += lookahead; //da implementare il lookahead
 
     __sync_lock_release(&queue_lock);
 }

@@ -526,7 +526,7 @@ void thread_loop(unsigned int thread_id) {
 
 		/*FETCH*/
 		if (queue_min() == 0) {
-			execution_time(INFTY);
+			execution_time(INFTY,-1);
 			continue;
 		}
 
@@ -539,16 +539,16 @@ void thread_loop(unsigned int thread_id) {
 
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
-			if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				//printf("%u SAF \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
-				if(check_safety(current_lvt)==0)
-					get_lp_lock(0, 1); //get_lp_lock(0, 1);
-				else
-					get_lp_lock(1, 1);
+				//if(check_safety(current_lvt)==0)
+				//	get_lp_lock(0, 1);
+				//else
+				//	get_lp_lock(1, 1);
 				t_pre = CLOCK_READ();// per throttling
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				t_post = CLOCK_READ();// per throttling
-				release_lp_lock();
+				//release_lp_lock();
 				committed_safe[tid]++;
 #ifdef THROTTLING
 				//guarda se si può migliorare
@@ -564,7 +564,7 @@ void thread_loop(unsigned int thread_id) {
 			else if (pending_events < reverse_execution_threshold) {
 				//printf("%u HTM \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 
-				get_lp_lock(0, 1);
+				//get_lp_lock(0, 1);
 
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
@@ -575,7 +575,7 @@ void thread_loop(unsigned int thread_id) {
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 						committed_htm[tid]++;
-						release_lp_lock();
+						//release_lp_lock();
 					} else {
 						_xabort(_ROLLBACK_CODE);
 					}
@@ -592,7 +592,7 @@ void thread_loop(unsigned int thread_id) {
 						abort_generic[tid]++;
 					}
 
-					release_lp_lock();
+					//release_lp_lock();
 					//goto reversible;
 					continue;
 				}
@@ -650,7 +650,7 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 
 	}
 
-	execution_time(INFTY);
+	execution_time(INFTY,-1);
 	
 	if(sim_error){
 		printf("\n[%u] Execution ended for an error\n\n", tid);

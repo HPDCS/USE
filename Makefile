@@ -63,7 +63,7 @@ PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
 
-all: robot_explore
+all: phold
 
 pcs: _pcs mm core link
 
