@@ -23,6 +23,8 @@ void message_state_init(void){
     unsigned int i;
 
     current_time_vector = malloc(sizeof(simtime_t) * n_cores);
+    current_region = malloc(sizeof(int)*n_cores);
+    
     if(current_time_vector == NULL){
 		printf("Out of memory in %s:%d", __FILE__, __LINE__);
 		abort();		
@@ -70,7 +72,6 @@ unsigned int check_safety_lookahead(simtime_t time){
 unsigned int check_safety(simtime_t time){
     unsigned int i;
     unsigned int events;
-    
     events = 0;
     
     for(i = 0; i < n_cores; i++){
@@ -82,7 +83,6 @@ unsigned int check_safety(simtime_t time){
 		  ))
             events++;
     }
-    
     return events;
 }
 

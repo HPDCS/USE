@@ -511,8 +511,8 @@ void release_waiting_ticket(){
 }
 
 void thread_loop(unsigned int thread_id) {
+	
 	unsigned int status, pending_events;
-		
 	unsigned long long t_pre, t_post;// per throttling
 	
 	bool retry_event;
@@ -539,9 +539,9 @@ void thread_loop(unsigned int thread_id) {
 
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
-			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+			if ((pending_events = check_safety(current_lvt)) == 0) { // if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {  //    
 				//printf("%u SAF \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
-				//if(check_safety(current_lvt)==0)
+				//if(check_safety_no_lookahead(current_lvt)==0)
 				//	get_lp_lock(0, 1);
 				//else
 				//	get_lp_lock(1, 1);
