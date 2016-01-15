@@ -541,14 +541,18 @@ void thread_loop(unsigned int thread_id) {
 ///non ci sono problemi quindi eseguo normalmente*/
 			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				//printf("%u SAF \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
-				//if(check_safety(current_lvt)==0)
-				//	get_lp_lock(0, 1);
-				//else
-				//	get_lp_lock(1, 1);
+#ifdef REVERSIBLE
+				if(check_safety_no_lookahead(current_lvt)==0)
+					get_lp_lock(0, 1);
+				else
+					get_lp_lock(1, 1);
+#endif
 				t_pre = CLOCK_READ();// per throttling
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				t_post = CLOCK_READ();// per throttling
-				//release_lp_lock();
+#ifdef REVERSIBLE
+				release_lp_lock();
+#endif
 				committed_safe[tid]++;
 #ifdef THROTTLING
 				//guarda se si può migliorare
@@ -563,9 +567,9 @@ void thread_loop(unsigned int thread_id) {
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
 			else if (pending_events < reverse_execution_threshold) {
 				//printf("%u HTM \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
-
-				//get_lp_lock(0, 1);
-
+#ifdef REVERSIBLE
+				get_lp_lock(0, 1);
+#endif
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
@@ -575,7 +579,9 @@ void thread_loop(unsigned int thread_id) {
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 						committed_htm[tid]++;
-						//release_lp_lock();
+#ifdef REVERSIBLE
+						release_lp_lock();
+#endif
 					} else {
 						_xabort(_ROLLBACK_CODE);
 					}
@@ -591,15 +597,17 @@ void thread_loop(unsigned int thread_id) {
 					else{
 						abort_generic[tid]++;
 					}
-
-					//release_lp_lock();
+#ifdef REVERSIBLE
+					release_lp_lock();
 					//goto reversible;
+#endif
 					continue;
 				}
 
 			}
 ///ESECUZIONE REVERSIBILE:
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
+#ifdef REVERSIBLE
 			else {
 reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 				if(get_lp_lock(1, 0)==0)
@@ -630,6 +638,7 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 				committed_reverse[tid]++;
 				
 			}
+#endif
 
 			break;
 		}
