@@ -542,10 +542,7 @@ void thread_loop(unsigned int thread_id) {
 			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				//printf("%u SAF \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp);
 #ifdef REVERSIBLE
-				if(check_safety_no_lookahead(current_lvt)==0)
-					get_lp_lock(0, 1);
-				else
-					get_lp_lock(1, 1);
+				get_lp_lock(0, 1);
 #endif
 				t_pre = CLOCK_READ();// per throttling
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
