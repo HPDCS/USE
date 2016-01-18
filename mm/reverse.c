@@ -1,5 +1,3 @@
-#ifdef HAVE_REVERSE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,17 +5,14 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-#include <mm/reverse.h>
-#include <mm/dymelor.h>
-#include <core/timer.h>
-#include <scheduler/scheduler.h>
-#include <scheduler/process.h>
-#include <datatypes/slab.h>
+#include <reverse.h>
+#include <dymelor.h>
+#include <slab.h>
 
-
+extern __thread msg_t current_msg;
 
 // #define revwin_overflow() do { \
-// 	printf("[LP%d] :: event %d win at %p\n", current_lp, current_evt->type, win); \
+// 	printf("[LP%d] :: event %d win at %p\n", current_lp, current_msg->type, win); \
 // 	printf("Code size is %lld bytes and data size is %lld bytes\n", ((long long)win->code - (long long)win->data), ((long long)win->data - sizeof(revwin_t))); \
 // 	fprintf(stderr, "Insufficent reverse window memory heap!\n"); \
 // 	exit(-ENOMEM); \
@@ -29,7 +24,7 @@
 // 	} while(0)
 
 static inline void revwin_overflow(revwin_t *win) {
-	printf("[LP%d] :: event %d win at %p\n", current_lp, current_evt->type, win);
+	printf("[LP%d] :: event %d win at %p\n", current_lp, current_msg.type, win);
 	printf("Code size is %lld bytes and data size is %lld bytes\n", ((long long)win->code - (long long)win->data), ((long long)win->data - sizeof(revwin_t)));
 	fprintf(stderr, "Insufficent reverse window memory heap!\n");
 	exit(-ENOMEM); \
@@ -367,7 +362,7 @@ void revwin_free(unsigned int lid, revwin_t *win) {
 void reverse_init(size_t window_size) {
 
 	// Allocate the structure needed by the slab allocator
-	slab_chain = rsalloc(sizeof(struct slab_chain));
+	slab_chain = malloc(sizeof(struct slab_chain));
 	if(slab_chain == NULL) {
 		printf("Unable to allocate memory for the SLAB structure\n");
 		abort();
@@ -446,7 +441,7 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 
 	// We have to retrieve the current event structure bound to this LP
 	// in order to bind this reverse window to it.
-	win = current_evt->revwin;
+	win = current_msg.revwin;
 	if(win == NULL) {
 		printf("No revwin has been defined for the event\n");
 		abort();
@@ -511,10 +506,12 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 
 	reversing_function(win, address, size);
 
+/*
 	// Gather statistics data
 	double elapsed = (double)timer_value_micro(t);
 	statistics_post_lp_data(current_lp, STAT_REVERSE_GENERATE, 1.0);
 	statistics_post_lp_data(current_lp, STAT_REVERSE_GENERATE_TIME, elapsed);
+	*/
 
 //	printf("[%d] :: Reverse MOV instruction generated to save value %lx\n", tid, *((unsigned long *)address));
 }
@@ -559,16 +556,13 @@ void execute_undo_event(unsigned int lid, revwin_t *win) {
 	// Calls the reversing function
 	((void (*)(void))win->code) ();
 
+	/*
 	double elapsed = (double)timer_value_micro(reverse_block_timer);
 	statistics_post_lp_data(lid, STAT_REVERSE_EXECUTE, 1.0);
 	statistics_post_lp_data(lid, STAT_REVERSE_EXECUTE_TIME, elapsed);
 	statistics_post_lp_data(current_lp, STAT_REVERSE_WINDOW_CODE_SIZE, revwin_avail_code_size());
 	statistics_post_lp_data(current_lp, STAT_REVERSE_WINDOW_DATA_SIZE, revwin_avail_data_size());
-
+*/
 
 //	printf("===> [%d] :: undo event executed (size = %ld bytes)\n", tid, revwin_size(win));
 }
-
-#endif /* HAVE_REVERSE */
-
-

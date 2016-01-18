@@ -13,6 +13,8 @@
 
 #include <ROOT-Sim.h>
 
+#include <reverse.h>
+
 #define MAX_LPs	2048
 
 #define MAX_DATA_SIZE		128
@@ -32,6 +34,7 @@ typedef struct __msg_t
   int type;
   unsigned int data_size;
   unsigned char data[MAX_DATA_SIZE];
+  revwin_t *revwin;
 
 } msg_t;
 

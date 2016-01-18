@@ -1,5 +1,3 @@
-#ifdef HAVE_REVERSE
-
 #pragma once
 #ifndef __REVERSE_H
 #define __REVERSE_H
@@ -220,5 +218,3 @@ extern void revwin_flush_cache(void);
 
 
 #endif /* __REVERSE_H */
-#endif /* HAVE_REVERSE */
-

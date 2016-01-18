@@ -121,6 +121,8 @@
 #define RESET_BIT_AT(B,K) ( B &= ~(MASK << K) )
 #define CHECK_BIT_AT(B,K) ( B & (MASK << K) )
 
+#define IS_POWEROF2(x) (1UL << (1 + (63 - __builtin_clzl((x) - 1))))
+
 
 /// This structure let DyMeLoR handle one malloc area (for serving given-size memory requests)
 struct _malloc_area {

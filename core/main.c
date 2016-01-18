@@ -9,7 +9,7 @@
 #include <core.h>
 #include <timer.h>
 
-
+#include <reverse.h>
 
 unsigned short int number_of_threads = 1;
 
@@ -66,6 +66,8 @@ int main(int argn, char *argv[]) {
         n = atoi(argv[1]);
         init(n, atoi(argv[2]));
     }
+
+    reverse_init(REVWIN_SIZE);
 
     printf("Start simulation\n");
 

@@ -18,12 +18,13 @@
 #include <numerical.h>
 #include <timer.h>
 
+#include <reverse.h>
+
 #include "core.h"
 #include "queue.h"
 #include "message_state.h"
 #include "simtypes.h"
 
-#include "reverse.h"
 
 //id del processo principale
 #define _MAIN_PROCESS		0
@@ -517,10 +518,10 @@ void thread_loop(unsigned int thread_id) {
 	
 	bool retry_event;
 
-	revwin *window; //fallo diventare un array di reverse window istanziato nell'init
+	revwin_t *window; //fallo diventare un array di reverse window istanziato nell'init
 
 	tid = thread_id;
-	window = create_new_revwin(0);
+	window = revwin_create();
 
 	while (!stop && !sim_error) {
 
@@ -613,7 +614,7 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 				if(get_lp_lock(1, 0)==0)
 					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
-				reset_window(window);	//<-da mettere una volta sola ad inizio esecuzione
+				revwin_reset(current_lp, window);	//<-da mettere una volta sola ad inizio esecuzione
 				//ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				///ATTENZIONE, da rimettere quello reversibile
