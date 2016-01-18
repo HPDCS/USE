@@ -23,13 +23,15 @@ void message_state_init(void){
     unsigned int i;
 
     current_time_vector = malloc(sizeof(simtime_t) * n_cores);
+    current_region = malloc(sizeof(int)*n_cores);
+    
     if(current_time_vector == NULL){
-		printf("Out of memory in %s:%d", __FILE__, __LINE__);
-		abort();		
-	}
+        printf("Out of memory in %s:%d", __FILE__, __LINE__);
+        abort();        
+    }
     for(i = 0; i < n_cores; i++){
         current_time_vector[i] = INFTY;     //processing
-		current_region[i]=0;
+        current_region[i]=0;
     }
 }
 
