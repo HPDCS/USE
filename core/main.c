@@ -67,8 +67,6 @@ int main(int argn, char *argv[]) {
         init(n, atoi(argv[2]));
     }
 
-    reverse_init(REVWIN_SIZE);
-
     printf("Start simulation\n");
 
     timer_start(exec_time);

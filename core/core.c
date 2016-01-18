@@ -520,6 +520,9 @@ void thread_loop(unsigned int thread_id) {
 
 	revwin_t *window; //fallo diventare un array di reverse window istanziato nell'init
 
+	// Initialize the SLAB allocator for this thread
+	reverse_init(REVWIN_SIZE);
+	
 	tid = thread_id;
 	window = revwin_create();
 
@@ -658,6 +661,9 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 	}
 
 	execution_time(INFTY,-1);
+
+	// Destroy SLAB's structures    
+	reverse_fini();
 	
 	if(sim_error){
 		printf("\n[%u] Execution ended for an error\n\n", tid);
