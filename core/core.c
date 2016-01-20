@@ -69,7 +69,7 @@ unsigned int *wait_time_id;
 int *wait_time_lk;
 
 //Soglia dopo la quale gli eventi vengono eseguiti in modalità reversibile
-unsigned int reverse_execution_threshold = 0;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 2;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
