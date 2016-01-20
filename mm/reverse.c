@@ -306,6 +306,10 @@ revwin_t *revwin_create(void) {
 		abort();
 	}
 	memset(win, 0, revwin_size);
+	if(mprotect(((char *)win-sizeof(struct slab_header)), revwin_size, PROT_WRITE | PROT_READ | PROT_EXEC) < 0) {
+		printf("Unable to assign executable flags to reverse window");
+		abort();
+	}
 
 
 	// Initialize reverse window's code field in order to point to very
