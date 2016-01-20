@@ -69,7 +69,7 @@ unsigned int *wait_time_id;
 int *wait_time_lk;
 
 //Soglia dopo la quale gli eventi vengono eseguiti in modalità reversibile
-unsigned int reverse_execution_threshold = 10;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
+unsigned int reverse_execution_threshold = 0;	//ho messo un valore a caso, ma sarà da fissare durante l'inizializzazione
 
 #define FINE_GRAIN_DEBUG
 
@@ -622,7 +622,7 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 
 				while (check_safety_lookahead(current_lvt) > 0) {
 					if ( check_waiting() ) {
-						execute_undo_event(window);
+						execute_undo_event(current_lp, window);
 						queue_clean();
 						abort_waiting[tid]++;
 						retry_event = true;
@@ -663,7 +663,7 @@ reversible:			//printf("%u REV \ttime:%f \tlp:%u\n",tid, current_lvt, current_lp
 	execution_time(INFTY,-1);
 
 	// Destroy SLAB's structures    
-	reverse_fini();
+	//reverse_fini();
 	
 	if(sim_error){
 		printf("\n[%u] Execution ended for an error\n\n", tid);

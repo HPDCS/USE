@@ -104,12 +104,18 @@ void *slab_alloc(struct slab_chain *const sch) {
 		/* no empty or partial slabs available, create a new one */
 		if (sch->slabsize <= slab_pagesize) {
 			sch->partial = mmap(NULL, sch->pages_per_alloc, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+			if(mprotect(sch->partial, sch->pages_per_alloc, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
+				printf("Unaable to set memory permissions\n");
+			}
 
 			if (UNLIKELY(sch->partial == MAP_FAILED))
 				return perror("mmap"), sch->partial = NULL;
 		} else {
 			const int err = posix_memalign((void **)&sch->partial,
 						       sch->slabsize, sch->pages_per_alloc);
+			if(mprotect(sch->partial, sch->pages_per_alloc, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
+				printf("Unaable to set memory permissions\n");
+			}
 
 			if (UNLIKELY(err != 0)) {
 				fprintf(stderr, "posix_memalign(align=%zu, size=%zu): %d\n", sch->slabsize, sch->pages_per_alloc, err);
