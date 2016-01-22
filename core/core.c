@@ -596,12 +596,10 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int status, pending_events;
 	unsigned long long t_pre, t_post, t_pre2, t_post2;// per throttling
 	bool retry_event;
-	revwin_t *window;
 
 	tid = thread_id;
 	
 	reverse_init(REVWIN_SIZE);
-	window = revwin_create();
 
 	while (!stop && !sim_error) {
 
@@ -610,7 +608,9 @@ void thread_loop(unsigned int thread_id) {
 			execution_time(INFTY,-1);
 			continue;
 		}
-
+		
+		current_msg.revwin = revwin_create();
+		
 		//lvt ed lp dell'evento corrente
 		current_lp = current_msg.receiver_id;	//identificatore lp
 		current_lvt = current_msg.timestamp;	//local virtual time
@@ -708,7 +708,7 @@ reversible:
 				if(get_lp_lock(1, 0)==0)
 					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
-				revwin_reset(current_lp, window);	//<-da mettere una volta sola ad inizio esecuzione
+				revwin_reset(current_lp, current_msg.revwin);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 				retry_event = false;
 
@@ -716,7 +716,7 @@ reversible:
 
 				while (check_safety_lookahead(current_lvt) > 0) {
 					if ( check_waiting() ) {
-						execute_undo_event(current_lp, window);
+						execute_undo_event(current_lp, current_msg.revwin);
 						queue_clean();
 						abort_waiting[tid]++;
 						retry_event = true;
