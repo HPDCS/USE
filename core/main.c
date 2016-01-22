@@ -74,7 +74,7 @@ int main(int argn, char *argv[]) {
 
     printf("Simulation ended: %f seconds\n", timer_value_seconds(exec_time));
     
-    print_report();
+    print_report_sum();
 
     return 0;
 }

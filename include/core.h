@@ -78,6 +78,7 @@ extern void flush(void);
 double double_cas(double *addr, double old_val, double new_val);
 
 void print_report(void);
+void print_report_sum(void);
 
 void *tuning(void *args);
 
