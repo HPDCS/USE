@@ -451,8 +451,6 @@ void revwin_reset(unsigned int lid, revwin_t *win) {
 #define SIMULATED_INCREMENTAL_CKPT if(0)
 static bool use_xmm = false;
 static __thread int count = 0;
-static __thread double revwin_avg_code = 0;
-static __thread double revwin_avg_data = 0;
 
 
 void reverse_code_generator(const unsigned long long address, const size_t size) {
@@ -461,9 +459,6 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 	bool dominant;
 	revwin_t *win;
 
-	//printf("address is %p - size is %d\n",address,size);
-
-	//SIMULATED_INCREMENTAL_CKPT return;
 
 	// We have to retrieve the current event structure bound to this LP
 	// in order to bind this reverse window to it.
@@ -514,21 +509,6 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 		}
 	}	
 
-	// Act accordingly to the currrent selected reversing strategy
-	/*if(cache.usefulness > 0.5) {
-	
-		// Reverse the whole malloc_area chunk passing the pointer
-		// of the target memory chunk to reverse (not the malloc_area one)
-		chunk_address = address & ADDRESS_PREFIX;
-		chunk_size = CLUSTER_SIZE;
-		//reverse_chunk(win, chunk_address, chunk_size);
-		reverse_single(win, address, size);
-
-	} else {
-	
-		// Reverse the single buffer access
-		reverse_single(win, address, size);
-	}*/
 
 	reversing_function(win, address, size);
 
@@ -538,20 +518,6 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 	statistics_post_lp_data(current_lp, STAT_REVERSE_GENERATE, 1.0);
 	statistics_post_lp_data(current_lp, STAT_REVERSE_GENERATE_TIME, elapsed);
 	*/
-
-#if 0
-	revwin_avg_code += win->code_start - win->code;
-	revwin_avg_code /= 2;
-
-	revwin_avg_data += win->data - win->data_start;
-	revwin_avg_data /= 2;
-
-	if((count++ % 1000) == 0) {
-		printf("Cache usefulness = %.3f\n", cache.usefulness);
-		printf("Revwin code size = %.3f, data size = %.3f\n", revwin_avg_code, revwin_avg_data);
-		printf("Dominated count = %d\n", dominated_count);
-	}
-#endif
 
 //	printf("[%d] :: Reverse MOV instruction generated to save value %lx\n", tid, *((unsigned long *)address));
 }
@@ -575,15 +541,6 @@ void execute_undo_event(unsigned int lid, revwin_t *win) {
 		return;
 	}
 
-	//revcode_size = ((win->base + win->size - 3) - win->top);
-	//printf("UNDO :: [%p - %p] revcode size= %d\n", win, event, revcode_size);
-	//printf("UNDO :: [%p]  revcode size= %d\n", win, revcode_size);
-	/*
-	if (revcode_size <= 0) {
-		printf("Empty reverse code\n");
-		return;
-	}
-	*/
 
 	// Statistics
 	timer reverse_block_timer;

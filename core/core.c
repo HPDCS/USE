@@ -733,6 +733,10 @@ reversible:
 				while (check_safety_lookahead(current_lvt) > 0) {
 					if ( check_waiting() ) {
 						execute_undo_event(current_lp, current_msg.revwin);
+
+						// TODO: handle the reverse cache flush
+						//revwin_flush_cache();
+
 						queue_clean();
 						abort_waiting[tid]++;
 						retry_event = true;
@@ -741,7 +745,7 @@ reversible:
 				}
 				
 				release_lp_lock();
-				
+
 				t_post2 = CLOCK_READ();
 				if(clocks_stm_checking[tid] > 0)
 					clocks_stm_checking[tid] = (clocks_stm_checking[tid]*0.9) + ((t_post2-t_pre2)*0.1);
@@ -765,10 +769,13 @@ reversible:
 
 			break;
 		}
+
 		release_waiting_ticket();
 		/*FLUSH*/ 
 		flush();
 		
+		revwin_free(current_lp, current_msg.revwin);
+
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
@@ -779,19 +786,19 @@ reversible:
 				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
 			}
 		}
-
 	}
 
 	execution_time(INFTY,-1);
 	
 	revwin_free(current_lp, current_msg.revwin);
 
-	// Destroy SLAB's structures    
+	// Destroy SLAB's structures
+	// FIXME: does not work!
 	//reverse_fini();
 	
 	if(sim_error){
 		printf("\n[%u] Execution ended for an error\n\n", tid);
-	}else if (stop){
+	} else if (stop){
 		printf("\n[%u] Execution ended correctly\n\n", tid);
 	}
 }

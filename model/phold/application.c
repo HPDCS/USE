@@ -84,9 +84,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 
-	if(snapshot->events < COMPLETE_EVENTS)
+	if(snapshot->events < COMPLETE_EVENTS) {
 //	if(snapshot->lvt < COMPLETE_TIME)
-		return false;
+        return false;
+    }
 	return true;
 }
 
