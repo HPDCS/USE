@@ -20,12 +20,12 @@
 #define MAX_DATA_SIZE		128
 #define THR_POOL_SIZE		16
 
-#define TROT_INIT_DELTA		0.3
-#define REV_INIT_THRESH		2
+#define TROT_INIT_DELTA		0.2
+#define REV_INIT_THRESH		10
 
-#define MODE_SAF	0
-#define MODE_HTM	1
-#define MODE_STM	2
+#define MODE_SAF	1
+#define MODE_HTM	2
+#define MODE_STM	3
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
