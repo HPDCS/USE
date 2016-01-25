@@ -10,6 +10,7 @@
 #include <slab.h>
 
 extern __thread msg_t current_msg;
+extern void **states;
 
 // #define revwin_overflow() do { \
 // 	printf("[LP%d] :: event %d win at %p\n", current_lp, current_msg->type, win); \
@@ -23,15 +24,33 @@ extern __thread msg_t current_msg;
 // 		revwin_overflow(); \
 // 	} while(0)
 
+//
+// revwin
+//   ====================
+//   ||     header     ||
+//   ||----------------||
+// ->||      data      ||
+//   ||                ||
+//   ||----------------||
+//   ||                ||
+//   ||                ||
+//   ||                ||
+//   ||      code      ||
+// ->||                ||
+//   ====================
+//
+
 static inline void revwin_overflow(revwin_t *win) {
 	printf("[LP%d] :: event %d win at %p\n", current_lp, current_msg.type, win);
-	printf("Code size is %lld bytes and data size is %lld bytes\n", ((long long)win->code - (long long)win->data), ((long long)win->data - sizeof(revwin_t)));
+	printf("Code size is %d bytes and data size is %d bytes\n", (int)((long long)win->code_start - (long long)win->code), (int)((long long)win->data - (long long)win->data_start));
+    printf("Reverse window has %d bytes, still available %d bytes\n", (int)((long long)win->code_start - (long long)win), (int)((long long)win->code - (long long)win->data));
 	fprintf(stderr, "Insufficent reverse window memory heap!\n");
 	exit(-ENOMEM); \
 }
 
 static inline void revwin_check_space(revwin_t *win, size_t size) {
-	if (((long long)win->code - (long long)win->data) < (size)) {
+	if ((int)((long long)win->code - (long long)win->data) < (size)) {
+        printf("Request for %d bytes failed!\n", size);
 		revwin_overflow(win);
 	}
 }
@@ -149,8 +168,8 @@ static void reverse_chunk(revwin_t *win, unsigned long long address, size_t size
  * @parm bsize The size of the single reverse block (must be 4, 8 or 16)
  *
  */
-static void reverse_single_xmm(revwin_t *win, unsigned long long address, int bsize) {
-	unsigned long long rip_relative;
+static void reverse_single_xmm(revwin_t *win, const unsigned long long address, int bsize) {
+	unsigned int rip_relative;
 
 	unsigned char revasm[22] = {
 		0x48,0xb8,  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,		// movabs 0x0, %rax
@@ -159,6 +178,7 @@ static void reverse_single_xmm(revwin_t *win, unsigned long long address, int bs
 	};
 
 	// Check whether there is enough available space to store data
+	bsize = 128;
 	revwin_check_space(win, bsize);
 
 	// Copy the word pointed to by address
@@ -166,14 +186,18 @@ static void reverse_single_xmm(revwin_t *win, unsigned long long address, int bs
 	memcpy(win->data, (void *)address, bsize);
 
 	// Computes the rip relative displacement
-	rip_relative = win->code - win->data;
+	// Note! 4 is the size of the last movdqu instruction to which
+	// the IP will point during the actual execution.
+	// For now, win->code points beyond that instruction since it is
+	// not yet written
+	rip_relative = win->data - win->code - 4;
 
 	// Update the data section ponter of reverse window
 	win->data += bsize;
 
 	// Builds the assembly reverse code with RIP-relative addressing
 	memcpy(revasm+2, &address, 8);
-	memcpy(revasm+15, &rip_relative, 4);
+	memcpy(revasm+14, &rip_relative, 4);
 
 	// Actually add the code to the revwin's executable section
 	revwin_add_code(win, revasm, sizeof(revasm));
@@ -190,14 +214,14 @@ static void reverse_single_xmm(revwin_t *win, unsigned long long address, int bs
  * @param size The number of bytes to reverse
  */
 static void reverse_single_embedded(revwin_t *win, const unsigned long long address, size_t size) {
-	unsigned long value, value_lower;
+	unsigned long long value, value_lower;
 	unsigned char *code;
 	unsigned short size_code;
 
 	unsigned char revcode_quadword[23] = {
-		0x48, 0xb8, 0xda, 0xd0, 0xda, 0xd0, 0x00, 0x00, 0x00, 0x00,			// movabs $0x0, %rax
-		0xc7, 0x00, 0xd3, 0xb0, 0x00, 0x00,									// movl $0x0, (%rax)
-		0xc7, 0x40, 0x04, 0xb0, 0xd3, 0x00, 0x00 							// movl $0x0, 4(%rax)
+		0x48, 0xb8,  0xda, 0xd0, 0xda, 0xd0, 0x00, 0x00, 0x00, 0x00,		// movabs $0x0, %rax
+		0xc7, 0x00,  0xd3, 0xb0, 0x00, 0x00,								// movl $0x0, (%rax)
+		0xc7, 0x40, 0x04,  0xb0, 0xd3, 0x00, 0x00 							// movl $0x0, 4(%rax)
 	};
 
 	// Get the value pointed to by 'address'
@@ -238,10 +262,10 @@ static bool check_dominance(unsigned long long address) {
 	// Inquiry DyMeLoR's API to retrieve the address of the memory
 	// area (i.e. chunk) associated with the current address
 	//chunk_address = get_area(address);
+	chunk_address = address;
 
 	// Get the actual cache line associated with the selected cluster
 	entry = get_cache_line(&cache, chunk_address);
-
 
 	// Check whether the tag matches the one associated to the current address;
 	// that is, it belongs to the correct chunk in cache (i.e. a chunk hit)
@@ -260,12 +284,11 @@ static bool check_dominance(unsigned long long address) {
 		entry->tag = get_address_tag(address);
 	}
 
-	
 	// Increase the total number of chunk hits
 	entry->total_hits++;
 	
 	// Now, verify that the address has been previously referenced or not
-	if(cache_check_bit(entry, address) == 1) {
+	if(cache_check_bit(entry, address) != 0) {
 		// This is a cache hit for the current address
 		return true;
 	}
@@ -280,15 +303,15 @@ static bool check_dominance(unsigned long long address) {
 
 	// Update cache usefulness as:
 	// U = distinct_hits / width
-	cache.usefulness += ((double)entry->distinct_hits / (double)CACHE_LINE_SIZE);
-	cache.usefulness /= 2;
+	cache.usefulness = ((double)entry->distinct_hits / (double)CACHE_LINE_SIZE);
 
 	return false;
 }
 
 
 void revwin_flush_cache(void) {
-	memset(cache.lines, 0, CACHE_LINE_SIZE*CACHE_NUM_LINES);
+	//memset(cache.lines, 0, CACHE_LINE_SIZE*sizeof(reverse_cache_line_t));
+	memset(&cache, 0, sizeof(cache));
 }
 
 
@@ -426,7 +449,11 @@ void revwin_reset(unsigned int lid, revwin_t *win) {
  */
 
 #define SIMULATED_INCREMENTAL_CKPT if(0)
-static bool use_xmm = true;
+static bool use_xmm = false;
+static __thread int count = 0;
+static __thread double revwin_avg_code = 0;
+static __thread double revwin_avg_data = 0;
+
 
 void reverse_code_generator(const unsigned long long address, const size_t size) {
 	unsigned long long chunk_address;
@@ -453,7 +480,7 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 	// Check whether the current address' update dominates over some other
 	// update on the same memory region. If so, we can return earlier.
 	dominant = check_dominance(address);
-	if(dominant) {
+	if(dominant && 0) {
 		// If the current address is dominated by some other update,
 		// then there is no need to generate any reversing instruction
 		dominated_count++;
@@ -469,7 +496,7 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 		reversing_function = reverse_chunk;
 		
 		if(strategy_id == STRATEGY_SINGLE) {
-			strategy_id == STRATEGY_CHUNK;
+			strategy_id = STRATEGY_CHUNK;
 			printf("Swith to chunk reversal (%f)\n", cache.usefulness);
 		}
 
@@ -482,7 +509,7 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 		}
 
 		if(strategy_id == STRATEGY_CHUNK) {
-			strategy_id == STRATEGY_SINGLE;
+			strategy_id = STRATEGY_SINGLE;
 			printf("Swith to single reversal (%f)\n", cache.usefulness);
 		}
 	}	
@@ -511,6 +538,20 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 	statistics_post_lp_data(current_lp, STAT_REVERSE_GENERATE, 1.0);
 	statistics_post_lp_data(current_lp, STAT_REVERSE_GENERATE_TIME, elapsed);
 	*/
+
+#if 0
+	revwin_avg_code += win->code_start - win->code;
+	revwin_avg_code /= 2;
+
+	revwin_avg_data += win->data - win->data_start;
+	revwin_avg_data /= 2;
+
+	if((count++ % 1000) == 0) {
+		printf("Cache usefulness = %.3f\n", cache.usefulness);
+		printf("Revwin code size = %.3f, data size = %.3f\n", revwin_avg_code, revwin_avg_data);
+		printf("Dominated count = %d\n", dominated_count);
+	}
+#endif
 
 //	printf("[%d] :: Reverse MOV instruction generated to save value %lx\n", tid, *((unsigned long *)address));
 }
@@ -548,12 +589,24 @@ void execute_undo_event(unsigned int lid, revwin_t *win) {
 	timer reverse_block_timer;
 	timer_start(reverse_block_timer);
 
+	unsigned int events_before = *((unsigned int *)(states[lid]+sizeof(simtime_t)));
 
 	// Add the complementary push %rax instruction to the top
 	revwin_add_code(win, &push, sizeof(push));
 
+	//printf("[%d] BEFORE :: %d\n", lid, *(unsigned int *)(states[lid]+sizeof(simtime_t)));
+
 	// Calls the reversing function
 	((void (*)(void))win->code) ();
+
+	unsigned int events_after = *((unsigned int *)(states[lid]+sizeof(simtime_t)));
+
+	if(events_after != (events_before-1)) {
+		printf("Simulation state corruption on lid %d\n", lid);
+		printf("BEFORE= %d\nAFTER= %d\n\n", events_before, events_after);
+	}
+
+	//printf("[%d] AFTER :: %d\n", lid, *(unsigned int *)(states[lid]+sizeof(simtime_t)));
 
 	/*
 	double elapsed = (double)timer_value_micro(reverse_block_timer);

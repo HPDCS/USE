@@ -34,11 +34,11 @@
 // k = lg2(CACHE_NUM_LINES) + x
 
 #define CACHE_MASK_ADDR  ~(-CACHE_LINE_SIZE)
-#define CACHE_MASK_LINE ~(-CACHE_NUM_LINES)
+#define CACHE_MASK_LINE (~(-CACHE_NUM_LINES) << LOGPOWER2(CACHE_NUM_LINES))
 
 // Works only with powers of 2
 #define LOGPOWER2(x) (__builtin_ctzl(x))
-#define INTDIV(d, q) ( (int)( (int)(d) / (int)(q) ) )
+#define INTDIV(d, q) ( (int)((int)(d) / (int)(q)) )
 
 
 #define cache_lines(cache) (((reverse_cache_t *)cache)->lines)
@@ -48,17 +48,17 @@
 #define get_cache_line(cache, address) (&( (((reverse_cache_t *)cache)->lines)[((address & CACHE_MASK_LINE) >> LOGPOWER2(CACHE_NUM_LINES)) % CACHE_NUM_LINES] ))
 
 #define cache_set_bit(line, address) ( SET_BIT_AT( \
-		(((reverse_cache_line_t *)line)->bitmap)[ (INTDIV((address & CACHE_MASK_ADDR), 8)) ], \
+		((unsigned int *)(((reverse_cache_line_t *)line)->bitmap))[ (INTDIV((address & CACHE_MASK_ADDR), 32)) ], \
 		(address % CACHE_LINE_SIZE) ) \
 	)
 
 #define cache_reset_bit(line, address) ( RESET_BIT_AT( \
-		(((reverse_cache_line_t *)line)->bitmap)[ (INTDIV((address & CACHE_MASK_ADDR), 8)) ], \
+		((unsigned int *)(((reverse_cache_line_t *)line)->bitmap))[ (INTDIV((address & CACHE_MASK_ADDR), 32)) ], \
 		(address % CACHE_LINE_SIZE) ) \
 	)
 
 #define cache_check_bit(line, address) ( CHECK_BIT_AT( \
-		(((reverse_cache_line_t *)line)->bitmap)[ (INTDIV((address & CACHE_MASK_ADDR), 8)) ], \
+		((unsigned int *)(((reverse_cache_line_t *)line)->bitmap))[ (INTDIV((address & CACHE_MASK_ADDR), 32)) ], \
 		(address % CACHE_LINE_SIZE) ) \
 	)
 
@@ -69,7 +69,7 @@ typedef struct _reverse_cache_line_t {
 	unsigned long long tag;
 	unsigned int total_hits;
 	unsigned int distinct_hits;
-	unsigned char bitmap[CACHE_LINE_SIZE];
+	unsigned int bitmap[CACHE_LINE_SIZE];
 } reverse_cache_line_t;
 
 
