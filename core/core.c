@@ -349,36 +349,37 @@ void print_report_sum(void){
 	tot_committed = tot_committed_safe+tot_committed_htm+tot_committed_reverse;
 	tot_uncommitted = tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting+tot_abort_cahcefull+tot_abort_debug+tot_abort_nested+tot_abort_generic;
 
-	printf("COMMITTED - TOT:  %u \n", tot_committed);
-	printf("COMMITTED - SAF:  %u \t- (%.3f)\n", tot_committed_safe, (double)tot_committed_safe/tot_committed);
-	printf("COMMITTED - HTM:  %u \t- (%.3f)\n", tot_committed_htm, (double)tot_committed_htm/tot_committed);
-	printf("COMMITTED - STM:  %u \t- (%.3f)\n\n", tot_committed_reverse, (double)tot_committed_reverse/tot_committed);
+	printf("\n");
+	printf("COMMITTED - TOT:  %12u \n", tot_committed);
+	printf("COMMITTED - SAF:  %12u \t- (%.3f)\n", tot_committed_safe, (double)tot_committed_safe/tot_committed);
+	printf("COMMITTED - HTM:  %12u \t- (%.3f)\n", tot_committed_htm, (double)tot_committed_htm/tot_committed);
+	printf("COMMITTED - STM:  %12u \t- (%.3f)\n\n", tot_committed_reverse, (double)tot_committed_reverse/tot_committed);
 	
 	if(tot_uncommitted > 0){
-		printf("ABORTED - TOTAL:  %u \t- (%.3f)\n", tot_uncommitted, (double)tot_uncommitted/(tot_uncommitted+tot_committed));
-		printf("ABORTED - UNSAF:  %u \t- (%.3f)\n", tot_abort_unsafety, (double)tot_abort_unsafety/tot_uncommitted);
-		printf("ABORTED - CONFL:  %u \t- (%.3f)\n", tot_abort_conflict, (double)tot_abort_conflict/tot_uncommitted);
-		printf("ABORTED - CAFUL:  %u \t- (%.3f)\n", tot_abort_cahcefull, (double)tot_abort_cahcefull/tot_uncommitted);
-		printf("ABORTED - DEBUG:  %u \t- (%.3f)\n", tot_abort_debug, (double)tot_abort_debug/tot_uncommitted);
-		printf("ABORTED - NESTD:  %u \t- (%.3f)\n", tot_abort_nested, (double)tot_abort_nested/tot_uncommitted);
-		printf("ABORTED - GENER:  %u \t- (%.3f)\n\n", tot_abort_generic, (double)tot_abort_generic/tot_uncommitted);
-		printf("ABORTED - WAIT :  %u \t- (%.3f)\n\n", tot_abort_waiting, (double)tot_abort_waiting/tot_uncommitted);
+		printf("ABORTED - TOTAL:  %12u \t- (%.3f)\n", tot_uncommitted, (double)tot_uncommitted/(tot_uncommitted+tot_committed));
+		printf("ABORTED - UNSAF:  %12u \t- (%.3f)\n", tot_abort_unsafety, (double)tot_abort_unsafety/tot_uncommitted);
+		printf("ABORTED - CONFL:  %12u \t- (%.3f)\n", tot_abort_conflict, (double)tot_abort_conflict/tot_uncommitted);
+		printf("ABORTED - CAFUL:  %12u \t- (%.3f)\n", tot_abort_cahcefull, (double)tot_abort_cahcefull/tot_uncommitted);
+		printf("ABORTED - DEBUG:  %12u \t- (%.3f)\n", tot_abort_debug, (double)tot_abort_debug/tot_uncommitted);
+		printf("ABORTED - NESTD:  %12u \t- (%.3f)\n", tot_abort_nested, (double)tot_abort_nested/tot_uncommitted);
+		printf("ABORTED - GENER:  %12u \t- (%.3f)\n\n", tot_abort_generic, (double)tot_abort_generic/tot_uncommitted);
+		printf("ABORTED - WAIT :  %12u \t- (%.3f)\n\n", tot_abort_waiting, (double)tot_abort_waiting/tot_uncommitted);
 	}
 	
 #ifdef THROTTLING
-	printf("final delta    :  %.1f\n",delta_count);
+	printf("final delta    :  %12.1f\n",delta_count);
 #endif
 #ifdef REVERSIBLE
-	printf("final threshold:  %u\n\n",reverse_execution_threshold);
+	printf("final threshold:  %12u\n\n",reverse_execution_threshold);
 #endif
 
-	printf("AVRAGE SAF TIME:  %llu - %llu\n", event_clocks_safe[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_safe[0]);
-	printf("AVRAGE HTM TIME:  %llu - %llu\n", event_clocks_htm[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_htm[0]);
-	printf("AVRAGE STM TIME:  %llu - %llu\n\n", event_clocks_stm[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_stm[0]);
+	printf("AVRAGE SAF TIME:  %12llu - %llu\n", event_clocks_safe[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_safe[0]);
+	printf("AVRAGE HTM TIME:  %12llu - %llu\n", event_clocks_htm[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_htm[0]);
+	printf("AVRAGE STM TIME:  %12llu - %llu\n\n", event_clocks_stm[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_stm[0]);
 	
 	
-	printf("TROTTL HTM TIME:  %llu - %llu\n", clocks_htm_trottling[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*clocks_htm_trottling[0]);
-	printf("CKSAFE STM TIME:  %llu - %llu\n\n", clocks_stm_checking[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*clocks_stm_checking[0]);
+	printf("TROTTL HTM TIME:  %12llu - %llu\n", clocks_htm_trottling[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*clocks_htm_trottling[0]);
+	printf("CKSAFE STM TIME:  %12llu - %llu\n\n", clocks_stm_checking[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*clocks_stm_checking[0]);
 }
 
 
@@ -406,12 +407,10 @@ void *tuning(void *args){
 	
 		if(throughput < old_throughput){//poichè ho visto un peggioramento, inverto la direzione
 			last_op=~last_op;
-			delta=delta/1.5;	
-			if(delta<0.02) delta = 0.02;
+			if(delta>0.025) delta = delta / 2;
 		}
 		else{
-			delta=delta*1.5;
-			if(delta>0.2) delta = 0.2;
+			if(delta<0.2) delta = delta * 2;
 		}
 			
 		if(last_op==1)
@@ -419,13 +418,12 @@ void *tuning(void *args){
 		else 
 			delta_count-=delta;
 			
-			
 		if(delta_count<0) 
 			delta_count=0;
 		if(delta_count>1)
 			delta_count=1;
 				
-		printf("Throughput %u : Delta : %.1f\n", throughput, delta_count);
+		printf("\t\t\t\t\t\t\t\t\t\t\t\tThroughput \told=%u \n\t\t\t\t\t\t\t\t\t\t\t\t\t\tnew=%u: \n\t\t\t\t\t\t\t\t\t\t\t\t\t\tdelta : %.3f\n", old_throughput, throughput, delta_count);
 		
 		old_committed = committed;
 		old_throughput = throughput;

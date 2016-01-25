@@ -38,11 +38,11 @@ void start_simulation(unsigned short int number_of_threads) {
     
 #ifdef THROTTLING     
 	if(number_of_threads>1){	
-		pthread_t p_tun;
-		if( (ret = pthread_create(&p_tun, NULL, tuning, NULL)) != 0) {
-			fprintf(stderr, "%s\n", strerror(errno));
-			abort();
-		}
+//		pthread_t p_tun;
+//		if( (ret = pthread_create(&p_tun, NULL, tuning, NULL)) != 0) {
+//			fprintf(stderr, "%s\n", strerror(errno));
+//			abort();
+//		}
 	}
 #endif
 
