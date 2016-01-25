@@ -105,7 +105,7 @@ void *slab_alloc(struct slab_chain *const sch) {
 		if (sch->slabsize <= slab_pagesize) {
 			sch->partial = mmap(NULL, sch->pages_per_alloc, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 			if(mprotect(sch->partial, sch->pages_per_alloc, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
-				printf("Unaable to set memory permissions\n");
+				printf("Unable to set memory permissions\n");
 			}
 
 			if (UNLIKELY(sch->partial == MAP_FAILED))
@@ -114,7 +114,7 @@ void *slab_alloc(struct slab_chain *const sch) {
 			const int err = posix_memalign((void **)&sch->partial,
 						       sch->slabsize, sch->pages_per_alloc);
 			if(mprotect(sch->partial, sch->pages_per_alloc, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
-				printf("Unaable to set memory permissions\n");
+				printf("Unable to set memory permissions\n");
 			}
 
 			if (UNLIKELY(err != 0)) {
@@ -230,7 +230,7 @@ void slab_free(struct slab_chain *const sch, const void *const addr) {
 				if (UNLIKELY(munmap(page, sch->pages_per_alloc) == -1))
 					perror("munmap");
 			} else {
-				free(page);
+				__real_free(page);
 			}
 		} else {
 			slab->slots = sch->empty_slotmask;
