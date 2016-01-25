@@ -596,10 +596,13 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int status, pending_events;
 	unsigned long long t_pre, t_post, t_pre2, t_post2;// per throttling
 	bool retry_event;
+	revwin_t *window;
 
 	tid = thread_id;
 	
 	reverse_init(REVWIN_SIZE);
+
+	window = revwin_create();
 
 	while (!stop && !sim_error) {
 
@@ -609,7 +612,7 @@ void thread_loop(unsigned int thread_id) {
 			continue;
 		}
 		
-		current_msg.revwin = revwin_create();
+		current_msg.revwin = window;
 		
 		//lvt ed lp dell'evento corrente
 		current_lp = current_msg.receiver_id;	//identificatore lp
@@ -767,6 +770,8 @@ reversible:
 	}
 
 	execution_time(INFTY,-1);
+	
+	revwin_free(current_lp, current_msg.revwin);
 
 	// Destroy SLAB's structures    
 	//reverse_fini();
