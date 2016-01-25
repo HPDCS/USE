@@ -774,8 +774,6 @@ reversible:
 		/*FLUSH*/ 
 		flush();
 		
-		revwin_free(current_lp, current_msg.revwin);
-
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
