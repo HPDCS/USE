@@ -404,10 +404,17 @@ void *tuning(void *args){
 			committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
 		throughput = committed - old_committed;
 	
-		if(throughput < old_throughput)//poichè ho visto un peggioramento, inverto la direzione
-			last_op=~last_op;	
+		if(throughput < old_throughput){//poichè ho visto un peggioramento, inverto la direzione
+			last_op=~last_op;
+			delta=delta/1.5;	
+			if(delta<0.02) delta = 0.02;
+		}
+		else{
+			delta=delta*1.5;
+			if(delta>0.2) delta = 0.2;
+		}
 			
-		if(last_op==1) 
+		if(last_op==1)
 			delta_count+=delta;
 		else 
 			delta_count-=delta;
