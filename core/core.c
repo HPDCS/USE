@@ -593,7 +593,7 @@ void release_waiting_ticket(){
 
 void thread_loop(unsigned int thread_id) {
 	
-	unsigned int status, pending_events;
+	unsigned int status, pending_events, mode, old_mode, retries;
 	unsigned long long t_pre, t_post, t_pre2, t_post2;// per throttling
 	bool retry_event;
 	revwin_t *window;
@@ -605,6 +605,8 @@ void thread_loop(unsigned int thread_id) {
 	window = revwin_create();
 
 	while (!stop && !sim_error) {
+		
+		mode = retries = 0;
 
 		/*FETCH*/
 		if (queue_min() == 0) {
@@ -620,10 +622,12 @@ void thread_loop(unsigned int thread_id) {
 		
 		while (1) {
 			
+			old_mode = mode;
+			
 ///ESECUZIONE SAFE:
 ///non ci sono problemi quindi eseguo normalmente*/
 			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
-				
+				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
 #endif
@@ -646,6 +650,9 @@ void thread_loop(unsigned int thread_id) {
 ///ESECUZNE HTM:
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
 			else if (pending_events < reverse_execution_threshold) {
+				mode = MODE_HTM;
+				if(mode == old_mode) retries++;
+				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);
 				
 				t_pre = CLOCK_READ();
 #ifdef REVERSIBLE
@@ -707,6 +714,7 @@ void thread_loop(unsigned int thread_id) {
 #ifdef REVERSIBLE
 			else {
 reversible:
+				mode = MODE_STM;
 				t_pre = CLOCK_READ();
 				if(get_lp_lock(1, 0)==0)
 					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
