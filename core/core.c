@@ -780,8 +780,8 @@ reversible:
 		if(tid == _MAIN_PROCESS) {
 		evt_count++;
 			if ((evt_count - 100000 * (evt_count / 100000)) == 0) {	//10000
-				printf("[%u] TIME: %f", tid, current_lvt);
-				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
+				//printf("[%u] TIME: %f", tid, current_lvt);
+				//printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
 			}
 		}
 	}
