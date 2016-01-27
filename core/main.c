@@ -77,7 +77,7 @@ int main(int argn, char *argv[]) {
     
     //print_report_sum();
 
-    printf_statistics();
+    print_statistics();
 
     //statistics_fini();
 

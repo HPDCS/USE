@@ -101,6 +101,10 @@ void statistics_post_data(int tid, int type, double value) {
             thread_stats[tid].abort_generic++;
             break;
 
+        case ABORT_RETRY:
+            thread_stats[tid].abort_retry++;
+            break;
+
         default:
             printf("Unrecognized stat type (%d)\n", type);
     }
@@ -132,6 +136,7 @@ void gather_statistics() {
         system_stats.abort_nested += thread_stats[i].abort_nested;
         system_stats.abort_debug += thread_stats[i].abort_debug;
         system_stats.abort_generic += thread_stats[i].abort_generic;
+        system_stats.abort_retry += thread_stats[i].abort_retry;
     }
 
         system_stats.clock_safe /= (double)system_stats.events_safe;
@@ -141,7 +146,7 @@ void gather_statistics() {
         system_stats.clock_stm_wait /= (double)system_stats.events_stm;
 }
 
-void printf_statistics() {
+void print_statistics() {
 
     gather_statistics();
 
@@ -177,6 +182,7 @@ void printf_statistics() {
 
     printf("HTM aborts for UNSAFETY............................: %d (%.2f%%)\n", system_stats.abort_unsafe, ((double)system_stats.abort_unsafe / abort_total)*100);
     printf("HTM aborts for CONFLICT............................: %d (%.2f%%)\n", system_stats.abort_conflict, ((double)system_stats.abort_conflict / abort_total)*100);
+    printf("               RETRY...............................: %d (%.2f%%)\n", system_stats.abort_retry, ((double)system_stats.abort_retry / abort_total)*100);
     printf("HTM aborts for CACHEFULL...........................: %d (%.2f%%)\n", system_stats.abort_cachefull, ((double)system_stats.abort_cachefull / abort_total)*100);
     printf("HTM aborts for NESTED..............................: %d (%.2f%%)\n", system_stats.abort_nested, ((double)system_stats.abort_nested / abort_total)*100);
     printf("HTM aborts for DEBUG...............................: %d (%.2f%%)\n", system_stats.abort_debug, ((double)system_stats.abort_debug / abort_total)*100);

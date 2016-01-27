@@ -20,6 +20,7 @@
 #define ABORT_DEBUG 15
 #define ABORT_NESTED 16
 #define ABORT_GENERIC 17
+#define ABORT_RETRY 18
 
 struct stats_t {
     unsigned int events_total;
@@ -43,6 +44,7 @@ struct stats_t {
     unsigned int abort_debug;
     unsigned int abort_nested;
     unsigned int abort_generic;
+    unsigned int abort_retry;
 };
 
 extern struct stats_t *thread_stats;

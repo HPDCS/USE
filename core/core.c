@@ -456,7 +456,7 @@ void thread_loop(unsigned int thread_id) {
 					}
 				} else {	//se il commit della transazione fallisce, finisce qui
 					if (status & _XABORT_RETRY){
-						printf("RETRY IS POSSIBLE\n");
+						statistics_post_data(tid, ABORT_RETRY, 1);
 					}
 					if (status & _XABORT_CAPACITY) {
 						statistics_post_data(tid, ABORT_CACHEFULL, 1);
@@ -483,7 +483,7 @@ void thread_loop(unsigned int thread_id) {
 
 					statistics_post_data(tid, CLOCK_HTM, (double)timer_value_micro(event_htm_processing));
 
-					printf_statistics();
+					//print_statistics();
 					continue;
 				}
 
