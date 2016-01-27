@@ -221,7 +221,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 //L'idea è di mettere un unico thread con lo scopo di regolare le variabili
 
 void *tuning(void *args){
-	unsigned int committed, old_committed, throughput, old_throughput, last_op, field, i;
+	unsigned int committed, old_committed, throughput, old_throughput, last_op, i;
 	old_throughput = 0;
 	last_op = 1;
 	//field = 1; // 0 sta per delta_count ed 1 sta per reverse_execution_threshold 
@@ -361,7 +361,6 @@ void release_waiting_ticket(){
 void thread_loop(unsigned int thread_id) {
 	
 	unsigned int status, pending_events, mode, old_mode, retries;
-	unsigned long long t_pre, t_post, t_pre2, t_post2;// per throttling
 	bool retry_event;
 	revwin_t *window;
 
@@ -393,7 +392,7 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-		if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+		if ((pending_events = check_safety(current_lvt)) == -1) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -461,21 +460,23 @@ void thread_loop(unsigned int thread_id) {
 					if (status & _XABORT_CAPACITY) {
 						statistics_post_data(tid, ABORT_CACHEFULL, 1);
 					}
-					else if (status & _XABORT_DEBUG) {
+					if (status & _XABORT_DEBUG) {
 						statistics_post_data(tid, ABORT_DEBUG, 1);
 					}
-					else if (status & _XABORT_CONFLICT) {
+					if (status & _XABORT_CONFLICT) {
 						statistics_post_data(tid, ABORT_CONFLICT, 1);
 					}
-					else if (status & _XABORT_NESTED) {
+					if (status & _XABORT_NESTED) {
 						statistics_post_data(tid, ABORT_NESTED, 1);
 					}
-					else if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
+					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
 					}
 					else {
+						printf("");
 						statistics_post_data(tid, ABORT_GENERIC, 1);
 					}
+					//statistics_post_data(tid, ABORT_TOTAL, 1);
 
 #ifdef REVERSIBLE
 					release_lp_lock();
@@ -493,7 +494,6 @@ void thread_loop(unsigned int thread_id) {
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 #ifdef REVERSIBLE
 			else {
-reversible:
 				mode = MODE_STM;
 
 				statistics_post_data(tid, EVENTS_STM, 1);

@@ -73,6 +73,10 @@ void statistics_post_data(int tid, int type, double value) {
             thread_stats[tid].clock_stm_wait += value;
             break;
 
+        case CLOCK_UNDO_EVENT:
+            thread_stats[tid].clock_undo_event += value;
+            break;
+
         case ABORT_UNSAFE:
             thread_stats[tid].abort_unsafe++;
             break;
@@ -128,6 +132,7 @@ void gather_statistics() {
         system_stats.clock_stm += thread_stats[i].clock_stm;
         system_stats.clock_htm_throttle += thread_stats[i].clock_htm_throttle;
         system_stats.clock_stm_wait += thread_stats[i].clock_stm_wait;
+        system_stats.clock_undo_event += thread_stats[i].clock_undo_event;
 
         system_stats.abort_unsafe += thread_stats[i].abort_unsafe;
         system_stats.abort_reverse += thread_stats[i].abort_reverse;
@@ -156,7 +161,7 @@ void print_statistics() {
     printf("\n");
 
     printf("Total events......................................: %d\n", system_stats.events_total);
-    printf("Safe events.......................................: %d (%.2f%%)\n", system_stats.events_safe, ((double)system_stats.events_htm / system_stats.events_total)*100);
+    printf("Safe events.......................................: %d (%.2f%%)\n", system_stats.events_safe, ((double)system_stats.events_safe / system_stats.events_total)*100);
     printf("HTM events........................................: %d (%.2f%%)\n", system_stats.events_htm, ((double)system_stats.events_htm / system_stats.events_total)*100);
     printf("STM events........................................: %d (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
 
@@ -170,6 +175,7 @@ void print_statistics() {
     printf("Average time spent in STM execution...............: %.3f\n", system_stats.clock_stm);
     printf("Average time spent for HTM throtteling............: %.3f\n", system_stats.clock_htm_throttle);
     printf("Average time spent to be safe in STM execution....: %.3f\n\n", system_stats.clock_stm_wait);
+    printf("Average time spent to be reverse..................: %.3f\n\n", system_stats.clock_undo_event);
 
     unsigned int abort_total = system_stats.abort_unsafe +
         system_stats.abort_conflict +
@@ -178,15 +184,15 @@ void print_statistics() {
         system_stats.abort_debug +
         system_stats.abort_generic;
 
-    printf("Total HTM aborts...................................: %d\n\n", abort_total);
+    printf("Total HTM aborts..................................: %d (%.2f%%)\n\n", abort_total,  (double)abort_total/(double)commits_total);
 
-    printf("HTM aborts for UNSAFETY............................: %d (%.2f%%)\n", system_stats.abort_unsafe, ((double)system_stats.abort_unsafe / abort_total)*100);
-    printf("HTM aborts for CONFLICT............................: %d (%.2f%%)\n", system_stats.abort_conflict, ((double)system_stats.abort_conflict / abort_total)*100);
-    printf("               RETRY...............................: %d (%.2f%%)\n", system_stats.abort_retry, ((double)system_stats.abort_retry / abort_total)*100);
-    printf("HTM aborts for CACHEFULL...........................: %d (%.2f%%)\n", system_stats.abort_cachefull, ((double)system_stats.abort_cachefull / abort_total)*100);
-    printf("HTM aborts for NESTED..............................: %d (%.2f%%)\n", system_stats.abort_nested, ((double)system_stats.abort_nested / abort_total)*100);
-    printf("HTM aborts for DEBUG...............................: %d (%.2f%%)\n", system_stats.abort_debug, ((double)system_stats.abort_debug / abort_total)*100);
-    printf("HTM aborts for GENERIC.............................: %d (%.2f%%)\n\n", system_stats.abort_generic, ((double)system_stats.abort_generic / abort_total)*100);
+    printf("HTM aborts for UNSAFETY...........................: %d (%.2f%%)\n", system_stats.abort_unsafe, ((double)system_stats.abort_unsafe / abort_total)*100);
+    printf("HTM aborts for CONFLICT...........................: %d (%.2f%%)\n", system_stats.abort_conflict, ((double)system_stats.abort_conflict / abort_total)*100);
+    printf("HTM aborts for CACHEFULL..........................: %d (%.2f%%)\n", system_stats.abort_cachefull, ((double)system_stats.abort_cachefull / abort_total)*100);
+    printf("HTM aborts for NESTED.............................: %d (%.2f%%)\n", system_stats.abort_nested, ((double)system_stats.abort_nested / abort_total)*100);
+    printf("HTM aborts for DEBUG..............................: %d (%.2f%%)\n", system_stats.abort_debug, ((double)system_stats.abort_debug / abort_total)*100);
+    printf("HTM aborts for GENERIC............................: %d (%.2f%%)\n", system_stats.abort_generic, ((double)system_stats.abort_generic / abort_total)*100);
+    printf("HTM abort RETRY...................................: %d (%.2f%%)\n\n", system_stats.abort_retry, ((double)system_stats.abort_retry / abort_total)*100);
 
     printf("STM abort for UNSAFETY............................: %d\n\n", system_stats.abort_reverse);
     
