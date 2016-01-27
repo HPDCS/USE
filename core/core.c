@@ -19,6 +19,7 @@
 #include <timer.h>
 
 #include <reverse.h>
+#include <statistics.h>
 
 #include "core.h"
 #include "queue.h"
@@ -69,25 +70,6 @@ int *wait_time_lk;
 //Variabili da tunare durante l'esecuzione per throttling e threshold
 double delta_count = TROT_INIT_DELTA;
 unsigned int reverse_execution_threshold = REV_INIT_THRESH;
-
-//variabili per collezzione statistiche
-unsigned int * committed_safe;
-unsigned int * committed_htm;
-unsigned int * committed_reverse;
-unsigned int * abort_unsafety;
-unsigned int * abort_conflict;
-unsigned int * abort_waiting;
-unsigned int * abort_cachefull;
-unsigned int * abort_debug;
-unsigned int * abort_generic;
-unsigned int * abort_nested;
-
-unsigned long long * event_clocks_safe;
-unsigned long long * event_clocks_htm; //comprensivo del throttling
-unsigned long long * event_clocks_stm; //comprensivo dei safety_check
-
-unsigned long long * clocks_htm_trottling;
-unsigned long long * clocks_stm_checking;
 
 
 
@@ -156,7 +138,7 @@ void _mkdir(const char *path) {
 void throttling(unsigned int events) {
 	unsigned long long tick_count;
 	
-	tick_count = CLOCK_READ() + events * (event_clocks_safe[tid] * delta_count); 
+	tick_count = CLOCK_READ() + events * (system_stats[tid].clock_safe * delta_count); 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
 			break;
@@ -192,53 +174,13 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	wait_time_id = malloc(sizeof(unsigned int) * lps_num);
 	wait_time_lk = malloc(sizeof(int) * lps_num);
 	
-	//forse non servono
-	committed_safe = malloc(sizeof(unsigned int) * n_cores);
-	committed_htm = malloc(sizeof(unsigned int) * n_cores);
-	committed_reverse = malloc(sizeof(unsigned int) * n_cores);
-	abort_unsafety = malloc(sizeof(unsigned int) * n_cores);
-	abort_waiting = malloc(sizeof(unsigned int) * n_cores);
-	abort_conflict = malloc(sizeof(unsigned int) * n_cores);
-	abort_cachefull = malloc(sizeof(unsigned int) * n_cores);
-	abort_debug = malloc(sizeof(unsigned int) * n_cores);
-	abort_generic = malloc(sizeof(unsigned int) * n_cores);
-	abort_nested = malloc(sizeof(unsigned int) * n_cores);
-	
-	event_clocks_safe = malloc(sizeof(unsigned long long) * n_cores);
-	event_clocks_htm = malloc(sizeof(unsigned long long) * n_cores);
-	event_clocks_stm = malloc(sizeof(unsigned long long) * n_cores);
-	
-	clocks_stm_checking = malloc(sizeof(unsigned long long) * n_cores);
-	clocks_htm_trottling = malloc(sizeof(unsigned long long) * n_cores);
 		
 	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || 
-		wait_time_id == NULL || wait_time_lk == NULL ||
-		committed_htm == NULL || committed_reverse == NULL || committed_safe == NULL || 
-		abort_conflict == NULL || abort_unsafety == NULL || abort_waiting == NULL || 
-		event_clocks_safe == NULL || event_clocks_stm == NULL || event_clocks_htm == NULL){
+		wait_time_id == NULL || wait_time_lk == NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();		
 	}
 	
-	for (i = 0; i < n_cores; i++) {
-		committed_safe[i] = 0;
-		committed_htm[i] = 0;
-		committed_reverse[i] = 0;
-		abort_unsafety[i] = 0;
-		abort_waiting[i] = 0;
-		abort_conflict[i] = 0;
-		abort_cachefull[i] = 0;
-		abort_debug[i] = 0;
-		abort_generic[i] = 0;
-		abort_nested[i] = 0;
-		
-		event_clocks_safe[i] = 0;
-		event_clocks_stm[i] = 0;
-		event_clocks_htm[i] = 0;
-		
-		clocks_stm_checking[i] = 0;
-		clocks_htm_trottling[i] = 0;
-	}
 	
 	for (i = 0; i < lps_num; i++) {
 		lp_lock[i] = 0;
@@ -248,9 +190,12 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 		can_stop[i] = false; //<--non c'era, serve? secondo me si
 	}
 
+	statistics_init();
+
 #ifndef NO_DYMELOR
 	    dymelor_init();
 #endif
+
 	queue_init();
 	message_state_init();
 	numerical_init();
@@ -271,118 +216,6 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	queue_insert(receiver, timestamp, event_type, event_content, event_size);
 }
 
-void print_report(void){
-	unsigned int i;;
-	unsigned int tot_committed_safe = 0;
-	unsigned int tot_committed_htm = 0;
-	unsigned int tot_committed_reverse = 0;
-	unsigned int tot_abort_unsafety = 0;
-	unsigned int tot_abort_conflict = 0;
-	unsigned int tot_abort_waiting = 0;
-	unsigned int tot_abort_cahcefull = 0;
-	unsigned int tot_abort_debug = 0;
-	unsigned int tot_abort_generic = 0;
-	unsigned int tot_abort_nested = 0;
-			
-	printf("\n\n|\tTID\t||\tSafe\t|\tHtm\t|\tRevers\t||\tTOTAL\t|\n");
-	printf("|---------------||--------------|---------------|---------------||--------------|\n");
-	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t||\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", i, committed_safe[i], committed_htm[i], committed_reverse[i], (committed_safe[i]+committed_htm[i]+committed_reverse[i]) );
-		tot_committed_safe += committed_safe[i];
-		tot_committed_htm += committed_htm[i];
-		tot_committed_reverse += committed_reverse[i];
-	}
-	printf("|---------------||--------------|---------------|---------------||--------------|\n");
-	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t||\t%u\t|\n", tot_committed_safe, tot_committed_htm, tot_committed_reverse, (tot_committed_safe+tot_committed_htm+tot_committed_reverse) );
-	
-	printf("\n\n|\tTID\t||\tUnsafe\t|\tCacFull\t|\tDebug\t|\tConfli\t|\tNested\t|\tGenric\t||\tWait\t|   |\tTOTAL\t|\n");
-	printf("|---------------||--------------|---------------|---------------|---------------|---------------|---------------||--------------|   |-----------|\n");
-	for(i = 0; i < n_cores; i++){
-		printf("|\t[%u]\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n", i, abort_unsafety[i], abort_cachefull[i], abort_debug[i], abort_conflict[i],abort_nested[i], abort_generic[i], abort_waiting[i], (abort_unsafety[i]+abort_conflict[i]+abort_waiting[i]) );
-		tot_abort_unsafety += abort_unsafety[i];
-		tot_abort_conflict += abort_conflict[i];
-		tot_abort_waiting += abort_waiting[i];
-		tot_abort_cahcefull += abort_cachefull[i];
-		tot_abort_debug += abort_debug[i];
-		tot_abort_nested += abort_nested[i];
-		tot_abort_generic += abort_generic[i];
-	}
-	printf("|---------------||--------------|---------------|---------------|---------------|---------------|---------------||--------------|   |-----------|\n");
-	printf("|\tTOT\t||\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t|\t%u\t||\t%u\t|   |\t%u\t|\n\n", tot_abort_unsafety, tot_abort_cahcefull, tot_abort_debug, tot_abort_conflict, tot_abort_nested, tot_abort_generic, tot_abort_waiting, (tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting) );
-
-#ifdef THROTTLING
-	printf("\n\n%u\t%u\t\t%u\t\t%u\t\t%u\t\t%u\t%f\n", tot_committed_safe, tot_committed_htm,tot_abort_unsafety,tot_abort_cahcefull,tot_abort_conflict,tot_abort_generic, delta_count);
-#else
-	printf("\n\n%u\t%u\t\t%u\t\t%u\t\t%u\t\t%u\n", tot_committed_safe, tot_committed_htm,tot_abort_unsafety,tot_abort_cahcefull,tot_abort_conflict,tot_abort_generic);
-#endif
-}
-
-void print_report_sum(void){
-	unsigned int i;;
-	unsigned int tot_committed_safe = 0;
-	unsigned int tot_committed_htm = 0;
-	unsigned int tot_committed_reverse = 0;
-	unsigned int tot_abort_unsafety = 0;
-	unsigned int tot_abort_conflict = 0;
-	unsigned int tot_abort_waiting = 0;
-	unsigned int tot_abort_cahcefull = 0;
-	unsigned int tot_abort_debug = 0;
-	unsigned int tot_abort_generic = 0;
-	unsigned int tot_abort_nested = 0;
-	unsigned int tot_committed = 0;
-	unsigned int tot_uncommitted = 0;
-			
-	for(i = 0; i < n_cores; i++){
-		tot_committed_safe += committed_safe[i];
-		tot_committed_htm += committed_htm[i];
-		tot_committed_reverse += committed_reverse[i];
-		
-		tot_abort_unsafety += abort_unsafety[i];
-		tot_abort_conflict += abort_conflict[i];
-		tot_abort_waiting += abort_waiting[i];
-		tot_abort_cahcefull += abort_cachefull[i];
-		tot_abort_debug += abort_debug[i];
-		tot_abort_nested += abort_nested[i];
-		tot_abort_generic += abort_generic[i];
-	}
-
-	tot_committed = tot_committed_safe+tot_committed_htm+tot_committed_reverse;
-	tot_uncommitted = tot_abort_unsafety+tot_abort_conflict+tot_abort_waiting+tot_abort_cahcefull+tot_abort_debug+tot_abort_nested+tot_abort_generic;
-
-	printf("\n");
-	printf("COMMITTED - TOT:  %12u \n", tot_committed);
-	printf("COMMITTED - SAF:  %12u \t- (%.3f)\n", tot_committed_safe, (double)tot_committed_safe/tot_committed);
-	printf("COMMITTED - HTM:  %12u \t- (%.3f)\n", tot_committed_htm, (double)tot_committed_htm/tot_committed);
-	printf("COMMITTED - STM:  %12u \t- (%.3f)\n\n", tot_committed_reverse, (double)tot_committed_reverse/tot_committed);
-	
-	if(tot_uncommitted > 0){
-		printf("ABORTED - TOTAL:  %12u \t- (%.3f)\n", tot_uncommitted, (double)tot_uncommitted/(tot_uncommitted+tot_committed));
-		printf("ABORTED - UNSAF:  %12u \t- (%.3f)\n", tot_abort_unsafety, (double)tot_abort_unsafety/tot_uncommitted);
-		printf("ABORTED - CONFL:  %12u \t- (%.3f)\n", tot_abort_conflict, (double)tot_abort_conflict/tot_uncommitted);
-		printf("ABORTED - CAFUL:  %12u \t- (%.3f)\n", tot_abort_cahcefull, (double)tot_abort_cahcefull/tot_uncommitted);
-		printf("ABORTED - DEBUG:  %12u \t- (%.3f)\n", tot_abort_debug, (double)tot_abort_debug/tot_uncommitted);
-		printf("ABORTED - NESTD:  %12u \t- (%.3f)\n", tot_abort_nested, (double)tot_abort_nested/tot_uncommitted);
-		printf("ABORTED - GENER:  %12u \t- (%.3f)\n\n", tot_abort_generic, (double)tot_abort_generic/tot_uncommitted);
-		printf("ABORTED - WAIT :  %12u \t- (%.3f)\n\n", tot_abort_waiting, (double)tot_abort_waiting/tot_uncommitted);
-	}
-	
-#ifdef THROTTLING
-	printf("final delta    :  %12.1f\n",delta_count);
-#endif
-#ifdef REVERSIBLE
-	printf("final threshold:  %12u\n\n",reverse_execution_threshold);
-#endif
-
-	printf("AVRAGE SAF TIME:  %12llu - %llu\n", event_clocks_safe[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_safe[0]);
-	printf("AVRAGE HTM TIME:  %12llu - %llu\n", event_clocks_htm[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_htm[0]);
-	printf("AVRAGE STM TIME:  %12llu - %llu\n\n", event_clocks_stm[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*event_clocks_stm[0]);
-	
-	
-	printf("TROTTL HTM TIME:  %12llu - %llu\n", clocks_htm_trottling[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*clocks_htm_trottling[0]);
-	printf("CKSAFE STM TIME:  %12llu - %llu\n\n", clocks_stm_checking[0], (long long unsigned int)sysconf(_SC_CLK_TCK)*clocks_stm_checking[0]);
-}
-
-
 
 //per ora non viene usato:
 //L'idea è di mettere un unico thread con lo scopo di regolare le variabili
@@ -393,8 +226,6 @@ void *tuning(void *args){
 	last_op = 1;
 	//field = 1; // 0 sta per delta_count ed 1 sta per reverse_execution_threshold 
 	double delta = 0.1;
-	//unsigned int change_direction = 0;
-	//unsigned int right_direction = 0;
 	
 	while(!stop && !sim_error){
 		sleep(3);
@@ -402,7 +233,8 @@ void *tuning(void *args){
 		committed = 0;
 		
 		for(i = 0; i <	n_cores; i++)
-			committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
+			//committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
+			committed = system_stats[tid].events_safe + system_stats[tid].commits_htm + system_stats[tid].commits_htm;
 		throughput = committed - old_committed;
 	
 		if(throughput < old_throughput){//poichè ho visto un peggioramento, inverto la direzione
@@ -428,76 +260,6 @@ void *tuning(void *args){
 		old_committed = committed;
 		old_throughput = throughput;
 	}
-
-
-/*
-	while(!stop && !sim_error){
-		sleep(2);
-		throughput = 0;
-		committed = 0;
-		
-		for(i = 0; i <	n_cores; i++)
-			committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
-		throughput = committed - old_committed;
-		
-		//gestisco eventuali cambi di direzione
-		if(throughput > old_throughput){
-			right_direction++;
-			if(right_direction>1) 
-				change_direction = 0;	
-		}else{ //poichè ho visto un peggioramento, inverto la direzione
-			last_op=~last_op; 
-			change_direction++;
-			right_direction = 0;	
-		}
-		
-		
-		//* UNDO THRESHOLD 
-		if(field == 1){
-			if(last_op==1) 
-				reverse_execution_threshold++;
-			else 
-				reverse_execution_threshold--; 
-			if(reverse_execution_threshold < 1){ 
-				reverse_execution_threshold = 1;
-				change_direction++;
-				right_direction = 0;
-			}
-			else if(reverse_execution_threshold > n_cores){ 
-				reverse_execution_threshold = n_cores;
-				change_direction++;
-				right_direction = 0;
-			}
-			printf("Throughput %u : Threshold : %u\n", throughput, reverse_execution_threshold);
-		}
-		
-		//* DELTA THROTTLING 
-		else{
-			if(last_op==1) 
-				delta_count+=delta;
-			else 
-				delta_count-=delta;
-			if(delta_count<0){ 
-				delta_count=0;
-				//change_direction++;
-				//right_direction = 0;
-			}	
-			printf("Throughput %u : Delta : %f\n", throughput, delta_count);
-		}
-		
-		//gestisco stabilizzazione
-		if(change_direction >= 3){
-			printf("Mi sono stabilizzato\n");
-			change_direction = 0;
-			right_direction = 0;
-			last_op=0; //dovrei fare in modo che sia coerente con quella vista prima
-			field=~field;			
-		}	
-				
-		old_committed = committed;
-		old_throughput = throughput;
-	}
-	*/
 
 	printf("Esecuzione del tuning terminata\n");
 	
@@ -629,141 +391,148 @@ void thread_loop(unsigned int thread_id) {
 			
 			old_mode = mode;
 			
-///ESECUZIONE SAFE:
+/// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+			if (0 && (pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
 #endif
-				t_pre = CLOCK_READ();
+				timer event_processing;
+				timer_start(event_processing);
+
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-				t_post = CLOCK_READ();
+
+				statistics_post_data(tid, EVENTS_SAFE, 1);
+				statistics_post_data(tid, CLOCK_SAFE, (double)timer_value_micro(event_processing));
+
 #ifdef REVERSIBLE
 				release_lp_lock();
 #endif
-				committed_safe[tid]++;
-#ifdef THROTTLING
-				//guarda se si può migliorare
-				if(event_clocks_safe[tid] > 0)
-					event_clocks_safe[tid] = (event_clocks_safe[tid]*0.9) + ((t_post-t_pre)*0.1);
-				else 
-					event_clocks_safe[tid] = (t_post-t_pre);
-#endif				
 
 			}
-///ESECUZNE HTM:
+
+/// ==== ESECUZNE HTM ====
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
 			else if (pending_events < reverse_execution_threshold) {
 				mode = MODE_HTM;
 				if(mode == old_mode) retries++;
 				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);
 				
-				t_pre = CLOCK_READ();
+
+				statistics_post_data(tid, EVENTS_HTM, 1);
+
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
 #endif
+
+				timer event_htm_processing;
+				timer_start(event_htm_processing);
+
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+
 #ifdef THROTTLING
-					t_pre2 = CLOCK_READ();
+					timer htm_throttling;
+					timer_start(htm_throttling);
+
 					throttling(pending_events);
-					t_post2 = CLOCK_READ();
-					if(clocks_htm_trottling[tid] > 0)
-						clocks_htm_trottling[tid] = (clocks_htm_trottling[tid]*0.9) + ((t_post2-t_pre2)*0.1);
-					else 
-						clocks_htm_trottling[tid] = (t_post2-t_pre2);
+
+					statistics_post_data(tid, CLOCK_HTM_THROTTLE, (double)timer_value_micro(htm_throttling));
 #endif
+
 					if (check_safety(current_lvt) == 0) {
 						_xend();
-						committed_htm[tid]++;
+						
+						statistics_post_data(tid, COMMITS_HTM, 1);
+
 #ifdef REVERSIBLE
 						release_lp_lock();
-						t_post = CLOCK_READ();
-						if(event_clocks_htm[tid] > 0)
-							event_clocks_htm[tid] = (event_clocks_htm[tid]*0.9) + ((t_post-t_pre)*0.1);
-						else 
-							event_clocks_htm[tid] = (t_post-t_pre);
 #endif
+
 					} else {
 						_xabort(_ROLLBACK_CODE);
+
 					}
 				} else {	//se il commit della transazione fallisce, finisce qui
-					if (status & _XABORT_CAPACITY)
-						abort_cachefull[tid]++;
-					else if (status & _XABORT_DEBUG)
-						abort_debug[tid]++;
-					else if (status & _XABORT_CONFLICT)
-						abort_conflict[tid]++;
-					else if (_XABORT_CODE(status) == _ROLLBACK_CODE)
-						abort_unsafety[tid]++;
-					else{
-						abort_generic[tid]++;
+					if (status & _XABORT_CAPACITY) {
+						statistics_post_data(tid, ABORT_CACHEFULL, 1);
 					}
+					else if (status & _XABORT_DEBUG) {
+						statistics_post_data(tid, ABORT_DEBUG, 1);
+					}
+					else if (status & _XABORT_CONFLICT) {
+						statistics_post_data(tid, ABORT_CONFLICT, 1);
+					}
+					else if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
+						statistics_post_data(tid, ABORT_UNSAFE, 1);
+					}
+					else {
+						statistics_post_data(tid, ABORT_GENERIC, 1);
+					}
+
 #ifdef REVERSIBLE
 					release_lp_lock();
-					t_post = CLOCK_READ();
-					if(event_clocks_htm[tid] > 0)
-						event_clocks_htm[tid] = (event_clocks_htm[tid]*0.9) + ((t_post-t_pre)*0.1);
-					else 
-						event_clocks_htm[tid] = (t_post-t_pre);
-					//goto reversible;
 #endif
+
+				statistics_post_data(tid, CLOCK_HTM, (double)timer_value_micro(event_htm_processing));
+
 					continue;
 				}
 
 			}
-///ESECUZIONE REVERSIBILE:
+
+/// ==== ESECUZIONE REVERSIBILE ====
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 #ifdef REVERSIBLE
 			else {
 reversible:
 				mode = MODE_STM;
-				t_pre = CLOCK_READ();
+
+				statistics_post_data(tid, EVENTS_STM, 1);
+
+				timer event_stm_processing;
+				timer_start(event_stm_processing);
+
 				if(get_lp_lock(1, 0)==0)
 					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
 				revwin_reset(current_lp, current_msg.revwin);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+				
 				retry_event = false;
 
-				t_pre2 = CLOCK_READ();
+				timer stm_safety_wait;
+				timer_start(stm_safety_wait);
 
 				while (check_safety_lookahead(current_lvt) > 0) {
 					if ( check_waiting() ) {
+
+						statistics_post_data(tid, CLOCK_STM_WAIT, (double)timer_value_micro(stm_safety_wait));
+						
+						timer undo_event_processing;
+						timer_start(undo_event_processing);
+						
 						execute_undo_event(current_lp, current_msg.revwin);
+
+						statistics_post_data(tid, CLOCK_UNDO_EVENT, (double)timer_value_micro(undo_event_processing));
+						statistics_post_data(tid, ABORT_REVERSE, 1);
 
 						// TODO: handle the reverse cache flush
 						//revwin_flush_cache();
 
 						queue_clean();
-						abort_waiting[tid]++;
+
 						retry_event = true;
 						break;
 					}
 				}
 				
 				release_lp_lock();
-
-				t_post2 = CLOCK_READ();
-				if(clocks_stm_checking[tid] > 0)
-					clocks_stm_checking[tid] = (clocks_stm_checking[tid]*0.9) + ((t_post2-t_pre2)*0.1);
-				else 
-					clocks_stm_checking[tid] = (t_post2-t_pre2);
 				
-				t_post = CLOCK_READ();
-				if(event_clocks_stm[tid] > 0)
-					event_clocks_stm[tid] = (event_clocks_stm[tid]*0.9) + ((t_post-t_pre)*0.1);
-				else 
-					event_clocks_stm[tid] = (t_post-t_pre);
-				
-
 				if (retry_event)
-					continue;
-				
-				committed_reverse[tid]++;
-				
+					continue;				
 			}
 #endif
 
@@ -771,6 +540,7 @@ reversible:
 		}
 
 		release_waiting_ticket();
+
 		/*FLUSH*/ 
 		flush();
 		
@@ -781,7 +551,7 @@ reversible:
 		evt_count++;
 			if ((evt_count - 100000 * (evt_count / 100000)) == 0) {	//10000
 				printf("[%u] TIME: %f", tid, current_lvt);
-				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", committed_safe[tid], committed_htm[tid], committed_reverse[tid]);
+				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", system_stats[tid].events_safe, system_stats[tid].commits_htm, system_stats[tid].commits_stm);
 			}
 		}
 	}

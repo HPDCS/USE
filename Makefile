@@ -3,7 +3,7 @@
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 FLAGS=-g -Wall -Wextra -mrtm -pthread -lm
-INCLUDE=-I include/ -I mm/ -I core/
+INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 
 ifdef MALLOC
 CFLAGS=$(FLAGS) -DNO_DYMELOR
@@ -43,7 +43,8 @@ CORE_SOURCES =  core/message_state.c\
 		core/topology.c\
 		core/queue.c\
 		core/main.c\
-		core/numerical.c
+		core/numerical.c\
+		statistics/statistics.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\

@@ -20,8 +20,8 @@
 #define MAX_DATA_SIZE		128
 #define THR_POOL_SIZE		16
 
-#define TROT_INIT_DELTA		0.2
-#define REV_INIT_THRESH		10
+#define TROT_INIT_DELTA		0.0
+#define REV_INIT_THRESH		2
 
 #define MODE_SAF	1
 #define MODE_HTM	2

@@ -10,6 +10,7 @@
 #include <timer.h>
 
 #include <reverse.h>
+#include <statistics.h>
 
 unsigned short int number_of_threads = 1;
 
@@ -72,9 +73,13 @@ int main(int argn, char *argv[]) {
     timer_start(exec_time);
     start_simulation(n);
 
-    printf("Simulation ended: %f seconds\n", timer_value_seconds(exec_time));
+    printf("Simulation ended: %.5f seconds\n", (double)timer_value_seconds(exec_time));
     
-    print_report_sum();
+    //print_report_sum();
+
+    printf_statistics();
+
+    //statistics_fini();
 
     return 0;
 }
