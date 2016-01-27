@@ -393,7 +393,7 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-			if (0 && (pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
