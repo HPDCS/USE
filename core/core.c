@@ -138,7 +138,7 @@ void _mkdir(const char *path) {
 void throttling(unsigned int events) {
 	unsigned long long tick_count;
 	
-	tick_count = CLOCK_READ() + events * (system_stats[tid].clock_safe * delta_count); 
+	tick_count = CLOCK_READ() + events * (thread_stats[tid].clock_safe * delta_count); 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
 			break;
@@ -234,7 +234,7 @@ void *tuning(void *args){
 		
 		for(i = 0; i <	n_cores; i++)
 			//committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
-			committed = system_stats[tid].events_safe + system_stats[tid].commits_htm + system_stats[tid].commits_htm;
+			committed = thread_stats[tid].events_safe + thread_stats[tid].commits_htm + thread_stats[tid].commits_htm;
 		throughput = committed - old_committed;
 	
 		if(throughput < old_throughput){//poichè ho visto un peggioramento, inverto la direzione
@@ -393,7 +393,7 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+			if (0 && (pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -419,7 +419,6 @@ void thread_loop(unsigned int thread_id) {
 				if(mode == old_mode) retries++;
 				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);
 				
-
 				statistics_post_data(tid, EVENTS_HTM, 1);
 
 #ifdef REVERSIBLE
@@ -548,10 +547,12 @@ reversible:
 			stop = check_termination();
 
 		if(tid == _MAIN_PROCESS) {
-		evt_count++;
+
+			evt_count++;
+			
 			if ((evt_count - 100000 * (evt_count / 100000)) == 0) {	//10000
 				printf("[%u] TIME: %f", tid, current_lvt);
-				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", system_stats[tid].events_safe, system_stats[tid].commits_htm, system_stats[tid].commits_stm);
+				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
 		}
 	}
@@ -562,7 +563,8 @@ reversible:
 
 	// Destroy SLAB's structures
 	// FIXME: does not work!
-	//reverse_fini();
+	reverse_fini();
+	statistics_fini();
 	
 	if(sim_error){
 		printf("\n[%u] Execution ended for an error\n\n", tid);

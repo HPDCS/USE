@@ -45,7 +45,7 @@ struct stats_t {
     unsigned int abort_generic;
 };
 
-extern struct stats_t *system_stats;
+extern struct stats_t *thread_stats;
 
 void statistics_init();
 void statistics_fini();
