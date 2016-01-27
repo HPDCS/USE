@@ -235,7 +235,7 @@ void *tuning(void *args){
 		for(i = 0; i <	n_cores; i++)
 			//committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
 			committed = thread_stats[tid].events_safe + thread_stats[tid].commits_htm + thread_stats[tid].commits_htm;
-		throughput = committed - old_committed;
+			throughput = committed - old_committed;
 	
 		if(throughput < old_throughput){//poichè ho visto un peggioramento, inverto la direzione
 			last_op=~last_op;
@@ -393,7 +393,7 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-			if (0 && (pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -527,6 +527,8 @@ reversible:
 						break;
 					}
 				}
+
+				statistics_post_data(tid, COMMITS_STM, 1);
 				
 				release_lp_lock();
 				
@@ -562,9 +564,12 @@ reversible:
 	revwin_free(current_lp, current_msg.revwin);
 
 	// Destroy SLAB's structures
-	// FIXME: does not work!
-	reverse_fini();
-	statistics_fini();
+	// FIXME
+	//reverse_fini();
+
+	// Unmount statistical data
+	// FIXME
+	//statistics_fini();
 	
 	if(sim_error){
 		printf("\n[%u] Execution ended for an error\n\n", tid);
