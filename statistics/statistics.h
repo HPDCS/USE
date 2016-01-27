@@ -36,6 +36,7 @@ struct stats_t {
     double clock_stm;
     double clock_htm_throttle;
     double clock_stm_wait;
+    double clock_undo_event;
 
     unsigned int abort_unsafe;
     unsigned int abort_reverse;
