@@ -392,7 +392,8 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-		if ((pending_events = check_safety(current_lvt)) == -1) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+		pending_events = check_safety(current_lvt);
+		if (pending_events == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -415,8 +416,8 @@ void thread_loop(unsigned int thread_id) {
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
 			else if (pending_events < reverse_execution_threshold) {
 				mode = MODE_HTM;
-				if(mode == old_mode) retries++;
-				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);
+				/*if(mode == old_mode) retries++;
+				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);*/
 				
 				statistics_post_data(tid, EVENTS_HTM, 1);
 
@@ -476,6 +477,7 @@ void thread_loop(unsigned int thread_id) {
 						printf("");
 						statistics_post_data(tid, ABORT_GENERIC, 1);
 					}
+
 					//statistics_post_data(tid, ABORT_TOTAL, 1);
 
 #ifdef REVERSIBLE
@@ -506,7 +508,7 @@ void thread_loop(unsigned int thread_id) {
 
 				revwin_reset(current_lp, current_msg.revwin);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-				
+
 				retry_event = false;
 
 				timer stm_safety_wait;
@@ -536,6 +538,7 @@ void thread_loop(unsigned int thread_id) {
 				}
 
 				statistics_post_data(tid, COMMITS_STM, 1);
+				statistics_post_data(tid, CLOCK_STM, (double)timer_value_micro(event_stm_processing));
 				
 				release_lp_lock();
 				
