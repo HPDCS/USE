@@ -393,7 +393,7 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-			if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+		if ((pending_events = check_safety(current_lvt)) == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -455,6 +455,9 @@ void thread_loop(unsigned int thread_id) {
 
 					}
 				} else {	//se il commit della transazione fallisce, finisce qui
+					if (status & _XABORT_RETRY){
+						printf("RETRY IS POSSIBLE\n");
+					}
 					if (status & _XABORT_CAPACITY) {
 						statistics_post_data(tid, ABORT_CACHEFULL, 1);
 					}
@@ -463,6 +466,9 @@ void thread_loop(unsigned int thread_id) {
 					}
 					else if (status & _XABORT_CONFLICT) {
 						statistics_post_data(tid, ABORT_CONFLICT, 1);
+					}
+					else if (status & _XABORT_NESTED) {
+						statistics_post_data(tid, ABORT_NESTED, 1);
 					}
 					else if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
@@ -475,8 +481,9 @@ void thread_loop(unsigned int thread_id) {
 					release_lp_lock();
 #endif
 
-				statistics_post_data(tid, CLOCK_HTM, (double)timer_value_micro(event_htm_processing));
+					statistics_post_data(tid, CLOCK_HTM, (double)timer_value_micro(event_htm_processing));
 
+					printf_statistics();
 					continue;
 				}
 
