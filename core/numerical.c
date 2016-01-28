@@ -84,7 +84,26 @@ int RandomRangeNonUniform(int x, int min, int max) {
       return (((RandomRange(0, x) | RandomRange(min, max))) % (max - min + 1)) + min;
 }
 
-
+/**
+* This function returns a random number according to a Logaritmic distribution.
+* The result is an approximation of ln(1-Random()) by Taylor.
+*
+* @author Mauro Ianni
+* @return a random number taken by ln(1-Random())
+* @date 1/27/2016
+*/
+double Log(){
+	double x, xp, ln;
+	unsigned int i;
+	int s = 1;
+	x = xp = -Random();
+	
+	for (i = 1; i <= 6; i++){
+		ln += s * xp * (1/1);
+		xp *= x;
+		s *= (-1);	
+	}	
+}
 
 /**
 * This function returns a random number according to an Exponential distribution.
@@ -102,7 +121,8 @@ double Expent(double mean) {
 		abort();
 	}
 
-	return (-mean * log(1 - Random()));
+	return (-mean * Log());
+	//return (-mean * log(1 - Random()));
 }
 
 

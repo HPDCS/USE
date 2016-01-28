@@ -167,8 +167,8 @@ void print_statistics() {
 
     unsigned int commits_total = system_stats.events_safe + system_stats.commits_htm + system_stats.commits_stm;
 
-    printf("HTM committed...................................: %11d (%.3f%%)\n", system_stats.commits_htm, ((double)system_stats.commits_htm / commits_total)*100);
-    printf("STM committed...................................: %11d (%.3f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / commits_total)*100);
+    printf("HTM committed...................................: %11d (%.3f%%)\n", system_stats.commits_htm, ((double)system_stats.commits_htm / system_stats.events_htm)*100);
+    printf("STM committed...................................: %11d (%.3f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / system_stats.events_stm)*100);
 
     printf("Average time spent in safe execution............: %6.3f usec\n", system_stats.clock_safe);
     printf("Average time spent in HTM execution.............: %6.3f usec\n", system_stats.clock_htm);
@@ -184,7 +184,7 @@ void print_statistics() {
         system_stats.abort_debug +
         system_stats.abort_generic;
 
-    printf("Total HTM aborts................................: %11d (%.3f%%)\n", abort_total,  (double)abort_total/(double)system_stats.events_htm);
+    printf("Total HTM aborts................................: %11d (%.3f%%)\n", abort_total,  ((double)abort_total/(double)system_stats.events_htm)*100);
 
     printf("HTM aborts for UNSAFETY.........................: %11d (%.3f%%)\n", system_stats.abort_unsafe, ((double)system_stats.abort_unsafe / abort_total)*100);
     printf("HTM aborts for CONFLICT.........................: %11d (%.3f%%)\n", system_stats.abort_conflict, ((double)system_stats.abort_conflict / abort_total)*100);
