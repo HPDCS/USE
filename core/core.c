@@ -383,7 +383,7 @@ void thread_loop(unsigned int thread_id) {
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
 		pending_events = check_safety(current_lvt);
-		if (pending_events == 0) {  //if ((pending_events = check_safety_lookahead(current_lvt)) == 0) {
+		if (pending_events == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -508,7 +508,7 @@ reversible:
 				timer stm_safety_wait;
 				timer_start(stm_safety_wait);
 
-				while (check_safety_lookahead(current_lvt) > 0) {
+				while (check_safety(current_lvt) > 0) {
 					if ( check_waiting() ) {
 
 						statistics_post_data(tid, CLOCK_STM_WAIT, (double)timer_value_micro(stm_safety_wait));
