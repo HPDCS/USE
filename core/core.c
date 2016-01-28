@@ -455,28 +455,29 @@ void thread_loop(unsigned int thread_id) {
 
 					}
 				} else {	//se il commit della transazione fallisce, finisce qui
-					if (status & _XABORT_RETRY){
-						statistics_post_data(tid, ABORT_RETRY, 1);
-					}
-					if (status & _XABORT_CAPACITY) {
-						statistics_post_data(tid, ABORT_CACHEFULL, 1);
-					}
-					if (status & _XABORT_DEBUG) {
-						statistics_post_data(tid, ABORT_DEBUG, 1);
-					}
-					if (status & _XABORT_CONFLICT) {
-						statistics_post_data(tid, ABORT_CONFLICT, 1);
-					}
-					if (status & _XABORT_NESTED) {
-						statistics_post_data(tid, ABORT_NESTED, 1);
-					}
 					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
+					} else {
+						if (status & _XABORT_RETRY){
+							statistics_post_data(tid, ABORT_RETRY, 1);
+						}
+						if (status & _XABORT_CAPACITY) {
+							statistics_post_data(tid, ABORT_CACHEFULL, 1);
+						}
+						if (status & _XABORT_DEBUG) {
+							statistics_post_data(tid, ABORT_DEBUG, 1);
+						}
+						if (status & _XABORT_CONFLICT) {
+							statistics_post_data(tid, ABORT_CONFLICT, 1);
+						}
+						if (status & _XABORT_NESTED) {
+							statistics_post_data(tid, ABORT_NESTED, 1);
+						}
 					}
-					else {
-						printf("");
+					/*else {
+						printf("Generic abort (%d)", status);
 						statistics_post_data(tid, ABORT_GENERIC, 1);
-					}
+					}*/
 
 					//statistics_post_data(tid, ABORT_TOTAL, 1);
 
@@ -496,15 +497,16 @@ void thread_loop(unsigned int thread_id) {
 ///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 #ifdef REVERSIBLE
 			else {
+reversible:
 				mode = MODE_STM;
+
+				if(get_lp_lock(1, 0)==0)
+					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
 				statistics_post_data(tid, EVENTS_STM, 1);
 
 				timer event_stm_processing;
 				timer_start(event_stm_processing);
-
-				if(get_lp_lock(1, 0)==0)
-					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
 				revwin_reset(current_lp, current_msg.revwin);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
@@ -539,7 +541,7 @@ void thread_loop(unsigned int thread_id) {
 
 				statistics_post_data(tid, COMMITS_STM, 1);
 				statistics_post_data(tid, CLOCK_STM, (double)timer_value_micro(event_stm_processing));
-				
+
 				release_lp_lock();
 				
 				if (retry_event)

@@ -170,12 +170,12 @@ void print_statistics() {
     printf("HTM committed.....................................: %d (%.2f%%)\n", system_stats.commits_htm, ((double)system_stats.commits_htm / commits_total)*100);
     printf("STM committed.....................................: %d (%.2f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / commits_total)*100);
 
-    printf("Average time spent in safe execution..............: %.3f\n", system_stats.clock_safe);
-    printf("Average time spent in HTM execution...............: %.3f\n", system_stats.clock_htm);
-    printf("Average time spent in STM execution...............: %.3f\n", system_stats.clock_stm);
-    printf("Average time spent for HTM throtteling............: %.3f\n", system_stats.clock_htm_throttle);
-    printf("Average time spent to be safe in STM execution....: %.3f\n\n", system_stats.clock_stm_wait);
-    printf("Average time spent to be reverse..................: %.3f\n\n", system_stats.clock_undo_event);
+    printf("Average time spent in safe execution..............: %.3f usec\n", system_stats.clock_safe);
+    printf("Average time spent in HTM execution...............: %.3f usec\n", system_stats.clock_htm);
+    printf("Average time spent in STM execution...............: %.3f usec\n", system_stats.clock_stm);
+    printf("Average time spent for HTM throtteling............: %.3f usec\n", system_stats.clock_htm_throttle);
+    printf("Average time spent to be safe in STM execution....: %.3f usec\n", system_stats.clock_stm_wait);
+    printf("Average time spent to reverse.....................: %.3f usec\n\n", system_stats.clock_undo_event);
 
     unsigned int abort_total = system_stats.abort_unsafe +
         system_stats.abort_conflict +
@@ -184,7 +184,7 @@ void print_statistics() {
         system_stats.abort_debug +
         system_stats.abort_generic;
 
-    printf("Total HTM aborts..................................: %d (%.2f%%)\n\n", abort_total,  (double)abort_total/(double)commits_total);
+    printf("Total HTM aborts..................................: %d (%.2f%%)\n", abort_total,  (double)abort_total/(double)system_stats.events_htm);
 
     printf("HTM aborts for UNSAFETY...........................: %d (%.2f%%)\n", system_stats.abort_unsafe, ((double)system_stats.abort_unsafe / abort_total)*100);
     printf("HTM aborts for CONFLICT...........................: %d (%.2f%%)\n", system_stats.abort_conflict, ((double)system_stats.abort_conflict / abort_total)*100);
