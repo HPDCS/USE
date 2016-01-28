@@ -40,35 +40,6 @@ void execution_time(simtime_t time, int clp){
     current_region[tid] = clp;
 }
 
-unsigned int check_safety_no_lookahead(simtime_t time){
-    unsigned int i;
-    unsigned int events;
-    
-    events = 0;
-    
-    for(i = 0; i < n_cores; i++){
-        if(i!=tid && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i)))
-            events++;
-    }
-    
-    return events;
-}
-
-unsigned int check_safety_lookahead(simtime_t time){
-    unsigned int i;
-    unsigned int events;
-    
-    time -= LOOKAHEAD;//invece di sommarlo ogni volta al tempo che sto studiando, lo sottraggo a time una volta sola
-    events = 0;
-    
-    for(i = 0; i < n_cores; i++){
-        if(i!=tid && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i)))
-            events++;
-    }
-    
-    return events;
-}
-
 unsigned int check_safety(simtime_t time){
     unsigned int i;
     unsigned int events;
@@ -78,7 +49,7 @@ unsigned int check_safety(simtime_t time){
     for(i = 0; i < n_cores; i++){
 		
         if(i!=tid && (
-			(   (time > (current_time_vector[i]+LOOKAHEAD)) || (time==(current_time_vector[i]+LOOKAHEAD) && tid > i))
+			(   (time > (current_time_vector[i]+LOOKAHEAD)) || (time==(current_time_vector[i]+LOOKAHEAD) && tid > i) )
 			||
 			( (current_lp==current_region[i]) && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i) ) )
 		  ))

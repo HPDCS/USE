@@ -266,16 +266,6 @@ void *tuning(void *args){
 	pthread_exit(NULL);
 }
 
-
-
-double double_cas(double *addr, double old_val, double new_val) {
-	long long res;
-
-	res = __sync_val_compare_and_swap(UNION_CAST(addr, long long *), UNION_CAST(old_val, long long), UNION_CAST(new_val, long long));
-
-	return UNION_CAST(res, double);
-}
-
 int check_waiting(){
 	return (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && wait_time_id[current_lp] < tid));
 }
