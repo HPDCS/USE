@@ -141,7 +141,7 @@ void _mkdir(const char *path) {
 void throttling(unsigned int events) {
 	unsigned long long tick_count;
 	
-	tick_count = CLOCK_READ() + events * (thread_stats[tid].clock_safe * delta_count); 
+	tick_count = CLOCK_READ() + events * (get_time_of_an_event() * delta_count); 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
 			break;
@@ -383,6 +383,7 @@ void release_waiting_ticket(){
 void thread_loop(unsigned int thread_id) {
 	
 	unsigned int status, pending_events, mode, old_mode, retries;
+	unsigned long long t_pre, t_post, t_pre2, t_pre3;
 	bool retry_event;
 	revwin_t *window;
 
@@ -420,13 +421,11 @@ void thread_loop(unsigned int thread_id) {
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
 #endif
-				timer event_processing;
-				timer_start(event_processing);
-
+				t_pre = CLOCK_READ();
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 				statistics_post_data(tid, EVENTS_SAFE, 1);
-				statistics_post_data(tid, CLOCK_SAFE, (double)timer_value_micro(event_processing));
+				statistics_post_data(tid, CLOCK_SAFE, CLOCK_READ()-t_pre);
 
 #ifdef REVERSIBLE
 				release_lp_lock();
@@ -447,26 +446,26 @@ void thread_loop(unsigned int thread_id) {
 				get_lp_lock(0, 1);
 #endif
 
-				timer event_htm_processing;
-				timer_start(event_htm_processing);
+				t_pre = CLOCK_READ();
 
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 #ifdef THROTTLING
-					timer htm_throttling;
-					timer_start(htm_throttling);
+					t_pre2 = CLOCK_READ();
 
 					throttling(pending_events);
 
-					statistics_post_data(tid, CLOCK_HTM_THROTTLE, (double)timer_value_micro(htm_throttling));
+					statistics_post_data(tid, CLOCK_HTM_THROTTLE, CLOCK_READ() - t_pre2);
 #endif
 
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 						
 						statistics_post_data(tid, COMMITS_HTM, 1);
+						
+						statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
 
 #ifdef REVERSIBLE
 						release_lp_lock();
@@ -503,14 +502,12 @@ void thread_loop(unsigned int thread_id) {
 #ifdef REVERSIBLE
 					release_lp_lock();
 #endif
-					statistics_post_data(tid, CLOCK_HTM, (double)timer_value_micro(event_htm_processing));
-
-					//print_statistics();
+					statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
 					continue;
 #ifdef REVERSIBLE
 foldpath:
 					release_lp_lock();
-					statistics_post_data(tid, CLOCK_HTM, (double)timer_value_micro(event_htm_processing));
+					statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
 					goto reversible;
 #endif
 				}
@@ -529,28 +526,25 @@ reversible:
 
 				statistics_post_data(tid, EVENTS_STM, 1);
 
-				timer event_stm_processing;
-				timer_start(event_stm_processing);
+				t_pre = CLOCK_READ();
 
 				revwin_reset(current_lp, current_msg.revwin);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 				retry_event = false;
 
-				timer stm_safety_wait;
-				timer_start(stm_safety_wait);
+				t_pre2 = CLOCK_READ();
 
 				while (check_safety(current_lvt) > 0) {
 					if ( check_waiting() ) {
 
-						statistics_post_data(tid, CLOCK_STM_WAIT, (double)timer_value_micro(stm_safety_wait));
+						statistics_post_data(tid, CLOCK_STM_WAIT, CLOCK_READ()-t_pre2);
 						
-						timer undo_event_processing;
-						timer_start(undo_event_processing);
+						t_pre3 = CLOCK_READ();
 						
 						execute_undo_event(current_lp, current_msg.revwin);
 
-						statistics_post_data(tid, CLOCK_UNDO_EVENT, (double)timer_value_micro(undo_event_processing));
+						statistics_post_data(tid, CLOCK_UNDO_EVENT, CLOCK_READ()-t_pre3);
 						statistics_post_data(tid, ABORT_REVERSE, 1);
 
 						// TODO: handle the reverse cache flush
@@ -564,7 +558,8 @@ reversible:
 				}
 
 				statistics_post_data(tid, COMMITS_STM, 1);
-				statistics_post_data(tid, CLOCK_STM, (double)timer_value_micro(event_stm_processing));
+				statistics_post_data(tid, CLOCK_STM_WAIT, CLOCK_READ()-t_pre2);
+				statistics_post_data(tid, CLOCK_STM, CLOCK_READ()-t_pre2);
 
 				release_lp_lock();
 				

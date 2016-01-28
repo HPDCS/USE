@@ -31,12 +31,12 @@ struct stats_t {
     unsigned int commits_htm;
     unsigned int commits_stm;
 
-    double clock_safe;
-    double clock_htm;
-    double clock_stm;
-    double clock_htm_throttle;
-    double clock_stm_wait;
-    double clock_undo_event;
+    unsigned long long clock_safe;
+    unsigned long long clock_htm;
+    unsigned long long clock_stm;
+    unsigned long long clock_htm_throttle;
+    unsigned long long clock_stm_wait;
+    unsigned long long clock_undo_event;
 
     unsigned int abort_unsafe;
     unsigned int abort_reverse;
@@ -52,6 +52,8 @@ extern struct stats_t *thread_stats;
 
 void statistics_init();
 void statistics_fini();
+
+unsigned long long get_time_of_an_event();
 
 void statistics_post_data(int lid, int type, double value);
 

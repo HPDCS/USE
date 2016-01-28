@@ -114,6 +114,10 @@ void statistics_post_data(int tid, int type, double value) {
     }
 }
 
+unsigned long long get_time_of_an_event(){
+		return thread_stats[tid].clock_safe/thread_stats[tid].events_safe;
+}
+
 
 void gather_statistics() {
     int i;
