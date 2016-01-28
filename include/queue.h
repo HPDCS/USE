@@ -24,6 +24,8 @@ int queue_min(void);
 
 int fetch(void);
 
+void flush(void);
+
 int queue_pending_message_size(void);
 
 void queue_deliver_msgs(void);

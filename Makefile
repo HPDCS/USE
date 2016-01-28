@@ -37,8 +37,7 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=test
 
-CORE_SOURCES =  core/message_state.c\
-		core/core.c\
+CORE_SOURCES =  core/core.c\
 		core/calqueue.c\
 		core/topology.c\
 		core/queue.c\

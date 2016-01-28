@@ -84,8 +84,9 @@ extern void flush(void);
 
 double double_cas(double *addr, double old_val, double new_val);
 
-void print_report(void);
-void print_report_sum(void);
+void execution_time(simtime_t time, int clp);
+
+unsigned int check_safety(simtime_t time);
 
 void *tuning(void *args);
 

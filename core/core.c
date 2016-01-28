@@ -23,8 +23,8 @@
 
 #include "core.h"
 #include "queue.h"
-#include "message_state.h"
 #include "simtypes.h"
+#include "lookahead.h"
 
 
 //id del processo principale
@@ -42,6 +42,9 @@ __thread unsigned int current_lp = 0;
 __thread unsigned int tid = 0;
 
 __thread unsigned long long evt_count = 0;
+
+static simtime_t *current_time_vector;
+static int *current_region;
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
@@ -168,6 +171,9 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	n_prc_tot = lps_num;
 	states = malloc(sizeof(void *) * n_prc_tot);
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
+	
+	current_time_vector = malloc(sizeof(simtime_t) * n_cores);
+    current_region = malloc(sizeof(int)*n_cores);
 
 	lp_lock = malloc(sizeof(int) * lps_num);
 	wait_time = malloc(sizeof(simtime_t) * lps_num);
@@ -176,18 +182,22 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	
 		
 	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || 
-		wait_time_id == NULL || wait_time_lk == NULL){
+		wait_time_id == NULL || wait_time_lk == NULL || current_time_vector == NULL || current_region == NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();		
 	}
 	
+	for(i = 0; i < n_cores; i++){
+        current_time_vector[i] = INFTY;     //processing
+        current_region[i]=0;
+    }
 	
 	for (i = 0; i < lps_num; i++) {
 		lp_lock[i] = 0;
 		wait_time_id[i] = _thread_num + 1;
 		wait_time[i] = INFTY;
 		wait_time_lk[i] = 0;
-		can_stop[i] = false; //<--non c'era, serve? secondo me si
+		can_stop[i] = false;
 	}
 
 	statistics_init();
@@ -197,10 +207,32 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 #endif
 
 	queue_init();
-	message_state_init();
 	numerical_init();
-
 	process_init_event();
+}
+
+void execution_time(simtime_t time, int clp){
+    current_time_vector[tid] = time;      //processing
+    current_region[tid] = clp;
+}
+
+unsigned int check_safety(simtime_t time){
+    unsigned int i;
+    unsigned int events;
+    
+    events = 0;
+    
+    for(i = 0; i < n_cores; i++){
+		
+        if(i!=tid && (
+			(   (time > (current_time_vector[i]+LOOKAHEAD)) || (time==(current_time_vector[i]+LOOKAHEAD) && tid > i) )
+			||
+			( (current_lp==current_region[i]) && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i) ) )
+		  ))
+            events++;
+    }
+    
+    return events;
 }
 
 bool check_termination(void) {

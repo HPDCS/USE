@@ -11,7 +11,6 @@
 #include <string.h>
 
 #include "queue.h"
-#include "message_state.h"
 #include "calqueue.h"
 #include "core.h"
 
@@ -129,4 +128,13 @@ void queue_destroy(void) {
 
 void queue_clean(void) {
     _thr_pool._thr_pool_count = 0;
+}
+
+void flush(void) {
+    while(__sync_lock_test_and_set(&queue_lock, 1))
+        while(queue_lock);
+
+	queue_deliver_msgs();
+
+    __sync_lock_release(&queue_lock);
 }
