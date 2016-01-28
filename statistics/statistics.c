@@ -179,7 +179,7 @@ void print_statistics() {
     printf("Average time spent to be safe in STM execution..: %6.3f usec\n", system_stats.clock_stm_wait);
     printf("Average time spent to reverse...................: %6.3f usec\n", system_stats.clock_undo_event);
     printf("Average useful time spent in HTM execution......: %6.3f usec\n", (system_stats.clock_htm+system_stats.clock_htm_throttle)/((double)system_stats.commits_htm / system_stats.events_htm));
-    printf("Average useful time spent in STM execution......: %6.3f usec\n\n", (system_stats.clock_stm+ystem_stats.clock_undo_event+system_stats.clock_stm_wait)/((double)system_stats.commits_stm / system_stats.events_stm));
+    printf("Average useful time spent in STM execution......: %6.3f usec\n\n", (system_stats.clock_stm+system_stats.clock_undo_event+system_stats.clock_stm_wait)/((double)system_stats.commits_stm / system_stats.events_stm));
     
 
     unsigned int abort_total = system_stats.abort_unsafe +
