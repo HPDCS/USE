@@ -143,7 +143,9 @@ void gather_statistics() {
         system_stats.abort_generic += thread_stats[i].abort_generic;
         system_stats.abort_retry += thread_stats[i].abort_retry;
     }
-
+		
+		//non so se sia corrette definirle così, perchè non si prende veramente il tempo medio della durata
+		//ma la stessa durata come se fosse spalmata su tutti gli eventi
         system_stats.clock_safe /= (double)system_stats.events_safe;
         system_stats.clock_htm /= (double)system_stats.events_htm;
         system_stats.clock_stm /= (double)system_stats.events_stm;
@@ -175,7 +177,10 @@ void print_statistics() {
     printf("Average time spent in STM execution.............: %6.3f usec\n", system_stats.clock_stm);
     printf("Average time spent for HTM throtteling..........: %6.3f usec\n", system_stats.clock_htm_throttle);
     printf("Average time spent to be safe in STM execution..: %6.3f usec\n", system_stats.clock_stm_wait);
-    printf("Average time spent to reverse...................: %6.3f usec\n\n", system_stats.clock_undo_event);
+    printf("Average time spent to reverse...................: %6.3f usec\n", system_stats.clock_undo_event);
+    printf("Average useful time spent in HTM execution......: %6.3f usec\n", (system_stats.clock_htm+system_stats.clock_htm_throttle)/((double)system_stats.commits_htm / system_stats.events_htm));
+    printf("Average useful time spent in STM execution......: %6.3f usec\n\n", (system_stats.clock_stm+ystem_stats.clock_undo_event+system_stats.clock_stm_wait)/((double)system_stats.commits_stm / system_stats.events_stm));
+    
 
     unsigned int abort_total = system_stats.abort_unsafe +
         system_stats.abort_conflict +
