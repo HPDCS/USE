@@ -14,6 +14,9 @@
 
 unsigned short int number_of_threads = 1;
 
+extern double delta_count;
+extern int reverse_execution_threshold;
+
 void *start_thread(void *args) {
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 
@@ -68,7 +71,21 @@ int main(int argn, char *argv[]) {
         init(n, atoi(argv[2]));
     }
 
-    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
+	if(argn > 3) {
+		int i;
+		for(i = 2; i < argn; i++) {
+			if(!strcmp(argv[i], "-d")) {
+				delta_count = atof(argv[++i]);
+				printf("%s, %f\n", argv[i-1], delta_count);
+			} else if(!strcmp(argv[i], "-t")) {
+				reverse_execution_threshold = atoi(argv[++i]);
+				printf("%s, %d\n", argv[i-1], reverse_execution_threshold);
+			}
+		}
+	}
+
+//    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
+    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n", delta_count, reverse_execution_threshold);
 
     timer_start(exec_time);
 
