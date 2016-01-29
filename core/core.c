@@ -383,7 +383,7 @@ void release_waiting_ticket(){
 void thread_loop(unsigned int thread_id) {
 	
 	unsigned int status, pending_events, mode, old_mode, retries;
-	unsigned long long t_pre, t_post, t_pre2, t_pre3;
+	//unsigned long long t_pre, t_post, t_pre2, t_pre3;
 	bool retry_event;
 	revwin_t *window;
 
@@ -421,11 +421,14 @@ void thread_loop(unsigned int thread_id) {
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
 #endif
-				t_pre = CLOCK_READ();
+				//t_pre = CLOCK_READ();
+				clock_timer event_processing;
+				clock_timer_start(event_processing);
+
 				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 				statistics_post_data(tid, EVENTS_SAFE, 1);
-				statistics_post_data(tid, CLOCK_SAFE, CLOCK_READ()-t_pre);
+				statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
 
 #ifdef REVERSIBLE
 				release_lp_lock();
@@ -446,26 +449,29 @@ void thread_loop(unsigned int thread_id) {
 				get_lp_lock(0, 1);
 #endif
 
-				t_pre = CLOCK_READ();
+				// Get the time of the whole exectution of an event in HTM
+				clock_timer htm_event_processing;
+				clock_timer_start(htm_event_processing);
 
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 #ifdef THROTTLING
-					t_pre2 = CLOCK_READ();
+					// Get the time of the whole time spent in throttling
+					// (NOTE! only for future committed events)
+					clock_timer htm_throttling;
+					clock_timer_start(htm_throttling);
 
 					throttling(pending_events);
 
-					statistics_post_data(tid, CLOCK_HTM_THROTTLE, CLOCK_READ() - t_pre2);
 #endif
-
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 						
 						statistics_post_data(tid, COMMITS_HTM, 1);
-						
-						statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
+						statistics_post_data(tid, CLOCK_HTM_THROTTLE, clock_timer_value(htm_throttling));
+						statistics_post_data(tid, CLOCK_HTM, clock_timer_value(htm_event_processing));
 
 #ifdef REVERSIBLE
 						release_lp_lock();
@@ -476,38 +482,40 @@ void thread_loop(unsigned int thread_id) {
 
 					}
 				} else {
-					if (status & _XABORT_RETRY || status & _XABORT_CONFLICT){
-						if (status & _XABORT_RETRY)
-							statistics_post_data(tid, ABORT_RETRY, 1);
-						if (status & _XABORT_CONFLICT)
-							statistics_post_data(tid, ABORT_CONFLICT, 1);
-					}
-					else if (status & _XABORT_CAPACITY) {
-						statistics_post_data(tid, ABORT_CACHEFULL, 1);
-						goto foldpath;
-					}
-					else if (status & _XABORT_DEBUG) {
-						statistics_post_data(tid, ABORT_DEBUG, 1);
-					}
-					else if (status & _XABORT_NESTED) {
-						statistics_post_data(tid, ABORT_NESTED, 1);
-					}
-					else if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
+					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
-					}
-					else {
-						statistics_post_data(tid, ABORT_GENERIC, 1);
-						goto foldpath;
+					} else {
+						if (status & _XABORT_RETRY || status & _XABORT_CONFLICT) {
+							if (status & _XABORT_RETRY)
+								statistics_post_data(tid, ABORT_RETRY, 1);
+							if (status & _XABORT_CONFLICT)
+								statistics_post_data(tid, ABORT_CONFLICT, 1);
+						}
+						if (status & _XABORT_CAPACITY) {
+							statistics_post_data(tid, ABORT_CACHEFULL, 1);
+							//goto foldpath;
+						}
+						if (status & _XABORT_DEBUG) {
+							statistics_post_data(tid, ABORT_DEBUG, 1);
+						}
+						if (status & _XABORT_NESTED) {
+							statistics_post_data(tid, ABORT_NESTED, 1);
+						}
+						if(status > (1<<12)) {
+							statistics_post_data(tid, ABORT_GENERIC, 1);
+							//goto foldpath;
+						}
 					}
 #ifdef REVERSIBLE
 					release_lp_lock();
 #endif
-					statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
+					statistics_post_data(tid, CLOCK_HTM, clock_timer_value(htm_event_processing));
 					continue;
 #ifdef REVERSIBLE
 foldpath:
+					printf("FOLDPATH\n");
 					release_lp_lock();
-					statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
+					//statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
 					goto reversible;
 #endif
 				}
@@ -526,25 +534,31 @@ reversible:
 
 				statistics_post_data(tid, EVENTS_STM, 1);
 
-				t_pre = CLOCK_READ();
+				// Get the time of the whole STM execution
+				clock_timer stm_event_processing;
+				clock_timer_start(stm_event_processing);
 
 				revwin_reset(current_lp, current_msg.revwin);	//<-da mettere una volta sola ad inizio esecuzione
 				ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 				retry_event = false;
 
-				t_pre2 = CLOCK_READ();
+				// Get the waiting time
+				clock_timer stm_safety_wait;
+				clock_timer_start(stm_safety_wait);
 
 				while (check_safety(current_lvt) > 0) {
-					if ( check_waiting() ) {
+					if ( check_waiting() == 1 ) {
 
-						statistics_post_data(tid, CLOCK_STM_WAIT, CLOCK_READ()-t_pre2);
+						statistics_post_data(tid, CLOCK_STM_WAIT, clock_timer_value(stm_safety_wait));
 						
-						t_pre3 = CLOCK_READ();
+						// Get the time for undo one event
+						clock_timer undo_event_processing;
+						clock_timer_start(undo_event_processing);
 						
 						execute_undo_event(current_lp, current_msg.revwin);
 
-						statistics_post_data(tid, CLOCK_UNDO_EVENT, CLOCK_READ()-t_pre3);
+						statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
 						statistics_post_data(tid, ABORT_REVERSE, 1);
 
 						// TODO: handle the reverse cache flush
@@ -552,19 +566,31 @@ reversible:
 
 						queue_clean();
 
+						// Reversible event must be retried, no other events can be
+						// fetched until the current one will not be processed
 						retry_event = true;
 						break;
 					}
 				}
 
-				statistics_post_data(tid, COMMITS_STM, 1);
-				statistics_post_data(tid, CLOCK_STM_WAIT, CLOCK_READ()-t_pre2);
-				statistics_post_data(tid, CLOCK_STM, CLOCK_READ()-t_pre2);
+				if(!retry_event) {
+					// Collect the time spend in waiting by a commiting event, only
+					statistics_post_data(tid, CLOCK_STM_WAIT, clock_timer_value(stm_safety_wait));
+				}
+
+				statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
 
 				release_lp_lock();
-				
+
+				// The reversible event was not safe and someone else has a less event's timestamp,
+				// therefore the whole event has been just reversed and we must retry it from
+				// the very beginning (i.e. safe->htm->stm).
 				if (retry_event)
-					continue;				
+					continue;
+
+				// If we are here, this means that the reversible event is now become safe and thus,
+				// it will be soon commited
+				statistics_post_data(tid, COMMITS_STM, 1);
 			}
 #endif
 
@@ -575,14 +601,14 @@ reversible:
 
 		/*FLUSH*/ 
 		flush();
-		
+
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
 		if(tid == _MAIN_PROCESS) {
 
 			evt_count++;
-			
+
 			if ((evt_count - 100000 * (evt_count / 100000)) == 0) {	//10000
 				printf("[%u] TIME: %f", tid, current_lvt);
 				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);

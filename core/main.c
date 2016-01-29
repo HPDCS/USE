@@ -16,16 +16,16 @@ unsigned short int number_of_threads = 1;
 
 void *start_thread(void *args) {
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
-	
+
 	//START THREAD (definita in core.c)
 	thread_loop(tid);
-	
+
 	pthread_exit(NULL);
 
 }
 
 void start_simulation(unsigned short int number_of_threads) {
-	
+
     pthread_t p_tid[number_of_threads-1];//pthread_t p_tid[number_of_threads];//
     int ret, i;
 
@@ -36,7 +36,7 @@ void start_simulation(unsigned short int number_of_threads) {
             abort();
         }
     }
-    
+
 #ifdef THROTTLING     
 	if(number_of_threads>1){	
 //		pthread_t p_tun;
@@ -71,10 +71,15 @@ int main(int argn, char *argv[]) {
     printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
 
     timer_start(exec_time);
-    start_simulation(n);
+
+	clock_timer simulation_clocks;
+	clock_timer_start(simulation_clocks);
+
+	start_simulation(n);
 
     printf("Simulation ended: %.5f seconds\n", (double)timer_value_seconds(exec_time));
-    
+    printf("Simulation ended: %llu clocks\n", clock_timer_value(simulation_clocks));
+
     //print_report_sum();
 
     print_statistics();
