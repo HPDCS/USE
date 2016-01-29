@@ -76,10 +76,8 @@ int main(int argn, char *argv[]) {
 		for(i = 2; i < argn; i++) {
 			if(!strcmp(argv[i], "-d")) {
 				delta_count = atof(argv[++i]);
-				printf("%s, %f\n", argv[i-1], delta_count);
 			} else if(!strcmp(argv[i], "-t")) {
 				reverse_execution_threshold = atoi(argv[++i]);
-				printf("%s, %d\n", argv[i-1], reverse_execution_threshold);
 			}
 		}
 	}

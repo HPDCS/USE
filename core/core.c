@@ -618,7 +618,9 @@ reversible:
 
 	execution_time(INFTY,-1);
 	
-	revwin_free(current_lp, current_msg.revwin);
+	// FIXME: Produces a segmentation fault, probably due to bad memory
+	// alignement return by the posix_memalign (!!?)
+//	revwin_free(current_lp, current_msg.revwin);
 
 	// Destroy SLAB's structures
 	// FIXME

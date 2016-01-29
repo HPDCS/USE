@@ -2,8 +2,10 @@
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
-FLAGS=-g -Wall -Wextra -mrtm -pthread -lm
+FLAGS=-g3 -Wall -Wextra -mrtm
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
+LIBS=-pthread -lm
+
 
 ifdef MALLOC
 CFLAGS=$(FLAGS) -DNO_DYMELOR
@@ -81,12 +83,12 @@ robot_explore: _robot_explore mm core link
 link:
 	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 ifdef MALLOC
-	gcc -g -o $(TARGET) model/__application_hijacked.o core/__core.o $(CFLAGS)
-#	gcc -g -o $(TARGET) model/__application.o core/__core.o $(CFLAGS)
+	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o
+#	gcc $(CFLAGS) -o $(TARGET) model/__application.o core/__core.o $(LIBS)
 else
-	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
-#ak	ld -g -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
-	gcc -g -o $(TARGET) model/application-mm.o core/__core.o $(CFLAGS)
+	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
+#	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
+	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o core/__core.o $(LIBS)
 endif
 
 
@@ -98,7 +100,7 @@ core: $(CORE_OBJ)
 
 %.o: %.c
 	@echo "[CC] $@"
-	@$(CC) -g -c -o $@ $< $(CFLAGS) $(INCLUDE)
+	@$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@ $(LIBS)
 
 _pcs_prealloc: $(PCS_PREALLOC_OBJ)
 	@ld -r -g $(PCS_PREALLOC_OBJ) -o model/__application.o
