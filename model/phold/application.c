@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ROOT-Sim.h>
+#include <errno.h>
 
 #include <lookahead.h>
 
@@ -8,12 +9,15 @@
 
 //#include <timer.h>
 
+//lp_state_type states[4] __attribute__((aligned (64)));
+
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
 	int 	i, j = 123;
 	event_content_type new_event;
-
+	int err;
+	unsigned int loops; 
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
 	//timer tm_ex;
@@ -26,8 +30,20 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		case INIT:
 			// Initialize LP's state
-			state_ptr = (lp_state_type *)malloc(sizeof(lp_state_type));
+			//state_ptr = (lp_state_type *)malloc(sizeof(lp_state_type));
+
+			//if(states[me] == NULL)
+			//	state_ptr = states[me];
+
+			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
+			err = posix_memalign((void **)(&state_ptr), 64, 64);
+			if(err < 0) {
+				printf("memalign failed: (%s)\n", strerror(errno));
+				exit(-1);
+			}
+
                         if(state_ptr == NULL){
+				printf("LP state allocation failed: (%s)\n", strerror(errno));
                                 exit(-1);
                         }
 
@@ -54,7 +70,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case LOOP:
 			//timer_start(tm_ex);
 
-			for(i = 0; i < LOOP_COUNT*29; i++) {
+			loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
+
+			for(i = 0; i < loops ; i++) {
 					j = i*i;
 			}
 			//printf("timer: %d\n", timer_value_micro(tm_ex));
