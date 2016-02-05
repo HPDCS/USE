@@ -97,12 +97,14 @@ double Log(){
 	unsigned int i;
 	int s = 1;
 	x = xp = -Random();
-	
+
 	for (i = 1; i <= 6; i++){
-		ln += s * xp * (1/1);
+		ln += s * xp * (1/i);
 		xp *= x;
 		s *= (-1);	
-	}	
+	}
+
+	return ln;
 }
 
 /**
@@ -121,8 +123,8 @@ double Expent(double mean) {
 		abort();
 	}
 
-	return (-mean * Log());
-	//return (-mean * log(1 - Random()));
+//	return (-mean * Log());
+	return (-mean * log(1 - Random()));
 }
 
 

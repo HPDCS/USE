@@ -12,17 +12,21 @@
 extern __thread msg_t current_msg;
 extern void **states;
 
+/*
 // #define revwin_overflow() do { \
 // 	printf("[LP%d] :: event %d win at %p\n", current_lp, current_msg->type, win); \
 // 	printf("Code size is %lld bytes and data size is %lld bytes\n", ((long long)win->code - (long long)win->data), ((long long)win->data - sizeof(revwin_t))); \
 // 	fprintf(stderr, "Insufficent reverse window memory heap!\n"); \
 // 	exit(-ENOMEM); \
 // } while(0)
+*/
 
+/*
 // #define revwin_check_space(size) do { \
 // 	if (((long long)win->code - (long long)win->data) < (size)) { \
 // 		revwin_overflow(); \
 // 	} while(0)
+*/
 
 //
 // revwin
@@ -49,8 +53,8 @@ static inline void revwin_overflow(revwin_t *win) {
 }
 
 static inline void revwin_check_space(revwin_t *win, size_t size) {
-	if ((int)((long long)win->code - (long long)win->data) < (size)) {
-        printf("Request for %d bytes failed!\n", size);
+	if ((size_t)((long long)win->code - (long long)win->data) < (size)) {
+        printf("Request for %d bytes failed!\n", (int)size);
 		revwin_overflow(win);
 	}
 }
@@ -450,12 +454,10 @@ void revwin_reset(unsigned int lid, revwin_t *win) {
 
 #define SIMULATED_INCREMENTAL_CKPT if(0)
 static bool use_xmm = false;
-static __thread int count = 0;
 
 
 void reverse_code_generator(const unsigned long long address, const size_t size) {
 	unsigned long long chunk_address;
-	size_t chunk_size;
 	bool dominant;
 	revwin_t *win;
 
@@ -532,8 +534,6 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
  */
 void execute_undo_event(unsigned int lid, revwin_t *win) {
 	unsigned char push = 0x50;
-	int err;
-
 
 	// Sanity check
 	if (win == NULL) {

@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
@@ -44,7 +46,7 @@ __thread unsigned int tid = 0;
 __thread unsigned long long evt_count = 0;
 
 static simtime_t *current_time_vector;
-static int *current_region;
+static unsigned int *current_region;
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
@@ -140,8 +142,14 @@ void _mkdir(const char *path) {
 
 void throttling(unsigned int events) {
 	unsigned long long tick_count;
-	
-	tick_count = CLOCK_READ() + events * (get_time_of_an_event() * delta_count); 
+	unsigned int i, j;
+
+/*
+	j = 0;
+	for (i = 0 ; i < 2900*delta_count*events ; i++)
+		j=i*i;
+*/
+	tick_count = CLOCK_READ() + events * (1 + (events - 1)  * get_frac_htm_aborted() * 0.7)  *  (get_time_of_an_event() * delta_count); 
 	while (true) {
 		if (CLOCK_READ() > tick_count)
 			break;
@@ -173,7 +181,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
 	
 	current_time_vector = malloc(sizeof(simtime_t) * n_cores);
-    current_region = malloc(sizeof(int)*n_cores);
+    	current_region = malloc(sizeof(unsigned int)*n_cores);
 
 	lp_lock = malloc(sizeof(int) * lps_num);
 	wait_time = malloc(sizeof(simtime_t) * lps_num);
@@ -211,7 +219,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	process_init_event();
 }
 
-void execution_time(simtime_t time, int clp){
+void execution_time(simtime_t time, unsigned int clp){
     current_time_vector[tid] = time;      //processing
     current_region[tid] = clp;
 }
@@ -225,7 +233,7 @@ unsigned int check_safety(simtime_t time){
     for(i = 0; i < n_cores; i++){
 		
         if(i!=tid && (
-			(   (time > (current_time_vector[i]+LOOKAHEAD)) || (time==(current_time_vector[i]+LOOKAHEAD) && tid > i) )
+			( (time > (current_time_vector[i]+LOOKAHEAD)) || (time==(current_time_vector[i]+LOOKAHEAD) && tid > i) )
 			||
 			( (current_lp==current_region[i]) && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i) ) )
 		  ))
@@ -386,9 +394,21 @@ void thread_loop(unsigned int thread_id) {
 	//unsigned long long t_pre, t_post, t_pre2, t_pre3;
 	bool retry_event;
 	revwin_t *window;
+	cpu_set_t mask;
 
 	tid = thread_id;
 	
+	// Set the CPU affinity
+	
+	printf("Thread %d set to CPU no %d\n", tid, tid);
+	CPU_ZERO(&mask);
+	CPU_SET(tid, &mask);
+	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+	if(err < 0) {
+		printf("Unable to set CPU affinity: %s\n", strerror(errno));
+		exit(-1);
+	}
+
 	reverse_init(REVWIN_SIZE);
 
 	window = revwin_create();
@@ -463,7 +483,8 @@ void thread_loop(unsigned int thread_id) {
 					clock_timer htm_throttling;
 					clock_timer_start(htm_throttling);
 
-					throttling(pending_events);
+					if(delta_count>0)
+						throttling(pending_events);
 
 #endif
 					if (check_safety(current_lvt) == 0) {
@@ -477,20 +498,22 @@ void thread_loop(unsigned int thread_id) {
 						release_lp_lock();
 #endif
 
+
 					} else {
 						_xabort(_ROLLBACK_CODE);
-
 					}
 				} else {
+					statistics_post_data(tid, ABORT_TOTAL, 1);
 					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
 					} else {
-						if (status & _XABORT_RETRY || status & _XABORT_CONFLICT) {
-							if (status & _XABORT_RETRY)
-								statistics_post_data(tid, ABORT_RETRY, 1);
-							if (status & _XABORT_CONFLICT)
-								statistics_post_data(tid, ABORT_CONFLICT, 1);
-						}
+						//if (status & _XABORT_RETRY || status & _XABORT_CONFLICT) {
+						if (status & _XABORT_RETRY)
+							statistics_post_data(tid, ABORT_RETRY, 1);
+
+						if (status & _XABORT_CONFLICT)
+							statistics_post_data(tid, ABORT_CONFLICT, 1);
+						//}
 						if (status & _XABORT_CAPACITY) {
 							statistics_post_data(tid, ABORT_CACHEFULL, 1);
 							//goto foldpath;
@@ -500,10 +523,6 @@ void thread_loop(unsigned int thread_id) {
 						}
 						if (status & _XABORT_NESTED) {
 							statistics_post_data(tid, ABORT_NESTED, 1);
-						}
-						if(status > (1<<12)) {
-							statistics_post_data(tid, ABORT_GENERIC, 1);
-							//goto foldpath;
 						}
 					}
 #ifdef REVERSIBLE
@@ -609,7 +628,7 @@ reversible:
 
 			evt_count++;
 
-			if ((evt_count - 100000 * (evt_count / 100000)) == 0) {	//10000
+			if ((evt_count - 1000000 * (evt_count / 1000000)) == 0) {	//10000
 				printf("[%u] TIME: %f", tid, current_lvt);
 				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}

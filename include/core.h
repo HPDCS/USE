@@ -84,7 +84,7 @@ extern void flush(void);
 
 double double_cas(double *addr, double old_val, double new_val);
 
-void execution_time(simtime_t time, int clp);
+void execution_time(simtime_t time, unsigned int clp);
 
 unsigned int check_safety(simtime_t time);
 
