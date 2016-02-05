@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <statistics.h>
 
 #include "queue.h"
 #include "calqueue.h"
@@ -28,6 +29,8 @@ typedef struct __queue_t {
 
 __thread msg_t current_msg __attribute__ ((aligned (64)));
 
+unsigned long long fetched_evt = 0;
+simtime_t old_ts = 0;
 
 queue_t _queue;
 
@@ -110,7 +113,11 @@ int queue_min(void) {
     free(node_ret);
 
     execution_time(current_msg.timestamp, current_msg.receiver_id);
-
+    
+    statistics_post_data(tid, EVENTS_FETCHED, 1);
+    statistics_post_data(tid, T_BTW_EVT, current_msg.timestamp-old_ts);
+	old_ts = current_msg.timestamp;
+	
     __sync_lock_release(&queue_lock);
 
     return 1;
@@ -131,10 +138,26 @@ void queue_clean(void) {
 }
 
 void flush(void) {
+	
     while(__sync_lock_test_and_set(&queue_lock, 1))
         while(queue_lock);
 
 	queue_deliver_msgs();
+	
+	if(current_lvt>gvt) gvt = current_lvt;
 
     __sync_lock_release(&queue_lock);
+    
+    /* This part is useful only if the lookahead is greater than 0
+	simtime_t tmp_gvt;
+	void * ptr_gvt = &gvt;
+ret:    
+    tmp_gvt = gvt;
+    if(tmp_gvt < current_lvt){
+		if(__sync_val_compare_and_swap(&gvt, tmp_gvt, current_lvt) == tmp_gvt)
+			return;
+		else
+			goto ret; 
+	}
+	*/
 }

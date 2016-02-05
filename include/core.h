@@ -57,6 +57,10 @@ extern unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 extern unsigned int n_prc_tot;
 
+/* Commit horizon */
+extern simtime_t gvt;
+/* Average time between consecutive events */
+extern simtime_t t_btw_evts;
 
 void init(unsigned int _thread_num, unsigned int);
 

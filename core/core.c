@@ -53,6 +53,12 @@ unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot;
 
+
+/* Commit horizon */
+simtime_t gvt = 0;
+/* Average time between consecutive events */
+simtime_t t_btw_evts = 0.1; //Non saprei che metterci
+
 bool stop = false;
 bool sim_error = false;
 
@@ -390,7 +396,8 @@ void release_waiting_ticket(){
 
 void thread_loop(unsigned int thread_id) {
 	
-	unsigned int status, pending_events, mode, old_mode, retries;
+	unsigned int status, safe, mode, old_mode, retries;
+	double pending_events;
 	//unsigned long long t_pre, t_post, t_pre2, t_pre3;
 	bool retry_event;
 	revwin_t *window;
@@ -435,8 +442,12 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-		pending_events = check_safety(current_lvt);
-		if (pending_events == 0) {
+		safe = check_safety(current_lvt);
+		
+		//compute the average number of events between the commit horizon and my currebt ts
+		pending_events = (current_lvt - gvt)/t_btw_evts - 1;
+		
+		if (safe == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -503,17 +514,19 @@ void thread_loop(unsigned int thread_id) {
 						_xabort(_ROLLBACK_CODE);
 					}
 				} else {
+					
 					statistics_post_data(tid, ABORT_TOTAL, 1);
+					
 					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
+						
 					} else {
-						//if (status & _XABORT_RETRY || status & _XABORT_CONFLICT) {
-						if (status & _XABORT_RETRY)
+						if (status & _XABORT_RETRY){
 							statistics_post_data(tid, ABORT_RETRY, 1);
-
-						if (status & _XABORT_CONFLICT)
-							statistics_post_data(tid, ABORT_CONFLICT, 1);
-						//}
+						}
+						if (status & _XABORT_CONFLICT){
+								statistics_post_data(tid, ABORT_CONFLICT, 1);
+						}
 						if (status & _XABORT_CAPACITY) {
 							statistics_post_data(tid, ABORT_CACHEFULL, 1);
 							//goto foldpath;

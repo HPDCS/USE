@@ -22,6 +22,8 @@
 #define ABORT_GENERIC 17
 #define ABORT_RETRY 18
 #define ABORT_TOTAL 19
+#define EVENTS_FETCHED 20
+#define T_BTW_EVT 21
 
 struct stats_t {
     unsigned int events_total;
@@ -50,14 +52,20 @@ struct stats_t {
     unsigned int abort_retry;
 } __attribute__((aligned (64)));
 
+
 extern struct stats_t *thread_stats;
 
+
+
 void statistics_init();
+
 void statistics_fini();
 
 unsigned long long get_time_of_an_event();
 
 double get_frac_htm_aborted();
+
+void print_statistics();
 
 void statistics_post_data(int lid, int type, double value);
 

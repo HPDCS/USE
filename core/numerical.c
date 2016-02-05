@@ -406,8 +406,6 @@ static void load_seed(void) {
 #define ROR(value, places) (value << (places)) | (value >> (RS_WORD_LENGTH - places)) // Circular shift
 void numerical_init(void) {
 
-	unsigned int i;
-
 	// Initialize the master seed
 	load_seed();
 	master_seed = sanitize_seed(master_seed);
