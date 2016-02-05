@@ -11,6 +11,10 @@ extern unsigned int reverse_execution_threshold;
 struct stats_t *thread_stats;
 struct stats_t system_stats;
 
+unsigned long long events_fetched;
+simtime_t tot_time_between_events;
+simtime_t t_btw_evts;
+
 void statistics_init() {
     thread_stats = malloc(n_cores * sizeof(struct stats_t));
     if(thread_stats == NULL) {
@@ -20,6 +24,9 @@ void statistics_init() {
     memset(thread_stats, 0, n_cores * sizeof(struct stats_t));
 
     memset(&system_stats, 0, sizeof(struct stats_t));
+    
+    events_fetched = 0;
+    tot_time_between_events = 0;
 }
 
 void statistics_fini() {
@@ -83,7 +90,7 @@ void statistics_post_data(int tid, int type, double value) {
 
         case ABORT_REVERSE:
             thread_stats[tid].abort_reverse++;
-        break;
+			break;
 
         case ABORT_CONFLICT:
             thread_stats[tid].abort_conflict++;
@@ -108,6 +115,13 @@ void statistics_post_data(int tid, int type, double value) {
         case ABORT_RETRY:
             thread_stats[tid].abort_retry++;
             break;
+        case EVENTS_FETCHED:
+			events_fetched++;
+			break;
+		case T_BTW_EVT:
+			tot_time_between_events += value;
+			t_btw_evts = tot_time_between_events/events_fetched;
+			break;
 
         default:
             printf("Unrecognized stat type (%d)\n", type);
@@ -120,7 +134,7 @@ unsigned long long get_time_of_an_event(){
 
 
 void gather_statistics() {
-    int i;
+    unsigned int i;
 
     for(i = 0; i < n_cores; i++) {
         system_stats.events_total += thread_stats[i].events_total;
@@ -186,7 +200,8 @@ void print_statistics() {
     printf("STM events......................................: %11u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
 
     unsigned int commits_total = system_stats.events_safe + system_stats.commits_htm + system_stats.commits_stm;
-
+    
+	printf("TOT committed...................................: %11u\n", commits_total);
     printf("HTM committed...................................: %11u (%.3f%%)\n", system_stats.commits_htm, ((double)system_stats.commits_htm / system_stats.events_htm)*100);
     printf("STM committed...................................: %11u (%.3f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / system_stats.events_stm)*100);
 

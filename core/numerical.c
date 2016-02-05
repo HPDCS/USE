@@ -99,10 +99,12 @@ double Log(){
 	x = xp = -Random();
 	
 	for (i = 1; i <= 6; i++){
-		ln += s * xp * (1/1);
+		ln += s * xp * (1/i);
 		xp *= x;
 		s *= (-1);	
 	}	
+	
+	return ln;
 }
 
 /**
@@ -403,8 +405,6 @@ static void load_seed(void) {
 #define RS_WORD_LENGTH (8 * sizeof(seed_type))
 #define ROR(value, places) (value << (places)) | (value >> (RS_WORD_LENGTH - places)) // Circular shift
 void numerical_init(void) {
-
-	unsigned int i;
 
 	// Initialize the master seed
 	load_seed();

@@ -21,6 +21,8 @@
 #define ABORT_NESTED 16
 #define ABORT_GENERIC 17
 #define ABORT_RETRY 18
+#define EVENTS_FETCHED 19
+#define T_BTW_EVT 20
 
 struct stats_t {
     unsigned int events_total;
@@ -55,6 +57,7 @@ void statistics_fini();
 
 unsigned long long get_time_of_an_event();
 
+void print_statistics();
 void statistics_post_data(int lid, int type, double value);
 
 #endif // _STATISTICS_H_

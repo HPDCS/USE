@@ -44,12 +44,18 @@ __thread unsigned int tid = 0;
 __thread unsigned long long evt_count = 0;
 
 static simtime_t *current_time_vector;
-static int *current_region;
+static unsigned int *current_region;
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot;
+
+
+/* Commit horizon */
+simtime_t gvt = 0;
+/* Average time between consecutive events */
+simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 
 bool stop = false;
 bool sim_error = false;
@@ -211,7 +217,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	process_init_event();
 }
 
-void execution_time(simtime_t time, int clp){
+void execution_time(simtime_t time, unsigned int clp){
     current_time_vector[tid] = time;      //processing
     current_region[tid] = clp;
 }
@@ -382,7 +388,8 @@ void release_waiting_ticket(){
 
 void thread_loop(unsigned int thread_id) {
 	
-	unsigned int status, pending_events, mode, old_mode, retries;
+	unsigned int status, safe, mode, old_mode, retries;
+	double pending_events;
 	//unsigned long long t_pre, t_post, t_pre2, t_pre3;
 	bool retry_event;
 	revwin_t *window;
@@ -415,8 +422,12 @@ void thread_loop(unsigned int thread_id) {
 			
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-		pending_events = check_safety(current_lvt);
-		if (pending_events == 0) {
+		safe = check_safety(current_lvt);
+		
+		//compute the average number of events between the commit horizon and my currebt ts
+		pending_events = (current_lvt - gvt)/t_btw_evts - 1;
+		
+		if (safe == 0) {
 				mode = MODE_SAF;
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
@@ -485,10 +496,10 @@ void thread_loop(unsigned int thread_id) {
 					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
 					} else {
-						if (status & _XABORT_RETRY || status & _XABORT_CONFLICT) {
-							if (status & _XABORT_RETRY)
-								statistics_post_data(tid, ABORT_RETRY, 1);
-							if (status & _XABORT_CONFLICT)
+						if (status & _XABORT_RETRY){
+							statistics_post_data(tid, ABORT_RETRY, 1);
+						}
+						if (status & _XABORT_CONFLICT){
 								statistics_post_data(tid, ABORT_CONFLICT, 1);
 						}
 						if (status & _XABORT_CAPACITY) {
@@ -501,7 +512,7 @@ void thread_loop(unsigned int thread_id) {
 						if (status & _XABORT_NESTED) {
 							statistics_post_data(tid, ABORT_NESTED, 1);
 						}
-						if(status > (1<<12)) {
+						if (status > (1<<12)) {
 							statistics_post_data(tid, ABORT_GENERIC, 1);
 							//goto foldpath;
 						}
