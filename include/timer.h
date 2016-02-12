@@ -77,8 +77,20 @@ typedef struct timeval timer;
 			unsigned int lo; \
 			unsigned int hi; \
 			__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi)); \
-			((unsigned long long)hi) << 32 | lo; \
+			(unsigned long long)(((unsigned long long)hi) << 32 | lo); \
 			})
+
+
+typedef unsigned long long clock_timer;
+
+
+#define clock_timer_start(timer) (timer = CLOCK_READ())
+
+#define clock_timer_value(timer) ({ \
+		unsigned long long value = CLOCK_READ(); \
+		value -= (unsigned long long)(timer); \
+		value; \
+		})
 
 #endif /* _TIMER_H */
 

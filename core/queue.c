@@ -9,28 +9,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <statistics.h>
 
 #include "queue.h"
-#include "message_state.h"
 #include "calqueue.h"
 #include "core.h"
-
-
-
-typedef struct __event_pool_node {
-    msg_t message;
-    calqueue_node *calqueue_node_reference;
-} event_pool_node;
-
-typedef struct __queue_t {
-    event_pool_node *head;
-    unsigned int size;
-} queue_t;
+#include "lookahead.h"
 
 __thread msg_t current_msg __attribute__ ((aligned (64)));
 
+unsigned long long fetched_evt = 0;
 
-queue_t _queue;
+/* commit horizon */
+simtime_t gvt = 0;
+/* Average time between consecutive events */
+simtime_t t_btw_evts = 0.1;
 
 typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
@@ -68,8 +61,6 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
     memcpy(msg_ptr->data, event_content, event_size);
-    //event_content andrebbe liberato poi?
-
 }
 
 unsigned int queue_pool_size(void) {
@@ -85,7 +76,7 @@ void queue_deliver_msgs(void) {
         new_hole = malloc(sizeof(msg_t));
         if(new_hole == NULL){
 			printf("Out of memory in %s:%d", __FILE__, __LINE__);
-			abort();		
+			abort();
 		}
         memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
         calqueue_put(new_hole->timestamp, new_hole);
@@ -112,6 +103,9 @@ int queue_min(void) {
 
     execution_time(current_msg.timestamp, current_msg.receiver_id);
 
+    statistics_post_data(tid, EVENTS_FETCHED, 1);
+    statistics_post_data(tid, T_BTW_EVT, current_msg.timestamp);
+
     __sync_lock_release(&queue_lock);
 
     return 1;
@@ -123,10 +117,31 @@ int fetch(void) {
     return queue_min();
 }
 
-void queue_destroy(void) {
-    free(_queue.head);
-}
-
 void queue_clean(void) {
     _thr_pool._thr_pool_count = 0;
+}
+
+void flush(void) {
+    while(__sync_lock_test_and_set(&queue_lock, 1))
+        while(queue_lock);
+
+	if(current_lvt>gvt) gvt = current_lvt;
+	else if(current_lvt+LOOKAHEAD < gvt)  printf("GVT: WTF!!! old=%f new=%f\n", gvt, current_lvt);
+
+	queue_deliver_msgs();
+
+    __sync_lock_release(&queue_lock);
+
+    /* This part is useful only if the lookahead is greater than 0
+	simtime_t tmp_gvt;
+	void * ptr_gvt = &gvt;
+ret:
+    tmp_gvt = gvt;
+    if(tmp_gvt < current_lvt){
+		if(__sync_val_compare_and_swap(&gvt, tmp_gvt, current_lvt) == tmp_gvt)
+			return;
+		else
+			goto ret;
+	}
+	*/
 }

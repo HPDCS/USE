@@ -84,8 +84,6 @@ int RandomRangeNonUniform(int x, int min, int max) {
       return (((RandomRange(0, x) | RandomRange(min, max))) % (max - min + 1)) + min;
 }
 
-
-
 /**
 * This function returns a random number according to an Exponential distribution.
 * The mean value of the distribution must be passed as the mean value.
@@ -102,7 +100,8 @@ double Expent(double mean) {
 		abort();
 	}
 
-	return (-mean * log(1 - Random()));
+	//return (-mean * log(1 - Random()));
+	return mean * ( 1.0 / ( 3 *(1.01 - Random()) ) );
 }
 
 
@@ -383,8 +382,6 @@ static void load_seed(void) {
 #define RS_WORD_LENGTH (8 * sizeof(seed_type))
 #define ROR(value, places) (value << (places)) | (value >> (RS_WORD_LENGTH - places)) // Circular shift
 void numerical_init(void) {
-
-	unsigned int i;
 
 	// Initialize the master seed
 	load_seed();

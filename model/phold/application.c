@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ROOT-Sim.h>
+#include <errno.h>
 
 #include <lookahead.h>
 
@@ -8,15 +9,22 @@
 
 //#include <timer.h>
 
-void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
+//lp_state_type LPS[1024] __attribute__((aligned (64)));
+
+#define LA (50)
+
+inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
 	int 	i, j = 123;
 	event_content_type new_event;
-
+	int err;
+	unsigned int loops; 
+	//lp_state_type *state_ptr = &(LPS[me]); //(lp_state_type*)state;
 	lp_state_type *state_ptr = (lp_state_type*)state;
-	
+
 	//timer tm_ex;
+	
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
@@ -26,10 +34,22 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		case INIT:
 			// Initialize LP's state
-			state_ptr = (lp_state_type *)malloc(sizeof(lp_state_type));
-                        if(state_ptr == NULL){
+			//state_ptr = (lp_state_type *)malloc(sizeof(lp_state_type));
+
+			//if(states[me] == NULL)
+			//	state_ptr = states[me];
+
+			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
+			err = posix_memalign((void **)(&state_ptr), 64, 64);
+			if(err < 0) {
+				printf("memalign failed: (%s)\n", strerror(errno));
+				exit(-1);
+			}
+
+           if(state_ptr == NULL){
+				printf("LP state allocation failed: (%s)\n", strerror(errno));
                                 exit(-1);
-                        }
+                  }
 
 			// Explicitly tell ROOT-Sim this is our LP's state
                         SetState(state_ptr);
@@ -40,13 +60,13 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			if(me == 0) {
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
-			
-//			for(i = 0; i < 10; i++) {
+
+			for(i = 0; i < 10; i++) {
 				timestamp = (simtime_t) (20 * Random());
 				if(timestamp < LOOKAHEAD)
 					timestamp += LOOKAHEAD;
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-//			}
+			}
 
 			break;
 
@@ -54,7 +74,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case LOOP:
 			//timer_start(tm_ex);
 
-			for(i = 0; i < LOOP_COUNT*29; i++) {
+			loops = LOOP_COUNT * 29;// * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
+
+			for(i = 0; i < loops ; i++) {
 					j = i*i;
 			}
 			//printf("timer: %d\n", timer_value_micro(tm_ex));
@@ -64,7 +86,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			delta = (simtime_t)(Expent(TAU));
 			if(delta < LOOKAHEAD)
 				delta += LOOKAHEAD;
-			timestamp = now + delta;
+			if(delta < LA ) delta = LA;
+			timestamp = now + delta ;
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
@@ -84,9 +107,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 
-	if(snapshot->events < COMPLETE_EVENTS)
-//	if(snapshot->lvt < COMPLETE_TIME)
-		return false;
+	if(snapshot->events < COMPLETE_EVENTS) {
+//	if(snapshot->lvt < COMPLETE_TIME) {
+        return false;
+    }
 	return true;
 }
 

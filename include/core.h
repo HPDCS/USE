@@ -13,16 +13,28 @@
 
 #include <ROOT-Sim.h>
 
+#include <reverse.h>
+
 #define MAX_LPs	2048
 
 #define MAX_DATA_SIZE		128
 #define THR_POOL_SIZE		16
+
+#define TROT_INIT_DELTA		0.0
+#define REV_INIT_THRESH		4
+
+#define MODE_SAF	1
+#define MODE_HTM	2
+#define MODE_STM	3
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 #define THROTTLING
+#define REVERSIBLE
+
+#define INCARNATION_DISP 13 
 
 typedef struct __msg_t
 {
@@ -32,6 +44,7 @@ typedef struct __msg_t
   int type;
   unsigned int data_size;
   unsigned char data[MAX_DATA_SIZE];
+  revwin_t *revwin;
 
 } msg_t;
 
@@ -46,17 +59,13 @@ extern unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 extern unsigned int n_prc_tot;
 
-
 void init(unsigned int _thread_num, unsigned int);
-
-//Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
 
 extern void rootsim_error(bool fatal, const char *msg, ...);
 
 
 //Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
+void thread_loop(unsigned int thread_id, int inc);
 
 extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
@@ -73,7 +82,7 @@ extern void flush(void);
 
 double double_cas(double *addr, double old_val, double new_val);
 
-void print_report(void);
+void execution_time(simtime_t time, unsigned int clp);
 
 void *tuning(void *args);
 

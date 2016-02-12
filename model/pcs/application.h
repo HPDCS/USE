@@ -11,7 +11,7 @@
 #define CHECK_FADING_TIME	10
 #define COMPLETE_CALLS		1000
 #ifndef TA
-#define TA			0.6
+#define TA			0.13
 #endif
 #define TA_DURATION		120
 #define CHANNELS_PER_CELL	1000
@@ -109,7 +109,7 @@ typedef struct _lp_state_type{
 
 	unsigned int *channel_state;
 	struct _channel *channels;
-} lp_state_type;
+} lp_state_type __attribute__((aligned(64)));
 
 
 double recompute_ta(double ref_ta, simtime_t now);

@@ -31,6 +31,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 //	printf("Executing %d at %d at %f state %p\n", event_type, me, now, ptr);
 
+	unsigned int i, j=123;
+//	for(i = 0 ; i < 15000 ; i++) j=i*i;
+
+
 	if(state != NULL) {
 		state->lvt = now;
 		state->executed_events++;

@@ -60,8 +60,6 @@ static void localinit(int qbase, int nbucks, double bwidth, double startprio) {
 // based on a random sample of the queue so that there will be about 3
 // items in each bucket.
 static double new_width(void) {
-	
-	//printf("calqueue: sto eseguendo new_width\n");
 
 	int nsamples, templastbucket, i, j;
 	double templastprio;
@@ -140,16 +138,14 @@ static double new_width(void) {
 // This copies the queue onto a calendar with nnewsize buckets. The new bucket
 // array is on the opposite end of the array a[QSPACE] from the original        EH?!?!?!?!?!
 static void resize(int newsize) {
+
 	double bwidth;
 	int i;
 	int oldnbuckets;
 	calqueue_node **oldcalendar, *temp, *temp2;
-	
+
 	if (!resize_enabled)
 		return;
-		
-	//printf("calqueue: sto eseguendo resize\n");
-
 	// Find new bucket width
 	bwidth = new_width();
 
@@ -200,8 +196,7 @@ static calqueue_node *calqueue_deq(void) {
 			// Update position on calendar and queue's size
 			lastbucket = i;
 			lastprio = e->timestamp;
-	
-			
+
 			qsize--;
 
 			// Remove the event from the calendar queue
@@ -210,8 +205,6 @@ static calqueue_node *calqueue_deq(void) {
 			// Halve the calendar size if needed
 			if (qsize < bot_threshold)
 				resize((int)((double)nbuckets / 2));
-				
-			//if(lastprio>248 && lastprio<251) printf("\tget: lastbucket %d, timestamo_head %f, buckettop %f\n", i, calendar[i]->timestamp, buckettop);
 
 			// Processing completed
 			return e;
@@ -256,22 +249,21 @@ void calqueue_put(double timestamp, void *payload) {
 
 	int i, i_bt;
 	calqueue_node *new_node, *traverse;
-	
-	//printf("calqueue: inserendo %f, cwidth %f, bukettop %f, nbuckets %d, lastprio %f\n", timestamp, cwidth, buckettop, nbuckets, lastprio);
 
 	// Fill the node entry
 	new_node = malloc(sizeof(calqueue_node));
 	new_node->timestamp = timestamp;
 	new_node->payload = payload;
 	new_node->next = NULL;
-	
+
 	if(new_node == NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-		abort();		
+		abort();
 	}
 
 	// Calculate the number of the bucket in which to place the new entry
 	i_bt = (int)round(timestamp / (double)cwidth);	// Virtual bucket
+
 	i = i_bt % nbuckets;	// Actual bucket
 
 	// Grab the head of events list in bucket i
@@ -305,8 +297,6 @@ void calqueue_put(double timestamp, void *payload) {
 	if (qsize > top_threshold && nbuckets < MAXNBUCKETS) {
 		resize(2 * nbuckets);
 	}
-	
-	//if(timestamp>248 && timestamp<251) printf("\tput: lastbucket %d, timestamo_head %f, buckettop %f\n", i, calendar[i]->timestamp, buckettop);
 }
 
 void *calqueue_get(void) {
@@ -317,8 +307,6 @@ void *calqueue_get(void) {
 	if (node == NULL) {
 		return NULL;
 	}
-	
-	//printf("calqueue: estraendo %f, cwidth %f, bukettop %f, nbuckets %d, lastprio %f\n", node->timestamp, cwidth, buckettop, nbuckets, lastprio);
 
 	payload = node->payload;
 	free(node);
