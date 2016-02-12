@@ -25,8 +25,8 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
-PHOLDMEM_SOURCES=model/phold-mem/application.c\
-				 model/phold-mem/functions.c
+HASH_SOURCES=model/hash/application.c\
+				 model/hash/functions.c
 
 TCAR_SOURCES=model/tcar/application.c\
 	            model/tcar/neighbours.c
