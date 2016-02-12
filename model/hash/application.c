@@ -12,10 +12,12 @@
 
 //lp_state_type states[4] __attribute__((aligned (64)));
 
+static unsigned int load[4] = {2, 4, 5, 1};
+
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
-	int i, j;
+	unsigned int i, j;
 	int err;
 	unsigned int loops; 
 	lp_state_type *state_ptr;
@@ -29,7 +31,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case INIT:
 
 			if(me == 0) {
-				printf("Running PHOLD-MEM benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
+				printf("Running HASH benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
 			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
@@ -50,6 +52,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			// Explicitly tell ROOT-Sim this is our LP's state
 			SetState(state_ptr);
 			
+			// Each INIT event will schedule a number of events
+			// to simulate a higher system load
 			for(i = 0; i < 10; i++) {
 				timestamp = (simtime_t) (20 * Random());
 				if(timestamp < LOOKAHEAD)
@@ -66,12 +70,15 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			// Load the state pointer
 			state_ptr = state;
+			//printf("state at: %p\n", state);
 
 			// Check the hash of the event's state if matches with the current one
 			current_hash = hash((void *) state_ptr, (sizeof(lp_state_type) - sizeof(unsigned long long)));
 
+			//state_dump(me, state_ptr, sizeof(lp_state_type));
+
 			if (current_hash != state_ptr->hash) {
-				printf("[%d] Possible state corruption: LVT's hash does not match! (%llx -> %llx)\n", me, state_ptr->hash, current_hash);
+				printf("[LP%d] Possible state corruption at time %.3f: state hash does not match! (%llx -> %llx)\n", me, now, state_ptr->hash, current_hash);
 				//exit(-1);
 			}
 
@@ -84,18 +91,23 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			state_ptr->current_lvt = now;
 
 			// Simulate a random memory access pattern
-			int span = SPAN_BASE + (SPAN_VAR * (2 * Random() - 1));
+			unsigned int span = SPAN_BASE + (SPAN_VAR * (2 * Random() - 1));
 			for (i = 0; i < span; i++) {
-				// Read and write on some cells of the data region
-				state_ptr->data[(int)(DATA_SIZE * Random())] += (i*i);
+				for (j = 0; j < load[state_ptr->epoch]; j++) {
+					// Read and write on some cells of the data region
+					state_ptr->data[(unsigned int)(DATA_SIZE * Random())] += (i*i);
+				}
 			}
 
 			// Busy loop, just do nothing...
 			//loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
 			loops = (LOOP_COUNT * 10) + ((LOOP_COUNT_VAR * 10) * (Random() - 1));		// loops e [0, LOOP_COUNT]
-			j = 0;
 			for(i = 0; i < loops ; i++) {
-					j = i*i;
+					state_ptr->counter = i*i;
+			}
+
+			if(state_ptr != 0 && (state_ptr->events % (COMPLETE_EVENTS / 4) == 0)) {
+				state_ptr->epoch++;
 			}
 
 			// The very LAST thing to do is to update LP'state hash
