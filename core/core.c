@@ -46,18 +46,13 @@ __thread unsigned int tid = 0;
 __thread unsigned long long evt_count = 0;
 
 static simtime_t *current_time_vector;
+static bool *current_time_proc;
 static unsigned int *current_region;
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot;
-
-
-/* Commit horizon */
-simtime_t gvt = 0;
-/* Average time between consecutive events */
-simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 
 bool stop = false;
 bool sim_error = false;
@@ -79,9 +74,8 @@ unsigned int *wait_time_id;
 int *wait_time_lk;
 
 //Variabili da tunare durante l'esecuzione per throttling e threshold
-double delta_count = TROT_INIT_DELTA;
-unsigned int reverse_execution_threshold = REV_INIT_THRESH;
-
+double * delta_count;
+__thread double reverse_execution_threshold = REV_INIT_THRESH;
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -146,22 +140,6 @@ void _mkdir(const char *path) {
 	}
 }
 
-void throttling(unsigned int events) {
-	unsigned long long tick_count;
-	unsigned int i, j;
-
-/*
-	j = 0;
-	for (i = 0 ; i < 2900*delta_count*events ; i++)
-		j=i*i;
-*/
-	tick_count = CLOCK_READ() + events * (1 + (events - 1)  * get_frac_htm_aborted() * 0.7)  *  (get_time_of_an_event() * delta_count); 
-	while (true) {
-		if (CLOCK_READ() > tick_count)
-			break;
-	}
-}
-
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
 }
@@ -180,32 +158,41 @@ static void process_init_event(void) {
 void init(unsigned int _thread_num, unsigned int lps_num) {
 	unsigned int i;
 
+	if(lps_num < _thread_num) {
+		printf("The number of LPs must be grater or equal then the number of threads\n");
+		exit(-1);
+	}
+
 	printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
 	n_cores = _thread_num;
 	n_prc_tot = lps_num;
 	states = malloc(sizeof(void *) * n_prc_tot);
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
-	
+
 	current_time_vector = malloc(sizeof(simtime_t) * n_cores);
+	current_time_proc = malloc(sizeof(bool) * n_cores);
     	current_region = malloc(sizeof(unsigned int)*n_cores);
 
 	lp_lock = malloc(sizeof(int) * lps_num);
 	wait_time = malloc(sizeof(simtime_t) * lps_num);
 	wait_time_id = malloc(sizeof(unsigned int) * lps_num);
 	wait_time_lk = malloc(sizeof(int) * lps_num);
-	
-		
-	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || 
+
+	delta_count = malloc(sizeof(double) * n_cores);
+
+
+	if(states == NULL || can_stop == NULL || lp_lock == NULL || wait_time == NULL || delta_count == NULL ||
 		wait_time_id == NULL || wait_time_lk == NULL || current_time_vector == NULL || current_region == NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-		abort();		
+		abort();
 	}
-	
+
 	for(i = 0; i < n_cores; i++){
         current_time_vector[i] = INFTY;     //processing
-        current_region[i]=0;
+        current_region[i] = UINT_MAX;
+	delta_count[i] = TROT_INIT_DELTA;
     }
-	
+
 	for (i = 0; i < lps_num; i++) {
 		lp_lock[i] = 0;
 		wait_time_id[i] = _thread_num + 1;
@@ -228,24 +215,31 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 void execution_time(simtime_t time, unsigned int clp){
     current_time_vector[tid] = time;      //processing
     current_region[tid] = clp;
+    current_time_proc[tid] = true;
 }
 
-unsigned int check_safety(simtime_t time){
+unsigned int check_safety(simtime_t time, unsigned int *e){
     unsigned int i;
     unsigned int events;
-    
+    unsigned int effective;
+
     events = 0;
-    
+    effective = 0;
+
     for(i = 0; i < n_cores; i++){
-		
+
         if(i!=tid && (
 			( (time > (current_time_vector[i]+LOOKAHEAD)) || (time==(current_time_vector[i]+LOOKAHEAD) && tid > i) )
 			||
 			( (current_lp==current_region[i]) && (time > current_time_vector[i] || (time==current_time_vector[i] && tid > i) ) )
-		  ))
-            events++;
+		  )) {
+		events++;
+		if (current_time_proc[tid])
+			effective++;
+	}
     }
-    
+
+    *e = effective;
     return events;
 }
 
@@ -253,7 +247,7 @@ bool check_termination(void) {
 	unsigned int i;
 	bool ret = true;
 	for (i = 0; i < n_prc_tot; i++) {
-		ret &= can_stop[i]; 
+		ret &= can_stop[i];
 	}
 	return ret;
 }
@@ -267,52 +261,55 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 //L'idea è di mettere un unico thread con lo scopo di regolare le variabili
 
 void *tuning(void *args){
-	unsigned int committed, old_committed, throughput, old_throughput, last_op, i;
-	old_throughput = 0;
-	last_op = 1;
-	//field = 1; // 0 sta per delta_count ed 1 sta per reverse_execution_threshold 
-	double delta = 0.1;
-	
+	unsigned int i;
+	unsigned int last_op[n_cores];
+	unsigned long long old_mid_time_htm[n_cores];
+	unsigned long long mid_time_htm[n_cores];
+	double delta[n_cores];
+
+	/* init */
+	for(i = 0 ; i < n_cores ; i++){
+		last_op[i] = 1;
+		//last_op[i] = ~last_op[i];
+		delta[i] = 0.1;
+	}
+
+	/* loop */
 	while(!stop && !sim_error){
-		sleep(3);
-		throughput = 0;
-		committed = 0;
-		
-		for(i = 0; i <	n_cores; i++)
-			//committed += (committed_safe[i] + committed_htm[i] + committed_reverse[i]); //totale transazioni commitatte
-			committed = thread_stats[tid].events_safe + thread_stats[tid].commits_htm + thread_stats[tid].commits_htm;
-			throughput = committed - old_committed;
-	
-		if(throughput < old_throughput){//poichè ho visto un peggioramento, inverto la direzione
-			last_op=~last_op;
-			if(delta>0.025) delta = delta / 2;
+		sleep(2);
+
+		for(i = 0; i <	n_cores; i++){
+			mid_time_htm[i] = get_useful_time_htm_th(i);
+			if(mid_time_htm[i] > old_mid_time_htm[i]){
+				last_op[i] = ~last_op[i];
+				if(delta[i] > 0.1) delta[i] = delta[i] / 2;
+			}
+			else{
+				if(delta[i] < 0.2) delta[i] = delta[i] * 2;
+			}
+
+			if(last_op[i] == 1)
+				delta_count[i] += delta[i];
+			else
+				delta_count[i] -= delta[i];
+
+			if(delta_count[i] < 0)
+				delta_count[i] = 0;
+			if(delta_count[i] > 1)
+				delta_count[i] = 1;
+
+			printf("\t\t\t\t\t\t\t\t\t\t\t\tThroughput of %d old=%llu \n\t\t\t\t\t\t\t\t\t\t\t\t\t\tnew=%llu: \n\t\t\t\t\t\t\t\t\t\t\t\t\t\tdelta : %.3f\n",i ,old_mid_time_htm[i], mid_time_htm[i], delta_count[i]);
+
+			old_mid_time_htm[i] = mid_time_htm[i];
 		}
-		else{
-			if(delta<0.2) delta = delta * 2;
-		}
-			
-		if(last_op==1)
-			delta_count+=delta;
-		else 
-			delta_count-=delta;
-			
-		if(delta_count<0) 
-			delta_count=0;
-		if(delta_count>1)
-			delta_count=1;
-				
-		printf("\t\t\t\t\t\t\t\t\t\t\t\tThroughput \told=%u \n\t\t\t\t\t\t\t\t\t\t\t\t\t\tnew=%u: \n\t\t\t\t\t\t\t\t\t\t\t\t\t\tdelta : %.3f\n", old_throughput, throughput, delta_count);
-		
-		old_committed = committed;
-		old_throughput = throughput;
 	}
 
 	printf("Esecuzione del tuning terminata\n");
-	
+
 	pthread_exit(NULL);
 }
 
-int check_waiting(){
+bool check_waiting(){
 	return (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && wait_time_id[current_lp] < tid));
 }
 
@@ -324,43 +321,65 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 	unsigned int old_tm_id;
 
 	do{
+		if(check_waiting()){
+			continue;
+		}
 		///ESCLUSIVO
-		if (mode && (old_lk = lp_lock[current_lp]) == 0) {
-			if (__sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1) == 0)
-				return 1;
+		if (mode==1){
+			if ( (old_lk = lp_lock[current_lp]) == 0 ) {
+				if (__sync_val_compare_and_swap(&lp_lock[current_lp], 0, -1) == 0){
+					return 1;
+				}
 
-		///CONDIVISO
-		}else if (!mode && (old_lk = lp_lock[current_lp]) >= 0) {
-			if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk + 1) == old_lk)
-				return 1;
-
-		///PRENOTAZIONE
-		}else {	//voglio prendere il lock ma non posso perche non è libero
-			if(wait_time_id[current_lp]==tid)
-				break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
-
-			while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
-				while (wait_time_lk[current_lp]) ;
-				
-			old_tm_id = wait_time_id[current_lp];
-			old_tm = wait_time[current_lp];	//può avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
-			
-			if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
-				wait_time[current_lp] = current_lvt;
-				wait_time_id[current_lp] = tid;
-				__sync_lock_release(&wait_time_lk[current_lp]);
-				break;
 			}
-			__sync_lock_release(&wait_time_lk[current_lp]);
-			
-			if(bloc)	
-				while ( check_waiting() );//aspetto di diventare il min
+		///CONDIVISO
+		} else if (mode==0){
+sh_lk:			if ( (old_lk = lp_lock[current_lp]) >= 0 ) {
+				if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk + 1) == old_lk){
+					return 1;
+				}
+				else
+					goto sh_lk;
+			}
 		}
 		
-	}while(bloc);
-	
-	return 0;
+		///PRENOTAZIONE
+		//voglio prendere il lock ma non posso perche non e libero
+		if(wait_time_id[current_lp]==tid)
+			continue; //se c'e il mio id, vuol dire che non e stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
 
+		while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
+			while (wait_time_lk[current_lp] == 1) ;
+
+		old_tm_id = wait_time_id[current_lp];
+		old_tm = wait_time[current_lp];	//puo avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
+
+		if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
+			wait_time[current_lp] = current_lvt;
+			wait_time_id[current_lp] = tid;
+		}
+		__sync_lock_release(&wait_time_lk[current_lp]);
+
+		while ( bloc == 1 &&  check_waiting() );//aspetto di diventare il min
+
+	} while(bloc);
+
+	return 0;
+}
+
+
+void release_waiting_ticket(){
+	if (wait_time_id[current_lp] == tid) { //rifaccio questo controllo anche prima del lock, in modo da evitarlo nel caso non sia necessario
+		while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
+			while (wait_time_lk[current_lp] == 1) ;
+
+		if (wait_time_id[current_lp] == tid) {
+			wait_time_id[current_lp] = UINT_MAX;
+			wait_time[current_lp] = INFTY;
+		}
+		__sync_lock_release(&wait_time_lk[current_lp]);
+
+	}
 }
 
 
@@ -373,43 +392,39 @@ void release_lp_lock() {
 	} else {
 		do {
 			if (__sync_val_compare_and_swap(&lp_lock[current_lp], old_lk, old_lk - 1) == old_lk) {
-				return;
+				break;
 			}
 			old_lk = lp_lock[current_lp];	//mettendono alla fine risparmio una lettura
 		} while (1);
 	}
+	release_waiting_ticket();
 }
 
-void release_waiting_ticket(){
-	if (wait_time_id[current_lp] == tid) { //rifaccio questo controllo anche prima del lock, in modo da evitarlo nel caso non sia necessario
-		while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
-			while (wait_time_lk[current_lp]) ;
 
-		if (wait_time_id[current_lp] == tid) {
-			wait_time_id[current_lp] = UINT_MAX;
-			wait_time[current_lp] = INFTY;
-		}
-		__sync_lock_release(&wait_time_lk[current_lp]);
+void thread_loop(unsigned int thread_id, int incarnation) {
 
-	}
-}
-
-void thread_loop(unsigned int thread_id) {
-	
 	unsigned int status, safe, mode, old_mode, retries;
+	unsigned long long tick_count, tick_base, mid_time_htm, mid_time_stm;
 	double pending_events;
-	//unsigned long long t_pre, t_post, t_pre2, t_pre3;
 	bool retry_event;
 	revwin_t *window;
 	cpu_set_t mask;
 
+	unsigned int effective;
+	unsigned int affinity;
+
 	tid = thread_id;
-	
+
+	if(incarnation > 0) {
+		thread_loop(thread_id, incarnation-1);
+		return;
+	}
+
 	// Set the CPU affinity
-	
-	printf("Thread %d set to CPU no %d\n", tid, tid);
+	affinity = (tid + 1)%8;
 	CPU_ZERO(&mask);
-	CPU_SET(tid, &mask);
+	CPU_SET(affinity, &mask);
+	printf("Thread %d set to CPU no %d\n", tid, affinity);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
@@ -421,38 +436,50 @@ void thread_loop(unsigned int thread_id) {
 	window = revwin_create();
 
 	while (!stop && !sim_error) {
-		
+
 		mode = retries = 0;
 
 		/*FETCH*/
 		if (queue_min() == 0) {
-			execution_time(INFTY,-1);
+			execution_time(INFTY,UINT_MAX);
 			continue;
 		}
-		
+
 		current_msg.revwin = window;
-		
+
 		//lvt ed lp dell'evento corrente
 		current_lp = current_msg.receiver_id;	//identificatore lp
 		current_lvt = current_msg.timestamp;	//local virtual time
-		
+
 		while (1) {
-			
+
 			old_mode = mode;
-			
+
+			// Get statistics about the total attempts done so far
+			// (this value should be the same of TOTAL_EVENTS)
+			statistics_post_data(tid, TOTAL_ATTEMPTS, 1);
+
+			safe = check_safety(current_lvt, &effective); //effective può essere tolto
+
+			// Save the number of threads holding newer events
+			statistics_post_data(tid, PRIO_THREADS, safe);
+
+			//compute the average number of events between the commit horizon and my currebt ts
+			pending_events = (current_lvt - gvt)/t_btw_evts - 1;
+			if(pending_events<0) pending_events=0;
+
+			// Save the computed number of pending events from the current LVT
+			statistics_post_data(tid, PENDING_EVENTS, pending_events);
+
 /// ==== ESECUZIONE SAFE ====
 ///non ci sono problemi quindi eseguo normalmente*/
-		safe = check_safety(current_lvt);
-		
-		//compute the average number of events between the commit horizon and my currebt ts
-		pending_events = (current_lvt - gvt)/t_btw_evts - 1;
-		
-		if (safe == 0) {
+
+			if (safe == -1) {
 				mode = MODE_SAF;
+
 #ifdef REVERSIBLE
 				get_lp_lock(0, 1);
 #endif
-				//t_pre = CLOCK_READ();
 				clock_timer event_processing;
 				clock_timer_start(event_processing);
 
@@ -460,7 +487,6 @@ void thread_loop(unsigned int thread_id) {
 
 				statistics_post_data(tid, EVENTS_SAFE, 1);
 				statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
-
 #ifdef REVERSIBLE
 				release_lp_lock();
 #endif
@@ -471,36 +497,40 @@ void thread_loop(unsigned int thread_id) {
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
 			else if (pending_events < reverse_execution_threshold) {
 				mode = MODE_HTM;
-				/*if(mode == old_mode) retries++;
-				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);*/
-				
 				statistics_post_data(tid, EVENTS_HTM, 1);
 
+				if(mode == old_mode) retries++;
+//				if(retries!=0 && retries%(1000000)==0)
+//					printf("[TH%d] HTM %d RETRIES, event %.2f on LP%d with CS %u\n", tid, retries, current_lvt, current_lp, safe);
 #ifdef REVERSIBLE
-				get_lp_lock(0, 1);
+				if(get_lp_lock(0, 0) == 0){
+					continue;
+				}
 #endif
-
 				// Get the time of the whole exectution of an event in HTM
 				clock_timer htm_event_processing;
 				clock_timer_start(htm_event_processing);
 
+				tick_count = (unsigned long long)(pending_events * tick_base);		//x
+
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
-
 #ifdef THROTTLING
 					// Get the time of the whole time spent in throttling
 					// (NOTE! only for future committed events)
 					clock_timer htm_throttling;
 					clock_timer_start(htm_throttling);
 
-					if(delta_count>0)
-						throttling(pending_events);
-
+					/* TROTTLING */
+					if(delta_count[tid] > 0){
+						tick_count += CLOCK_READ();
+						while(CLOCK_READ() < tick_count);
+					}
 #endif
-					if (check_safety(current_lvt) == 0) {
+					if (check_safety(current_lvt, &effective) == 0) {
 						_xend();
-						
+
 						statistics_post_data(tid, COMMITS_HTM, 1);
 						statistics_post_data(tid, CLOCK_HTM_THROTTLE, clock_timer_value(htm_throttling));
 						statistics_post_data(tid, CLOCK_HTM, clock_timer_value(htm_event_processing));
@@ -514,12 +544,12 @@ void thread_loop(unsigned int thread_id) {
 						_xabort(_ROLLBACK_CODE);
 					}
 				} else {
-					
+
 					statistics_post_data(tid, ABORT_TOTAL, 1);
-					
+
 					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
-						
+
 					} else {
 						if (status & _XABORT_RETRY){
 							statistics_post_data(tid, ABORT_RETRY, 1);
@@ -529,7 +559,6 @@ void thread_loop(unsigned int thread_id) {
 						}
 						if (status & _XABORT_CAPACITY) {
 							statistics_post_data(tid, ABORT_CACHEFULL, 1);
-							//goto foldpath;
 						}
 						if (status & _XABORT_DEBUG) {
 							statistics_post_data(tid, ABORT_DEBUG, 1);
@@ -542,14 +571,12 @@ void thread_loop(unsigned int thread_id) {
 					release_lp_lock();
 #endif
 					statistics_post_data(tid, CLOCK_HTM, clock_timer_value(htm_event_processing));
-					continue;
-#ifdef REVERSIBLE
-foldpath:
-					printf("FOLDPATH\n");
-					release_lp_lock();
-					//statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
-					goto reversible;
-#endif
+					if(retries < 1 && status & _XABORT_RETRY)
+						continue;
+					else{
+						statistics_post_data(tid, TOTAL_ATTEMPTS, 1);
+						goto reversible;
+					}
 				}
 
 			}
@@ -560,11 +587,16 @@ foldpath:
 			else {
 reversible:
 				mode = MODE_STM;
-
-				if(get_lp_lock(1, 0)==0)
-					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
-
 				statistics_post_data(tid, EVENTS_STM, 1);
+
+				//if(old_mode == mode) retries++;
+				//if(retries>0 && retries%(100) == 0) printf("STM RETRIES: %d\n", retries);
+
+				if(get_lp_lock(1, 0)==0){
+					//printf("The unprevedible it si happening\n");
+					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalita transazionale
+				}
+
 
 				// Get the time of the whole STM execution
 				clock_timer stm_event_processing;
@@ -579,15 +611,15 @@ reversible:
 				clock_timer stm_safety_wait;
 				clock_timer_start(stm_safety_wait);
 
-				while (check_safety(current_lvt) > 0) {
-					if ( check_waiting() == 1 ) {
+				while (check_safety(current_lvt, &effective) > 0) {
+					if ( check_waiting() ) {
 
 						statistics_post_data(tid, CLOCK_STM_WAIT, clock_timer_value(stm_safety_wait));
-						
+
 						// Get the time for undo one event
 						clock_timer undo_event_processing;
 						clock_timer_start(undo_event_processing);
-						
+
 						execute_undo_event(current_lp, current_msg.revwin);
 
 						statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
@@ -629,21 +661,44 @@ reversible:
 			break;
 		}
 
-		release_waiting_ticket();
-
 		/*FLUSH*/ 
 		flush();
+		current_time_proc[tid] = false;
+//		printf("[TH%d] Event %.3f on LP%d committed\n", tid, current_lvt, current_lp);
 
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
+
+		evt_count++;
+
+		if(evt_count%1000==0){
+			mid_time_htm = get_useful_time_htm();
+			mid_time_stm = get_useful_time_stm();
+			if(mid_time_htm > mid_time_stm){
+				reverse_execution_threshold-=0.25;
+				if(reverse_execution_threshold < 0)
+					 reverse_execution_threshold = 0;
+			}
+			else{
+				reverse_execution_threshold+=0.25;
+			}
+			if(evt_count%100000==0)
+				printf("[TH%u] threshold setted to %.2f - ratio htm/stm: %f\n",tid, reverse_execution_threshold, (double)mid_time_htm/(double)mid_time_stm);
+
+			tick_base = (unsigned long long)get_time_of_an_event() * delta_count[tid];
+			//printf("[TH%d]tick:base %llu\n", tid, get_time_of_an_event());
+
+			//tick_count = (unsigned long)(pending_events*pending_events*tick_base);	//x*x
+			//tick_count = (unsigned long)((1/(4-pending_events))*tick_base);	//1/(4-x)
+			//tick_count = (unsigned long)((10 / (4 - 0.5*pending_events))*tick_base);		// 10 / (4 - 0.5x)
+		}
+
 		if(tid == _MAIN_PROCESS) {
 
-			evt_count++;
-
-			if ((evt_count - 1000000 * (evt_count / 1000000)) == 0) {	//10000
-				printf("[%u] TIME: %f", tid, current_lvt);
-				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
+			if ((evt_count - 100000 * (evt_count / 100000)) == 0) {	//10000
+				printf("[%u] TIME: %14.3f", tid, current_lvt);
+				printf(" \tsafety=%12u \ttransactional=%12u \treversible=%12u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
 		}
 	}

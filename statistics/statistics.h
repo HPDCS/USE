@@ -24,6 +24,9 @@
 #define ABORT_TOTAL 19
 #define EVENTS_FETCHED 20
 #define T_BTW_EVT 21
+#define PRIO_THREADS 22
+#define PENDING_EVENTS 23
+#define TOTAL_ATTEMPTS 24
 
 struct stats_t {
     unsigned int events_total;
@@ -32,11 +35,15 @@ struct stats_t {
     unsigned int events_stm;
     
     unsigned int commits_htm;
+    unsigned int commits_htm_tmp;
     unsigned int commits_stm;
+    unsigned int commits_stm_tmp;
 
     unsigned long long clock_safe;
     unsigned long long clock_htm;
+    unsigned long long clock_htm_tmp;
     unsigned long long clock_stm;
+    unsigned long long clock_stm_tmp;
     unsigned long long clock_htm_throttle;
     unsigned long long clock_stm_wait;
     unsigned long long clock_undo_event;
@@ -50,11 +57,14 @@ struct stats_t {
     unsigned int abort_nested;
     unsigned int abort_generic;
     unsigned int abort_retry;
+
+    unsigned int attempts;
+    double prio_threads;
+    double pending_events;
 } __attribute__((aligned (64)));
 
 
 extern struct stats_t *thread_stats;
-
 
 
 void statistics_init();
@@ -62,6 +72,14 @@ void statistics_init();
 void statistics_fini();
 
 unsigned long long get_time_of_an_event();
+
+unsigned long long get_useful_time_htm();
+
+unsigned long long get_useful_time_stm();
+
+unsigned long long get_useful_time_htm_th(unsigned int t);
+
+unsigned long long get_useful_time_stm_th(unsigned int t);
 
 double get_frac_htm_aborted();
 

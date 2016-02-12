@@ -21,7 +21,7 @@
 #define THR_POOL_SIZE		16
 
 #define TROT_INIT_DELTA		0.0
-#define REV_INIT_THRESH		0
+#define REV_INIT_THRESH		4
 
 #define MODE_SAF	1
 #define MODE_HTM	2
@@ -33,6 +33,8 @@
 
 #define THROTTLING
 #define REVERSIBLE
+
+#define INCARNATION_DISP 13 
 
 typedef struct __msg_t
 {
@@ -57,21 +59,13 @@ extern unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 extern unsigned int n_prc_tot;
 
-/* Commit horizon */
-extern simtime_t gvt;
-/* Average time between consecutive events */
-extern simtime_t t_btw_evts;
-
 void init(unsigned int _thread_num, unsigned int);
-
-//Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
 
 extern void rootsim_error(bool fatal, const char *msg, ...);
 
 
 //Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
+void thread_loop(unsigned int thread_id, int inc);
 
 extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
@@ -89,8 +83,6 @@ extern void flush(void);
 double double_cas(double *addr, double old_val, double new_val);
 
 void execution_time(simtime_t time, unsigned int clp);
-
-unsigned int check_safety(simtime_t time);
 
 void *tuning(void *args);
 

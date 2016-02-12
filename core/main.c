@@ -15,13 +15,13 @@
 unsigned short int number_of_threads = 1;
 
 extern double delta_count;
-extern int reverse_execution_threshold;
+double reverse_execution_threshold_main;
 
 void *start_thread(void *args) {
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 
 	//START THREAD (definita in core.c)
-	thread_loop(tid);
+	thread_loop(tid, (tid+1)*INCARNATION_DISP);
 
 	pthread_exit(NULL);
 
@@ -29,7 +29,7 @@ void *start_thread(void *args) {
 
 void start_simulation(unsigned short int number_of_threads) {
 
-    pthread_t p_tid[number_of_threads-1];//pthread_t p_tid[number_of_threads];//
+    pthread_t p_tid[number_of_threads-1];
     int ret, i;
 
     //Child thread
@@ -40,18 +40,18 @@ void start_simulation(unsigned short int number_of_threads) {
         }
     }
 
-#ifdef THROTTLING     
-	if(number_of_threads>1){	
-//		pthread_t p_tun;
-//		if( (ret = pthread_create(&p_tun, NULL, tuning, NULL)) != 0) {
-//			fprintf(stderr, "%s\n", strerror(errno));
-//			abort();
-//		}
+#ifdef THROTTLING
+	if(number_of_threads>1){
+		pthread_t p_tun;
+		if( (ret = pthread_create(&p_tun, NULL, tuning, NULL)) != 0) {
+			fprintf(stderr, "%s\n", strerror(errno));
+			abort();
+		}
 	}
 #endif
 
     //Main thread
-    thread_loop(0);
+    thread_loop(0,0);
 
     for(i = 0; i < number_of_threads-1; i++){
         pthread_join(p_tid[i], NULL);
@@ -77,13 +77,13 @@ int main(int argn, char *argv[]) {
 			if(!strcmp(argv[i], "-d")) {
 				delta_count = atof(argv[++i]);
 			} else if(!strcmp(argv[i], "-t")) {
-				reverse_execution_threshold = atoi(argv[++i]);
+				reverse_execution_threshold_main = atof(argv[++i]);
 			}
 		}
 	}
 
 //    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
-    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n", delta_count, reverse_execution_threshold);
+    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n", delta_count, reverse_execution_threshold_main);
 
     timer_start(exec_time);
 
@@ -94,8 +94,6 @@ int main(int argn, char *argv[]) {
 
     printf("Simulation ended: %.5f seconds\n", (double)timer_value_seconds(exec_time));
     printf("Simulation ended: %llu clocks\n", clock_timer_value(simulation_clocks));
-
-    //print_report_sum();
 
     print_statistics();
 
