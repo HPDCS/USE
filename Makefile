@@ -25,6 +25,9 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
+HASH_SOURCES=model/hash/application.c\
+				 model/hash/functions.c
+
 TCAR_SOURCES=model/tcar/application.c\
 	            model/tcar/neighbours.c
 
@@ -62,6 +65,7 @@ PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
 TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
+HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
 
@@ -79,9 +83,15 @@ phold: _phold mm core link
 
 robot_explore: _robot_explore mm core link
 
+hash: _hash mm core link
+
 
 link:
+ifdef REVERSIBLE
 	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+else
+	cp model/__application.o model/__application_hijacked.o
+endif
 ifdef MALLOC
 	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o
 #	gcc $(CFLAGS) -o $(TARGET) model/__application.o core/__core.o $(LIBS)
@@ -113,6 +123,9 @@ _tcar: $(TCAR_OBJ)
 
 _phold: $(PHOLD_OBJ)
 	@ld -r -g $(PHOLD_OBJ) -o model/__application.o
+
+_hash: $(HASH_OBJ)
+	@ld -r -g $(HASH_OBJ) -o model/__application.o
 
 _traffic: $(TRAFFIC_OBJ)
 	@ld -r -g $(TRAFFIC_OBJ) -o model/__application.o
