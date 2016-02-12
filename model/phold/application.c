@@ -9,18 +9,22 @@
 
 //#include <timer.h>
 
-//lp_state_type states[4] __attribute__((aligned (64)));
+//lp_state_type LPS[1024] __attribute__((aligned (64)));
 
-void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
+#define LA (50)
+
+inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
 	int 	i, j = 123;
 	event_content_type new_event;
 	int err;
 	unsigned int loops; 
+	//lp_state_type *state_ptr = &(LPS[me]); //(lp_state_type*)state;
 	lp_state_type *state_ptr = (lp_state_type*)state;
-	
+
 	//timer tm_ex;
+	
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
@@ -42,10 +46,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				exit(-1);
 			}
 
-                        if(state_ptr == NULL){
+           if(state_ptr == NULL){
 				printf("LP state allocation failed: (%s)\n", strerror(errno));
                                 exit(-1);
-                        }
+                  }
 
 			// Explicitly tell ROOT-Sim this is our LP's state
                         SetState(state_ptr);
@@ -56,13 +60,13 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			if(me == 0) {
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
-			
-//			for(i = 0; i < 10; i++) {
+
+			for(i = 0; i < 10; i++) {
 				timestamp = (simtime_t) (20 * Random());
 				if(timestamp < LOOKAHEAD)
 					timestamp += LOOKAHEAD;
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-//			}
+			}
 
 			break;
 
@@ -70,7 +74,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case LOOP:
 			//timer_start(tm_ex);
 
-			loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
+			loops = LOOP_COUNT * 29;// * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
 
 			for(i = 0; i < loops ; i++) {
 					j = i*i;
@@ -82,7 +86,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			delta = (simtime_t)(Expent(TAU));
 			if(delta < LOOKAHEAD)
 				delta += LOOKAHEAD;
-			timestamp = now + delta;
+			if(delta < LA ) delta = LA;
+			timestamp = now + delta ;
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
