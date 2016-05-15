@@ -25,6 +25,7 @@
 
 #include "core.h"
 #include "queue.h"
+#include "nb_calqueue.h"
 #include "simtypes.h"
 #include "lookahead.h"
 
@@ -274,7 +275,6 @@ void *tuning(void *args){
 	double delta = 0.1;
 	
 	while(!stop && !sim_error){
-		sleep(3);
 		throughput = 0;
 		committed = 0;
 		
@@ -429,7 +429,6 @@ void thread_loop(unsigned int thread_id) {
 			execution_time(INFTY,-1);
 			continue;
 		}
-		
 		current_msg.revwin = window;
 		
 		//lvt ed lp dell'evento corrente
@@ -469,7 +468,7 @@ void thread_loop(unsigned int thread_id) {
 
 /// ==== ESECUZNE HTM ====
 ///non sono safe quindi ricorro ad eseguire eventi in htm*/
-			else if (pending_events < reverse_execution_threshold) {
+			else if (false){//pending_events < reverse_execution_threshold) {
 				mode = MODE_HTM;
 				/*if(mode == old_mode) retries++;
 				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);*/
@@ -483,6 +482,10 @@ void thread_loop(unsigned int thread_id) {
 				// Get the time of the whole exectution of an event in HTM
 				clock_timer htm_event_processing;
 				clock_timer_start(htm_event_processing);
+				
+				
+				if(delta_count>0) //<- si potrebbe fare qualcosa di più utile qui
+					throttling(pending_events);
 
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
@@ -493,10 +496,6 @@ void thread_loop(unsigned int thread_id) {
 					// (NOTE! only for future committed events)
 					clock_timer htm_throttling;
 					clock_timer_start(htm_throttling);
-
-					if(delta_count>0)
-						throttling(pending_events);
-
 #endif
 					if (check_safety(current_lvt) == 0) {
 						_xend();

@@ -13,7 +13,10 @@
 
 #include "queue.h"
 #include "calqueue.h"
+#include "nb_calqueue.h"
 #include "core.h"
+
+#define NBC
 
 
 
@@ -31,6 +34,7 @@ __thread msg_t current_msg __attribute__ ((aligned (64)));
 
 unsigned long long fetched_evt = 0;
 simtime_t old_ts = 0;
+nb_calqueue* nbcalqueue;
 
 queue_t _queue;
 
@@ -44,7 +48,11 @@ __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 int queue_lock = 0;
 
 void queue_init(void) {
-    calqueue_init();
+#ifdef NBC
+    nbcalqueue = nb_calqueue_init(n_cores);
+#else
+	calqueue_init();
+#endif
 }
 
 void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
@@ -90,25 +98,35 @@ void queue_deliver_msgs(void) {
 			abort();		
 		}
         memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
+#ifndef NBC
         calqueue_put(new_hole->timestamp, new_hole);
+#else
+        nbc_enqueue(nbcalqueue, new_hole->timestamp, (void *)new_hole);
+#endif
     }
 
     _thr_pool._thr_pool_count = 0;
 }
 
 int queue_min(void) {
-
-    while(__sync_lock_test_and_set(&queue_lock, 1))
-        while(queue_lock);
-
+#ifdef NBC
     msg_t *node_ret;
-    node_ret = calqueue_get();
-
+    nbc_bucket_node* nbn;
+    nbn = nbc_dequeue(nbcalqueue);
+    node_ret = (msg_t*)nbn->payload;
     if(node_ret == NULL){
-        __sync_lock_release(&queue_lock);
         return 0;
     }
-
+#else
+    while(__sync_lock_test_and_set(&queue_lock, 1))
+        while(queue_lock);
+    msg_t *node_ret;
+	node_ret = calqueue_get();
+    if(node_ret == NULL){
+		__sync_lock_release(&queue_lock);
+        return 0;
+    }
+#endif
     memcpy(&current_msg, node_ret, sizeof(msg_t));
     free(node_ret);
 
@@ -117,9 +135,9 @@ int queue_min(void) {
     statistics_post_data(tid, EVENTS_FETCHED, 1);
     statistics_post_data(tid, T_BTW_EVT, current_msg.timestamp-old_ts);
 	old_ts = current_msg.timestamp;
-	
+#ifndef NBC	
     __sync_lock_release(&queue_lock);
-
+#endif
     return 1;
 
 }
@@ -138,7 +156,8 @@ void queue_clean(void) {
 }
 
 void flush(void) {
-	
+
+#ifndef NBC
     while(__sync_lock_test_and_set(&queue_lock, 1))
         while(queue_lock);
 
@@ -147,17 +166,10 @@ void flush(void) {
 	if(current_lvt>gvt) gvt = current_lvt;
 
     __sync_lock_release(&queue_lock);
-    
-    /* This part is useful only if the lookahead is greater than 0
-	simtime_t tmp_gvt;
-	void * ptr_gvt = &gvt;
-ret:    
-    tmp_gvt = gvt;
-    if(tmp_gvt < current_lvt){
-		if(__sync_val_compare_and_swap(&gvt, tmp_gvt, current_lvt) == tmp_gvt)
-			return;
-		else
-			goto ret; 
-	}
-	*/
+#else 
+	queue_deliver_msgs();
+	
+	if(current_lvt>gvt) gvt = current_lvt;
+#endif
+
 }
