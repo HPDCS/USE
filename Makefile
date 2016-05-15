@@ -2,10 +2,12 @@
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
-FLAGS=-g3 -Wall -Wextra -mrtm
+FLAGS= -DARCH_X86_64-g3 -Wall -Wextra -mrtm
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
-
+REVERSIBLE=1
+ARCH_X86=1
+ARCH_X86_64=1
 
 ifdef MALLOC
 CFLAGS=$(FLAGS) -DNO_DYMELOR
@@ -44,6 +46,10 @@ TARGET=test
 
 CORE_SOURCES =  core/core.c\
 		core/calqueue.c\
+		core/nb_calqueue.c\
+		core/x86.c\
+		core/list.c\
+		core/myallocator.c\
 		core/topology.c\
 		core/queue.c\
 		core/main.c\

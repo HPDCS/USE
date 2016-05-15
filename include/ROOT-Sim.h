@@ -44,7 +44,7 @@
  #undef INIT
 #endif
 /// This is the message code which is sent by the simulation kernel upon startup
-#define INIT	0
+#define INIT	9
 
 
 /// This macro can be used to convert command line parameters to integers

@@ -37,6 +37,7 @@
 #include "atomic.h"
 #include "myallocator.h"
 #include "nb_calqueue.h"
+#include "core.h"
 
 __thread nbc_bucket_node *to_free_nodes = NULL;
 __thread nbc_bucket_node *to_free_tables_old = NULL;
@@ -329,6 +330,7 @@ static void search(nbc_bucket_node *head, double timestamp, unsigned int tie_bre
 			*right_node = right;
 			if(flag == REMOVE_DEL_INV )
 				*right_node = get_unmarked(right);
+			
 			return;
 		}
 	} while (1);
@@ -411,6 +413,7 @@ static bool insert_std(nb_calqueue* queue, table* hashtable, nbc_bucket_node** n
 
 	if(flag == REMOVE_DEL && is_marked(right_node, INV))
 		*new_node = get_marked(*new_node, INV);
+		
 
 	if (CAS_x86(
 				(volatile unsigned long long*)&(left_node->next),
@@ -420,6 +423,8 @@ static bool insert_std(nb_calqueue* queue, table* hashtable, nbc_bucket_node** n
 	{
 		if(flag == REMOVE_DEL)
 			*new_node = get_unmarked(*new_node);
+		
+		//printf("insert_std: evt type %u\n", ((msg_t*)(new_node[0]->payload))->type);//da_cancellare
 		return true;
 
 	}
@@ -903,6 +908,8 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload)
 			h,
 			new_node);
 	atomic_inc_x86(&(h->counter));
+	
+	//printf("nbc_enqueue: evt type %u\n", ((msg_t*)(new_node->payload))->type);//da_cancellare
 }
 
 /**
@@ -945,6 +952,8 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 		min = array + (index % size);
 
 		search(min, 0.0, 0, &left_node, &right_node, REMOVE_DEL_INV);
+		
+		//printf("nbc_dequeue: -1 evt type %u\n", ((msg_t*)(right_node->payload))->type); //da_cancellare
 
 
 		if(is_marked(min->next, MOV))
@@ -978,8 +987,10 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 			unsigned int new_current = ((unsigned int)(h->current >> 32));
 			if( new_current < index )
 				continue;
-
-			res = node_malloc(right_node, right_timestamp, right_node->counter);
+			//printf("nbc_dequeue: 0 evt type %u\n", ((msg_t*)(right_node->payload))->type); //da_cancellare
+			res = node_malloc(right_node->payload, right_timestamp, right_node->counter);
+			
+			//printf("nbc_dequeue: 1 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
 			if(CAS_x86(
 								(volatile unsigned long long *)&(right_node->next),
 								(unsigned long long) get_unmarked(right_node_next),
@@ -992,7 +1003,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 				search(min, right_timestamp, -1,  &left_node, &right_node, REMOVE_DEL_INV);
 				atomic_dec_x86(&(h->counter));
 
-			printf("SIZE NBCQ%u\n", size); //da_cancellare
+				//printf("nbc_dequeue: 2 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
 				return res;
 			}
 			else
@@ -1030,7 +1041,19 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 	}while(1);
 	return NULL;
 }
+void *nbc_get(nb_calqueue *queue) {
+	nbc_bucket_node *node;
+	void *payload;
 
+	node = nbc_dequeue(queue);
+	if (node == NULL) {
+		return NULL;
+	}
+
+	payload = node->payload;
+	//free(node);
+	return payload;
+}
 /**
  * This function frees any node in the hashtable with a timestamp strictly less than a given threshold,
  * assuming that any thread does not hold any pointer related to any nodes

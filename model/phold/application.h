@@ -4,12 +4,12 @@
 
 
 // Event types
-#define LOOP		1
-#define EXTERNAL_LOOP	2
+#define LOOP		8
+#define EXTERNAL_LOOP	7
 
 #define VARIANCE 0.2
 #define LOOP_COUNT 100
-#define COMPLETE_EVENTS 10000
+#define COMPLETE_EVENTS 1000
 #define COMPLETE_TIME 200000
 #define TAU 100
 

@@ -24,6 +24,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
+		
+	//printf("EVENT INIT: %d\n", INIT);	
+	//printf("EVENT TYPE: %d\n", event_type);
 
 
 	switch (event_type) {
@@ -42,27 +45,26 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				exit(-1);
 			}
 
-                        if(state_ptr == NULL){
+            if(state_ptr == NULL){
 				printf("LP state allocation failed: (%s)\n", strerror(errno));
-                                exit(-1);
-                        }
+				exit(-1);
+            }
 
 			// Explicitly tell ROOT-Sim this is our LP's state
-                        SetState(state_ptr);
-
-
+            SetState(state_ptr);
+			
 			state_ptr->events = 0;
 
 			if(me == 0) {
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
-//			for(i = 0; i < 10; i++) {
+			for(i = 0; i < 1; i++) {
 				timestamp = (simtime_t) (20 * Random());
 				if(timestamp < LOOKAHEAD)
 					timestamp += LOOKAHEAD;
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-//			}
+			}
 
 			break;
 
@@ -95,12 +97,15 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		default:
 			printf("[ERR] Requested to process an event neither ALLOC, nor DEALLOC, nor INIT\n");
+			abort();
 			break;
 	}
 }
 	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
+	
+	//printf("TOTALE: %u\n", snapshot->events);//da_cancellare
 
 	if(snapshot->events < COMPLETE_EVENTS) {
 //	if(snapshot->lvt < COMPLETE_TIME) {

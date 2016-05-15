@@ -90,6 +90,8 @@ void queue_deliver_msgs(void) {
 
     msg_t *new_hole;
     unsigned int i;
+    
+    //printf("flush: pool_size = %u\n", _thr_pool._thr_pool_count);
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
         new_hole = malloc(sizeof(msg_t));
@@ -101,26 +103,27 @@ void queue_deliver_msgs(void) {
 #ifndef NBC
         calqueue_put(new_hole->timestamp, new_hole);
 #else
-        nbc_enqueue(nbcalqueue, new_hole->timestamp, (void *)new_hole);
+        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole);
 #endif
     }
 
     _thr_pool._thr_pool_count = 0;
+    
+    //printf("flush: flushed an event with type %i\n", new_hole->type);
 }
 
 int queue_min(void) {
-#ifdef NBC
+	//printf("queue_min: start\n");
     msg_t *node_ret;
-    nbc_bucket_node* nbn;
-    nbn = nbc_dequeue(nbcalqueue);
-    node_ret = (msg_t*)nbn->payload;
+#ifdef NBC
+    node_ret = nbc_get(nbcalqueue);
     if(node_ret == NULL){
+		//printf("NONONON\n");
         return 0;
     }
 #else
     while(__sync_lock_test_and_set(&queue_lock, 1))
         while(queue_lock);
-    msg_t *node_ret;
 	node_ret = calqueue_get();
     if(node_ret == NULL){
 		__sync_lock_release(&queue_lock);
@@ -138,12 +141,15 @@ int queue_min(void) {
 #ifndef NBC	
     __sync_lock_release(&queue_lock);
 #endif
+
+	//printf("fetch: taken an event of type %i\n", node_ret->type);
     return 1;
 
 }
 
 
 int fetch(void) {
+	//printf("fetch: start\n");
     return queue_min();
 }
 
