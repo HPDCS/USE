@@ -35,7 +35,6 @@
 #include <math.h>
 
 #include "atomic.h"
-#include "myallocator.h"
 #include "nb_calqueue.h"
 #include "core.h"
 
@@ -197,7 +196,7 @@ static void error(const char *msg, ...) {
 static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned int tie_breaker)
 {
 
-	nbc_bucket_node* res = (nbc_bucket_node*) mm_std_malloc(sizeof(nbc_bucket_node));
+	nbc_bucket_node* res = (nbc_bucket_node*) malloc(sizeof(nbc_bucket_node));
 
 	if (is_marked(res, DEL) || is_marked(res, MOV) || is_marked(res, INV) || res == NULL)
 		error("%lu - Not aligned Node or No memory\n", pthread_self());
@@ -405,7 +404,7 @@ static bool insert_std(nb_calqueue* queue, table* hashtable, nbc_bucket_node** n
 	else if(D_EQUAL(new_node_timestamp, left_node->timestamp ) && left_node->counter == new_node_counter)
 	{
 		if(flag == REMOVE_DEL_INV)
-			mm_free((*new_node));
+			free((*new_node));
 		else
 			*new_node = left_node;
 		return true;
@@ -459,7 +458,7 @@ static void set_new_table(table* h, unsigned int threshold )
 	if(new_size > 0)
 	{
 
-		table *new_h = (table*) mm_std_malloc(sizeof(table));
+		table *new_h = (table*) malloc(sizeof(table));
 		if(new_h == NULL)
 			error("No enough memory to new table structure\n");
 
@@ -470,10 +469,10 @@ static void set_new_table(table* h, unsigned int threshold )
 		new_h->current 		= ((unsigned long long)-1) << 32;
 
 
-		nbc_bucket_node *array =  (nbc_bucket_node*) mm_std_malloc(sizeof(nbc_bucket_node) * new_size);
+		nbc_bucket_node *array =  (nbc_bucket_node*) malloc(sizeof(nbc_bucket_node) * new_size);
 		if(array == NULL)
 		{
-			mm_std_free(new_h);
+			free(new_h);
 			error("No enough memory to allocate new table array %u\n", new_size);
 		}
 
@@ -490,8 +489,8 @@ static void set_new_table(table* h, unsigned int threshold )
 				(unsigned long long)			NULL,
 				(unsigned long long) 			new_h))
 		{
-			mm_std_free(new_h->array);
-			mm_std_free(new_h);
+			free(new_h->array);
+			free(new_h);
 		}
 
 		//else
@@ -782,7 +781,7 @@ static table* read_table(nb_calqueue* queue)
 					}
 
 					if(replica != replica2)
-						mm_free(replica);
+						free(replica);
 
 					do
 					{
@@ -841,28 +840,28 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold)
 {
 	unsigned int i = 0;
 
-	nb_calqueue* res = (nb_calqueue*) mm_std_malloc(sizeof(nb_calqueue));
+	nb_calqueue* res = (nb_calqueue*) malloc(sizeof(nb_calqueue));
 	if(res == NULL)
 		error("No enough memory to allocate queue\n");
 	memset(res, 0, sizeof(nb_calqueue));
 
 	res->threshold = threshold;
 
-	res->hashtable = (table*) mm_std_malloc(sizeof(table));
+	res->hashtable = (table*) malloc(sizeof(table));
 	if(res->hashtable == NULL)
 	{
-		mm_std_free(res);
+		free(res);
 		error("No enough memory to allocate queue\n");
 	}
 	res->hashtable->bucket_width = 1.0;
 	res->hashtable->new_table = NULL;
 	res->hashtable->size = 1;
 
-	res->hashtable->array = (nbc_bucket_node*) mm_std_malloc(sizeof(nbc_bucket_node) );
+	res->hashtable->array = (nbc_bucket_node*) malloc(sizeof(nbc_bucket_node) );
 	if(res->hashtable->array == NULL)
 	{
-		mm_std_free(res->hashtable);
-		mm_std_free(res);
+		free(res->hashtable);
+		free(res);
 		error("No enough memory to allocate queue\n");
 	}
 
@@ -1091,9 +1090,9 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 				to_free_tables_old = to_free_tables_old->next;
 
 				table *h = (table*) my_tmp->payload;
-				mm_free(h->array);
-				mm_free(h);
-				mm_free(my_tmp);
+				free(h->array);
+				free(h);
+				free(my_tmp);
 			}
 		}
 	}
@@ -1141,7 +1140,7 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 				if(tmp->timestamp < timestamp)
 				{
 					current_meta_node->counter--;
-					mm_free(tmp);
+					free(tmp);
 					committed++;
 				}
 				tmp =  get_unmarked(tmp_next);
@@ -1152,7 +1151,7 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 				meta_tmp = current_meta_node;
 				*meta_prec = current_meta_node->next;
 				current_meta_node = current_meta_node->next;
-				mm_free(meta_tmp);
+				free(meta_tmp);
 			}
 			else
 			{

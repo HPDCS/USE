@@ -50,8 +50,6 @@ CORE_SOURCES =  core/core.c\
 		core/calqueue.c\
 		core/nb_calqueue.c\
 		core/x86.c\
-		core/list.c\
-		core/myallocator.c\
 		core/topology.c\
 		core/queue.c\
 		core/main.c\
