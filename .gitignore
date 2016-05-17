@@ -27,3 +27,16 @@
 *.i*86
 *.x86_64
 *.hex
+
+.project
+.cproject
+
+test
+phold 		 
+pcs		 
+pcs-prealloc 
+traffic  	 
+tcar	 
+phold 		 
+robot_explore
+hash 		 

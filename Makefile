@@ -2,7 +2,8 @@
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
-FLAGS= -DARCH_X86_64-g3 -Wall -Wextra -mrtm
+QUEUE= -DNBC
+FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
 REVERSIBLE=1
@@ -78,20 +79,27 @@ HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
 
-all: phold
+all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
+pcs: TARGET=pcs 
 pcs: _pcs mm core link
 
+pcs-prealloc: TARGET=pcs-prealloc 
 pcs-prealloc: _pcs_prealloc mm core link
 
+traffic: TARGET=traffic 
 traffic: _traffic mm core link
 
+tcar: TARGET=tcar 
 tcar: _tcar mm core link
 
+phold: TARGET=phold 
 phold: _phold mm core link
 
+robot_explore: TARGET=robot_explore 
 robot_explore: _robot_explore mm core link
 
+hash: TARGET=hash 
 hash: _hash mm core link
 
 
@@ -148,3 +156,13 @@ _robot_explore: $(ROBOT_EXPLORE_OBJ)
 
 clean:
 	@find . -name "*.o" -exec rm {} \;
+	@find . -type f -name "phold" 		  -exec rm {} \;
+	@find . -type f -name "pcs" 		  -exec rm {} \;
+	@find . -type f -name "pcs-prealloc"  -exec rm {} \;
+	@find . -type f -name "traffic "  	  -exec rm {} \;
+	@find . -type f -name "tcar" 		  -exec rm {} \;
+	@find . -type f -name "phold" 		  -exec rm {} \;
+	@find . -type f -name "robot_explore" -exec rm {} \;
+	@find . -type f -name "hash" 		  -exec rm {} \;
+	
+ 		 
