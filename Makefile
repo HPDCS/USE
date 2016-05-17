@@ -2,8 +2,11 @@
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
-QUEUE= -DNBC
+
 FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
+
+
+
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
 REVERSIBLE=1
@@ -17,7 +20,9 @@ else
 CFLAGS=$(FLAGS)
 endif
 
-
+ifdef NBC
+CFLAGS:= $(CFLAGS) -DNBC
+endif
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
 		    model/pcs-prealloc/functions_app.c\
 		    model/pcs-prealloc/topology.c

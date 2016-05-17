@@ -17,9 +17,6 @@
 #include "core.h"
 #include "lookahead.h"
 
-#define NBC
-
-
 
 typedef struct __event_pool_node {
     msg_t message;

@@ -99,6 +99,11 @@ int main(int argn, char *argv[]) {
 
     print_statistics();
 
+#ifdef NBC
+    	printf("Using SPINLOCK CALQUEUE\n");
+#else
+    	printf("Using NONBLOCKING CALQUEUE\n");
+#endif
     //statistics_fini();
 
     return 0;
