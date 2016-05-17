@@ -5,8 +5,6 @@ CC=gcc
 
 FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 
-
-
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
 REVERSIBLE=1
@@ -81,7 +79,8 @@ PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
-
+all:
+	echo $(CFLAGS)
 all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
