@@ -15,6 +15,7 @@
 #include "calqueue.h"
 #include "nb_calqueue.h"
 #include "core.h"
+#include "lookahead.h"
 
 #define NBC
 
@@ -176,6 +177,8 @@ void flush(void) {
 	queue_deliver_msgs();
 	
 	if(current_lvt>gvt) gvt = current_lvt;
+	
+	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
 #endif
 
 }

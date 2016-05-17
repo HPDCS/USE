@@ -219,6 +219,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 
 #ifndef NO_DYMELOR
 	    dymelor_init();
+	    printf("Dymelor abilitato\n");
 #endif
 
 	queue_init();
@@ -247,7 +248,7 @@ unsigned int check_safety(simtime_t time){
             events++;
     }
     
-    return events;
+    return 0;//return events;
 }
 
 bool check_termination(void) {
@@ -558,6 +559,7 @@ foldpath:
 #ifdef REVERSIBLE
 			else {
 reversible:
+				continue;
 				mode = MODE_STM;
 
 				if(get_lp_lock(1, 0)==0)

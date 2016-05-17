@@ -59,8 +59,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
-			for(i = 0; i < 1; i++) {
-				timestamp = (simtime_t) (20 * Random());
+			for(i = 0; i < 5; i++) {
+				timestamp = (simtime_t) (TAU * Random());
 				if(timestamp < LOOKAHEAD)
 					timestamp += LOOKAHEAD;
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
@@ -73,25 +73,28 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			//timer_start(tm_ex);
 
 			loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
-
+/*
 			for(i = 0; i < loops ; i++) {
 					j = i*i;
 			}
 			//printf("timer: %d\n", timer_value_micro(tm_ex));
-
+*/
 			state_ptr->events++;
-
+/*
 			delta = (simtime_t)(Expent(TAU));
 			if(delta < LOOKAHEAD)
 				delta += LOOKAHEAD;
+*/
+			delta = TAU * Random();
 			timestamp = now + delta;
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-
+/*
 			if(event_type == LOOP && Random() < 0.2) {
 				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
 			}
+*/	
 			break;
 
 

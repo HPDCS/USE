@@ -8,6 +8,7 @@ LIBS=-pthread -lm
 REVERSIBLE=1
 ARCH_X86=1
 ARCH_X86_64=1
+MALLOC = 1
 
 ifdef MALLOC
 CFLAGS=$(FLAGS) -DNO_DYMELOR
@@ -54,7 +55,9 @@ CORE_SOURCES =  core/core.c\
 		core/queue.c\
 		core/main.c\
 		core/numerical.c\
-		statistics/statistics.c
+		statistics/statistics.c\
+		mm/reverse.c\
+		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
@@ -99,7 +102,9 @@ else
 	cp model/__application.o model/__application_hijacked.o
 endif
 ifdef MALLOC
-	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o
+#	ld -r -o model/application.o model/__application_hijacked.o  
+	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o $(LIBS)
+#	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o $(LIBS)
 #	gcc $(CFLAGS) -o $(TARGET) model/__application.o core/__core.o $(LIBS)
 else
 	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o

@@ -1051,7 +1051,7 @@ void *nbc_get(nb_calqueue *queue) {
 	}
 
 	payload = node->payload;
-	//free(node);
+	free(node);
 	return payload;
 }
 /**

@@ -230,7 +230,7 @@ void slab_free(struct slab_chain *const sch, const void *const addr) {
 				if (UNLIKELY(munmap(page, sch->pages_per_alloc) == -1))
 					perror("munmap");
 			} else {
-				__real_free(page);
+				free(page);
 			}
 		} else {
 			slab->slots = sch->empty_slotmask;
