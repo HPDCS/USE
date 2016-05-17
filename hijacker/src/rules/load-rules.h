@@ -88,14 +88,14 @@ typedef struct Preset {
 
 
 typedef struct Instruction {
-	unsigned int	flags;					//! Instruction flags to catch for the instrumentation process
-	unsigned int	skipFlags;				//! Instruction flags to filter out from instrumentation
-	Call		*call;						//! External user function to call
+	unsigned int	flags;
+	unsigned int	skipFlags;
+	Call		*call;
 	int		nAssembly;
 	Assembly	*assembly[MAX_CHILDREN];
-	xmlChar		*before;					//! What must be injected BEFORE the matched instruction
-	xmlChar		*after;						//! What must be injected AFTER the matched instruction
-	xmlChar		*replace;					//! What will replace the matched instruction with
+	xmlChar		*before;
+	xmlChar		*after;
+	xmlChar		*replace;
 } Instruction;
 
 
@@ -110,7 +110,7 @@ typedef struct Function {
 
 
 typedef struct Executable {
-	xmlChar		*entryPoint;					//! Where the program must start
+	xmlChar		*entryPoint;
 	xmlChar		*suffix;
 	int		nInjects;
 	xmlChar		*injectFiles[MAX_CHILDREN];

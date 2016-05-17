@@ -43,63 +43,30 @@
  *
  * @author Simone Economo
  */
-function *find_func_from_instr(insn_info *target, insn_address_type type) {
+function *find_func(function *functions, insn_info *instr, insn_address_type type) {
 	function *func, *prev;
-	insn_info *instr;
 
-	for (func = PROGRAM(v_code)[PROGRAM(version)]; func; func = func->next) {
-		for (instr = func->begin_insn; instr; instr = instr->next) {
-			if (instr == target) {
-				return func;
-			}
+	func = functions;
+	prev = NULL;
+
+	while(func) {
+
+		if (type == NEW_ADDR && func->insn->new_addr > instr->new_addr) {
+			break;
 		}
+    else if (type == ORIG_ADDR && func->insn->orig_addr > instr->orig_addr) {
+      break;
+    }
+
+		prev = func;
+		func = func->next;
 	}
 
-	return NULL;
-
-	// for (func = PROGRAM(v_code)[PROGRAM(version)], prev = NULL; func;
-	// 	   prev = func, func = func->next) {
-	// 	if (type == NEW_ADDR && func->begin_insn->new_addr > instr->new_addr) {
-	// 		return prev;
-	// 	}
-	// 	else if (type == ORIG_ADDR && func->begin_insn->orig_addr > instr->orig_addr) {
-	// 		return prev;
-	// 	}
-	// }
-
-	// // if (!func) {
-	// // 	return NULL;
-	// // }
-
-	// return prev;
-}
-
-
-function *find_func_from_addr(unsigned long long addr) {
-	function *func;
-
-	for (func = PROGRAM(v_code)[PROGRAM(version)]; func; func = func->next) {
-		if (func->begin_insn->orig_addr <= addr
-		 && func->begin_insn->orig_addr + func->symbol->size > addr) {
-			return func;
-		}
+	if (!func) {
+		return NULL;
 	}
 
-	return NULL;
-}
-
-
-function *find_func_cool(section *sec, unsigned long long addr) {
-	function *func;
-
-	for (func = PROGRAM(v_code)[PROGRAM(version)]; func; func = func->next) {
-		if (func->symbol->sec == sec && func->begin_insn->orig_addr <= addr
-		 && func->begin_insn->orig_addr + func->symbol->size > addr) {
-			return func;
-		}
-	}
-
-	return NULL;
+	return prev;
 }
 
 
@@ -108,89 +75,46 @@ function *find_func_cool(section *sec, unsigned long long addr) {
  * created function is added to the program's code (at the end) and is associated
  * with a global symbol.
  *
- * @author Davide Cingolani
- *
  * @param name Buffer pointing to the new name of the function.
  * @param code Pointer to the instruction list that make up the body of the function.
  *
  * @return Pointer to the new function descriptor.
  */
-function *function_create_from_insn(char *name, insn_info *code, section *sec) {
-	function *func, *prev, *curr;
+function *create_function_node(char *name, insn_info *code) {
+	function *func, *list;
 	symbol *sym;
-	insn_info *instr;
+	insn_info *insn;
+	int size;
 
-	size_t size;
-
-	for (size = 0, instr = code; instr; size += instr->size, instr = instr->next);
-
-	func = (function *) calloc(sizeof(function), 1);
-
-	func->name = (char *) malloc(strlen((const char *) name) + 1);
-	strcpy(func->name, name);
-
-	func->begin_insn = code;
-
-	sym = symbol_create(name, SYMBOL_FUNCTION, SYMBOL_GLOBAL, sec, size);
-	func->symbol = sym;
-	sym->func = func;
-
-	// func->symbol->offset = sec->sym->size;
-
-	for (instr = code; instr; instr = instr->next) {
-		instr->new_addr += sec->sym->size;
-	}
-
-	// sec->sym->size += size;
-
-	for (prev = NULL, curr = PROGRAM(v_code)[PROGRAM(version)]; curr;
-		prev = curr, curr = curr->next) {
-		if (prev && prev->symbol->sec == sec && curr->symbol->sec != sec) {
-			break;
-		}
-	}
-
-	prev->next = func;
-	func->next = curr;
-
-	hnotice(4, "New function '%s' created\n", name);
-
-	return func;
-}
-
-// FIXME: unire le funzionalità di parse_instruction_bytes() come catena di istruzioni e
-// la funzioe create_function_node()!!!
-/**
- * Create a function starting from an array of raw bytes that represents
- * its instructions. The returned function description will be filled
- *
- *
- */
-function *function_create_from_bytes(char *name, unsigned char *code, size_t size, section *sec) {
-	insn_info *insn, *first;
-	function *func;
-	unsigned long long pos;
-
-	first = calloc(sizeof(insn_info), 1);
-	insn = first;
-	pos = 0;
-
-	// Parse the instruction bytes provided in order to create a chain of
-	// instructions to append to the newly-created function
-	while(pos < size) {
-		parse_instruction_bytes(code, &pos, &insn);
-
-		insn->orig_addr += pos;
-		insn->new_addr += pos;
-
-		insn->next = calloc(sizeof(insn_info), 1);
-
-		insn->next->new_addr = insn->new_addr;
-		insn->next->orig_addr = insn->orig_addr;
+	size = 0;
+	insn = code;
+	while(insn) {
+		size += insn->size;
 		insn = insn->next;
 	}
 
-	func = function_create_from_insn(name, first, sec);
+	sym = create_symbol_node((unsigned char *)name, SYMBOL_FUNCTION, SYMBOL_GLOBAL, size);
+
+	func = (function *) malloc(sizeof(function));
+	if(!func) {
+		herror(true, "Out of memory!\n");
+	}
+	bzero(func, sizeof(function));
+
+	func->name = (unsigned char *)name;
+	func->symbol = sym;
+	func->insn = code;
+
+	list = PROGRAM(code);
+	while(list->next) {
+		list = list->next;
+	}
+
+	func->orig_addr = func->new_addr = (list->new_addr + list->symbol->size);
+	func->symbol->position = func->orig_addr;
+	list->next = func;
+
+	hnotice(4, "New function '%s' created\n", name);
 
 	return func;
 }
@@ -203,22 +127,22 @@ function *function_create_from_bytes(char *name, unsigned char *code, size_t siz
  *
  * @return Size in bytes of the passed function.
  */
-// static int get_function_size(function *func) {
-// 	insn_info *insn;
-// 	int size;
+static int get_function_size(function *func) {
+	insn_info *insn;
+	int size;
 
-// 	if(func == NULL)
-// 		return -1;
+	if(func == NULL)
+		return -1;
 
-// 	insn = func->begin_insn;
-// 	size = 0;
-// 	while(insn) {
-// 		size += insn->size;
-// 		insn = insn->next;
-// 	}
+	insn = func->insn;
+	size = 0;
+	while(insn) {
+		size += insn->size;
+		insn = insn->next;
+	}
 
-// 	return size;
-// }
+	return size;
+}
 
 
 /**
@@ -236,25 +160,27 @@ function * clone_function (function *func, char *suffix) {
 	char *name;
 	int size;
 
-	if (!func) {
+	if(!func)
 		return NULL;
-	}
 
 	// Allocates memory for the new descriptor
-	clone = (function *) calloc(sizeof(function), 1);
+	clone = (function *) malloc(sizeof(function));
+	if(!clone) {
+		herror(true, "Out of memory!\n");
+	}
 
 	// Copies the original descriptor to the new one
 	memcpy(clone, func, sizeof(function));
 
 	// Updates the pointer to instruction list
-	clone->begin_insn = clone_instruction_list(func->begin_insn);
+	clone->insn = clone_instruction_list(func->insn);
 
-	// Reset some fields
-	clone->begin_blk = clone->end_blk = clone->source = NULL;
-	clone->calledfrom.first = clone->calledfrom.last = NULL;
-	clone->callto.first = clone->callto.last = NULL;
+  // [SE] Reset other references
+  clone->begin_blk = clone->end_blk = clone->source = NULL;
+  clone->calledfrom.first = clone->calledfrom.last = NULL;
+  clone->callto.first = clone->callto.last = NULL;
 
-	// Compose the function name
+	// Updates the symbol pointer (assume that symbols have been already be cloned)
 	size = strlen((const char *)func->name) + strlen(suffix) + 2; // one is \0, one is '_'
 	name = malloc(sizeof(char) * size);
 	bzero(name, size);
@@ -262,21 +188,15 @@ function * clone_function (function *func, char *suffix) {
 	strcat(name, "_");
 	strcat(name, suffix);
 
+	size = get_function_size(clone);
+	if(size <= 0) {
+		hinternal();
+	}
+
+	clone->symbol = create_symbol_node((unsigned char *)name, SYMBOL_FUNCTION, SYMBOL_GLOBAL, size);
 	clone->name = (unsigned char *)name;
 
-	// FIXME: E' realmente necessario?
-	// size = get_function_size(clone);
-	// if (size <= 0) {
-	// 	hinternal();
-	// }
-
-	// Create a new symbol
-	clone->symbol = symbol_create(name, func->symbol->type, func->symbol->bind,
-		func->symbol->sec, size);
-
-	clone->symbol->func = clone;
-
-	// hnotice(4, "Function '%s' (%d bytes) cloned\n", clone->name, clone->symbol->size);
+	hnotice(6, "Function '%s' (%d bytes) cloned\n", clone->name, clone->symbol->size);
 
 	return clone;
 }
@@ -291,6 +211,8 @@ function * clone_function (function *func, char *suffix) {
  */
 function *clone_function_list(function *func, char *suffix) {
 	function *clone, *head;
+	insn_info *insn;
+	symbol *sym;
 
 	if(!func)
 		return NULL;
@@ -306,49 +228,3 @@ function *clone_function_list(function *func, char *suffix) {
 
 	return head;
 }
-
-
-// FIXME: unire le funzionalità di parse_instruction_bytes() come catena di istruzioni e
-// la funzioe create_function_node()!!!
-/**
- * Create a function starting from an array of raw bytes that represents
- * its instructions. The returned function description will be filled
- *
- *
- */
-/*function *create_function(char *name, unsigned char *code, size_t size) {
-	insn_info *insn, *first;
-	function *func;
-	unsigned long long pos;
-
-	first = calloc(sizeof(insn_info), 1);
-	if(first == NULL) {
-		abort();
-	}
-
-	insn = first;
-	pos = 0;
-
-	func = create_function_node(name, first);
-	insn->new_addr = func->new_addr;
-
-	// Parse the instruction bytes provided in order to create a chain of
-	// instructions to append to the newly created function
-
-	// This will create the instrucion chain
-	while(pos < size) {
-
-		parse_instruction_bytes(code, &pos, &insn);
-
-		insn->orig_addr += pos;
-		insn->new_addr += pos;
-
-		insn->next = calloc(sizeof(insn_info), 1);
-
-		insn->next->new_addr = insn->new_addr;
-		insn->next->orig_addr = insn->orig_addr;
-		insn = insn->next;
-	}
-
-	return func;
-}*/

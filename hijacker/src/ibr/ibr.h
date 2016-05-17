@@ -33,7 +33,6 @@
 
 #include <utils.h>
 #include <instruction.h>
-#include <elf/elf-defs.h>
 
 typedef struct _instruction insn_info;
 typedef struct _block block;
@@ -55,13 +54,7 @@ typedef enum {
 	SUBSTITUTE
 } insn_insert_mode;
 
-
-#define instr_reference_weak(instr) \
-  ((instr)->reference.first ? (instr)->reference.first->elem : NULL)
-
-
 struct _instruction {
-	unsigned int index;
 	unsigned long   flags;
 	unsigned long long  orig_addr;
 	unsigned long long  new_addr;
@@ -71,7 +64,7 @@ struct _instruction {
 		insn_info_x86   x86;
 	} i;
 
-	char *secname;     // [SE] Code section the instruction belongs to
+  char *secname;     // [SE] Code section the instruction belongs to
 
 	struct _instruction *jumpto;
 
@@ -88,16 +81,8 @@ struct _instruction {
 	// as the target of a jump instruction.
 	struct _instruction *virtual;
 
-	linked_list reference;
-	linked_list pointedby;
-
-	// struct _symbol *reference;
-	// struct _symbol *pointedby;
-	bool written;		// Tell if the current instruction has been currently emitted
-
-	// Parent instruction in the previous IBR version
-	struct _instruction *parent;
-
+	struct _symbol *reference;
+	struct _symbol *pointedby;
 	struct _instruction *prev;  // Instructions are organized in a chain
 	struct _instruction *next;
 };
@@ -106,68 +91,68 @@ struct _instruction {
 /* Blocks */
 
 typedef enum {
-	SPLIT_FIRST,
-	SPLIT_LAST
+  SPLIT_FIRST,
+  SPLIT_LAST
 } block_split_mode;
 
 typedef enum {
-	BLOCK_GENERIC,
-	BLOCK_LOOP_HEADER,
-	BLOCK_LOOP_FOOTER,
-	BLOCK_BRANCH_HEADER,
-	BLOCK_BRANCH_THEN,
-	BLOCK_BRANCH_ELSE
+  BLOCK_GENERIC,
+  BLOCK_LOOP_HEADER,
+  BLOCK_LOOP_FOOTER,
+  BLOCK_BRANCH_HEADER,
+  BLOCK_BRANCH_THEN,
+  BLOCK_BRANCH_ELSE
 } block_type;
 
 typedef enum {
-	EDGE_GOTO,
-	EDGE_THEN,
-	EDGE_ELSE,
-	EDGE_FORCED,
-	EDGE_IND,
-	EDGE_CALLRET,
-	EDGE_INIT
+  EDGE_GOTO,
+  EDGE_THEN,
+  EDGE_ELSE,
+  EDGE_FORCED,
+  EDGE_IND,
+  EDGE_CALLRET,
+  EDGE_INIT
 } block_edge_type;
 
 typedef enum {
-	EDGE_NEXT,
-	EDGE_BACK
+  EDGE_NEXT,
+  EDGE_BACK
 } block_edge_dir;
 
 typedef struct {
-	block_edge_type type;
-	block_edge_dir dir;
-	block *from;
-	block *to;
+  block_edge_type type;
+  block_edge_dir dir;
+  block *from;
+  block *to;
 } block_edge;
 
 typedef struct {
-	linked_list sources;
+  linked_list sources;
 } block_graph;
 
 struct _block {
 	unsigned int id;          // Unique identifier for the block
 	unsigned long length;     // Number of instructions that make up the block
-	insn_info *begin;         // First instruction of the block
-	insn_info *end;           // Last instruction of the block
-	struct _block *next;      // Ordered list of blocks
+  insn_info *begin;         // First instruction of the block
+  insn_info *end;           // Last instruction of the block
+  struct _block *next;      // Ordered list of blocks
 
-	// Presets-related fields
-	void *smtracer;
+  // Presets-related fields
+  void *smtracer;
 
-	// Callgraph-related fields
-	function *callto;         // The function being called by this block
-	struct {
-		unsigned long long size;
-		function **entry;
-	} calltable;              // A list of potential functions that can be called by this block
+  // Callgraph-related fields
+  function *callto;         // The function being called by this block
+  struct {
+    unsigned long long size;
+    function **entry;
+  } calltable;              // A list of potential functions that can be called by this block
 
 	// Flowgraph-related fields
-	block_type type;          // The type of a block wrt control flow structures
+  block_type type;          // The type of a block wrt control flow structures
 	linked_list out;          // Double-linked list of next blocks
 	linked_list in;           // Double-linked list of previous blocks
-	bool visited;             // True if the block was already met in the current visit
-	bool active;              // True if the block is in the current path (only for DFS!)
+  bool visited;             // True if the block was already met in the current visit
+  bool active;              // True if the block is in the current path (only for DFS!)
 
 	// Tree-related fields
 	int balance;              // The balance factor of the AVL tree rooted at this block
@@ -181,16 +166,14 @@ struct _block {
 /* Symbols */
 
 typedef enum {
-	SYMBOL_NULL,
+  SYMBOL_NULL,
 	SYMBOL_VARIABLE,
 	SYMBOL_FUNCTION,
 	SYMBOL_UNDEF,
 	SYMBOL_SECTION,
 	SYMBOL_FILE,
-	SYMBOL_TLS
+  SYMBOL_TLS
 } symbol_type;
-
-extern const char *symbol_type_str[];
 
 typedef enum {
 	SYMBOL_LOCAL,
@@ -198,66 +181,39 @@ typedef enum {
 	SYMBOL_WEAK
 } symbol_bind;
 
-extern const char *symbol_bind_str[];
-
-// FIXME: Incomplete list of relocations...
-typedef enum {
-	RELOC_PCREL_32,
-	RELOC_PCREL_64,
-	RELOC_TLSREL_32,
-	RELOC_ABS_32,
-	RELOC_ABS_32S,
-	RELOC_ABS_64,
-} reloc_type;
-
-extern const char *reloc_type_str[];
-
 struct _symbol {
-	symbol_type type;     /// The hijacker's local type specification of the symbol
-	symbol_bind bind;     /// The hijacker's local bind specification of the symbol
-
-	unsigned int index;   /// Symbol's index within the symbol table
-	unsigned char *name;  /// Pointer to the buffer holding the symbol's name
-	unsigned int size;    /// Size of the symbol, could be zero (e.g. for SYMBOL_UNDEF)
-
-	unsigned int secnum;  /// Index of the section the symbol belongs to
-	section *sec;         /// Section the symbol belongs to (for section symbols it's the section itself)
-	unsigned long long offset;   /// Displacement from the beginning of the section
-
-	void *payload;        /// Symbol's initial value
-	function *func;       /// The function associated with the symbol (if a symbol section)
-
+	symbol_type     type;     /// The hijacker's local type specification of the symbol
+	symbol_bind   bind;     /// The hijacker's local bind specification of the symbol
+	unsigned char *name;      /// Pointer to the buffer holding the symbol's name
+	unsigned int  size;   /// Size of the symbol, could be zero (e.g. for SYMBOL_UNDEF)
+	unsigned int  secnum;     /// Index of the section the symbol belongs to
+  section *sec;             // [SE] Section the symbol belongs to
+	unsigned int  index;      /// Symbol's index within the symbol table
+	unsigned long long  position;   /// Offset positioning within the symbol section
+	void *initial; /// [SE] Symbol's initialization value
+	function *func; /// [SE] The function related to the symbol (if any)
 	struct _relocation {
-		unsigned char type;            /// The type of the relocation
-
-		section *sec;                  /// Source relocation section
-		unsigned long long offset;     /// Displacement from the beginning of the section
-
-		long addend;                   /// Displacement from the beginning of the symbol
-
-		insn_info *target_insn;        /// Instruction where the relocation is applied (if any)
+//    struct _symbol *from;   /// Symbol from which the relocation applies
+		insn_info *ref_insn;    /// Instruction where the relocation is applied
+		long long offset;     /// The offset from the reference symbol's position
+		long addend;        /// The offset from the target symbol
+		unsigned char type;     /// The type of the relocation
+		unsigned char *secname;   /// Name of the relocation section where to add the entry
 	} relocation;
-
-	int version;       /// Integer indicating to which instrumenting version it belongs
-	bool duplicate;    /// Flag that tells if symbol is a duplicate
-	bool referenced;   /// Flag indicating the symbol has been referenced
-	bool authentic;
-
+	int version;  /// Integer indicating to which instrumenting version it belongs
+	bool    duplicate;    /// Flag that tells if symbol is a duplicate
+	bool    referenced;   /// Flag indicating the symbol has been resolved
+	long    extra_flags;  /// Maintains the info field of the ELF's symbol (either bind and type) # ridondante
 	struct _symbol  *next;
 };
 
 struct _reloc {
-	int type;
-
-	unsigned int symnum;  // index of symbol relocation refers to
-	symbol *sym;
-	int addend;    // explicit displacement to add to the offset
-
-	unsigned int secnum; // index of section relocation targets
-	section *sec;
 	long long offset;    // offset within the section to which apply the relocation
-
-	// unsigned char *name;
+	unsigned char *name;
+	symbol *symbol;
+	unsigned int s_index;  // index of symbol relocation refers to
+	int type;
+	int addend;    // explicit displacement to add to the offset
 	struct _reloc *next;
 };
 
@@ -265,134 +221,100 @@ struct _reloc {
 /* Functions */
 
 struct _function {
-	unsigned char   *name;
-
 	block *begin_blk;        // [SE]
 	block *end_blk;          // [SE]
 
-	// Callgraph-related fields
-	block *source;           // Starting block of the cfg
-	linked_list calledfrom;  // List of basic blocks that call this function
-	linked_list callto;      // List of functions that are called by this function
-	bool visited;            // True if the function was already met in the current visit
+  // Callgraph-related fields
+  block *source;           // Starting block of the cfg
+  linked_list calledfrom;  // List of basic blocks that call this function
+  linked_list callto;      // List of functions that are called by this function
+  bool visited;            // True if the function was already met in the current visit
 
-	bool overload;
-	insn_info   *begin_insn;
-	insn_info   *end_insn;
+	int     passes;
+	unsigned char   *name;
+	unsigned long long  orig_addr;
+	unsigned long long  new_addr;
+	insn_info   *insn;
 	symbol      *symbol;  // [DC] Added reference to the relative symbol
-
 	struct _function *next;
 };
-
-#define functions_overlap(a, b)\
-	(a && b && a->symbol->sec == b->symbol->sec\
-		&& a->begin_insn->new_addr == b->begin_insn->new_addr)
 
 
 /* Sections and relocation entries */
 
 typedef enum {
-	SECTION_NULL,
+  SECTION_NULL,
 	SECTION_CODE,
 	SECTION_SYMBOLS,
 	SECTION_NAMES,
 	SECTION_RELOC,
-	SECTION_TLS,
+  SECTION_TLS,
 	SECTION_RAW
 } section_type;
 
-extern const char *section_type_str[];
-
 struct _section {
-	section_type type;
-	unsigned int index;
+	section_type    type;
+	unsigned int  index;
 	unsigned char *name;
-	unsigned long long offset;
-
-	void *payload;  // In-memory section contents
-	void *header;
-
-	symbol *sym;
-
-	// Emit stage
-	void *ptr;   // [DC] Payload's file pointer
-	void *reference; // [DC] May represent a reference to a relocation entry
-
+	void    *header;
+	void    *payload;  // In-memory section contents (parse stage)
+	void    *ptr;   // [DC] Payload's file pointer (emit stage)
+	void    *reference; // [DC] May represent a reference to a relocation entry (emit stage)
 	struct _section *next;
 };
 
 
 /* instruction.c */
 
-insn_info *find_insn(function *func, unsigned long long addr, insn_address_type type);
-insn_info *find_insn_cool(insn_info *head, unsigned long long addr);
-insn_info *find_last_insn(function *functions);
-void parse_instruction_bytes(unsigned char *bytes, unsigned long int *pos, insn_info **final);
-int insert_instructions_at(insn_info *target, unsigned char *binary, size_t size,
+extern insn_info *find_insn(function *func, unsigned long long addr, insn_address_type type);
+extern insn_info *find_last_insn(function *functions);
+extern int insert_instructions_at(insn_info *target, unsigned char *binary, size_t size,
 	insn_insert_mode mode, insn_info **last);
-int substitute_instruction_with(insn_info *target, unsigned char *binary, size_t size,
+extern int substitute_instruction_with(insn_info *target, unsigned char *binary, size_t size,
 	insn_info **last);
-insn_info *clone_instruction(insn_info *insn);
-insn_info *clone_instruction_list(insn_info *insn);
-void add_call_instruction(insn_info *target, unsigned char *func, insn_insert_mode mode, insn_info **instr);
-void add_jump_instruction(insn_info *target, unsigned char *name, insn_insert_mode mode, insn_info **instr);
-void set_jumpto_reference(insn_info *jump, insn_info *target);
-void set_jumptable_entry(insn_info *jump, insn_info *entry, unsigned int idx);
-void set_virtual_reference(insn_info *target, insn_info *virtual);
-void link_jump_instructions(void);
-void update_instruction_addresses(int version);
-void update_jump_displacements(int version);
-void set_call_displacement(insn_info *jump, insn_info *target);
+extern insn_info *clone_instruction(insn_info *insn);
+extern insn_info *clone_instruction_list(insn_info *insn);
+extern void add_call_instruction(insn_info *target, unsigned char *func, insn_insert_mode mode, insn_info **instr);
+extern void set_jumpto_reference(insn_info *jump, insn_info *target);
+extern void set_jumptable_entry(insn_info *jump, insn_info *entry, unsigned int idx);
+extern void set_virtual_reference(insn_info *target, insn_info *virtual);
+extern void update_instruction_addresses(void);
+extern void update_jump_displacements(void);
 
 /* symbol.c */
 
-symbol *find_symbol(size_t index);
-symbol *find_symbol_by_name(unsigned char *name);
-symbol *create_symbol_node(unsigned char *name, symbol_type type, symbol_bind bind, int size);
-symbol *symbol_create(char *name, symbol_type type, symbol_bind bind,
-	section *sec, size_t size);
-symbol *symbol_create_from_ELF(Elf_Sym *elfsym);
-void symbol_append(symbol *sym, symbol **head);
-symbol *symbol_check_shared(symbol *sym);
-symbol *symbol_clone(symbol *sym, char *suffix);
-void find_relocations(symbol *symbols, section *in, symbol *to, linked_list *list);
-symbol *symbol_rela_create(symbol *sym, reloc_type type,
-	unsigned long long offset, long addend, section *sec);
-symbol *symbol_rela_create_from_ELF(reloc *rel);
-symbol *symbol_instr_rela_create(symbol *sym, insn_info *insn, reloc_type type);
-symbol *symbol_rela_clone(symbol *sym);
+extern symbol *find_symbol(unsigned char *name);
+extern symbol *create_symbol_node(unsigned char *name, symbol_type type, symbol_bind bind, int size);
+extern symbol *symbol_check_shared(symbol *sym);
+extern symbol *clone_symbol(symbol *sym);
+extern void find_relocations(symbol *symbols, unsigned char *in, unsigned char *to, linked_list *list);
 
 /* function.c */
 
-function *find_func_cool(section *sec, unsigned long long addr);
-function *find_func_from_instr(insn_info *instr, insn_address_type type);
-function *find_func_from_addr(unsigned long long addr);
-function *function_create_from_insn(char *name, insn_info *code, section *sec);
-function *function_create_from_bytes(char *name, unsigned char *code, size_t size, section *sec);
-function *clone_function(function *func, char *suffix);
-function *clone_function_list(function *func, char *suffix);
-// function *clone_function_descriptor(function *original, char *name);
+extern function *find_func(function *functions, insn_info *target, insn_address_type type);
+extern function *find_func_from_sym(symbol *sym);
+extern function *create_function_node(char *name, insn_info *code);
+extern function *clone_function(function *func, char *suffix);
+extern function *clone_function_list(function *func, char *suffix);
+extern function *clone_function_descriptor(function *original, char *name);
 
 /* section.c */
 
-section *find_section(unsigned int idx);
-section *find_section_by_name(unsigned char *name, int version);
-// reloc *find_reloc(section *sec, unsigned long offset);
-section *section_create(char *name, section_type type, void *payload);
-section *section_create_from_ELF(size_t index, section_type type);
-void section_append(section *sec, section **head);
-section *section_clone(section *sec, char *suffix);
+extern section *find_section(unsigned int idx);
+extern section *find_section_by_name(unsigned char *name);
+// extern reloc *find_reloc(section *sec, unsigned long offset);
+extern section *add_section(section_type type, int secndx, void *payload, section **first);
 
 /* block.c */
 
-block *block_create(void);
-block *block_split(block *node, insn_info *breakpoint, block_split_mode mode);
-block *block_find(insn_info *instr);
-void block_link(block *from, block *to, block_edge_type type);
-void block_tree_dump(char *filename, char *mode);
-void block_graph_dump(function *func, char *filename, char *mode);
-block *block_graph_create();
-void block_graph_visit(block_edge *edge, graph_visit *visit);
+extern block *block_create(void);
+extern block *block_split(block *node, insn_info *breakpoint, block_split_mode mode);
+extern block *block_find(insn_info *instr);
+extern void block_link(block *from, block *to, block_edge_type type);
+extern void block_tree_dump(char *filename, char *mode);
+extern void block_graph_dump(function *func, char *filename, char *mode);
+extern block *block_graph_create(function *functions);
+extern void block_graph_visit(block_edge *edge, graph_visit *visit);
 
 
 #endif /* _IBR_H */

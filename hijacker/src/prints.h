@@ -111,7 +111,6 @@
 		set_style(RESET);\
 		fprintf(stderr, "] %s:%d: ", __FILE__, __LINE__);\
 		fprintf(stderr, __VA_ARGS__);\
-		fflush(stderr);\
 		if(fatal) {\
 			exit(EXIT_FAILURE);\
 		}\
@@ -124,7 +123,6 @@
 			printf("%*s", verb_level, " ");\
 			yellow_arrow();\
 			printf(__VA_ARGS__);\
-			fflush(stdout);\
 		}\
 	} while(0)
 

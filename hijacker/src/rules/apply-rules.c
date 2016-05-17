@@ -252,7 +252,7 @@ static int apply_rule_instruction(Executable *exec, Instruction *tagInstruction,
 
 	(void)exec;
 
-	insn = func->begin_insn;
+	insn = func->insn;
 	count = 0;
 
 	hnotice(2, "Entering Instruction scope; searching for instruction of type %d\n", tagInstruction->flags);
@@ -367,7 +367,7 @@ static int apply_rule_function (Executable *exec, Function *tagFunction) {
 			// Check if a Call tag has been specified
 			if(tagFunction->call) {
 				tagCall = tagFunction->call;
-				apply_rule_addcall(tagCall, func->begin_insn);
+				apply_rule_addcall(tagCall, func->insn);
 			}
 
 		}
@@ -380,54 +380,6 @@ static int apply_rule_function (Executable *exec, Function *tagFunction) {
 	}
 
 	return count;
-}
-
-
-static void hijack_main(unsigned char *entry_point) {
-	// Find the current main function
-	symbol *sym_main, *sym_text, *sym;
-	function *main;
-	section *text;
-
-	unsigned char code[1] = {0x90};
-	unsigned char code2[1] = {0xc3};
-	unsigned char code2bis[1] = {0xc9};
-	unsigned char code3[5] = {0x48, 0x89, 0xe5, 0x55};
-
-	sym_text = find_symbol_by_name(".text.instr");
-
-	if (sym_text == NULL) {
-		hinternal();
-	}
-
-	text = sym_text->sec;
-
-	sym_main = find_symbol_by_name("main");
-
-	if (sym_main == NULL) {
-		hinternal();
-	}
-
-	// Change the name of the original entry program's point
-	sym_main->name = sym_main->func->name = "original_main";
-
-	// Change all relocations toward the main symbol (if any)
-	for (sym = PROGRAM(symbols); sym; sym = sym->next) {
-		if (str_equal(sym->name, "main")) {
-			sym->name = "original_main";
-		}
-	}
-
-	// Creates a new stub function that acts as the new main
-	main = function_create_from_bytes("main", code, sizeof(code), text);
-
-	// Adds the jump to the new entry point
-	insert_instructions_at(main->begin_insn, code2, sizeof(code2), INSERT_AFTER, &(main->begin_insn));
-	insert_instructions_at(main->begin_insn, code2bis, sizeof(code2), INSERT_BEFORE, &(main->begin_insn));
-	add_call_instruction(main->begin_insn, "dump", INSERT_BEFORE, &(main->begin_insn));
-	add_call_instruction(main->begin_insn, entry_point, INSERT_BEFORE, &(main->begin_insn));
-	insert_instructions_at(main->begin_insn, code3, sizeof(code3), INSERT_BEFORE, &(main->begin_insn));
-
 }
 
 
@@ -448,13 +400,10 @@ void apply_rules(void) {
 	Instruction *tagInstruction;
 	Function *tagFunction;
 
-	hprint("Start applying rules...\n\n");
-
-	unsigned char *entry_point;
+	hprint("Start applying rules...\n");
 
 	// Create a temporary directory to place object files;
 	execute("mkdir", "-p", TEMP_PATH);
-
 
 	// Iterates all over executable versions
 	for (version = 0; version < config.nExecutables; version++) {
@@ -503,8 +452,7 @@ void apply_rules(void) {
 			hnotice(3, "Looking for the instruction with flags %x\n", tagInstruction->flags);
 			func = PROGRAM(code);
 			while(func) {
-				hnotice(3, "Instrumenting function '%s' <%#08llx>\n",
-					func->symbol->name, func->begin_insn->new_addr);
+				hnotice(3, "Instrumenting function '%s' <%#08llx>\n", func->symbol->name, func->new_addr);
 				instrumented += apply_rule_instruction(exec, tagInstruction, func);
 				func = func->next;
 			}
@@ -518,18 +466,12 @@ void apply_rules(void) {
 			instrumented += apply_rule_function(exec, tagFunction);
 		}
 
-		// Check for a new entry point to be selected, if any
-		if(exec->entryPoint != NULL) {
-			hnotice(1, "A new entry point has been detected to function'%s'\n", exec->entryPoint);
-			hijack_main(exec->entryPoint);
-		}
-
-		// if (version != 0 && instrumented) {
+		if (version != 0 && instrumented) {
 			// [SE] If some actual instrumentation has been carried out, first update
 			// instruction addresses and then recompute jump displacements
-			// update_instruction_addresses(version);
-			// update_jump_displacements(version);
-		// }
+			update_instruction_addresses();
+			update_jump_displacements();
+		}
 
 		hnotice(1, "Instrumentation of executable version %d terminated: %d instructions have been instrumented\n",
 			version, instrumented);

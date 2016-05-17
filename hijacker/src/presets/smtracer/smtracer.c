@@ -39,14 +39,12 @@
 
 
 // Size of a single entry in the TLS buffer
-#define BUFFER_ENTRY_SIZE 24
-// Size of a single field in an entry of the TLS buffer
-#define BUFFER_FIELD_SIZE 8
+#define BUFFER_ENTRY_SIZE (1<<4)
 // Maximum length for the name of the TLS buffer symbol
-#define BUFFER_NAME_LEN   (1<<6)
+#define BUFFER_NAME_LEN   (1<<5)
 
-// Experimental score triple to derive the instrumentation score
-// of a single memory access expression
+// Experimental score triple to derive the
+// instrumentation score of a single access
 #define SCORE_1   1
 #define SCORE_2   3
 #define SCORE_3   5
@@ -64,21 +62,21 @@ static double blk_score_threshold;
 static size_t chunk_size;
 static double acc_threshold;
 static bool use_stack;
-static bool simulated;
+
 
 
 inline static bool smt_is_relevant(insn_info *instr) {
   bool is_relevant;
 
   insn_info_x86 *target_x86;
-  // symbol *sym;
+  symbol *sym;
 
   if (instr == NULL) {
     return false;
   }
 
   target_x86 = &instr->i.x86;
-  // sym = instr_reference_weak(instr);
+  sym = instr->reference;
 
   if (use_stack == false) {
     if (target_x86->has_base_register == true && target_x86->breg == 5) {
@@ -100,11 +98,11 @@ inline static bool smt_is_relevant(insn_info *instr) {
 }
 
 static void smt_tls_init(void) {
-  symbol *sym;
+  section *sec;
   void *tbss_payload;
   unsigned int tbss_size;
 
-  unsigned int disp;
+  unsigned int count, disp;
 
   char *buffer_name;
 
@@ -115,39 +113,56 @@ static void smt_tls_init(void) {
   tbss_size = BUFFER_ENTRY_SIZE * tls_buffer_size;
   disp = 0;
 
-  sym = find_symbol_by_name(".tbss");
+  // Counting the total number of sections and looking for .tbss, if exists
+  for (sec = PROGRAM(sections), count = 0; sec; sec = sec->next, ++count) {
+    if (tbss_sec == NULL && sec->name && !strcmp((const char *)sec->name, ".tbss")) {
+      tbss_sec = sec;
+    }
+    else if (tbss_sec == NULL && sec->index && !strcmp((const char *) sec_name(sec->index), ".tbss")) {
+      tbss_sec = sec;
+    }
+  }
 
-  if (sym == NULL) {
+  if (tbss_sec == NULL) {
     // If the section hasn't been found, it's time to create it
     hnotice(3, "Creating a new .tbss section\n");
 
     tbss_payload = calloc(tbss_size, 1);
-    tbss_sec = section_create(".tbss", SECTION_TLS, tbss_payload);
-    tbss_sym = tbss_sec->sym;
 
-    section_append(tbss_sec, &PROGRAM(sections)[0]);
+    tbss_sec = add_section(SECTION_TLS, count, tbss_payload, NULL);
+    tbss_sym = create_symbol_node(".tbss", SYMBOL_SECTION, SYMBOL_LOCAL, 0);
 
     // Now install a new ELF header...
     hdr = calloc(sizeof(Section_Hdr), 1);
 
-    // Write alignment information into the ELF header
     if (ELF(is64)) {
       hdr64 = &(hdr->section64);
+
+      // hdr64->sh_name = elf_write_string(shstrtab, ".tbss");
+      hdr64->sh_type = SHT_NOBITS;
+      hdr64->sh_flags = SHF_WRITE | SHF_ALLOC | SHF_TLS;
+      hdr64->sh_link = SHN_UNDEF;
       hdr64->sh_addralign = BUFFER_ENTRY_SIZE;
+      hdr64->sh_size = tbss_size;
     } else {
       hdr32 = &(hdr->section32);
+
+      // hdr32->sh_name = elf_write_string(shstrtab, ".tbss");
+      hdr32->sh_type = SHT_NOBITS;
+      hdr32->sh_flags = SHF_WRITE | SHF_ALLOC | SHF_TLS;
+      hdr32->sh_link = SHN_UNDEF;
       hdr32->sh_addralign = BUFFER_ENTRY_SIZE;
+      hdr32->sh_size = tbss_size;
     }
 
     tbss_sec->header = hdr;
 
   } else {
     // Otherwise, let's hook to the existing section
-    tbss_sym = find_symbol_by_name(".tbss");
+    tbss_sym = find_symbol(".tbss");
 
     hnotice(3, "Existing .tbss section found of size %u bytes\n", tbss_sym->size);
 
-    tbss_sec = tbss_sym->sec;
     tbss_size += tbss_sym->size;
     tbss_payload = calloc(tbss_size, 1);
 
@@ -176,11 +191,14 @@ static void smt_tls_init(void) {
 
   // A different buffer symbol is created for each version
   buffer_name = malloc(BUFFER_NAME_LEN);
-  sprintf(buffer_name, "__smtracer_buffer_%d", PROGRAM(version));
+  strcpy(buffer_name, "__smtracer_buffer_");
+  sprintf(buffer_name + strlen("__smtracer_buffer_"), "%d", PROGRAM(version));
 
-  tls_buffer_sym = symbol_create(buffer_name, SYMBOL_TLS, SYMBOL_LOCAL, tbss_sec, tbss_size);
+  tls_buffer_sym = create_symbol_node(buffer_name, SYMBOL_TLS, SYMBOL_LOCAL,
+    BUFFER_ENTRY_SIZE * tls_buffer_size);
 
-  tls_buffer_sym->offset = disp;
+  tls_buffer_sym->sec = tbss_sec;
+  tls_buffer_sym->position = disp;
   tls_buffer_sym->secnum = tbss_sec->index;
 }
 
@@ -233,7 +251,7 @@ static void smt_compute_cycles(void) {
 
   ll_init(&headers);
 
-  for (func = PROGRAM(v_code)[PROGRAM(version)]; func; func = func->next) {
+  for (func = PROGRAM(code); func; func = func->next) {
     graph_visit visit = {
       .payload   = &headers,
       .policy    = VISIT_DEPTH,
@@ -290,7 +308,7 @@ static void smt_compute_cycles(void) {
   unsigned int hottest;
   linked_list queue = { NULL, NULL };
 
-  for (func = PROGRAM(v_code)[PROGRAM(version)]; func; func = func->next) {
+  for (func = PROGRAM(code); func; func = func->next) {
     if (func->calledfrom.first == NULL) {
       ll_push(&queue, func);
     }
@@ -332,7 +350,7 @@ static void smt_compute_cycles(void) {
     }
   }
 
-  for (func = PROGRAM(v_code)[PROGRAM(version)]; func; func = func->next) {
+  for (func = PROGRAM(code); func; func = func->next) {
     func->visited = false;
   }
 }
@@ -409,7 +427,7 @@ static void smt_compute_features(void) {
   for (blk = PROGRAM(blocks)[PROGRAM(version)]; blk; blk = blk->next) {
     smt = blk->smtracer;
 
-    if (highest <= 0) {
+    if (highest == 0) {
       smt->score = 1.0;
     }
     else {
@@ -427,10 +445,10 @@ void smt_init(void) {
   // no relevant access will be discarded due to lack of space
   highest = 0;
 
-  for (func = PROGRAM(v_code)[PROGRAM(version)]; func; func = func->next) {
+  for (func = PROGRAM(code); func; func = func->next) {
     count = 0;
 
-    for (instr = func->begin_insn; instr; instr = instr->next) {
+    for (instr = func->insn; instr; instr = instr->next) {
       count += smt_is_relevant(instr);
     }
 
@@ -471,7 +489,7 @@ static void smt_resolve_address(smt_access *access) {
 
   pivot = access->insn;
   x86 = &pivot->i.x86;
-  sym = instr_reference_weak(pivot);
+  sym = pivot->reference;
 
   bool has_disp, has_fs;
   unsigned char scale, modrm, sib;
@@ -481,8 +499,6 @@ static void smt_resolve_address(smt_access *access) {
 
   has_disp = true;
   has_fs = x86->insn[0] == 0x64;
-
-  scale = 0;
 
   switch(x86->scale) {
     case 8:
@@ -595,7 +611,7 @@ static void smt_resolve_address(smt_access *access) {
 
       insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
 
-      ref = symbol_instr_rela_create(sym, current, RELOC_PCREL_32);
+      ref = instruction_rela_node(sym, current, RELOCATE_RELATIVE_32);
       // ref->relocation.addend = sym->relocation.addend;
     }
 
@@ -606,7 +622,7 @@ static void smt_resolve_address(smt_access *access) {
 
       insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
 
-      ref = symbol_instr_rela_create(sym, current, RELOC_ABS_32);
+      ref = instruction_rela_node(sym, current, RELOCATE_ABSOLUTE_32);
       // ref->relocation.addend = sym->relocation.addend;
 
       if (sym->relocation.type == R_X86_64_32S) {
@@ -621,7 +637,7 @@ static void smt_resolve_address(smt_access *access) {
 
       insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
 
-      ref = symbol_instr_rela_create(sym, current, RELOC_ABS_64);
+      ref = instruction_rela_node(sym, current, RELOCATE_ABSOLUTE_64);
       // ref->relocation.addend = sym->relocation.addend;
     }
 
@@ -663,7 +679,7 @@ static void smt_resolve_address(smt_access *access) {
         }
       }
 
-      ref = symbol_instr_rela_create(sym, current, RELOC_TLSREL_32);
+      ref = instruction_rela_node(sym, current, RELOCATE_TLS_RELATIVE_32);
       // ref->relocation.addend = sym->relocation.addend;
     }
 
@@ -685,7 +701,7 @@ static void smt_resolve_address(smt_access *access) {
       //   insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
       // }
 
-      // symbol_instr_rela_create(sym, current, RELOC_ABS_64);
+      // instruction_rela_node(sym, current, RELOCATE_ABSOLUTE_64);
     }
 
   }
@@ -707,13 +723,13 @@ static void smt_instrument_access(block *blk, smt_access *access) {
       0x56
     };
 
-    insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
+    insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &first);
 
     // If the instrumented instruction is the target of a jump, let's update
     // the virtual reference
     // if (pivot == block_find(pivot)->begin && !pivot->virtual) {
     if (!ll_empty(&pivot->targetof) && !pivot->virtual) {
-      set_virtual_reference(pivot, current);
+      set_virtual_reference(pivot, first);
     }
   }
 
@@ -748,7 +764,7 @@ static void smt_instrument_access(block *blk, smt_access *access) {
 
   // Store chunk address in TLS buffer
   // ---------------------------------
-  // MOV %rsi, %fs:disp+(index*BUFFER_ENTRY_SIZE)
+  // MOV %rsi, %fs:disp+index*BUFFER_ENTRY_SIZE
 
   {
     unsigned char instr[9] = {
@@ -757,21 +773,22 @@ static void smt_instrument_access(block *blk, smt_access *access) {
 
     insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
 
-    ref = symbol_instr_rela_create(tls_buffer_sym, current, RELOC_TLSREL_32);
+    ref = instruction_rela_node(tls_buffer_sym, current, RELOCATE_TLS_RELATIVE_32);
     ref->relocation.addend = access->index * BUFFER_ENTRY_SIZE;
   }
 
-  // Increment access counter in TLS buffer
-  // --------------------------------------
-  // MOVQ access->count, %rsi
-  // ADD %rsi, %fs:disp+(index*BUFFER_ENTRY_SIZE)+BUFFER_FIELD_SIZE
+  // Increment block id + access counter in TLS buffer
+  // -------------------------------------------------
+  // MOVQ (blk->id << 16 | access->counter), %rsi
+  // ADD %rsi, %fs:disp+index*BUFFER_ENTRY_SIZE+BUFFER_ENTRY_SIZE/2
 
   {
     unsigned char instr[7] = {
       0x48, 0xc7, 0xc6, 0x00, 0x00, 0x00, 0x00
     };
 
-    *(uint32_t *)(instr + 3) = access->count;
+    // *(uint32_t *)(instr + 3) = access->counter;
+    *(uint32_t *)(instr + 3) = blk->id << 16 | access->counter;
 
     insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
   }
@@ -783,34 +800,8 @@ static void smt_instrument_access(block *blk, smt_access *access) {
 
     insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
 
-    ref = symbol_instr_rela_create(tls_buffer_sym, current, RELOC_TLSREL_32);
-    ref->relocation.addend = access->index * BUFFER_ENTRY_SIZE + BUFFER_FIELD_SIZE;
-  }
-
-  // Store block ID + selection bit in the TLS buffer
-  // ------------------------------------------------
-  // MOVQ (blk->id<<1|selbit), %rsi
-  // MOV %rsi, %fs:disp+(index*BUFFER_ENTRY_SIZE)+BUFFER_FIELD_SIZE*2
-
-  {
-    unsigned char instr[7] = {
-      0x48, 0xc7, 0xc6, 0x00, 0x00, 0x00, 0x00
-    };
-
-    *(uint32_t *)(instr + 3) = (blk->id << 1) | access->selected;
-
-    insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
-  }
-
-  {
-    unsigned char instr[9] = {
-      0x64, 0x48, 0x89, 0x34, 0x25, 0x00, 0x00, 0x00, 0x00
-    };
-
-    insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
-
-    ref = symbol_instr_rela_create(tls_buffer_sym, current, RELOC_TLSREL_32);
-    ref->relocation.addend = access->index * BUFFER_ENTRY_SIZE + BUFFER_FIELD_SIZE * 2;
+    ref = instruction_rela_node(tls_buffer_sym, current, RELOCATE_TLS_RELATIVE_32);
+    ref->relocation.addend = access->index * BUFFER_ENTRY_SIZE + BUFFER_ENTRY_SIZE / 2;
   }
 
   // Restore old register values
@@ -826,56 +817,47 @@ static void smt_instrument_access(block *blk, smt_access *access) {
   }
 }
 
-static size_t smt_instrument_block(block *blk, size_t *nextindex) {
+static size_t smt_instrument_block(block *blk) {
   smt_data *smt;
   smt_access *access, *highest;
 
+  double similarity;
   double overhead;
-  size_t ninstr, cinstr, index;
+  size_t ninstr;
+  size_t cinstr;
+
+  // Index in the TLS buffer (function-level scope)
+  static size_t index;
 
   smt = blk->smtracer;
 
-  index = *nextindex;
-
   // We compute the percentage overhead as a function of
   // the number of candidates and the user-defined accuracy
-  if (smt->ntotal == 1) {
-    // The overhead is 1 only if the accuracy is 1
-    overhead = (acc_threshold < 1) ? 0 : 1;
-  } else {
-    // The overhead depends on the total number of expressions
-    // vs. total number of candidates
-    overhead = pow(acc_threshold, (smt->ntotal - 1) / (smt->ncandidates - 1));
-  }
+  similarity = smt->ntotal / smt->ncandidates;
+  overhead = pow(acc_threshold, similarity);
 
   // The number of accesses that is actually instrumented
   // is computed using the number of candidates and the
   // overhead
   ninstr = ceil(overhead * smt->ncandidates);
+  cinstr = 0;
 
-  hnotice(3, "Instrumentable candidates: %lu; Total candidates: %lu; Total: %lu\n",
+  hnotice(3, "Instrumentable candidates: %u; Total candidates: %u; Total: %u\n",
     ninstr, smt->ncandidates, smt->ntotal);
 
   // Keep instrumenting until there's no more space left
   // in our bag full of overhead...
-  for (cinstr = 0; cinstr < ninstr; cinstr += 1) {
+  while(cinstr < ninstr) {
     highest = NULL;
 
-    // Find the next access to instrument according to its score
     for (access = smt->candidates; access; access = access->next) {
-      if (access->original != NULL) {
-        // While in simulation mode, duplicate accesses will
-        // have an average score equal to 0. This is a problem
-        // when another original (i.e., not having a duplicate)
-        // access has score 0.
-        // To avoid confusion between the two, we skip duplicates.
-        continue;
-      }
+
       if (highest == NULL && access->instrumented == false) {
         // The first intercepted access is the first occurring
         // access which hasn't been instrumented yet
         highest = access;
       }
+
       if (highest != NULL && access->instrumented == false) {
         // NOTE: strict inequality, since our bias is toward the
         // first occurring access within the basic block
@@ -892,52 +874,18 @@ static size_t smt_instrument_block(block *blk, size_t *nextindex) {
       break;
     }
 
-    highest->selected = true;
-    highest->instrumented = true;
-    highest->index = index++;
-
     smt_instrument_access(blk, highest);
 
-    hnotice(3, "Instrumented access '%s' at <%#08llx> (cinstr = %lu)\n",
-      highest->insn->i.x86.mnemonic, highest->insn->orig_addr, cinstr);
+    hnotice(3, "Instrumented access '%s' at <%#08llx>\n",
+      highest->insn->i.x86.mnemonic, highest->insn->orig_addr);
+
+    highest->instrumented = true;
+    highest->index = index;
+
+    index += 1;
+    cinstr += 1;
+
   }
-
-  if (simulated == true) {
-    // In simulation mode we instrument all the remaining accesses,
-    // which are the union of duplicate accesses and original
-    // non-instrumented ones. In doing this, we keep track of the
-    // fact that they were not selected.
-
-    for (access = smt->candidates; access; access = access->next) {
-      if (access->instrumented == true) {
-        continue;
-      }
-
-      if (access->original != NULL && access->original->instrumented == true) {
-        // Duplicate of an original instrumented access, so it is
-        // logically instrumented by our engine.
-        if (access->original->original != NULL) {
-          hinternal();
-        }
-        access->selected = true;
-      } else {
-        // Original, non-instrumented access, which is not logically
-        // instrumented by our engine (boooo!)
-        access->selected = false;
-      }
-
-      access->instrumented = true;
-      access->index = index++;
-
-      smt_instrument_access(blk, access);
-
-      hnotice(3, "Instrumented simulated access '%s' at <%#08llx> (cinstr = %lu)\n",
-        access->insn->i.x86.mnemonic, access->insn->orig_addr, cinstr);
-    }
-  }
-
-  // Update the next index prior to the next invocation
-  *nextindex = index;
 
   return cinstr;
 }
@@ -981,7 +929,7 @@ inline static bool smt_same_ireg(smt_access *target, smt_access *current) {
 }
 
 inline static size_t smt_absdiff_imm(smt_access *target, smt_access *current) {
-  return abs(target->insn->i.x86.disp - current->insn->i.x86.disp);
+  return abs(target->insn->i.x86.disp - target->insn->i.x86.disp);
 }
 
 inline static size_t smt_absdiff_sym(smt_access *target, smt_access *current) {
@@ -990,16 +938,16 @@ inline static size_t smt_absdiff_sym(smt_access *target, smt_access *current) {
 
   ptrdiff_t distance;
 
-  target_sym = instr_reference_weak(target->insn);
-  current_sym = instr_reference_weak(current->insn);
+  target_sym = target->insn->reference;
+  current_sym = current->insn->reference;
 
   target_sec = find_section(target_sym->secnum);
   current_sec = find_section(current_sym->secnum);
 
   if (target_sec == current_sec) {
     // if (target_sym != current_sym) {
-      distance = target_sym->offset + target_sym->relocation.addend;
-      distance -= current_sym->offset + current_sym->relocation.addend;
+      distance = target_sym->position + target_sym->relocation.addend;
+      distance -= current_sym->position + current_sym->relocation.addend;
 
       return abs(distance);
     // } else {
@@ -1011,14 +959,14 @@ inline static size_t smt_absdiff_sym(smt_access *target, smt_access *current) {
 }
 
 static inline bool smt_is_irr(smt_access *access) {
-  return (instr_reference_weak(access->insn) != NULL);
+  return (access->insn->reference != NULL);
 }
 
 static bool smt_same_template(smt_access *target, smt_access *current) {
   symbol *target_sym, *current_sym;
 
-  target_sym = instr_reference_weak(target->insn);
-  current_sym = instr_reference_weak(current->insn);
+  target_sym = target->insn->reference;
+  current_sym = current->insn->reference;
 
   if (target_sym == current_sym) {
     // When symbols are the same, the two accesses
@@ -1091,16 +1039,8 @@ static void smt_compute_access_scores(block *blk) {
   memset(distance, '\0', sizeof(double) * smt->ncandidates * smt->ncandidates);
 
   for (i = 0, target = smt->candidates; target; target = target->next, ++i) {
-    if (target->original != NULL) {
-      // Skip duplicated accesses (simulation mode)
-      continue;
-    }
 
     for (j = 0, current = smt->candidates; current; current = current->next, ++j) {
-      if (current->original != NULL) {
-        // Skip duplicated accesses (simulation mode)
-        continue;
-      }
 
       if (target == current || distance[i][j] > 0) {
         // If distance[i][j] is greater than zero, then we have
@@ -1236,7 +1176,7 @@ static void smt_call_routine(unsigned int total, symbol *callfunc, insn_info *pi
 
     insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
 
-    symbol_instr_rela_create(tls_buffer_sym, current, RELOC_TLSREL_32);
+    instruction_rela_node(tls_buffer_sym, current, RELOCATE_TLS_RELATIVE_32);
   }
 
   // Store total number of tracked accesses
@@ -1264,7 +1204,7 @@ static void smt_call_routine(unsigned int total, symbol *callfunc, insn_info *pi
 
   //   insert_instructions_at(current, instr, sizeof(instr), INSERT_AFTER, &current);
 
-  //   symbol_instr_rela_create(callfunc, current, RELOC_ABS_64);
+  //   instruction_rela_node(callfunc, current, RELOCATE_ABSOLUTE_64);
   // }
 
   // Call user-defined routine
@@ -1286,7 +1226,7 @@ static void smt_call_routine(unsigned int total, symbol *callfunc, insn_info *pi
 
     insert_instructions_at(pivot, instr, sizeof(instr), INSERT_BEFORE, &current);
 
-    symbol_instr_rela_create(callfunc, current, RELOC_PCREL_32);
+    instruction_rela_node(callfunc, current, RELOCATE_RELATIVE_32);
   }
 
   // Restore old register values
@@ -1373,7 +1313,7 @@ static void smt_update_vtable(insn_info *instr, char *vtable) {
   }
 }
 
-static bool smt_equal(smt_access *target, smt_access *current) {
+static bool smt_check_equivalence(smt_access *target, smt_access *current) {
   bool same;
 
   symbol *target_sym, *current_sym;
@@ -1391,8 +1331,8 @@ static bool smt_equal(smt_access *target, smt_access *current) {
     // Accesses refer to the same symbol, which is associated
     // with relocation information
 
-    target_sym = instr_reference_weak(target->insn);
-    current_sym = instr_reference_weak(current->insn);
+    target_sym = target->insn->reference;
+    current_sym = current->insn->reference;
 
     if (target_sym != current_sym) {
       // Different existing symbols mean non-equivalent accesses
@@ -1457,7 +1397,7 @@ static bool smt_equal(smt_access *target, smt_access *current) {
 
 static bool smt_resolve_access(block *blk, insn_info *instr, char *vtable) {
   smt_data *smt;
-  smt_access *target, *current, *prev;
+  smt_access *target, *current, *prev, *found;
 
   smt = blk->smtracer;
 
@@ -1465,7 +1405,7 @@ static bool smt_resolve_access(block *blk, insn_info *instr, char *vtable) {
   // access with the accesses already in the history
   target = calloc(sizeof(smt_access), 1);
 
-  target->count = 1;
+  target->counter = 1;
   target->insn = instr;
   target->instrumented = false;
 
@@ -1478,52 +1418,38 @@ static bool smt_resolve_access(block *blk, insn_info *instr, char *vtable) {
   prev = NULL;
 
   for (current = smt->candidates; current; prev = current, current = current->next) {
-    if (smt_equal(target, current)) {
+    if (smt_check_equivalence(target, current)) {
+      // If an equivalence access were already intercepted,
+      // skip this one and increment the counter of the former,
+      // then exit the function
       hnotice(3, "Found equivalence between accesses '%s' and '%s'\n",
         target->insn->i.x86.mnemonic, current->insn->i.x86.mnemonic);
 
-      if (simulated == false) {
-        // If an equivalence access was already intercepted,
-        // skip this one and increment the counter of the former,
-        // then get out of the function
-        current->count += 1;
+      current->counter += 1;
 
-        free(target);
-        return false;
-      } else {
-        // We are in simulation mode: the access is instrumented,
-        // but we keep memory of the fact that it were not
-        // selected by our engine
-        target->original = current;
-        break;
-      }
+      free(target);
+      return false;
     }
   }
 
-  // We append the access to the list of candidates for the
-  // current basic block, including simulated accesses
+  // We captured a new access, gotcha! It will be later logged into the
+  // application's TLS buffer
+  hnotice(3, "New access found '%s' at <%#08llx>\n",
+    target->insn->i.x86.mnemonic, target->insn->orig_addr);
+
   if (smt->candidates == NULL) {
     smt->candidates = target;
   } else {
     prev->next = target;
   }
 
-  // Counters are not incremented for simulated accesses,
-  // so as to preserve the goodness of simulation
-  if (target->original == NULL) {
-    // We captured a new access, gotcha! It will be later logged
-    // into the application's TLS buffer
-    hnotice(3, "New access found '%s' at <%#08llx>\n",
-      target->insn->i.x86.mnemonic, target->insn->orig_addr);
-
-    if (smt_is_irr(target)) {
-      smt->nirr += 1;
-    } else {
-      smt->nrri += 1;
-    }
-
-    smt->ncandidates += 1;
+  if (smt_is_irr(target)) {
+    smt->nirr += 1;
+  } else {
+    smt->nrri += 1;
   }
+
+  smt->ncandidates += 1;
 
   return true;
 }
@@ -1555,7 +1481,7 @@ static size_t smt_trace_func(function *func, symbol *callfunc) {
   block *blk;
   smt_data *smt;
 
-  size_t count, index;
+  size_t count;
 
   insn_info *instr;
   smt_access *access, *temp;
@@ -1570,9 +1496,6 @@ static size_t smt_trace_func(function *func, symbol *callfunc) {
 
   // Total number of instrumented accesses for this function
   count = 0;
-
-  // Index in the TLS buffer (function-level scope)
-  index = 0;
 
   for (blk = func->begin_blk; blk != func->end_blk->next; blk = blk->next) {
     smt = blk->smtracer;
@@ -1591,18 +1514,12 @@ static size_t smt_trace_func(function *func, symbol *callfunc) {
 
       // A subset of relevant accesses is actually instrumented
       // according to the requested accuracy factor
-      count += smt_instrument_block(blk, &index);
+      count += smt_instrument_block(blk);
 
       // Free unnecessary heap memory
       for (access = smt->candidates; access; access = temp) {
         temp = access->next;
-
-        // FIXME: there is still a free corruption which affect `smt->candidates`
-        // once a new instruction will be added to the code. In particular the
-        // `calloc` in the `instruction_add` will return the same memory block
-        // freed in this step which, though, will be used again in the future by
-        // `smt_same_template` function.
-        // free(access);
+        free(access);
       }
     }
 
@@ -1616,7 +1533,7 @@ static size_t smt_trace_func(function *func, symbol *callfunc) {
   // in which calls to this function are placed are referred
   // to as `flushpoints`
 
-  for (instr = func->begin_insn; instr; instr = instr->next) {
+  for (instr = func->insn; instr; instr = instr->next) {
 
     if (smt_is_flushpoint(instr, func)) {
       hnotice(3, "Found flushpoint '%s' at <%#08llx>\n",
@@ -1635,38 +1552,23 @@ static size_t smt_trace_func(function *func, symbol *callfunc) {
 }
 
 size_t smt_run(char *name, param **params, size_t numparams) {
-  section *sec, *text;
-
   symbol *callfunc;
   function *func;
 
   size_t count, func_count;
 
-  if (numparams > 5) {
+  if (numparams > 4) {
     hinternal();
   }
 
   // We expect the params to be passed in the appropriate order
-  // and never to be omitted
   blk_score_threshold = atof(params[0]->value);
-  chunk_size          = 1 << (atoi(params[1]->value));
-  acc_threshold       = atof(params[2]->value);
-  use_stack           = !strcmp(params[3]->value, "true");
-  simulated           = !strcmp(params[4]->value, "true");
+  chunk_size = 1 << (atoi(params[1]->value));
+  acc_threshold = atof(params[2]->value);
+  use_stack = (numparams == 4) && !strcmp(params[3]->value, "true");
 
   // A weak symbol is created that represents the user-defined function
-  for (text = NULL, sec = PROGRAM(sections)[PROGRAM(version)]; sec; sec = sec->next) {
-    if (sec->type == SECTION_CODE) {
-      text = sec;
-      break;
-    }
-  }
-
-  if (text == NULL) {
-    hinternal();
-  }
-
-  callfunc = symbol_create(name, SYMBOL_UNDEF, SYMBOL_GLOBAL, text, 0);
+  callfunc = create_symbol_node(name, SYMBOL_UNDEF, SYMBOL_GLOBAL, 0);
 
   // We now iterate on all basic blocks to instrument the appropriate accesses
   count = 0;
@@ -1689,8 +1591,8 @@ size_t smt_run(char *name, param **params, size_t numparams) {
         0x48, 0x81, 0xec, 0x80, 0x00, 0x00, 0x00
       };
 
-      // insert_instructions_at(func->begin_blk->end, instr, sizeof(instr),
-      //   INSERT_AFTER, NULL);
+      insert_instructions_at(func->begin_blk->end, instr, sizeof(instr),
+        INSERT_AFTER, NULL);
     }
 
     if (func_count > 0 && ll_empty(&func->callto)) {
@@ -1702,8 +1604,8 @@ size_t smt_run(char *name, param **params, size_t numparams) {
         0x48, 0x81, 0xc4, 0x80, 0x00, 0x00, 0x00
       };
 
-      // insert_instructions_at(func->end_blk->begin, instr, sizeof(instr),
-      //   INSERT_BEFORE, NULL);
+      insert_instructions_at(func->end_blk->begin, instr, sizeof(instr),
+        INSERT_BEFORE, NULL);
     }
 
   }

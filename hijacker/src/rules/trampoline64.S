@@ -57,9 +57,6 @@ trampoline:
 	push	%r14
 	push	%r15
 
-# OCCHIO CHE QUESTO DEVE ESSERE GESTITO DA HIJACKER NELLA GENERAZIONE DELLE ISTRUZIONI INTORNO ALLA CALL
-#	pushfw				# salva il registro EFLAGS
-	
 	# Push dei primi 4 registri vettoriali
 	sub	$16,%rsp
 	movsd	%xmm0,(%rsp)
@@ -71,6 +68,8 @@ trampoline:
 	movsd	%xmm3,(%rsp)
 
 	
+# OCCHIO CHE QUESTO DEVE ESSERE GESTITO DA HIJACKER NELLA GENERAZIONE DELLE ISTRUZIONI INTORNO ALLA CALL
+#	pushfw				# salva il registro EFLAGS
 
 	mov	%rsp, %rbp		# (12->24) Crea la finestra dello stack
 	add	$184, %rbp		# (4->8) %rbp deve puntare il valore di %rax nello stack
@@ -138,7 +137,6 @@ trampoline:
 	movslq	(%rdx), %rsi				# Carica la dimensione
 
 	.CallDymelor:
-
 	# Standard ABI V wants stack to BE ALIGNED to double word!!
 	# Section 5.2.1.2
 	sub $6, %rsp
@@ -154,13 +152,12 @@ trampoline:
 
 	#call	increment_stack_mov_count  # Chiama la funzione per il calcolo delle stack mov
 	
-#	cmp 	%rdi, %rsp		# Nello stack?
-#	jb	.Fine				# Se %esp è minore di %edi
+	#cmp 	%rdi, %rsp		# Nello stack?
+	#jb	.Fine				# Se %esp è minore di %edi
 
 	# La calling convention del System V ABI prevede che vengano passati
 	# per primi i registri %rdi e %rsi, in questa sequenza
 	# call	reverse_code_generator		# Chiama la funzione che si preoccupa della generazione del codice inverso
-	.Reverse:
 	call *16(%rdx)			# Chiama la funzione specificata nelle regole XML, contenuta nell'ultimo campo della struttura di trampoline
 
 	add $6, %rsp

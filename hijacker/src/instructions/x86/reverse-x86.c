@@ -42,15 +42,12 @@ void x86_trampoline_prepare(insn_info *target, unsigned char *func, int where) {
 	insn_info_x86 *x86;
 	insn_info *instr;
 	insn_entry *entry;
-
-	ll_node *rela_node;
 	symbol *sym;
-
 	unsigned int size;
 	int num;
 	int idx;
 
-	unsigned char flags;
+	unsigned char flags; // [SE]
 
 	// Retrieve information to fill the structure
 	// from the instruction descriptor get the x86 instrucion one
@@ -63,7 +60,6 @@ void x86_trampoline_prepare(insn_info *target, unsigned char *func, int where) {
 		herror(true, "Out of memory!\n");
 	}
 	bzero(entry, sizeof(insn_entry));
-
 
 	// fill the structure
 	entry->size = x86->span;
@@ -144,19 +140,16 @@ void x86_trampoline_prepare(insn_info *target, unsigned char *func, int where) {
 		insert_instructions_at(instr, mov, sizeof(mov), INSERT_AFTER, &instr);
 	}
 
-	// Warning! At this stage the displacement value could be zero
+	// Warning! The at this stage the displacement value could be zero
 	// since it can be the result of a relocation; therefore the structure
 	// would save an incorrect value. It is necessary to look for a relocation
 	// symbol, if any, and duplicate the entry relative to the exact
 	// point where the offset will be placed in the structure
-	for (rela_node = target->reference.first; rela_node; rela_node = rela_node->next) {
+	if(target->reference != NULL) {
 		hnotice(4, "A RELA node has been found to this instruction; we have to duplicate the RELA to the entry's offset\n");
 
-		sym = rela_node->elem;
-
-		// Note that prev*3 points to the MOV operation which is
-		// responsible for the displacement
-		symbol_instr_rela_create(sym, instr->prev->prev->prev, RELOC_ABS_32);
+		sym = target->reference;
+		instruction_rela_node(sym, instr->prev->prev->prev, RELOCATE_ABSOLUTE_32);
 	}
 
 	// Adds the pointer to the function that the trampoline module has to call at runtime
@@ -173,7 +166,7 @@ void x86_trampoline_prepare(insn_info *target, unsigned char *func, int where) {
 	hnotice(4, "Push the function pointer to '%s' in the trampoline structure\n", func);
 
 	sym = create_symbol_node(func, SYMBOL_UNDEF, SYMBOL_GLOBAL, 0);
-	symbol_instr_rela_create(sym, instr->prev, RELOC_ABS_64);
+	instruction_rela_node(sym, instr->prev, RELOCATE_ABSOLUTE_64);
 
 
 	hnotice(4, "Adds the call to the trampoline hijacker library function\n");
@@ -183,7 +176,7 @@ void x86_trampoline_prepare(insn_info *target, unsigned char *func, int where) {
 
 	// Checks and creates the symbol name that will be the target of the call
 	sym = create_symbol_node((unsigned char *)"trampoline", SYMBOL_UNDEF, SYMBOL_GLOBAL, 0);
-	symbol_instr_rela_create(sym, instr, RELOC_PCREL_32);
+	instruction_rela_node(sym, instr, RELOCATE_RELATIVE_32);
 
 	// in order to align the stack pointer we need to insert an ADD instruction
 	// to compensate the SUB used to make room for the structure

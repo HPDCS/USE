@@ -8,8 +8,7 @@ int variabile;
 char var;
 
 int main(void) {
-	char *addr = malloc(1);
-	*addr = 'x';
+	void *addr = malloc(1);
 	printf("%p\n", addr);
 	return 0;
 }

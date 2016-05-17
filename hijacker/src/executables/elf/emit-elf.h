@@ -32,8 +32,6 @@
 
 #include <elf/elf-defs.h>
 
-
-#define SECTION_INIT_SIZE 1024
 #define SECNAME_SIZE 256
 
 
