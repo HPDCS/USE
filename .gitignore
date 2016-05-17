@@ -32,11 +32,10 @@
 .cproject
 
 test
-phold 		 
-pcs		 
 pcs-prealloc 
 traffic  	 
 tcar	 
-phold 		 
 robot_explore
 hash 		 
+phold
+pcs
