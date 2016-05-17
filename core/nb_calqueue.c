@@ -382,7 +382,7 @@ static inline void nbc_flush_current(table* h, nbc_bucket_node* node)
  * @param payload the event to be enqueued
  *
  */
-static bool insert_std(nb_calqueue* queue, table* hashtable, nbc_bucket_node** new_node, int flag)
+static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 {
 	nbc_bucket_node *left_node, *right_node, *bucket;
 	unsigned int index;
@@ -574,7 +574,7 @@ static double compute_mean_separation_time(table* h,
 	if(new_bw < 0)
 	{
 
-		int sample_size;
+		unsigned int sample_size;
 		double average = 0.0;
 		double newaverage = 0.0;
 
@@ -743,7 +743,7 @@ static table* read_table(nb_calqueue* queue)
 						error("A\n");
 
 					replica2 = replica;
-					while(!insert_std(queue, new_h, &replica2, REMOVE_DEL) && queue->hashtable == h);
+					while(!insert_std(new_h, &replica2, REMOVE_DEL) && queue->hashtable == h);
 
 					if(queue->hashtable != h)
 						return queue->hashtable;
@@ -901,7 +901,7 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload)
 
 	do
 		h  = read_table(queue);
-	while(!insert_std(queue, h, &new_node, REMOVE_DEL_INV));
+	while(!insert_std(h, &new_node, REMOVE_DEL_INV));
 
 	nbc_flush_current(
 			h,
@@ -963,7 +963,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 
 
 		if(right_node == tail && size == 1 )
-			return node_malloc(NULL, INFTY, 1);
+			return NULL;
 
 		else if( LESS(right_timestamp, (index)*bucket_width) )
 			nbc_flush_current(h, right_node);
@@ -987,7 +987,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 			if( new_current < index )
 				continue;
 			//printf("nbc_dequeue: 0 evt type %u\n", ((msg_t*)(right_node->payload))->type); //da_cancellare
-			res = node_malloc(right_node->payload, right_timestamp, right_node->counter);
+			res = right_node->payload;
 			
 			//printf("nbc_dequeue: 1 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
 			if(CAS_x86(
@@ -1005,8 +1005,6 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 				//printf("nbc_dequeue: 2 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
 				return res;
 			}
-			else
-				free(res);
 		}
 //		else if(is_marked(right_node_next, DEL))
 //		{
@@ -1040,19 +1038,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 	}while(1);
 	return NULL;
 }
-void *nbc_get(nb_calqueue *queue) {
-	nbc_bucket_node *node;
-	void *payload;
 
-	node = nbc_dequeue(queue);
-	if (node == NULL) {
-		return NULL;
-	}
-
-	payload = node->payload;
-	free(node);
-	return payload;
-}
 /**
  * This function frees any node in the hashtable with a timestamp strictly less than a given threshold,
  * assuming that any thread does not hold any pointer related to any nodes
@@ -1064,7 +1050,7 @@ void *nbc_get(nb_calqueue *queue) {
  * @param timestamp the threshold such that any node with timestamp strictly less than it is removed and freed
  *
  */
-double nbc_prune(nb_calqueue *queue, double timestamp)
+double nbc_prune(double timestamp)
 {
 	unsigned int committed = 0;
 	nbc_bucket_node **prec, *tmp, *tmp_next;
@@ -1120,17 +1106,19 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 			{
 				tmp_next = tmp->next;
 				if(!is_marked(tmp_next, DEL) && !is_marked(tmp_next, INV))
-					error("Found a valid node during prune B "
-							"%p "
-							"%p "
-							"%llu "
-							"%f "
-							"%u "
-							"%u "
-							"%f "
+					error("Found a valid node during prune "
+							"NODE %p "
+							"NEXT %p "
+							"TAIL %p "
+							"MARK %llu "
+							"TS %f "
+							"PRUNE TS %f "
+							"TIE %u "
+							"TIE META %u "
 							"\n",
 							tmp,
 							tmp->next,
+							g_tail,
 							(unsigned long long) tmp->next & (3ULL),
 							tmp->timestamp,
 							timestamp,

@@ -114,7 +114,7 @@ int queue_min(void) {
 	//printf("queue_min: start\n");
     msg_t *node_ret;
 #ifdef NBC
-    node_ret = nbc_get(nbcalqueue);
+    node_ret = nbc_dequeue(nbcalqueue);
     if(node_ret == NULL){
 		//printf("NONONON\n");
         return 0;
@@ -175,7 +175,7 @@ void flush(void) {
 	
 	if(current_lvt>gvt) gvt = current_lvt;
 	
-	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
+	nbc_prune(current_lvt - LOOKAHEAD);
 #endif
 
 }

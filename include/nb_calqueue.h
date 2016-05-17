@@ -97,8 +97,7 @@ struct nb_calqueue
 
 extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload);
 extern nbc_bucket_node* nbc_dequeue(nb_calqueue *queue);
-extern double nbc_prune(nb_calqueue *queue, double timestamp);
+extern double nbc_prune(double timestamp);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold);
-extern void *nbc_get(nb_calqueue *queue);
 
 #endif /* DATATYPES_NONBLOCKING_QUEUE_H_ */
