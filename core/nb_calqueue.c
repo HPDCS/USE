@@ -42,7 +42,6 @@ __thread nbc_bucket_node *to_free_nodes = NULL;
 __thread nbc_bucket_node *to_free_tables_old = NULL;
 __thread nbc_bucket_node *to_free_tables_new = NULL;
 __thread unsigned int to_remove_nodes_count = 0;
-__thread unsigned int  lid;
 __thread unsigned int  mark;
 
 static nbc_bucket_node *g_tail;
@@ -156,11 +155,11 @@ static inline bool is_marked_for_search(void *pointer, unsigned int mask)
 *
 * @author Alessandro Pellegrini
 *
-* @param lid The local Id of the Light Process
+* @param tid The local Id of the Light Process
 * @return A value to be used as a unique mark for the message within the LP
 */
 static inline unsigned long long generate_ABA_mark() {
-	unsigned long long k1 = lid;
+	unsigned long long k1 = tid;
 	unsigned long long k2 = mark++;
 	unsigned long long res = (unsigned long long)( ((k1 + k2) * (k1 + k2 + 1) / 2) + k2 );
 	return ((~((unsigned long long)0))>>32) & res;
@@ -682,7 +681,7 @@ static table* read_table(nb_calqueue* queue)
 
 	if(h->new_table != NULL)
 	{
-		//printf("%u - MOVING BUCKETS\n", lid);
+		//printf("%u - MOVING BUCKETS\n", tid);
 		table *new_h = h->new_table;
 		nbc_bucket_node *array = h->array;
 		double new_bw = new_h->bucket_width;
@@ -762,7 +761,7 @@ static table* read_table(nb_calqueue* queue)
 					right_replica_field = right_node->replica;
 
 					if(right_replica_field == tail)
-						error("%u - C %p %p %p %p %p\n", lid, replica, replica2, tail, right_replica_field, right_node->replica);
+						error("%u - C %p %p %p %p %p\n", tid, replica, replica2, tail, right_replica_field, right_node->replica);
 
 					if(replica == replica2 && replica != right_replica_field)
 					{
