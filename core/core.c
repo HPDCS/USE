@@ -74,7 +74,7 @@ mauro
 //lock su LP
 int *lp_lock;
 
-//variabili per gestire le segnalazioni di priorità
+//variabili per gestire le segnalazioni di prioritï¿½
 simtime_t *wait_time;
 unsigned int *wait_time_id;
 int *wait_time_lk;
@@ -266,7 +266,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 
 
 //per ora non viene usato:
-//L'idea è di mettere un unico thread con lo scopo di regolare le variabili
+//L'idea ï¿½ di mettere un unico thread con lo scopo di regolare le variabili
 
 void *tuning(void *args){
 	unsigned int committed, old_committed, throughput, old_throughput, last_op, i;
@@ -284,7 +284,7 @@ void *tuning(void *args){
 			committed = thread_stats[tid].events_safe + thread_stats[tid].commits_htm + thread_stats[tid].commits_htm;
 			throughput = committed - old_committed;
 	
-		if(throughput < old_throughput){//poichè ho visto un peggioramento, inverto la direzione
+		if(throughput < old_throughput){//poichï¿½ ho visto un peggioramento, inverto la direzione
 			last_op=~last_op;
 			if(delta>0.025) delta = delta / 2;
 		}
@@ -336,15 +336,15 @@ int get_lp_lock(unsigned int mode, unsigned int bloc) {
 				return 1;
 
 		///PRENOTAZIONE
-		}else {	//voglio prendere il lock ma non posso perche non è libero
+		}else {	//voglio prendere il lock ma non posso perche non ï¿½ libero
 			if(wait_time_id[current_lp]==tid)
-				break; //se c'è il mio id, vuol dire che non è stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
+				break; //se c'ï¿½ il mio id, vuol dire che non ï¿½ stato aggiornato (o, se lo stanno aggiornando, me ne accorgo al giro successivo)
 
 			while (__sync_lock_test_and_set(&wait_time_lk[current_lp], 1))
 				while (wait_time_lk[current_lp]) ;
 				
 			old_tm_id = wait_time_id[current_lp];
-			old_tm = wait_time[current_lp];	//può avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
+			old_tm = wait_time[current_lp];	//puï¿½ avere senso leggerli prima e prendere il lock e rileggerli solo se necessario?
 			
 			if (current_lvt < old_tm || (current_lvt == old_tm && tid < old_tm_id)) {
 				wait_time[current_lp] = current_lvt;
@@ -440,64 +440,65 @@ void thread_loop(unsigned int thread_id) {
 			
 			old_mode = mode;
 			
-/// ==== ESECUZIONE SAFE ====
-///non ci sono problemi quindi eseguo normalmente*/
-		safe = check_safety(current_lvt);
-		
-		//compute the average number of events between the commit horizon and my currebt ts
-		pending_events = (current_lvt - gvt)/t_btw_evts - 1;
-		
-		if (safe == 0) {
-				mode = MODE_SAF;
-#ifdef REVERSIBLE
-				get_lp_lock(0, 1);
-#endif
-				//t_pre = CLOCK_READ();
-				clock_timer event_processing;
-				clock_timer_start(event_processing);
+			/// ==== ESECUZIONE SAFE ====
+			///non ci sono problemi quindi eseguo normalmente*/
+			safe = check_safety(current_lvt);
 
-				ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+			//compute the average number of events between the commit horizon and my current ts
+			pending_events = (current_lvt - gvt)/t_btw_evts - 1;
 
-				statistics_post_data(tid, EVENTS_SAFE, 1);
-				statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
+			if (safe == 0) {
+					mode = MODE_SAF;
 
-#ifdef REVERSIBLE
-				release_lp_lock();
-#endif
+					#ifdef REVERSIBLE
+					get_lp_lock(0, 1);
+					#endif
+					//t_pre = CLOCK_READ();
+					clock_timer event_processing;
+					clock_timer_start(event_processing);
 
+					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+
+					statistics_post_data(tid, EVENTS_SAFE, 1);
+					statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
+
+					#ifdef REVERSIBLE
+					release_lp_lock();
+					#endif
 			}
 
-/// ==== ESECUZNE HTM ====
-///non sono safe quindi ricorro ad eseguire eventi in htm*/
-			else if (false){//pending_events < reverse_execution_threshold) {
+#if HTM == 1
+			/// ==== ESECUZIONE HTM ====
+			///non sono safe quindi ricorro ad eseguire eventi in htm*/
+			else if (pending_events < reverse_execution_threshold) {
 				mode = MODE_HTM;
 				/*if(mode == old_mode) retries++;
 				if(retries!=0 && retries%(100)==0) printf("++++HO FATTO %d tentativi\n", retries);*/
 				
 				statistics_post_data(tid, EVENTS_HTM, 1);
 
-#ifdef REVERSIBLE
+				#ifdef REVERSIBLE
 				get_lp_lock(0, 1);
-#endif
+				#endif
 
 				// Get the time of the whole exectution of an event in HTM
 				clock_timer htm_event_processing;
 				clock_timer_start(htm_event_processing);
 				
-				
-				if(delta_count>0) //<- si potrebbe fare qualcosa di più utile qui
+				if(delta_count>0) //<- si potrebbe fare qualcosa di piï¿½ utile qui
 					throttling(pending_events);
 
 				if ((status = _xbegin()) == _XBEGIN_STARTED) {
 
 					ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-#ifdef THROTTLING
+					#ifdef THROTTLING
 					// Get the time of the whole time spent in throttling
 					// (NOTE! only for future committed events)
 					clock_timer htm_throttling;
 					clock_timer_start(htm_throttling);
-#endif
+					#endif
+
 					if (check_safety(current_lvt) == 0) {
 						_xend();
 						
@@ -505,22 +506,23 @@ void thread_loop(unsigned int thread_id) {
 						statistics_post_data(tid, CLOCK_HTM_THROTTLE, clock_timer_value(htm_throttling));
 						statistics_post_data(tid, CLOCK_HTM, clock_timer_value(htm_event_processing));
 
-#ifdef REVERSIBLE
+						#ifdef REVERSIBLE
 						release_lp_lock();
-#endif
-
-
-					} else {
+						#endif
+					}
+					else {
 						_xabort(_ROLLBACK_CODE);
 					}
-				} else {
+				}
+				else {
 					
 					statistics_post_data(tid, ABORT_TOTAL, 1);
 					
 					if (_XABORT_CODE(status) == _ROLLBACK_CODE) {
 						statistics_post_data(tid, ABORT_UNSAFE, 1);
 						
-					} else {
+					}
+					else {
 						if (status & _XABORT_RETRY){
 							statistics_post_data(tid, ABORT_RETRY, 1);
 						}
@@ -538,24 +540,25 @@ void thread_loop(unsigned int thread_id) {
 							statistics_post_data(tid, ABORT_NESTED, 1);
 						}
 					}
-#ifdef REVERSIBLE
+					#ifdef REVERSIBLE
 					release_lp_lock();
-#endif
+					#endif
 					statistics_post_data(tid, CLOCK_HTM, clock_timer_value(htm_event_processing));
 					continue;
-#ifdef REVERSIBLE
-foldpath:
+
+					#ifdef REVERSIBLE
+					foldpath:
 					printf("FOLDPATH\n");
 					release_lp_lock();
 					//statistics_post_data(tid, CLOCK_HTM, CLOCK_READ() - t_pre);
 					goto reversible;
-#endif
+					#endif
 				}
-
 			}
+#endif
 
-/// ==== ESECUZIONE REVERSIBILE ====
-///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
+			/// ==== ESECUZIONE REVERSIBILE ====
+			///mi sono allontanato molto dal GVT, quindi preferisco un esecuzione reversibile*/
 #ifdef REVERSIBLE
 			else {
 reversible:
@@ -563,7 +566,7 @@ reversible:
 				mode = MODE_STM;
 
 				if(get_lp_lock(1, 0)==0)
-					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
+					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalitï¿½ transazionale
 
 				statistics_post_data(tid, EVENTS_STM, 1);
 
