@@ -396,6 +396,11 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 	search(bucket, new_node_timestamp, new_node_counter, &left_node, &right_node, flag);
 
 	(*new_node)->next = right_node;
+	if(flag == REMOVE_DEL)
+		(*new_node)->next = get_marked(right_node, INV);
+
+
+
 
 	if(new_node_counter == 0)
 		(*new_node)->counter = 1 + ( -D_EQUAL(new_node_timestamp, left_node->timestamp ) & left_node->counter );
@@ -537,7 +542,7 @@ static void block_table(table* h, unsigned int *index, double *min_timestamp)
 				(
 					is_marked(right_node_next, DEL) ||
 					is_marked(right_node_next, INV) ||
-					(	get_unmarked(right_node_next) == right_node_next && (
+					(	get_unmarked(right_node_next) == right_node_next && !(
 							cas_result = CAS_x86(
 							(volatile unsigned long long *) &(right_node->next),
 							(unsigned long long)			right_node_next,
@@ -692,13 +697,13 @@ static table* read_table(nb_calqueue* queue)
 			block_table(h, &index, &min_timestamp);
 			double newaverage = compute_mean_separation_time(h, new_h->size, queue->threshold, index, min_timestamp);
 			//if
-			(
+			//(
 					CAS_x86(
 							(volatile unsigned long long *) &(new_h->bucket_width),
 							*( (unsigned long long*)  &new_bw),
 							*( (unsigned long long*)  &newaverage)
 					)
-				)
+			//	)
 				//printf("COMPUTE BW %.20f %u\n", newaverage, new_h->size)
 				;
 		}
@@ -722,7 +727,7 @@ static table* read_table(nb_calqueue* queue)
 						(
 							is_marked(right_node_next, DEL) ||
 							is_marked(right_node_next, INV) ||
-							(	get_unmarked(right_node_next) == right_node_next && (
+							(	get_unmarked(right_node_next) == right_node_next && !(
 									CAS_x86(
 									(volatile unsigned long long *) &(right_node->next),
 									(unsigned long long)			right_node_next,
@@ -784,6 +789,17 @@ static table* read_table(nb_calqueue* queue)
 
 					do
 					{
+						right_node_next = right_replica_field->next;
+						marked = is_marked(right_node_next, INV);
+						if(marked)
+							cas_result = CAS_x86(
+											(volatile unsigned long long *) &(right_replica_field->next),
+											(unsigned long long)			right_node_next,
+											(unsigned long long) 			get_unmarked(right_node_next)
+										);
+					}while( marked && !cas_result ) ;
+
+					do{
 						right_node_next = right_node->next;
 						marked = is_marked(right_node_next, DEL);
 						if(!marked)
@@ -794,18 +810,6 @@ static table* read_table(nb_calqueue* queue)
 										);
 
 					}while( !marked && !cas_result ) ;
-
-					do
-					{
-						right_node_next = right_replica_field->next;
-						marked = is_marked(right_node_next, INV);
-						if(marked)
-							cas_result = CAS_x86(
-											(volatile unsigned long long *) &(right_replica_field->next),
-											(unsigned long long)			right_node_next,
-											(unsigned long long) 			get_unmarked(right_node_next)
-										);
-					}while( marked && !cas_result ) ;
 
 					nbc_flush_current(
 							new_h,

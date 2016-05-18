@@ -124,7 +124,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 					}
 				}
 			}
-			TEMP = receiver;
+
 			receiver = GetNeighbourId(me, receiver);
 
 			switch (DISTRIBUZIONE) {
