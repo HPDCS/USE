@@ -270,6 +270,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 //per ora non viene usato:
 //L'idea � di mettere un unico thread con lo scopo di regolare le variabili
 
+#if HTM == 1
 void *tuning(void *args){
 	unsigned int committed, old_committed, throughput, old_throughput, last_op, i;
 	old_throughput = 0;
@@ -314,6 +315,7 @@ void *tuning(void *args){
 	
 	pthread_exit(NULL);
 }
+#endif
 
 int check_waiting(){
 	return (wait_time[current_lp] < current_lvt || (wait_time[current_lp] == current_lvt && wait_time_id[current_lp] < tid));
@@ -630,8 +632,10 @@ reversible:
 				// it will be soon commited
 				statistics_post_data(tid, COMMITS_STM, 1);
 			}
+#else
+			else
+				continue;
 #endif
-
 			break;
 		}
 
