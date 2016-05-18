@@ -84,25 +84,25 @@ all:
 all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
-pcs: _pcs mm core link
+pcs: clean _pcs mm core link
 
 pcs-prealloc: TARGET=pcs-prealloc 
-pcs-prealloc: _pcs_prealloc mm core link
+pcs-prealloc: clean _pcs_prealloc mm core link
 
 traffic: TARGET=traffic 
-traffic: _traffic mm core link
+traffic: clean _traffic mm core link
 
 tcar: TARGET=tcar 
-tcar: _tcar mm core link
+tcar: clean _tcar mm core link
 
 phold: TARGET=phold 
-phold: _phold mm core link
+phold: clean  _phold mm core link
 
 robot_explore: TARGET=robot_explore 
-robot_explore: _robot_explore mm core link
+robot_explore: clean _robot_explore mm core link
 
 hash: TARGET=hash 
-hash: _hash mm core link
+hash: clean _hash mm core link
 
 
 link:
