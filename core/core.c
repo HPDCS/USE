@@ -250,7 +250,7 @@ unsigned int check_safety(simtime_t time){
             events++;
     }
     
-    return 0;//return events;
+    return events;
 }
 
 bool check_termination(void) {

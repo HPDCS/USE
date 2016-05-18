@@ -11,6 +11,8 @@
 #define LOOP_COUNT 100
 #define COMPLETE_EVENTS 1000
 #define COMPLETE_TIME 200000
+#define EVENTS_PER_LP 5
+
 #define TAU 1
 
 

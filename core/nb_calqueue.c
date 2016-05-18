@@ -1051,10 +1051,12 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
  */
 double nbc_prune(double timestamp)
 {
+	return 0.0;
 	unsigned int committed = 0;
 	nbc_bucket_node **prec, *tmp, *tmp_next;
 	nbc_bucket_node **meta_prec, *meta_tmp, *current_meta_node;
 	unsigned int counter;
+
 
 	if(to_free_tables_old != NULL)
 	{

@@ -20,8 +20,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	simtime_t timestamp=0;
 	simtime_t delta=0;
 	
-	for ( i = 0 ; i < 10000 ; i++) 
-		j= i*i;
+//	for ( i = 0 ; i < 10000 ; i++)
+//		j= i*i;
 
 	switch(event_type) {
 
