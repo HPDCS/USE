@@ -147,6 +147,7 @@ void _mkdir(const char *path) {
 	}
 }
 
+#if HTM == 1
 void throttling(unsigned int events) {
 	unsigned long long tick_count;
 	unsigned int i, j;
@@ -162,6 +163,7 @@ void throttling(unsigned int events) {
 			break;
 	}
 }
+#endif
 
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
@@ -440,13 +442,13 @@ void thread_loop(unsigned int thread_id) {
 			
 			old_mode = mode;
 			
-			/// ==== ESECUZIONE SAFE ====
-			///non ci sono problemi quindi eseguo normalmente*/
 			safe = check_safety(current_lvt);
-
 			//compute the average number of events between the commit horizon and my current ts
 			pending_events = (current_lvt - gvt)/t_btw_evts - 1;
 
+
+			/// ==== ESECUZIONE SAFE ====
+			///non ci sono problemi quindi eseguo normalmente*/
 			if (safe == 0) {
 					mode = MODE_SAF;
 
