@@ -43,6 +43,10 @@
 #define MINIMUM_SIZE 1
 
 
+#define ENABLE_EXPANSION 1
+#define ENABLE_PRUNE 	 1
+
+
 extern __thread unsigned int  lid;
 
 

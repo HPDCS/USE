@@ -39,10 +39,17 @@
 #include "core.h"
 
 __thread nbc_bucket_node *to_free_nodes = NULL;
+__thread nbc_bucket_node *to_free_nodes_old = NULL;
+
 __thread nbc_bucket_node *to_free_tables_old = NULL;
 __thread nbc_bucket_node *to_free_tables_new = NULL;
+
 __thread unsigned int to_remove_nodes_count = 0;
 __thread unsigned int  mark;
+__thread unsigned int  prune_count = 0;
+
+static unsigned int *prune_array;
+static unsigned int threads;
 
 static nbc_bucket_node *g_tail;
 
@@ -55,10 +62,6 @@ static nbc_bucket_node *g_tail;
 
 #define REMOVE_DEL		 0
 #define REMOVE_DEL_INV	 1
-
-
-#define ENABLE_EXPANSION 1
-#define ENABLE_PRUNE 	 0
 
 
 /**
@@ -889,6 +892,10 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold)
 {
 	unsigned int i = 0;
 
+	threads = threshold;
+	prune_array = (unsigned int*) malloc(sizeof(unsigned int)*threshold*threshold);
+	memset(prune_array, 0, sizeof(unsigned int)*threshold*threshold);
+
 	nb_calqueue* res = (nb_calqueue*) malloc(sizeof(nb_calqueue));
 	if(res == NULL)
 		error("No enough memory to allocate queue\n");
@@ -1137,106 +1144,136 @@ double nbc_prune(double timestamp)
 	nbc_bucket_node **prec, *tmp, *tmp_next;
 	nbc_bucket_node **meta_prec, *meta_tmp, *current_meta_node;
 	unsigned int counter;
+	unsigned int i=0;
+	unsigned int flag = 1;
 
+	prune_count++;
 
-
-	if(to_free_tables_old != NULL)
-	{
-		if(to_free_tables_old->timestamp == INFTY)
-			to_free_tables_old->timestamp = timestamp;
-		else if(to_free_tables_old->timestamp < timestamp)
-		{
-			to_free_tables_old->counter++;
-			to_free_tables_old->timestamp = timestamp;
-		}
-
-
-		if(to_free_tables_old->counter > 3)
-		{
-			while(to_free_tables_old != NULL)
-			{
-				nbc_bucket_node *my_tmp = to_free_tables_old;
-				to_free_tables_old = to_free_tables_old->next;
-
-				table *h = (table*) my_tmp->payload;
-				free(h->array);
-				free(h);
-				free(my_tmp);
-			}
-		}
-	}
+	if(prune_count < 100)
+		return 0.0;
 	else
+		prune_count = 0;
+
+
+	for(;i<threads;i++)
 	{
-		to_free_tables_old = to_free_tables_new;
-		to_free_tables_new = NULL;
+		prune_array[tid + i*threads] = 1;
+		flag &= prune_array[tid*threads +i];
 	}
 
-
-	current_meta_node = to_free_nodes;
-	meta_prec = (nbc_bucket_node**)&(to_free_nodes);
-
-	while(current_meta_node != NULL)
+	if(flag == 1)
 	{
-
-		if(	LESS(current_meta_node->timestamp, timestamp) )
+		if(to_free_tables_old != NULL)
 		{
-			counter = current_meta_node->counter;
-			prec = (nbc_bucket_node**)&(current_meta_node->payload);
-			tmp = *prec;
-			tmp = get_unmarked(tmp);
-
-			while(counter-- != 0)
-			{
-				tmp_next = tmp->next;
-				if(!is_marked(tmp_next, DEL) && !is_marked(tmp_next, INV))
-					error("Found a valid node during prune "
-							"NODE %p "
-							"NEXT %p "
-							"TAIL %p "
-							"MARK %llu "
-							"TS %f "
-							"PRUNE TS %f "
-							"TIE %u "
-							"TIE META %u "
-							"\n",
-							tmp,
-							tmp->next,
-							g_tail,
-							(unsigned long long) tmp->next & (3ULL),
-							tmp->timestamp,
-							timestamp,
-							counter,
-							current_meta_node->counter);
-
-				if( LESS(tmp->timestamp, timestamp))
+//			if(to_free_tables_old->timestamp == INFTY)
+//				to_free_tables_old->timestamp = timestamp;
+//			else if(to_free_tables_old->timestamp < timestamp)
+//			{
+//				to_free_tables_old->counter++;
+//				to_free_tables_old->timestamp = timestamp;
+//			}
+//			if(to_free_tables_old->counter > 3)
+//			{
+				while(to_free_tables_old != NULL)
 				{
-					current_meta_node->counter--;
-					free(tmp);
-					committed++;
-				}
-				tmp =  get_unmarked(tmp_next);
-			}
+					nbc_bucket_node *my_tmp = to_free_tables_old;
+					to_free_tables_old = to_free_tables_old->next;
 
-			if(current_meta_node->counter == 0)
-			{
-				meta_tmp = current_meta_node;
-				*meta_prec = current_meta_node->next;
-				current_meta_node = current_meta_node->next;
-				free(meta_tmp);
-			}
-			else
-			{
-				meta_prec = (nbc_bucket_node**) & ( current_meta_node->next );
-				current_meta_node = current_meta_node->next;
-			}
+					table *h = (table*) my_tmp->payload;
+					free(h->array);
+					free(h);
+					free(my_tmp);
+				}
+//			}
 		}
 		else
 		{
-			meta_prec = (nbc_bucket_node**)  & ( current_meta_node->next );
-			current_meta_node = current_meta_node->next;
+			to_free_tables_old = to_free_tables_new;
+			to_free_tables_new = NULL;
 		}
+
+
+		if(to_free_nodes_old != NULL)
+		{
+
+			current_meta_node = to_free_nodes_old;
+			meta_prec = (nbc_bucket_node**)&(to_free_nodes_old);
+
+			while(current_meta_node != NULL)
+			{
+				//if(	LESS(current_meta_node->timestamp, timestamp) )
+				{
+					counter = current_meta_node->counter;
+					prec = (nbc_bucket_node**)&(current_meta_node->payload);
+					tmp = *prec;
+					tmp = get_unmarked(tmp);
+
+					while(counter-- != 0)
+					{
+						tmp_next = tmp->next;
+						if(!is_marked(tmp_next, DEL) && !is_marked(tmp_next, INV))
+							error("Found a %s node during prune "
+									"NODE %p "
+									"NEXT %p "
+									"TAIL %p "
+									"MARK %llu "
+									"TS %f "
+									"PRUNE TS %f "
+									"TIE %u "
+									"TIE META %u "
+									"\n",
+									is_marked(tmp_next, MOV) ? "MOV" : "VAL",
+									tmp,
+									tmp->next,
+									g_tail,
+									(unsigned long long) tmp->next & (3ULL),
+									tmp->timestamp,
+									timestamp,
+									counter,
+									current_meta_node->counter);
+
+						//if( LESS(tmp->timestamp, timestamp))
+						{
+							current_meta_node->counter--;
+							free(tmp);
+							committed++;
+						}
+						tmp =  get_unmarked(tmp_next);
+					}
+
+					if(current_meta_node->counter == 0)
+					{
+						meta_tmp = current_meta_node;
+						*meta_prec = current_meta_node->next;
+						current_meta_node = current_meta_node->next;
+						free(meta_tmp);
+					}
+					else
+					{
+						meta_prec = (nbc_bucket_node**) & ( current_meta_node->next );
+						current_meta_node = current_meta_node->next;
+					}
+				}
+//				else
+//				{
+//					meta_prec = (nbc_bucket_node**)  & ( current_meta_node->next );
+//					current_meta_node = current_meta_node->next;
+//				}
+			}
+			to_remove_nodes_count -= committed;
+		}
+		else
+		{
+			to_free_nodes_old = to_free_nodes;
+			to_free_nodes = NULL;
+		}
+
+
+		for(i=0;i<threads;i++)
+			prune_array[tid*threads +i] = 0;
+
+
 	}
-	to_remove_nodes_count -= committed;
 	return (double)committed;
 }
 
