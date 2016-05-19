@@ -967,6 +967,24 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload)
 	//printf("nbc_enqueue: evt type %u\n", ((msg_t*)(new_node->payload))->type);//da_cancellare
 }
 
+static bool CAS_for_mark( nbc_bucket_node* right_node, nbc_bucket_node* right_node_next)
+{
+	return CAS_x86(
+			(volatile unsigned long long *)&(right_node->next),
+			(unsigned long long) get_unmarked(right_node_next),
+			(unsigned long long) get_marked(right_node_next, DEL)
+			);
+
+}
+
+static bool CAS_for_increase_cur(table* h, unsigned long long current, unsigned long long newCur)
+{
+	return CAS_x86(
+			(volatile unsigned long long *)&(h->current),
+			(unsigned long long)			current,
+			(unsigned long long) 			newCur				);
+}
+
 /**
  * This function dequeue from the nonblocking queue. The cost of this operation when succeeds should be O(1)
  *
@@ -1031,11 +1049,13 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 
 			unsigned long long newCur =  ( ( unsigned long long ) index+1 ) << 32;
 			newCur |= generate_ABA_mark();
-				CAS_x86(
-						(volatile unsigned long long *)&(h->current),
-						(unsigned long long)			current,
-						(unsigned long long) 			newCur
-				);
+//				CAS_x86(
+//						(volatile unsigned long long *)&(h->current),
+//						(unsigned long long)			current,
+//						(unsigned long long) 			newCur				)
+			CAS_for_increase_cur(h, current, newCur)
+
+			;
 		}
 		else if(!is_marked(right_node_next, DEL))
 		{
@@ -1046,16 +1066,18 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 			res = right_node->payload;
 			
 			//printf("nbc_dequeue: 1 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
-			if(CAS_x86(
-								(volatile unsigned long long *)&(right_node->next),
-								(unsigned long long) get_unmarked(right_node_next),
-								(unsigned long long) get_marked(right_node_next, DEL)
-								)
-							)
+			if(
+//					CAS_x86(
+//								(volatile unsigned long long *)&(right_node->next),
+//								(unsigned long long) get_unmarked(right_node_next),
+//								(unsigned long long) get_marked(right_node_next, DEL)
+//								)
+					CAS_for_mark(right_node, right_node_next)
+				)
 			{
 				nbc_bucket_node *left_node, *right_node;
 
-				search(min, right_timestamp, -1,  &left_node, &right_node, REMOVE_DEL_INV);
+				search(min, right_timestamp, 0,  &left_node, &right_node, REMOVE_DEL_INV);
 				atomic_dec_x86(&(h->counter));
 
 				//printf("nbc_dequeue: 2 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
