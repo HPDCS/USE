@@ -29,6 +29,9 @@
 #include "simtypes.h"
 #include "lookahead.h"
 
+#ifdef REVERSIBLE
+#undef REVERSIBLE
+#endif
 
 //id del processo principale
 #define _MAIN_PROCESS		0

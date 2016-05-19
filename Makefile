@@ -7,7 +7,7 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
-REVERSIBLE=1
+#REVERSIBLE=1
 ARCH_X86=1
 ARCH_X86_64=1
 MALLOC = 1

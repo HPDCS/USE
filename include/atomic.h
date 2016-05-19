@@ -35,7 +35,9 @@
 
 #define SPINLOCK_GIVES_COUNT
 
-
+#ifndef ARCH_X86_64
+#define ARCH_X86_64
+#endif
 
 
 #if defined(ARCH_X86) || defined(ARCH_X86_64)
