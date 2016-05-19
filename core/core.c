@@ -29,9 +29,9 @@
 #include "simtypes.h"
 #include "lookahead.h"
 
-#ifdef REVERSIBLE
-#undef REVERSIBLE
-#endif
+//#ifdef REVERSIBLE
+//#undef REVERSIBLE
+//#endif
 
 //id del processo principale
 #define _MAIN_PROCESS		0
@@ -569,7 +569,6 @@ void thread_loop(unsigned int thread_id) {
 #ifdef REVERSIBLE
 			else {
 reversible:
-				continue;
 				mode = MODE_STM;
 
 				if(get_lp_lock(1, 0)==0)
