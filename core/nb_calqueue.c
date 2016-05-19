@@ -655,7 +655,13 @@ static double compute_mean_separation_time(table* h,
 				{
 
 					tmp_next = tmp->next;
-					if(!is_marked(tmp_next, DEL) && tmp->counter != HEAD_ID && GEQ(tmp_timestamp, min_timestamp + old_bw*(i)))
+					if(
+							!is_marked(tmp_next, DEL) &&
+							!is_marked(tmp_next, INV) &&
+							tmp->counter != HEAD_ID   &&
+							GEQ(tmp_timestamp, min_timestamp + old_bw*(i)) &&
+							!D_EQUAL(tmp_timestamp, sample_array[counter-1])
+					)
 						sample_array[counter++] = tmp_timestamp;
 					else
 					{
