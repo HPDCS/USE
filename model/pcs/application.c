@@ -4,6 +4,7 @@
 #include <ROOT-Sim.h>
 
 #include "application.h"
+#include <lookahead.h>
 
 
 unsigned int limit_complete_calls = COMPLETE_CALLS;//int complete_calls = COMPLETE_CALLS;
@@ -60,28 +61,28 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			state->ta_change = TA_CHANGE;
 			state->channels_per_cell = CHANNELS_PER_CELL;
 
-			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-				p[w] = malloc(sizeof(channel));	
-				if(p[w] == NULL){
-					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-					abort();		
-				}
-				*p[w] = 'x';
-			}
-			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-				free(p[w]);
-			}
-			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-				p[w] = malloc(sizeof(sir_data_per_cell));
-				if(p[w] == NULL){
-					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-					abort();		
-				}
-				*p[w] = 'x';
-			}
-			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-				free(p[w]);
-			}
+//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+//				p[w] = malloc(sizeof(channel));
+//				if(p[w] == NULL){
+//					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+//					abort();
+//				}
+//				*p[w] = 'x';
+//			}
+//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+//				free(p[w]);
+//			}
+//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+//				p[w] = malloc(sizeof(sir_data_per_cell));
+//				if(p[w] == NULL){
+//					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+//					abort();
+//				}
+//				*p[w] = 'x';
+//			}
+//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
+//				free(p[w]);
+//			}
 
 
 			// Show current configuration, only once
@@ -91,7 +92,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 				fflush(stdout);
 			}
 
-			state->channel_counter = state->channels_per_cell;
+//			state->channel_counter = state->channels_per_cell;
 
 			// Setup channel state
 			state->channel_state = malloc(sizeof(unsigned int) * 2 * (CHANNELS_PER_CELL / BITS + 1));
@@ -135,15 +136,15 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 				switch (DURATION_DISTRIBUTION) {
 
 					case UNIFORM:
-						new_event_content.call_term_time = now + (simtime_t)(state->ta_duration * Random());
+						new_event_content.call_term_time = LOOKAHEAD + now + (simtime_t)(state->ta_duration * Random());
 						break;
 
 					case EXPONENTIAL:
-						new_event_content.call_term_time = now + (simtime_t)(Expent(state->ta_duration));
+						new_event_content.call_term_time = LOOKAHEAD + now + (simtime_t)(Expent(state->ta_duration));
 						break;
 
 					default:
- 						new_event_content.call_term_time = now + (simtime_t) (5 * Random() );
+ 						new_event_content.call_term_time = LOOKAHEAD + now + (simtime_t) (5 * Random() );
 				}
 
 				// Determine whether the call will be handed-off or not
@@ -151,15 +152,15 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 					case UNIFORM:
 
-						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
+						handoff_time  = LOOKAHEAD + now + (simtime_t)((state->ta_change) * Random());
 						break;
 
 					case EXPONENTIAL:
-						handoff_time = now + (simtime_t)(Expent(state->ta_change));
+						handoff_time = LOOKAHEAD + now + (simtime_t)(Expent(state->ta_change));
 						break;
 
 					default:
-						handoff_time = now + (simtime_t)(5 * Random());
+						handoff_time = LOOKAHEAD + now + (simtime_t)(5 * Random());
 
 				}
 
@@ -179,15 +180,15 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			switch (DISTRIBUTION) {
 
 				case UNIFORM:
-					timestamp= now + (simtime_t)(state->ta * Random());
+					timestamp= LOOKAHEAD + now + (simtime_t)(state->ta * Random());
 					break;
 
 				case EXPONENTIAL:
-					timestamp= now + (simtime_t)(Expent(state->ta));
+					timestamp= LOOKAHEAD + now + (simtime_t)(Expent(state->ta));
 					break;
 
 				default:
-					timestamp= now + (simtime_t) (5 * Random());
+					timestamp= LOOKAHEAD + now + (simtime_t) (5 * Random());
 
 			}
 
@@ -214,7 +215,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			state->leaving_handoffs++;
 //			deallocation(me, state, event_content->channel, event_content, now);
 
-			new_event_content.call_term_time =  event_content->call_term_time;
+		//	new_event_content.call_term_time =  event_content->call_term_time;
 			break;
 
         	case HANDOFF_RECV:
@@ -231,16 +232,15 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 				switch (CELL_CHANGE_DISTRIBUTION) {
 					case UNIFORM:
-						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
+						handoff_time  = LOOKAHEAD + now + (simtime_t)((state->ta_change) * Random());
 
 						break;
 					case EXPONENTIAL:
-						handoff_time = now + (simtime_t)(Expent( state->ta_change ));
+						handoff_time = LOOKAHEAD + now + (simtime_t)(Expent( state->ta_change ));
 
 						break;
 					default:
-						handoff_time = now+
-			    			(simtime_t) (5 * Random());
+						handoff_time = LOOKAHEAD + now + (simtime_t) (5 * Random());
 				}
 
 				if(new_event_content.call_term_time < handoff_time ) {
