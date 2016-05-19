@@ -104,7 +104,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 				state->channel_state[w] = 0;
 
 			// Start the simulation
-			timestamp = (simtime_t) (20 * Random());
+			timestamp = (simtime_t) (TA * Random());
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
 //			printf("INIT %d: START at %f\n", me, timestamp);
 

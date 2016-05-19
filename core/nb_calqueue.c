@@ -48,7 +48,7 @@ __thread unsigned int to_remove_nodes_count = 0;
 __thread unsigned int  mark;
 __thread unsigned int  prune_count = 0;
 
-static unsigned int *prune_array;
+static unsigned int * volatile prune_array;
 static unsigned int threads;
 
 static nbc_bucket_node *g_tail;
