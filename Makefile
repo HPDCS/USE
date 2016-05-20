@@ -59,7 +59,7 @@ CORE_SOURCES =  core/core.c\
 		core/numerical.c\
 		statistics/statistics.c\
 #		mm/reverse.c\
-		mm/slab.c
+#		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\

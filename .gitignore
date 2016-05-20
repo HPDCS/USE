@@ -41,3 +41,5 @@ phold
 pcs
 /tcar
 log_test/*
+/pcs_lf
+/pcs_sl
