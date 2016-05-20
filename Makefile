@@ -10,7 +10,7 @@ LIBS=-pthread -lm
 #REVERSIBLE=1
 ARCH_X86=1
 ARCH_X86_64=1
-MALLOC = 1
+#MALLOC = 1
 
 ifdef MALLOC
 CFLAGS=$(FLAGS) -DNO_DYMELOR
@@ -58,7 +58,7 @@ CORE_SOURCES =  core/core.c\
 		core/main.c\
 		core/numerical.c\
 		statistics/statistics.c\
-		mm/reverse.c\
+#		mm/reverse.c\
 		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
