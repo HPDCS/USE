@@ -45,6 +45,7 @@
 
 #define ENABLE_EXPANSION 1
 #define ENABLE_PRUNE 	 1
+#define FLUSH_SMART		 1
 
 
 extern __thread unsigned int  lid;

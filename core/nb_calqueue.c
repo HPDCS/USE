@@ -53,8 +53,6 @@ static unsigned int threads;
 
 static nbc_bucket_node *g_tail;
 
-#define USE_MACRO 0
-
 #define VAL ((unsigned long long)0)
 #define DEL ((unsigned long long)1)
 #define MOV ((unsigned long long)2)
@@ -381,6 +379,19 @@ static inline void nbc_flush_current(table* h, nbc_bucket_node* node)
 	newCur |= generate_ABA_mark();
 
 	// Retry until it is ensured that the current is moved back to index
+#if FLUSH_SMART == 1
+	oldCur = h->current;
+	oldIndex = (unsigned int) (oldCur >> 32);
+	if(
+		index > oldIndex || is_marked(node->next, DEL)
+		|| CAS_x86(
+					(volatile unsigned long long *)&(h->current),
+					(unsigned long long) oldCur,
+					(unsigned long long) newCur
+					)
+				) return;
+#endif
+
 	do
 	{
 
@@ -388,7 +399,11 @@ static inline void nbc_flush_current(table* h, nbc_bucket_node* node)
 		oldIndex = (unsigned int) (oldCur >> 32);
 	}
 	while (
-			index <= oldIndex && !is_marked(node->next, DEL)
+			index <
+#if FLUSH_SMART == 0
+			=
+#endif
+			oldIndex && !is_marked(node->next, DEL)
 			&& !CAS_x86(
 						(volatile unsigned long long *)&(h->current),
 						(unsigned long long) oldCur,
