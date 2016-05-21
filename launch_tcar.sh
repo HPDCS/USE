@@ -10,6 +10,10 @@ LOOP_COUNT_list="1000"		#loop_count
 ROB_PER_CELLA_list="2"		#robot per cella
 NUM_CELLE_OCC="80 160"		#numero di celle occupate
 
+FOLDER="log_test_tcar_$(date +%Y%m%d)-$(date +%H)"
+
+mkdir ${FOLDER}
+
 for loop_count in $LOOP_COUNT_list
 do
 for lookahead in $LOOKAHEAD_list
@@ -38,14 +42,14 @@ do
 				do
 					for threads in $THREAD_list
 					do
-						echo "./${test}_sl_nohi $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
-							  ./${test}_sl_nohi $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run
-						echo "./${test}_lf_nohi $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
-							  ./${test}_lf_nohi $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run
-						echo "./${test}_sl_hi   $threads $lp >   log_test/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
-							  ./${test}_sl_hi   $threads $lp >   log_test/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run 
-						echo "./${test}_lf_hi   $threads $lp >   log_test/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
-							  ./${test}_lf_hi   $threads $lp >   log_test/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run
+						echo "./${test}_sl_nohi $threads $lp > ${FOLDER}/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
+							  ./${test}_sl_nohi $threads $lp > ${FOLDER}/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run
+						echo "./${test}_lf_nohi $threads $lp > ${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
+							  ./${test}_lf_nohi $threads $lp > ${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run
+						echo "./${test}_sl_hi   $threads $lp >   ${FOLDER}/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
+							  ./${test}_sl_hi   $threads $lp >   ${FOLDER}/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run 
+						echo "./${test}_lf_hi   $threads $lp >   ${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"
+							  ./${test}_lf_hi   $threads $lp >   ${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run
 					done
 				done
 		done
