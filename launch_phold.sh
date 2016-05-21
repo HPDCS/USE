@@ -9,7 +9,10 @@ FAN_OUT_list="1 10 25 50"		#lista fan out
 LOOKAHEAD_list="0.1 0.01 0.0001"		#lookahead
 LOOP_COUNT_list="50 100 150"	#loop_count
 
-FOLDER="log_test_phold_$(date +%Y%m%d)-$(date +%H)"
+FOLDER="results/results_phold/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+
+mkdir results
+mkdir results/results_phold
 
 mkdir ${FOLDER}
 

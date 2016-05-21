@@ -10,7 +10,10 @@ LOOP_COUNT_list="1000"		#loop_count
 ROB_PER_CELLA_list="2"		#robot per cella
 NUM_CELLE_OCC="80 160"		#numero di celle occupate
 
-FOLDER="log_test_tcar_$(date +%Y%m%d)-$(date +%H)"
+FOLDER="results/results_tcar/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
+
+mkdir results
+mkdir results/results_tcar
 
 mkdir ${FOLDER}
 
