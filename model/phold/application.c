@@ -15,7 +15,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 	simtime_t timestamp, delta;
 	int 	i, j = 123;
-	event_content_type new_event;
+	//event_content_type new_event;
 	int err;
 	unsigned int loops; 
 	lp_state_type *state_ptr = (lp_state_type*)state;
@@ -70,11 +70,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case LOOP:
 			//timer_start(tm_ex);
 
-//			loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
-//
-//			for(i = 0; i < loops ; i++) {
-//					j = i*i;
-//			}
+			loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
+
+			for(i = 0; i < loops ; i++) {
+					j = i*i;
+			}
 			//printf("timer: %d\n", timer_value_micro(tm_ex));
 
 			state_ptr->events++;
@@ -84,6 +84,15 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+
+			if(event_type == LOOP )
+			{
+				for(j=0;j<FAN_OUT;j++){
+						delta = LOOKAHEAD + Expent(TAU);
+						timestamp = now + delta;
+						ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
+				}
+			}
 
 			if(event_type == LOOP && Random() < 0.2) {
 				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);

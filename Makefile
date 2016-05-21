@@ -7,10 +7,8 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
-#REVERSIBLE=1
 ARCH_X86=1
 ARCH_X86_64=1
-#MALLOC = 1
 
 ifdef MALLOC
 CFLAGS=$(FLAGS) -DNO_DYMELOR
@@ -21,6 +19,24 @@ endif
 ifdef NBC
 CFLAGS:= $(CFLAGS) -DNBC
 endif
+
+ifdef REVERSIBLE
+CFLAGS:= $(CFLAGS) -DREVERSIBLE
+endif
+
+ifdef LOOKAHEAD
+CFLAGS:= $(CFLAGS) -DLOOKAHEAD=$(LOOKAHEAD)
+endif
+
+ifdef FAN_OUT
+CFLAGS:= $(CFLAGS) -DFAN_OUT=$(FAN_OUT)
+endif
+
+ifdef LOOP_COUNT
+CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
+endif
+
+
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
 		    model/pcs-prealloc/functions_app.c\
 		    model/pcs-prealloc/topology.c

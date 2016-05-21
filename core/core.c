@@ -572,7 +572,7 @@ reversible:
 				mode = MODE_STM;
 
 				if(get_lp_lock(1, 0)==0)
-					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalit� transazionale
+					continue; //Se non riesco a prendere il lock riparto da capo perche magari a questo giro rientro in modalità transazionale
 
 				statistics_post_data(tid, EVENTS_STM, 1);
 

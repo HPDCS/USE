@@ -771,8 +771,11 @@ static table* read_table(nb_calqueue* queue)
 							*( (unsigned long long*)  &newaverage)
 					)
 				)
-			//	printf("COMPUTE BW %.20f %u\n", newaverage, new_h->size)
+			{
+				//	printf("COMPUTE BW %.20f %u\n", newaverage, new_h->size)
+
 				;
+			}
 		}
 
 		for(i=0; i < h->size; i++)

@@ -1,24 +1,28 @@
-for test in phold tcar
+for lookahead in 0.1 0.01 0.001 0.0001
 do
-	make $test
-	mv $test ${test}_sl
-
-	make $test NBC=1
-	mv $test ${test}_lf
-	for run in 1
+	for test in phold #tcar
 	do
-		for lp in 16 64 256 1024
-			do
-				for threads in 1 4 8 16 24 32
+		make $test LOOKAHEAD=${lookahead}
+		mv $test ${test}_sl
+
+		make $test NBC=1 LOOKAHEAD=${lookahead}
+		mv $test ${test}_lf
+		for run in 1
+		do
+			for lp in 1024 #16 64 256 1024
 				do
-					echo "./${test}_sl $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-$run"
-					      ./${test}_sl $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-$run
-					echo "./${test}_lf $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-$run"
-					      ./${test}_lf $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-$run
+					for threads in 1 4 8 16 24 32
+					do
+						echo "./${test}_sl $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-$run"
+							  ./${test}_sl $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-$run
+						echo "./${test}_lf $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-$run"
+							  ./${test}_lf $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-$run
+					done
 				done
-			done
+		done
 	done
 done
+
 
 for test in phold tcar
 do

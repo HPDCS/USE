@@ -114,7 +114,7 @@ int queue_min(void) {
 	//printf("queue_min: start\n");
     msg_t *node_ret;
 #ifdef NBC
-    node_ret = nbc_dequeue(nbcalqueue);
+    node_ret = (msg_t *)nbc_dequeue(nbcalqueue);
     if(node_ret == NULL){
 		//printf("NONONON\n");
         return 0;
