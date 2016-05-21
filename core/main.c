@@ -84,7 +84,7 @@ int main(int argn, char *argv[]) {
 	}
 
 //    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
-    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n", delta_count, reverse_execution_threshold);
+    printf("**START SIMULATION**-\n\n");
 
     timer_start(exec_time);
 

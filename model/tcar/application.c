@@ -20,12 +20,16 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	simtime_t timestamp=0;
 	simtime_t delta=0;
 	
-//	for ( i = 0 ; i < 10000 ; i++)
-//		j= i*i;
+	for ( i = 0 ; i < LOOP_COUNT ; i++)
+		j= i*i;
 
 	switch(event_type) {
 
 		case INIT:
+		
+			if(me == 0) {
+				printf("Running TCAR with:\n NUM_CELLE_OCCUPATE=%d ROBOT_PER_CELLA=%d, TOTAL_VISIT=%d, LOOKAHEAD=%f\n", NUM_CELLE_OCCUPATE, ROBOT_PER_CELLA, VISITE_MINIME, LOOKAHEAD);
+			}
 
 			pointer = (lp_state_type *)malloc(sizeof(lp_state_type));
 			if(pointer == NULL){

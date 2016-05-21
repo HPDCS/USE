@@ -1,10 +1,21 @@
-for loop_count in 50 100 150
+#!/bin/bash
+
+LP_list="1024"					#numero di lp
+THREAD_list="1 4 8 16 32"		#numero di thread
+TEST_list="phold"				#test
+RUN_list="1 2"					#lista del numero di run
+
+FAN_OUT_list="1 10 25 50"		#lista fan out
+LOOKAHEAD_list="0.1 0.01 0.0001"		#lookahead
+LOOP_COUNT_list="50 100 150"	#loop_count
+
+for loop_count in $LOOP_COUNT_list
 do
-for fan_out in 1 10 25 50
+for fan_out in $FAN_OUT_list
 do
-for lookahead in 0.1 0.01 0.001 0.0001
+for lookahead in $LOOKAHEAD_list
 do
-	for test in phold 
+	for test in $TEST_list 
 	do
 		make $test 			LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}
 		mv $test ${test}_sl_nohi
@@ -17,20 +28,20 @@ do
 							
 		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}
 		mv $test ${test}_lf_hi
-		for run in 1 2 
+		for run in $RUN_list
 		do
-			for lp in 1024 #16 64 256 1024
+			for lp in $LP_list
 				do
-					for threads in 1 4 8 16 24 32
+					for threads in $THREAD_list
 					do
-						echo "./${test}_sl_nohi $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run "
-							  ./${test}_sl_nohi $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run
-						echo "./${test}_lf_nohi $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run"
-							  ./${test}_lf_nohi $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run
-						echo "./${test}_sl_hi   $threads $lp >   log_test/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run  "
-							  ./${test}_sl_hi   $threads $lp >   log_test/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run  
-						echo "./${test}_lf_hi   $threads $lp >   log_test/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run  "
-							  ./${test}_lf_hi   $threads $lp >   log_test/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$run  
+						echo "./${test}_sl_nohi $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run "
+							  ./${test}_sl_nohi $threads $lp > log_test/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run
+						echo "./${test}_lf_nohi $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run"
+							  ./${test}_lf_nohi $threads $lp > log_test/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run
+						echo "./${test}_sl_hi   $threads $lp >   log_test/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run  "
+							  ./${test}_sl_hi   $threads $lp >   log_test/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run  
+						echo "./${test}_lf_hi   $threads $lp >   log_test/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run  "
+							  ./${test}_lf_hi   $threads $lp >   log_test/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run  
 					done
 				done
 		done

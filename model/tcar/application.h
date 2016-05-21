@@ -38,6 +38,9 @@
 	#define VISITE_MINIME	1000
 #endif
 
+#ifndef LOOP_COUNT
+	#define LOOP_COUNT	1000
+#endif
 
 
 typedef struct _event_content_type {

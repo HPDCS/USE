@@ -36,6 +36,16 @@ ifdef LOOP_COUNT
 CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
 endif
 
+ifdef NUM_CELLE_OCCUPATE
+CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
+endif
+
+
+ifdef ROBOT_PER_CELLA
+CFLAGS:= $(CFLAGS) -DROBOT_PER_CELLA=$(ROBOT_PER_CELLA)
+endif
+
+
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
 		    model/pcs-prealloc/functions_app.c\
