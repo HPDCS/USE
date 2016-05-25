@@ -3,11 +3,12 @@
 LP_list="1024"					#numero di lp
 THREAD_list="1 4 8 16 32"		#numero di thread
 TEST_list="phold"				#test
-RUN_list="1 2"					#lista del numero di run
+RUN_list="1 2 3 4"				#lista del 
+numero di run
 
 FAN_OUT_list="1 10 25 50"		#lista fan out
-LOOKAHEAD_list="0.1 0.01 0.0001"		#lookahead
-LOOP_COUNT_list="50 100 150"	#loop_count
+LOOKAHEAD_list="0.1 0.001"		#lookahead
+LOOP_COUNT_list="50 100 150 250 400 600"	#loop_count
 
 MAX_RETRY="5"
 

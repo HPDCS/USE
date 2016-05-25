@@ -408,7 +408,9 @@ void thread_loop(unsigned int thread_id) {
 	double pending_events;
 	//unsigned long long t_pre, t_post, t_pre2, t_pre3;
 	bool retry_event;
+#ifdef REVERSIBLE
 	revwin_t *window;
+#endif
 	cpu_set_t mask;
 
 	tid = thread_id;
@@ -423,11 +425,10 @@ void thread_loop(unsigned int thread_id) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
 	}
-
+#ifdef REVERSIBLE
 	reverse_init(REVWIN_SIZE);
-
 	window = revwin_create();
-
+#endif
 	while (!stop && !sim_error) {
 		
 		mode = retries = 0;
@@ -437,8 +438,9 @@ void thread_loop(unsigned int thread_id) {
 			execution_time(INFTY,-1);
 			continue;
 		}
+#ifdef REVERSIBLE
 		current_msg.revwin = window;
-		
+#endif		
 		//lvt ed lp dell'evento corrente
 		current_lp = current_msg.receiver_id;	//identificatore lp
 		current_lvt = current_msg.timestamp;	//local virtual time
