@@ -7,10 +7,10 @@ RUN_list="1 2 3 4"				#lista del
 numero di run
 
 FAN_OUT_list="1 10 25 50"		#lista fan out
-LOOKAHEAD_list="0.1 0.001"		#lookahead
+LOOKAHEAD_list="0.1" #y 0.001"		#lookahead
 LOOP_COUNT_list="600 400 250 150 100 50"	#loop_count
 
-MAX_RETRY="5"
+MAX_RETRY="10"
 
 FOLDER="results/results_phold" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
@@ -47,10 +47,10 @@ do
 						EX2="./${test}_lf_nohi $threads $lp"
 						EX3="./${test}_sl_hi $threads $lp"
 						EX4="./${test}_lf_hi $threads $lp"
-						FILE1="${FOLDER}/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run"; touch $FILE1
-						FILE2="${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run"; touch $FILE2
-						FILE3="${FOLDER}/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run"; touch $FILE3
-						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count$_run"; touch $FILE4
+						FILE1="${FOLDER}/${test}-sl-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count-$run"; touch $FILE1
+						FILE2="${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count-$run"; touch $FILE2
+						FILE3="${FOLDER}/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count-$run"; touch $FILE3
+						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count-$run"; touch $FILE4
 						
 						N=0
 						while [[ $(grep -c "Simulation ended" $FILE1) -eq 0 ]]
