@@ -12,7 +12,7 @@ LOOP_COUNT_list="600 400 250 150 100 50"	#loop_count
 
 MAX_RETRY="5"
 
-FOLDER="results/results_phold/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/results_phold" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir results
 mkdir results/results_phold
