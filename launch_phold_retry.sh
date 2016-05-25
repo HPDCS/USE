@@ -8,7 +8,7 @@ numero di run
 
 FAN_OUT_list="1 10 25 50"		#lista fan out
 LOOKAHEAD_list="0.1 0.001"		#lookahead
-LOOP_COUNT_list="50 100 150 250 400 600"	#loop_count
+LOOP_COUNT_list="600 400 250 150 100 50"	#loop_count
 
 MAX_RETRY="5"
 
