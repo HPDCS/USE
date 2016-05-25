@@ -18,7 +18,7 @@
 #define MAX_LPs	2048
 
 #define MAX_DATA_SIZE		128
-#define THR_POOL_SIZE		16
+#define THR_POOL_SIZE		128
 
 #define TROT_INIT_DELTA		0.0
 #define REV_INIT_THRESH		0

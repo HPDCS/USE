@@ -43,3 +43,8 @@ pcs
 log_test/*
 /pcs_lf
 /pcs_sl
+/phold_lf_hi
+/phold_lf_nohi
+/phold_sl_hi
+/phold_sl_nohi
+/log_test/
