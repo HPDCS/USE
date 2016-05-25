@@ -854,6 +854,10 @@ static table* read_table(nb_calqueue* queue)
 						}while( !marked && !cas_result ) ;
 					}
 
+					nbc_flush_current(
+							new_h,
+							right_replica_field);
+
 					do
 					{
 						right_node_next = right_replica_field->next;
@@ -878,9 +882,6 @@ static table* read_table(nb_calqueue* queue)
 
 					}while( !marked && !cas_result ) ;
 
-					nbc_flush_current(
-							new_h,
-							right_replica_field);
 				}
 			}while(right_node != tail);
 		}
