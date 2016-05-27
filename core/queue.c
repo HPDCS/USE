@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <statistics.h>
+#include <timer.h>
 
 #include "queue.h"
 #include "calqueue.h"
@@ -113,6 +114,9 @@ void queue_deliver_msgs(void) {
 int queue_min(void) {
 	//printf("queue_min: start\n");
     msg_t *node_ret;
+
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
 #ifdef NBC
     node_ret = (msg_t *)nbc_dequeue(nbcalqueue);
     if(node_ret == NULL){
@@ -128,6 +132,8 @@ int queue_min(void) {
         return 0;
     }
 #endif
+    statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
+
     memcpy(&current_msg, node_ret, sizeof(msg_t));
     free(node_ret);
 
@@ -160,7 +166,8 @@ void queue_clean(void) {
 }
 
 void flush(void) {
-
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
 #ifndef NBC
     while(__sync_lock_test_and_set(&queue_lock, 1))
         while(queue_lock);
@@ -177,5 +184,6 @@ void flush(void) {
 	
 	nbc_prune(current_lvt - LOOKAHEAD);
 #endif
+    statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
 
 }

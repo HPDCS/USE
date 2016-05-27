@@ -13,6 +13,8 @@
 #define CLOCK_HTM_THROTTLE 8
 #define CLOCK_STM_WAIT 9
 #define CLOCK_UNDO_EVENT 10
+#define CLOCK_ENQUEUE 22
+#define CLOCK_DEQUEUE 23
 #define ABORT_UNSAFE 11
 #define ABORT_REVERSE 12
 #define ABORT_CONFLICT 13
@@ -40,6 +42,8 @@ struct stats_t {
     unsigned long long clock_htm_throttle;
     unsigned long long clock_stm_wait;
     unsigned long long clock_undo_event;
+    unsigned long long clock_enqueue;
+    unsigned long long clock_dequeue;
 
     unsigned int abort_total;
     unsigned int abort_unsafe;
