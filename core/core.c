@@ -429,6 +429,9 @@ void thread_loop(unsigned int thread_id) {
 	reverse_init(REVWIN_SIZE);
 	window = revwin_create();
 #endif
+
+	clock_timer main_loop_time;
+	clock_timer_start(main_loop_time);
 	while (!stop && !sim_error) {
 		
 		mode = retries = 0;
@@ -661,6 +664,9 @@ reversible:
 			}
 		}
 	}
+
+	statistics_post_data(tid, CLOCK_LOOP, clock_timer_value(main_loop_time));
+
 
 	execution_time(INFTY,-1);
 	

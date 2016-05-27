@@ -69,7 +69,11 @@ void statistics_post_data(int tid, int type, double value) {
             break;
 
         case CLOCK_ENQUEUE:
-            thread_stats[tid].clock_dequeue += (unsigned long long)value;
+            thread_stats[tid].clock_enqueue += (unsigned long long)value;
+            break;
+
+        case CLOCK_LOOP:
+            thread_stats[tid].clock_loop += (unsigned long long)value;
             break;
 
         case CLOCK_SAFE:
@@ -169,6 +173,7 @@ void gather_statistics() {
         system_stats.clock_stm += thread_stats[i].clock_stm;
         system_stats.clock_enqueue += thread_stats[i].clock_enqueue;
         system_stats.clock_dequeue += thread_stats[i].clock_dequeue;
+        system_stats.clock_loop += thread_stats[i].clock_loop;
         system_stats.clock_htm_throttle += thread_stats[i].clock_htm_throttle;
         system_stats.clock_stm_wait += thread_stats[i].clock_stm_wait;
         system_stats.clock_undo_event += thread_stats[i].clock_undo_event;
@@ -232,6 +237,7 @@ void print_statistics() {
     printf("Average time spent in safe execution............: %llu clocks\n", system_stats.clock_safe);
     printf("Time spent in enqueue............: %llu clocks\n", system_stats.clock_enqueue);
     printf("Time spent in dequeue............: %llu clocks\n", system_stats.clock_dequeue);
+    printf("Time spent in main loop..........: %llu clocks\n", system_stats.clock_loop);
     printf("Average time spent in HTM execution.............: %llu clocks\n", system_stats.clock_htm);
     printf("Average time spent for HTM throttling...........: %llu clocks (%.2f%%)\n", system_stats.clock_htm_throttle, ((double)system_stats.clock_htm_throttle / system_stats.clock_htm)*100);
     printf("Average time spent in STM execution.............: %llu clocks\n", system_stats.clock_stm);

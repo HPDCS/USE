@@ -14,6 +14,7 @@
 #define CLOCK_STM_WAIT 9
 #define CLOCK_UNDO_EVENT 10
 #define CLOCK_ENQUEUE 22
+#define CLOCK_LOOP 24
 #define CLOCK_DEQUEUE 23
 #define ABORT_UNSAFE 11
 #define ABORT_REVERSE 12
@@ -44,6 +45,7 @@ struct stats_t {
     unsigned long long clock_undo_event;
     unsigned long long clock_enqueue;
     unsigned long long clock_dequeue;
+    unsigned long long clock_loop;
 
     unsigned int abort_total;
     unsigned int abort_unsafe;
