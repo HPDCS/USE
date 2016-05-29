@@ -383,7 +383,8 @@ static inline void nbc_flush_current(table* h, nbc_bucket_node* node)
 	oldCur = h->current;
 	oldIndex = (unsigned int) (oldCur >> 32);
 	if(
-		index > oldIndex || is_marked(node->next, DEL)
+		index > oldIndex
+		|| is_marked(node->next, DEL)
 		|| CAS_x86(
 					(volatile unsigned long long *)&(h->current),
 					(unsigned long long) oldCur,
@@ -411,6 +412,50 @@ static inline void nbc_flush_current(table* h, nbc_bucket_node* node)
 						)
 					);
 }
+
+static inline void nbc_flush_current2(table* h, nbc_bucket_node* node)
+{
+	unsigned long long oldCur;
+	unsigned int oldIndex;
+	unsigned int index = hash(node->timestamp, h->bucket_width);
+	unsigned long long newCur =  ( ( unsigned long long ) index ) << 32;
+	newCur |= generate_ABA_mark();
+
+	// Retry until it is ensured that the current is moved back to index
+#if FLUSH_SMART == 1
+	oldCur = h->current;
+	oldIndex = (unsigned int) (oldCur >> 32);
+	if(
+		index > oldIndex
+		|| is_marked(node->next, DEL) || is_marked(node->next, VAL)
+		|| CAS_x86(
+					(volatile unsigned long long *)&(h->current),
+					(unsigned long long) oldCur,
+					(unsigned long long) newCur
+					)
+				) return;
+#endif
+
+	do
+	{
+
+		oldCur = h->current;
+		oldIndex = (unsigned int) (oldCur >> 32);
+	}
+	while (
+			index <
+#if FLUSH_SMART == 0
+			=
+#endif
+			oldIndex && !is_marked(node->next, DEL) && !is_marked(node->next, MOV)
+			&& !CAS_x86(
+						(volatile unsigned long long *)&(h->current),
+						(unsigned long long) oldCur,
+						(unsigned long long) newCur
+						)
+					);
+}
+
 
 /**
  * This function insert a new event in the nonblocking queue.
@@ -854,7 +899,7 @@ static table* read_table(nb_calqueue* queue)
 						}while( !marked && !cas_result ) ;
 					}
 
-					nbc_flush_current(
+					nbc_flush_current2(
 							new_h,
 							right_replica_field);
 
@@ -1066,8 +1111,8 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 			return NULL;
 
 		else if( LESS(right_timestamp, (index)*bucket_width) )
-			nbc_flush_current(h, right_node);
-
+			//nbc_flush_current(h, right_node);
+			continue;
 		else if( GREATER(right_timestamp, (index+1)*bucket_width) )
 		{
 			if(index+1 < index)

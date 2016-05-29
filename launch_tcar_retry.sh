@@ -5,14 +5,14 @@ THREAD_list="1 4 8 16 32"	#numero di thread
 TEST_list="tcar"			#test
 RUN_list="1 2"				#lista del numero di run
 
-LOOKAHEAD_list="0.2 0.002"	#lookahead
-LOOP_COUNT_list="1000"		#loop_count
+LOOKAHEAD_list="0.2" # 0.002"	#lookahead
+LOOP_COUNT_list="4500"		#loop_count
 ROB_PER_CELLA_list="2"		#robot per cella
 NUM_CELLE_OCC="80 160"		#numero di celle occupate
 
-MAX_RETRY="5"
+MAX_RETRY="10"
 
-FOLDER="results/results_tcar/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/results_tcar2" #/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir results
 mkdir results/results_tcar
@@ -55,23 +55,23 @@ do
 						FILE3="${FOLDER}/${test}-sl-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"; touch $FILE3
 						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"; touch $FILE4
 						
-						N=0
-						while [[ $(grep -c "Simulation ended" $FILE1) -eq 0 ]]
-						do
-							echo $FILE1
-							$EX1 > $FILE1
-							if test $N -ge $MAX_RETRY ; then echo break; break; fi
-							N=$(( N+1 ))
-						done
-						 
-						N=0
-						while [[ $(grep -c "Simulation ended" $FILE2) -eq 0 ]]
-						do
-							echo $FILE2
-							$EX2 > $FILE2
-							if test $N -ge $MAX_RETRY ; then echo break; break; fi
-							N=$(( N+1 ))
-						done
+						#N=0
+						#while [[ $(grep -c "Simulation ended" $FILE1) -eq 0 ]]
+						#do
+						#	echo $FILE1
+						#	$EX1 > $FILE1
+						#	if test $N -ge $MAX_RETRY ; then echo break; break; fi
+						#	N=$(( N+1 ))
+						#done
+						# 
+						#N=0
+						#while [[ $(grep -c "Simulation ended" $FILE2) -eq 0 ]]
+						#do
+						#	echo $FILE2
+						#	$EX2 > $FILE2
+						#	if test $N -ge $MAX_RETRY ; then echo break; break; fi
+						#	N=$(( N+1 ))
+						#done
 						 
 						N=0
 						while [[ $(grep -c "Simulation ended" $FILE3) -eq 0 ]]
