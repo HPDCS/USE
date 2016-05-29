@@ -1155,21 +1155,21 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 
 		else if( LESS(right_timestamp, (index)*bucket_width) )
 		{	//nbc_flush_current(h, right_node);
-			printf("ER %f %u %f %p %u %u %u %u - %u %u\n",
-					right_timestamp,
-					right_node->counter,
-					(index)*bucket_width,
-					h,
-					is_marked(right_node_next, DEL),
-					is_marked(right_node_next, INV),
-					is_marked(right_node_next, VAL),
-					is_marked(right_node_next, MOV),
-					index,
-					index % size
-					);
-			if(old == right_timestamp)
-				exit(1);
-			old = right_timestamp;
+//			printf("ER %f %u %f %p %u %u %u %u - %u %u\n",
+//					right_timestamp,
+//					right_node->counter,
+//					(index)*bucket_width,
+//					h,
+//					is_marked(right_node_next, DEL),
+//					is_marked(right_node_next, INV),
+//					is_marked(right_node_next, VAL),
+//					is_marked(right_node_next, MOV),
+//					index,
+//					index % size
+//					);
+//			if(old == right_timestamp)
+//				exit(1);
+//			old = right_timestamp;
 			continue;
 		}
 		else if( GREATER(right_timestamp, (index+1)*bucket_width) )
