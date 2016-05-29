@@ -318,10 +318,28 @@ static void search(nbc_bucket_node *head, double timestamp, unsigned int tie_bre
 
 			// Exit if tmp is a tail or its timestamp is > of the searched key
 		} while (	tmp != tail &&
+//					(
+//						is_marked_for_search(tmp_next, flag)
+//						|| (
+//								LEQ(tmp_timestamp, timestamp) &&
+//								tie_breaker == 0
+//							)
+//						|| (
+//								LEQ(tmp_timestamp, timestamp) &&
+//								tie_breaker != 0 && tmp->counter <= tie_breaker
+//							)
+//					)
 					(
 						is_marked_for_search(tmp_next, flag)
-						|| ( LEQ(tmp_timestamp, timestamp) && tie_breaker == 0)
-						|| ( LEQ(tmp_timestamp, timestamp) && tie_breaker != 0 && tmp->counter <= tie_breaker)
+						|| LESS(tmp_timestamp, timestamp)
+						||  (
+								D_EQUAL(tmp_timestamp, timestamp) &&
+								tie_breaker == 0
+							)
+						|| (
+								D_EQUAL(tmp_timestamp, timestamp) &&
+								tie_breaker != 0 && tmp->counter <= tie_breaker
+							)
 					)
 				);
 
@@ -447,7 +465,7 @@ static inline void nbc_flush_current2(table* h, nbc_bucket_node* node)
 #if FLUSH_SMART == 0
 			=
 #endif
-			oldIndex && !is_marked(node->next, DEL) && !is_marked(node->next, MOV)
+			oldIndex && !is_marked(node->next, DEL) && !is_marked(node->next, VAL)
 			&& !CAS_x86(
 						(volatile unsigned long long *)&(h->current),
 						(unsigned long long) oldCur,
@@ -501,7 +519,12 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 					(unsigned long long) right_node,
 					(unsigned long long) new_node_pointer
 				))
+		{
+
+//			printf("ENQUEUE: %f %u - %u %u\n", new_node_pointer->timestamp, new_node_pointer->counter, hash(new_node_timestamp,
+//					hashtable->bucket_width), index );
 			return true;
+		}
 
 		// reset tie breaker
 		new_node_pointer->counter = 0;
@@ -520,6 +543,17 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 		// first replica to be inserted
 		if(is_marked(right_node, INV))
 			new_node_pointer = get_marked(new_node_pointer, INV);
+
+//		if(right_node->timestamp == INFTY)
+//		printf("MOVING %f %u between left %f %u right  INFTY %u\n",
+//				new_node_timestamp, new_node_counter,
+//				left_node->timestamp, left_node->counter,
+//				 right_node->counter);
+//		else
+//			printf("MOVING %f %u between left %f %u right  %f %u\n",
+//					new_node_timestamp, new_node_counter,
+//					left_node->timestamp, left_node->counter,
+//					right_node->timestamp, right_node->counter);
 
 		if (CAS_x86(
 					(volatile unsigned long long*)&(left_node->next),
@@ -634,7 +668,7 @@ static void block_table(table* h, unsigned int *index, double *min_timestamp)
 
 		do
 		{
-			search(bucket, 0.0, 0, &left_node, &right_node, REMOVE_DEL_INV);
+			search(bucket, -1.0, 0, &left_node, &right_node, REMOVE_DEL_INV);
 			right_node = get_unmarked(right_node);
 			right_node_next = right_node->next;
 		}
@@ -657,6 +691,7 @@ static void block_table(table* h, unsigned int *index, double *min_timestamp)
 		{
 			*min_timestamp = right_node->timestamp;
 			*index = i;
+//			printf("MIN %f %u\n", *min_timestamp, right_node->counter);
 		}
 
 	}
@@ -817,7 +852,7 @@ static table* read_table(nb_calqueue* queue)
 					)
 				)
 			{
-				//	printf("COMPUTE BW %.20f %u\n", newaverage, new_h->size)
+//					printf("COMPUTE BW %.20f %u\n", newaverage, new_h->size)
 
 				;
 			}
@@ -833,7 +868,7 @@ static table* read_table(nb_calqueue* queue)
 				do
 				{
 
-					search(bucket, 0.0, 0, &left_node, &right_node, REMOVE_DEL_INV);
+					search(bucket, -1.0, 0, &left_node, &right_node, REMOVE_DEL_INV);
 					right_node = get_unmarked(right_node);
 					right_node_next = right_node->next;
 				}
@@ -899,7 +934,7 @@ static table* read_table(nb_calqueue* queue)
 						}while( !marked && !cas_result ) ;
 					}
 
-					nbc_flush_current2(
+					nbc_flush_current(
 							new_h,
 							right_replica_field);
 
@@ -936,7 +971,12 @@ static table* read_table(nb_calqueue* queue)
 				(unsigned long long)			h,
 				(unsigned long long) 			new_h
 		))
+		{
+//			printf("%u %f %llu %u %f %llu\n",
+//					h->counter.count, h->bucket_width, h->current>>32,
+//					new_h->counter.count, new_h->bucket_width , new_h->current>>32);
 			connect_to_be_freed_table_list(h);
+		}
 
 		h = new_h;
 	}
@@ -1030,6 +1070,8 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload)
 		h  = read_table(queue);
 	while(!insert_std(h, &new_node, REMOVE_DEL_INV));
 
+
+
 	nbc_flush_current(
 			h,
 			new_node);
@@ -1077,6 +1119,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 	nbc_bucket_node *array;
 	double right_timestamp;
 	double bucket_width;
+	double old = INFTY;
 
 
 	tail = g_tail;
@@ -1095,7 +1138,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 
 		min = array + (index % size);
 
-		search(min, 0.0, 0, &left_node, &right_node, REMOVE_DEL_INV);
+		search(min, -1.0, 0, &left_node, &right_node, REMOVE_DEL_INV);
 		
 		//printf("nbc_dequeue: -1 evt type %u\n", ((msg_t*)(right_node->payload))->type); //da_cancellare
 
@@ -1111,8 +1154,24 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 			return NULL;
 
 		else if( LESS(right_timestamp, (index)*bucket_width) )
-			//nbc_flush_current(h, right_node);
+		{	//nbc_flush_current(h, right_node);
+			printf("ER %f %u %f %p %u %u %u %u - %u %u\n",
+					right_timestamp,
+					right_node->counter,
+					(index)*bucket_width,
+					h,
+					is_marked(right_node_next, DEL),
+					is_marked(right_node_next, INV),
+					is_marked(right_node_next, VAL),
+					is_marked(right_node_next, MOV),
+					index,
+					index % size
+					);
+			if(old == right_timestamp)
+				exit(1);
+			old = right_timestamp;
 			continue;
+		}
 		else if( GREATER(right_timestamp, (index+1)*bucket_width) )
 		{
 			if(index+1 < index)
@@ -1135,7 +1194,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 				continue;
 			//printf("nbc_dequeue: 0 evt type %u\n", ((msg_t*)(right_node->payload))->type); //da_cancellare
 			res = right_node->payload;
-			
+			unsigned int tie = right_node->counter;
 			//printf("nbc_dequeue: 1 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
 			if(
 //					CAS_x86(
@@ -1148,9 +1207,10 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 			{
 				nbc_bucket_node *left_node, *right_node;
 
-				search(min, right_timestamp, 0,  &left_node, &right_node, REMOVE_DEL_INV);
+				//search(min, right_timestamp, tie,  &left_node, &right_node, REMOVE_DEL_INV);
+				//search(min, -1.0, 0,  &left_node, &right_node, REMOVE_DEL_INV);
 				atomic_dec_x86(&(h->counter));
-
+				//printf("DEQUEUE: %f %u - %u %u\n", right_timestamp, tie, index, index % size);
 				//printf("nbc_dequeue: 2 evt type %u\n", ((msg_t*)(res->payload))->type); //da_cancellare
 				return res;
 			}
