@@ -1207,7 +1207,7 @@ nbc_bucket_node* nbc_dequeue(nb_calqueue *queue)
 			{
 				nbc_bucket_node *left_node, *right_node;
 
-				//search(min, right_timestamp, tie,  &left_node, &right_node, REMOVE_DEL_INV);
+				search(min, right_timestamp, tie,  &left_node, &right_node, REMOVE_DEL_INV);
 				//search(min, -1.0, 0,  &left_node, &right_node, REMOVE_DEL_INV);
 				atomic_dec_x86(&(h->counter));
 				//printf("DEQUEUE: %f %u - %u %u\n", right_timestamp, tie, index, index % size);
