@@ -64,6 +64,18 @@ void statistics_post_data(int tid, int type, double value) {
             thread_stats[tid].commits_stm_tmp++;
             break;
 
+        case CLOCK_DEQUEUE:
+            thread_stats[tid].clock_dequeue += (unsigned long long)value;
+            break;
+
+        case CLOCK_ENQUEUE:
+            thread_stats[tid].clock_enqueue += (unsigned long long)value;
+            break;
+
+        case CLOCK_LOOP:
+            thread_stats[tid].clock_loop += (unsigned long long)value;
+            break;
+
         case CLOCK_SAFE:
             thread_stats[tid].clock_safe += (unsigned long long)value;
             break;
@@ -194,6 +206,9 @@ void gather_statistics() {
         system_stats.clock_safe += thread_stats[i].clock_safe;
         system_stats.clock_htm += thread_stats[i].clock_htm;
         system_stats.clock_stm += thread_stats[i].clock_stm;
+        system_stats.clock_enqueue += thread_stats[i].clock_enqueue;
+        system_stats.clock_dequeue += thread_stats[i].clock_dequeue;
+        system_stats.clock_loop += thread_stats[i].clock_loop;
         system_stats.clock_htm_throttle += thread_stats[i].clock_htm_throttle;
         system_stats.clock_stm_wait += thread_stats[i].clock_stm_wait;
         system_stats.clock_undo_event += thread_stats[i].clock_undo_event;
@@ -258,10 +273,8 @@ void print_statistics() {
     printf("HTM events......................................: %12u (%.2f%%)\n", system_stats.events_htm, ((double)system_stats.events_htm / system_stats.events_total)*100);
     printf("STM events......................................: %12u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
 
-    printf("Total attempts..................................: %12u\n", system_stats.attempts);
-    printf("Average priority threads........................: %.2f\n", system_stats.prio_threads);
-    printf("Average pending events..........................: %.2f\n\n", system_stats.pending_events);
-    
+
+
     unsigned int commits_total = system_stats.events_safe + system_stats.commits_htm + system_stats.commits_stm;
     
     printf("TOT committed...................................: %12u\n", commits_total);
@@ -269,6 +282,9 @@ void print_statistics() {
     printf("STM committed...................................: %12u (%.2f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / system_stats.events_stm)*100);
 
     printf("Average time spent in safe execution............: %llu clocks\n", system_stats.clock_safe);
+    printf("Time spent in enqueue............: %llu clocks\n", system_stats.clock_enqueue);
+    printf("Time spent in dequeue............: %llu clocks\n", system_stats.clock_dequeue);
+    printf("Time spent in main loop..........: %llu clocks\n", system_stats.clock_loop);
     printf("Average time spent in HTM execution.............: %llu clocks\n", system_stats.clock_htm);
     printf("Average time spent for HTM throttling...........: %llu clocks (%.2f%%)\n", system_stats.clock_htm_throttle, ((double)system_stats.clock_htm_throttle / system_stats.clock_htm)*100);
     printf("Average time spent in STM execution.............: %llu clocks\n", system_stats.clock_stm);

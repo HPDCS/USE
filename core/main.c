@@ -18,6 +18,7 @@ extern double delta_count;
 double reverse_execution_threshold_main;
 
 void *start_thread(void *args) {
+
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 
 	//START THREAD (definita in core.c)
@@ -83,7 +84,7 @@ int main(int argn, char *argv[]) {
 	}
 
 //    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
-    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n", delta_count, reverse_execution_threshold_main);
+    printf("**START SIMULATION**-\n\n");
 
     timer_start(exec_time);
 
@@ -97,6 +98,11 @@ int main(int argn, char *argv[]) {
 
     print_statistics();
 
+#ifndef NBC
+    	printf("Using SPINLOCK CALQUEUE\n");
+#else
+    	printf("Using NONBLOCKING CALQUEUE\n");
+#endif
     //statistics_fini();
 
     return 0;

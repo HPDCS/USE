@@ -16,7 +16,7 @@
 /* Per simulare il time stepping del modello da cui abbiamo preso spunto dove si diceva che:
  *"ogni movimento di un robot impiega 1 time-step e che ogni robot si muove 1 volta per ogni time-step"
  */
-#define TIME_STEP 5.0
+#define TIME_STEP 1.0
 
 
 
@@ -38,6 +38,9 @@
 	#define VISITE_MINIME	1000
 #endif
 
+#ifndef LOOP_COUNT
+	#define LOOP_COUNT	1000
+#endif
 
 
 typedef struct _event_content_type {

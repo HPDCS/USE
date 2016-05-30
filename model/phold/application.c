@@ -17,7 +17,7 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 
 	simtime_t timestamp, delta;
 	int 	i, j = 123;
-	event_content_type new_event;
+	//event_content_type new_event;
 	int err;
 	unsigned int loops; 
 	//lp_state_type *state_ptr = &(LPS[me]); //(lp_state_type*)state;
@@ -28,6 +28,9 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
+		
+	//printf("EVENT INIT: %d\n", INIT);	
+	//printf("EVENT TYPE: %d\n", event_type);
 
 
 	switch (event_type) {
@@ -46,25 +49,22 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 				exit(-1);
 			}
 
-           if(state_ptr == NULL){
+            if(state_ptr == NULL){
 				printf("LP state allocation failed: (%s)\n", strerror(errno));
-                                exit(-1);
-                  }
+				exit(-1);
+            }
 
 			// Explicitly tell ROOT-Sim this is our LP's state
-                        SetState(state_ptr);
-
-
+            SetState(state_ptr);
+			
 			state_ptr->events = 0;
 
 			if(me == 0) {
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
-
-			for(i = 0; i < 10; i++) {
-				timestamp = (simtime_t) (20 * Random());
-				if(timestamp < LOOKAHEAD)
-					timestamp += LOOKAHEAD;
+			
+			for(i = 0; i < EVENTS_PER_LP; i++) {
+				timestamp = (simtime_t) LOOKAHEAD + (TAU * Random());
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 			}
 
@@ -83,29 +83,39 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 
 			state_ptr->events++;
 
-			delta = (simtime_t)(Expent(TAU));
-			if(delta < LOOKAHEAD)
-				delta += LOOKAHEAD;
-			if(delta < LA ) delta = LA;
-			timestamp = now + delta ;
+			delta = LOOKAHEAD + Expent(TAU);
+			timestamp = now + delta;
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 
+			if(event_type == LOOP )
+			{
+				for(j=0;j<FAN_OUT;j++){
+						delta = LOOKAHEAD + Expent(TAU);
+						timestamp = now + delta;
+						ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
+				}
+			}
+
 			if(event_type == LOOP && Random() < 0.2) {
 				ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
 			}
+
 			break;
 
 
 		default:
 			printf("[ERR] Requested to process an event neither ALLOC, nor DEALLOC, nor INIT\n");
+			abort();
 			break;
 	}
 }
 	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
+	
+	//printf("TOTALE: %u\n", snapshot->events);//da_cancellare
 
 	if(snapshot->events < COMPLETE_EVENTS) {
 //	if(snapshot->lvt < COMPLETE_TIME) {

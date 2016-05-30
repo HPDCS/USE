@@ -18,7 +18,7 @@
 #define MAX_LPs	2048
 
 #define MAX_DATA_SIZE		128
-#define THR_POOL_SIZE		16
+#define THR_POOL_SIZE		128
 
 #define TROT_INIT_DELTA		0.0
 #define REV_INIT_THRESH		4
@@ -32,7 +32,7 @@
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 #define THROTTLING
-#define REVERSIBLE
+#define HTM 0
 
 #define INCARNATION_DISP 13 
 
@@ -76,7 +76,7 @@ extern void _mkdir(const char *path);
 
 extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
-//extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
+extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 
 extern void flush(void);
 

@@ -4,14 +4,23 @@
 
 
 // Event types
-#define LOOP		1
-#define EXTERNAL_LOOP	2
+#define LOOP			8
+#define EXTERNAL_LOOP	7
 
-#define VARIANCE 0.0
-#define LOOP_COUNT 100
-#define COMPLETE_EVENTS 10000
+#define VARIANCE 0.2
+#define COMPLETE_EVENTS 5000
 #define COMPLETE_TIME 200000
-#define TAU 100
+#define EVENTS_PER_LP 5
+
+#ifndef FAN_OUT
+#define FAN_OUT 1
+#endif
+
+#ifndef LOOP_COUNT
+#define LOOP_COUNT 100
+#endif
+
+#define TAU 1
 
 
 // This is the events' payload which is exchanged across LPs

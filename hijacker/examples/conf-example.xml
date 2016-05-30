@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<hijacker:Rules xmlns:hijacker="http://www.dis.uniroma1.it/~hpdcs/">
+
+	<hijacker:Executable entryPoint="foo">
+
+		<hijacker:Inject file="foo.S" /> 
+
+		<hijacker:Instruction type="I_MEMWR" injectBefore="monitorPreamble.S" />
+
+		<hijacker:Instruction type="I_MEMWR|I_MEMRD" injectBefore="foo.S" injectAfter="foo.S" replace="foo.S">
+			<hijacker:AddCall where="before" function="monitor" arguments="qualcosa" convention="stdcall" />
+			<hijacker:Assembly where="before" instruction="mov $0x5,%rax" syntax="ATT" arch="x86" action="insert" />
+		</hijacker:Instruction>
+
+
+		<hijacker:Instruction type="I_MEMWR|I_MEMRD" injectBefore="foo.S" injectAfter="foo.S" replace="foo.S">
+			<hijacker:AddCall where="before" function="monitor" arguments="qualcosa" convention="stdcall" />
+		</hijacker:Instruction>
+
+
+		<hijacker:Instruction type="I_MEMWR|I_MEMRD" injectBefore="foo.S" injectAfter="foo.S" replace="foo.S">
+			<hijacker:AddCall where="before" function="monitor2" arguments="qualcosa" convention="stdcall" />
+		</hijacker:Instruction>
+
+
+		<hijacker:Function name="bar">
+			<hijacker:AddCall where="before" function="monitor" arguments="qualcosa" convention="asmlinkage" />
+			
+			<hijacker:Instruction type="I_JUMP" injectBefore="foo.S" injectAfter="foo.S" replace="foo.S">
+				<hijacker:AddCall where="before" function="monitor" arguments="qualcosa" convention="stdcall" />
+			</hijacker:Instruction>
+		</hijacker:Function>
+
+
+		<hijacker:Function name="bar" preamble="func_before" postamble="func_after">
+			<hijacker:AddCall where="after" function="monitor3" arguments="qualcosa" convention="asmlinkage" />
+			
+			<hijacker:Instruction type="I_JUMP" injectBefore="foo.S" injectAfter="foo.S" replace="foo.S">
+				<hijacker:AddCall where="before" function="monitor" arguments="qualcosa" convention="stdcall" />
+			</hijacker:Instruction>
+			
+			<hijacker:Instruction type="I_JUMP" injectBefore="foo.S" injectAfter="foo.S" replace="foo.S">
+				<hijacker:AddCall where="before" function="monitorrrr" arguments="qualcosa" convention="stdcall" />
+			</hijacker:Instruction>
+		</hijacker:Function>
+
+
+	</hijacker:Executable>
+	
+	
+	<!-- Having an additional Executable activates multiversioning -->
+	<hijacker:Executable entryPoint="foo">
+
+		<hijacker:Instruction type="I_MEMWR|I_MEMRD" injectBefore="foo.S" injectAfter="foo.S" replace="foo.S">
+			<hijacker:Assembly where="before" instruction="addl $1, counter" syntax="ATT" arch="x86" action="insert" />
+		</hijacker:Instruction>
+
+
+	</hijacker:Executable>
+
+</hijacker:Rules>

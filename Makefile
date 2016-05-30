@@ -2,16 +2,49 @@
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
-FLAGS=-g3 -Wall -Wextra -mrtm
+
+FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
+
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
-
+ARCH_X86=1
+ARCH_X86_64=1
 
 ifdef MALLOC
 CFLAGS=$(FLAGS) -DNO_DYMELOR
 else
 CFLAGS=$(FLAGS)
 endif
+
+ifdef NBC
+CFLAGS:= $(CFLAGS) -DNBC
+endif
+
+ifdef REVERSIBLE
+CFLAGS:= $(CFLAGS) -DREVERSIBLE
+endif
+
+ifdef LOOKAHEAD
+CFLAGS:= $(CFLAGS) -DLOOKAHEAD=$(LOOKAHEAD)
+endif
+
+ifdef FAN_OUT
+CFLAGS:= $(CFLAGS) -DFAN_OUT=$(FAN_OUT)
+endif
+
+ifdef LOOP_COUNT
+CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
+endif
+
+ifdef NUM_CELLE_OCCUPATE
+CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
+endif
+
+
+ifdef ROBOT_PER_CELLA
+CFLAGS:= $(CFLAGS) -DROBOT_PER_CELLA=$(ROBOT_PER_CELLA)
+endif
+
 
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
@@ -44,11 +77,15 @@ TARGET=test
 
 CORE_SOURCES =  core/core.c\
 		core/calqueue.c\
+		core/nb_calqueue.c\
+		core/x86.c\
 		core/topology.c\
 		core/queue.c\
 		core/main.c\
 		core/numerical.c\
-		statistics/statistics.c
+		statistics/statistics.c\
+#		mm/reverse.c\
+#		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
@@ -68,22 +105,30 @@ PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
+all:
+	echo $(CFLAGS)
+all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
-all: phold
+pcs: TARGET=pcs 
+pcs: clean _pcs mm core link
 
-pcs: _pcs mm core link
+pcs-prealloc: TARGET=pcs-prealloc 
+pcs-prealloc: clean _pcs_prealloc mm core link
 
-pcs-prealloc: _pcs_prealloc mm core link
+traffic: TARGET=traffic 
+traffic: clean _traffic mm core link
 
-traffic: _traffic mm core link
+tcar: TARGET=tcar 
+tcar: clean _tcar mm core link
 
-tcar: _tcar mm core link
+phold: TARGET=phold 
+phold: clean  _phold mm core link
 
-phold: _phold mm core link
+robot_explore: TARGET=robot_explore 
+robot_explore: clean _robot_explore mm core link
 
-robot_explore: _robot_explore mm core link
-
-hash: _hash mm core link
+hash: TARGET=hash 
+hash: clean _hash mm core link
 
 
 link:
@@ -93,7 +138,9 @@ else
 	cp model/__application.o model/__application_hijacked.o
 endif
 ifdef MALLOC
-	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o
+#	ld -r -o model/application.o model/__application_hijacked.o  
+	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o $(LIBS)
+#	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o $(LIBS)
 #	gcc $(CFLAGS) -o $(TARGET) model/__application.o core/__core.o $(LIBS)
 else
 	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
@@ -137,3 +184,13 @@ _robot_explore: $(ROBOT_EXPLORE_OBJ)
 
 clean:
 	@find . -name "*.o" -exec rm {} \;
+	@find . -type f -name "phold" 		  -exec rm {} \;
+	@find . -type f -name "pcs" 		  -exec rm {} \;
+	@find . -type f -name "pcs-prealloc"  -exec rm {} \;
+	@find . -type f -name "traffic "  	  -exec rm {} \;
+	@find . -type f -name "tcar" 		  -exec rm {} \;
+	@find . -type f -name "phold" 		  -exec rm {} \;
+	@find . -type f -name "robot_explore" -exec rm {} \;
+	@find . -type f -name "hash" 		  -exec rm {} \;
+	
+ 		 

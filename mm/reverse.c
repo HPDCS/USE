@@ -559,8 +559,8 @@ void execute_undo_event(unsigned int lid, revwin_t *win) {
 	unsigned int events_after = *((unsigned int *)(states[lid]+sizeof(simtime_t)));
 
 	if(events_after != (events_before-1)) {
-		printf("Simulation state corruption on lid %d\n", lid);
-		printf("BEFORE= %d\nAFTER= %d\n\n", events_before, events_after);
+		//printf("Simulation state corruption on lid %d\n", lid);
+		//printf("BEFORE= %d\nAFTER= %d\n\n", events_before, events_after);
 	}
 
 	//printf("[%d] AFTER :: %d\n", lid, *(unsigned int *)(states[lid]+sizeof(simtime_t)));
