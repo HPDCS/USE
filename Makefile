@@ -83,6 +83,7 @@ CORE_SOURCES =  core/core.c\
 		core/queue.c\
 		core/main.c\
 		core/numerical.c\
+		core/hpdcs_math.c\
 		statistics/statistics.c\
 #		mm/reverse.c\
 #		mm/slab.c

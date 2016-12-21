@@ -37,6 +37,7 @@
 #include "atomic.h"
 
 
+
 /**
 * This function implements a compare-and-swap atomic operation on x86 for long long values
 *
@@ -340,6 +341,4 @@ inline void spin_unlock_x86(spinlock_t *s) {
 }
 
 
-#else
-#error x86.c: Currently supporting only x86/x86_64
 #endif /* defined(ARCH_X86) || defined(ARCH_X86_64) */

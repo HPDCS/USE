@@ -12,6 +12,8 @@
 #include <reverse.h>
 #include <statistics.h>
 
+__thread struct drand48_data seedT;
+
 unsigned short int number_of_threads = 1;
 
 extern double delta_count;
@@ -20,6 +22,8 @@ extern int reverse_execution_threshold;
 void *start_thread(void *args) {
 
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+	
+    srand48_r(tid+254, &seedT);
 
 	//START THREAD (definita in core.c)
 	thread_loop(tid);

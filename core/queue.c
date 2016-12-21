@@ -182,7 +182,7 @@ void flush(void) {
 	
 	if(current_lvt>gvt) gvt = current_lvt;
 	
-	nbc_prune(current_lvt - LOOKAHEAD);
+	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
 #endif
     statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
 
