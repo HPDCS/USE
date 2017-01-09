@@ -51,7 +51,7 @@ int queue_lock = 0;
 
 void queue_init(void) {
 #ifdef NBC
-    nbcalqueue = nb_calqueue_init(n_cores);
+    nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
 #else
 	calqueue_init();
 #endif
@@ -180,7 +180,7 @@ void flush(void) {
 	
 	if(current_lvt>gvt) gvt = current_lvt;
 	
-	nbc_prune(current_lvt - LOOKAHEAD);
+	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
 #endif
     statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
 

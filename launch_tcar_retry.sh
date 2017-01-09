@@ -10,6 +10,9 @@ LOOP_COUNT_list="4500"		#loop_count
 ROB_PER_CELLA_list="2"		#robot per cella
 NUM_CELLE_OCC="80 160"		#numero di celle occupate
 
+PUB_list="0.33"
+EPB_list="12"
+
 MAX_RETRY="10"
 
 FOLDER="results/results_tcar2" #/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
@@ -17,6 +20,11 @@ FOLDER="results/results_tcar2" #/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
 mkdir results
 mkdir results/results_tcar
 mkdir ${FOLDER}
+
+for pub in $PUB_list
+do
+for epb in $EPB_list
+do
 
 for loop_count in $LOOP_COUNT_list
 do
@@ -32,13 +40,13 @@ do
 		make $test 			LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count}
 		mv $test ${test}_sl_nohi
 		
-		make $test NBC=1 	LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count}
+		make $test NBC=1 	LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb}
 		mv $test ${test}_lf_nohi
 		
 		make $test 			REVERSIBLE=1 LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count}
 		mv $test ${test}_sl_hi
 							
-		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count}
+		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb}
 		mv $test ${test}_lf_hi
 		for run in $RUN_list 
 		do
@@ -100,6 +108,8 @@ do
 		rm ${test}_lf_hi
 	done
 	
+done
+done
 done
 done
 done

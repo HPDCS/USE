@@ -6,9 +6,12 @@ TEST_list="phold"				#test
 RUN_list="1 2 3 4"				#lista del 
 numero di run
 
-FAN_OUT_list="1 10 25 50"		#lista fan out
+FAN_OUT_list="1 50"		#lista fan out
 LOOKAHEAD_list="0.1" #y 0.001"		#lookahead
 LOOP_COUNT_list="600 400 250 150 100 50"	#loop_count
+
+PUB_list="0.33"
+EPB_list="12"
 
 MAX_RETRY="10"
 
@@ -18,6 +21,11 @@ mkdir results
 mkdir results/results_phold
 mkdir ${FOLDER}
 
+for pub in $PUB_list
+do
+for epb in $EPB_list
+do
+
 for loop_count in $LOOP_COUNT_list
 do
 for fan_out in $FAN_OUT_list
@@ -26,16 +34,16 @@ for lookahead in $LOOKAHEAD_list
 do
 	for test in $TEST_list 
 	do
-		make $test 			LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}
+		make $test 			LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} 
 		mv $test ${test}_sl_nohi
 		
-		make $test NBC=1 	LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}
+		make $test NBC=1 	LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb}
 		mv $test ${test}_lf_nohi
 		
 		make $test 			REVERSIBLE=1 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}
 		mv $test ${test}_sl_hi
 							
-		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}
+		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb}
 		mv $test ${test}_lf_hi
 		for run in $RUN_list
 		do
@@ -97,6 +105,8 @@ do
 		rm ${test}_sl_hi
 		rm ${test}_lf_hi
 	done
+done
+done
 done
 done
 done

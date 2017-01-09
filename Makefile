@@ -40,9 +40,20 @@ ifdef NUM_CELLE_OCCUPATE
 CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
 endif
 
-
 ifdef ROBOT_PER_CELLA
 CFLAGS:= $(CFLAGS) -DROBOT_PER_CELLA=$(ROBOT_PER_CELLA)
+endif
+
+ifdef PERC_USED_BUCKET
+CFLAGS:= $(CFLAGS) -DPUB=$(PERC_USED_BUCKET)
+else
+CFLAGS:= $(CFLAGS) -DPUB=0.33
+endif
+
+ifdef ELEM_PER_BUCKET
+CFLAGS:= $(CFLAGS) -DEPB=$(ELEM_PER_BUCKET)
+else
+CFLAGS:= $(CFLAGS) -DEPB=3
 endif
 
 
@@ -83,6 +94,7 @@ CORE_SOURCES =  core/core.c\
 		core/queue.c\
 		core/main.c\
 		core/numerical.c\
+		core/hpdcs_math.c\
 		statistics/statistics.c\
 #		mm/reverse.c\
 #		mm/slab.c
