@@ -48,7 +48,7 @@ int queue_lock = 0;
 
 void queue_init(void) {
 #ifdef NBC
-    nbcalqueue = nb_calqueue_init(n_cores);
+    nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
 #else
 	calqueue_init();
 #endif
