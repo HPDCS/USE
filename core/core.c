@@ -38,7 +38,7 @@
 #define PRINT_REPORT_RATE	10000
 
 #define MAX_PATHLEN			512
-#define CACHE_LINE_SIZE 	64
+//#define CACHE_LINE_SIZE 	64
 
 
 __thread simtime_t current_lvt = 0;
@@ -170,9 +170,9 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	
 	states = malloc(sizeof(void *) * n_prc_tot);
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
-	lp_lock_ret =  posix_memalign(&lp_lock, CACHE_LINE_SIZE, lps_num * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
+	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, lps_num * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
-	if(states == NULL || can_stop == NULL || lp_lock_ret == NULL){
+	if(states == NULL || can_stop == NULL || lp_lock_ret == 0){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();		
 	}
@@ -212,14 +212,14 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 
 void thread_loop(unsigned int thread_id) {
 	
-	unsigned int status, mode, old_mode, retries;
-	double pending_events;
+	//unsigned int mode, old_mode, retries;
+	//double pending_events;
 	revwin_t *window;
 
 	tid = thread_id;
 	
 	//Set the CPU affinity
-	set_affinity(tid)
+	set_affinity(tid);
 	
 	reverse_init(REVWIN_SIZE);
 	window = revwin_create();
@@ -230,7 +230,7 @@ void thread_loop(unsigned int thread_id) {
 	///* START SIMULATION *///
 	while (!stop && !sim_error) {
 		
-		mode = retries = 0; //<--possono sparire?
+		//mode = retries = 0; //<--possono sparire?
 
 		/// *FETCH* ///
 		if (getMinFree() == 0) {
@@ -242,11 +242,11 @@ execution:
 		current_lp = current_msg->receiver_id;	//identificatore lp
 		current_lvt = current_msg->timestamp;	//local virtual time
 				
-		old_mode = mode;
+		//old_mode = mode;
 		
 		if (safe) {
 		/// ==== SAFE EXECUTION ==== ///
-			mode = MODE_SAF;
+			//mode = MODE_SAF;
               
 			clock_timer event_processing;
 			clock_timer_start(event_processing);
@@ -258,7 +258,7 @@ execution:
 		}
 		else {
 		/// ==== REVERSIBLE EXECUTION ==== ///
-			mode = MODE_STM;
+			//mode = MODE_STM;
 
 			// Get the time of the whole STM execution
 			clock_timer stm_event_processing;
@@ -296,7 +296,7 @@ execution:
 					goto execution;
 					
 				}
-			}while(!safe)
+			}while(!safe);
 				
 			//Attenzione, ora si sommano i tempi degli eventi squashatu con i relativi eventi eseguiti poi
 			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));

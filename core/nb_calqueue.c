@@ -1326,3 +1326,13 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 	return (double)committed;
 }
 
+///*---------------- DA FARE --------------*///
+nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
+	return 1;
+}
+nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
+	return 1;
+}
+void delete(nb_calqueue *queue, nbc_bucket_node* node){
+	return;
+}

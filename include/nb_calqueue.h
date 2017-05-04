@@ -113,4 +113,8 @@ extern nbc_bucket_node* nbc_dequeue(nb_calqueue *queue);
 extern double nbc_prune(double timestamp);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold);
 
+extern nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag);
+extern nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node);
+extern void delete(nb_calqueue *queue, nbc_bucket_node* node);
+
 #endif /* DATATYPES_NONBLOCKING_QUEUE_H_ */

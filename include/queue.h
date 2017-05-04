@@ -2,6 +2,9 @@
 #define __QUEUE_H
 
 
+#include <stdbool.h>
+
+
 /* Struttura dati "Coda con priorità" per la schedulazione degli eventi (provissoria):
  * Estrazione a costo O(n)
  * Dimensione massima impostata a tempo di compilazione
@@ -36,9 +39,9 @@ unsigned int getMinFree();
 void commit();
 
 extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
-extern __thread bool  safe __attribute__ ((aligned (64)));
+extern __thread bool  safe;
 extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
-extern __thread bool  new_safe __attribute__ ((aligned (64)));
+extern __thread bool  new_safe;
 extern unsigned int *lp_lock;
 
 

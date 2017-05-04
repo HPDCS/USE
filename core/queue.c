@@ -13,9 +13,7 @@
 //MACROs to manage lp_unsafe_set
 #define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1 << (lp%64)) )
 #define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1 << (lp%64)) )
-#define clear_lp_unsafe_set			for(unsigned int x = 0; x < n_prc_tot/64; x++){\ 
-										lp_unsafe_set[x] = 0;\
-									}	
+#define clear_lp_unsafe_set			for(unsigned int x = 0; x < n_prc_tot/64; x++){lp_unsafe_set[x] = 0;}	
 //MACROs to manage lock
 #define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
@@ -38,10 +36,10 @@ nb_calqueue* nbcalqueue;
 //} queue_t;
 
 __thread msg_t * current_msg __attribute__ ((aligned (64)));
-__thread bool safe = false;
+__thread bool safe;
 
 __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
-__thread bool  new_safe = false;
+__thread bool  new_safe;
 
 __thread unsigned long long * lp_unsafe_set;
 
@@ -62,11 +60,11 @@ __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
-	if((lp_unsafe_set=malloc(n_prc_tot/8))==-1){
+	if((lp_unsafe_set=malloc(n_prc_tot/8))==NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
-	clear_lp_unsafe_set();
+	clear_lp_unsafe_set;
 }
 
 void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
@@ -139,7 +137,7 @@ void commit(void) {
 	
 	queue_deliver_msgs();
 	delete(nbcalqueue, current_msg->node);
-	unlock(current_msg->lp;)
+	unlock(current_msg->receiver_id);
 	
 	if(current_lvt > gvt) gvt = current_lvt;
 	//else if (current_lvt < gvt+LOOKAHEAD) printf("ERROR: event processed out of order");
@@ -157,7 +155,7 @@ unsigned int getMinFree(){
 	unsigned int lp;
 	
 	safe = false;
-	clear_lp_unsafe_set();
+	clear_lp_unsafe_set;
 	    
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
@@ -167,15 +165,15 @@ unsigned int getMinFree(){
     
     while(node != NULL){
 		if(!node->reserved){
-			ts = node->ts;
+			ts = node->timestamp;
 			lp = node->tag;
 			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
 				if(tryLock(lp)){
 retry_on_replica:
-					if((node->next & 1ULL)){ //da verificare se è corretto?
+					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
 						if(node->replica != NULL){
 							node = node->replica;
-							goto retry_on_replica:
+							goto retry_on_replica;
 						}
 						unlock(lp);
 					}
@@ -216,7 +214,7 @@ retry_on_replica:
 
 void getMinLP(unsigned int lp){
 	nbc_bucket_node * node;
-	simtime_t ts, min = INFTY;
+	simtime_t min = INFTY;
 	
 	new_safe = false;
 	    
@@ -237,7 +235,7 @@ void getMinLP(unsigned int lp){
     new_current_msg = (msg_t *) node->payload;
     new_current_msg->node = node;
 
-	if( ts < (min + LOOKAHEAD)){
+	if( node->timestamp < (min + LOOKAHEAD)){
 		new_safe = true;
 	}
     
