@@ -74,6 +74,9 @@ struct __bucket_node
 	double timestamp;  				// key
 	unsigned int counter; 			// used to resolve the conflict with same timestamp using a FIFO policy
 	//char zpad3[36];					// actually used only to distinguish head nodes
+	/*********************DA SISTEMARE*************************/
+	unsigned int lp;
+	unsigned bool reserved;
 };
 
 

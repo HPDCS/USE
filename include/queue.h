@@ -20,12 +20,6 @@ unsigned int queue_pool_size(void);
 
 void queue_register_thread(void);
 
-int queue_min(void);
-
-int fetch(void);
-
-void flush(void);
-
 int queue_pending_message_size(void);
 
 void queue_deliver_msgs(void);
@@ -34,7 +28,18 @@ void queue_destroy(void);
 
 void queue_clean(void);
 
-extern __thread msg_t current_msg __attribute__ ((aligned (64)));
+
+void getMinLP(unsigned int lp);
+
+unsigned int getMinFree();
+
+void commit();
+
+extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
+extern __thread bool  safe __attribute__ ((aligned (64)));
+extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
+extern __thread bool  new_safe __attribute__ ((aligned (64)));
+extern unsigned int *lp_lock;
 
 
 
