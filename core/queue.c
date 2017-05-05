@@ -60,7 +60,11 @@ __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
-	if((lp_unsafe_set=malloc(n_prc_tot/8))==NULL){
+	//if((lp_unsafe_set=malloc(n_prc_tot/8))==NULL){
+}
+
+void lock_init(){
+		if((lp_unsafe_set=malloc(256))==NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}

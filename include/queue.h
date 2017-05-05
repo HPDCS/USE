@@ -44,6 +44,8 @@ extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
 extern __thread bool  new_safe;
 extern unsigned int *lp_lock;
 
+extern void lock_init();
+
 
 
 #endif

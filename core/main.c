@@ -45,16 +45,6 @@ void start_simulation(unsigned short int number_of_threads) {
         }
     }
 
-#ifdef THROTTLING     
-	if(number_of_threads>1){	
-//		pthread_t p_tun;
-//		if( (ret = pthread_create(&p_tun, NULL, tuning, NULL)) != 0) {
-//			fprintf(stderr, "%s\n", strerror(errno));
-//			abort();
-//		}
-	}
-#endif
-
     //Main thread
     thread_loop(0);
 
@@ -76,18 +66,6 @@ int main(int argn, char *argv[]) {
         init(n, atoi(argv[2]));
     }
 
-	if(argn > 3) {
-		int i;
-		for(i = 2; i < argn; i++) {
-			if(!strcmp(argv[i], "-d")) {
-				//delta_count = atof(argv[++i]);
-			} else if(!strcmp(argv[i], "-t")) {
-				//reverse_execution_threshold = atoi(argv[++i]);
-			}
-		}
-	}
-
-//    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
     printf("**START SIMULATION**-\n\n");
 
     timer_start(exec_time);
@@ -100,15 +78,9 @@ int main(int argn, char *argv[]) {
     printf("Simulation ended: %.5f seconds\n", (double)timer_value_seconds(exec_time));
     printf("Simulation ended: %llu clocks\n", clock_timer_value(simulation_clocks));
 
-    //print_report_sum();
 
     print_statistics();
 
-#ifndef NBC
-    	printf("Using SPINLOCK CALQUEUE\n");
-#else
-    	printf("Using NONBLOCKING CALQUEUE\n");
-#endif
     //statistics_fini();
 
     return 0;

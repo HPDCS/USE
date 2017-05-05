@@ -35,7 +35,7 @@
 
 //id del processo principale
 #define MAIN_PROCESS		0
-#define PRINT_REPORT_RATE	10000
+#define PRINT_REPORT_RATE	1
 
 #define MAX_PATHLEN			512
 //#define CACHE_LINE_SIZE 	64
@@ -229,7 +229,7 @@ void thread_loop(unsigned int thread_id) {
 	//	printf("Unable to set CPU affinity: %s\n", strerror(errno));
 	//	exit(-1);
 	//}
-	
+	lock_init();
 	
 	reverse_init(REVWIN_SIZE);
 	window = revwin_create();
@@ -242,10 +242,12 @@ void thread_loop(unsigned int thread_id) {
 		
 		//mode = retries = 0; //<--possono sparire?
 
+	printf("Start getMinFree\n");
 		/// *FETCH* ///
 		if (getMinFree() == 0) {
 			continue;
 		}
+	printf("End   getMinFree\n");
 execution:		
 		queue_clean();
 		
@@ -253,6 +255,7 @@ execution:
 		current_lvt = current_msg->timestamp;	//local virtual time
 				
 		//old_mode = mode;
+		
 		
 		if (safe) {
 		/// ==== SAFE EXECUTION ==== ///
@@ -265,6 +268,7 @@ execution:
               
 			statistics_post_data(tid, EVENTS_SAFE, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
+			//sleep(5);//////////////////////////////7
 		}
 		else {
 		/// ==== REVERSIBLE EXECUTION ==== ///
@@ -323,14 +327,14 @@ execution:
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
-		if(tid == MAIN_PROCESS) {
+		//if(tid == MAIN_PROCESS) {
 			evt_count++;
 
 			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
 				printf("[%u] TIME: %f", tid, current_lvt);
 				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
-		}
+		//}
 	}
 
 	statistics_post_data(tid, CLOCK_LOOP, clock_timer_value(main_loop_time));
