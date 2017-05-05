@@ -1328,11 +1328,128 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 
 ///*---------------- DA FARE --------------*///
 nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
-	return 1;
+		nbc_bucket_node *min, *min_next, 
+					*left_node, *left_node_next, 
+					*tail, *array;
+	table * h;
+	
+	unsigned long long current;
+	unsigned long long index;
+	unsigned long long epoch;
+	
+	unsigned int size;
+	double bucket_width;
+
+	tail = g_tail;
+	
+	do
+	{
+		h = read_table(queue);
+		current = h->current;
+		size = h->size;
+		array = h->array;
+		bucket_width = h->bucket_width;
+
+		index = current >> 32;
+		epoch = current & MASK_EPOCH;
+
+		assertf(
+				index+1 > MASK_EPOCH, 
+				"\nOVERFLOW INDEX:%llu  BW:%.10f SIZE:%u TAIL:%p TABLE:%p NUM_ELEM:%u\n",
+				index, bucket_width, size, tail, h, atomic_read(&h->counter)
+			);
+		min = array + (index++ % size);
+
+		left_node = min_next = min->next;
+		
+		if(is_marked(min_next, MOV))
+			continue;
+		
+		while(left_node->epoch <= epoch)
+		{	
+			left_node_next = left_node->next;
+			if(!is_marked(left_node_next))
+			{
+				if(left_node->timestamp < index*bucket_width && (tag == (~0U) || left_node->tag == tag))
+					return left_node;
+				else
+				{
+					if(left_node == tail && size == 1 )
+					{
+						#if LOG_DEQUEUE == 1
+						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
+						#endif
+						return NULL;
+					}
+					break;	
+				}
+				
+			}
+			
+			if(is_marked(left_node_next, MOV))
+			{
+				break;
+			}
+			left_node = get_unmarked(left_node_next);
+		}
+
+	}while(1);
+	
+	return NULL;
 }
 nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
-	return 1;
+	/* preferirei avere l'hashtable anche come parametro */
+	/* oppure sfruttare il campo epoca per avere un puntatore a hashtable */
+	nbc_bucket_node  *array, *node_next;
+	table *h;
+	double bucket_width;
+	unsigned int bucket;
+	unsigned int size;
+	h = read_table(queue);
+	
+	bucket = hash(node->timestamp, bucket_width);
+	bucket_width = h->bucket_width;
+	size  = h->size;
+	
+	do
+	{
+		/* read table recovery*/
+		node_next = node->next;
+		if(is_marked(node_next, MOV) || node->replica != NULL)
+			return NULL;
+			
+		while((is_marked(node_next, DEL) || is_marked(node_next, INV) ))
+		{
+			node = get_unmarked(node_next);
+			node_next = node->next;
+		}
+
+		if(is_marked(node_next, MOV) || node->replica != NULL)
+			return NULL;
+			
+		if(node->timestamp < (bucket+1)*bucket_width)
+			return node;
+		else
+			node = h->array + (bucket+1)%size;
+	}while(1);
+	return NULL;
 }
 void delete(nb_calqueue *queue, nbc_bucket_node* node){
+	nbc_bucket_node *node_next, *tmp;
+	
+	node_next = FETCH_AND_OR(&node->next, DEL);
+	tmp = node;
+	while(is_marked(node_next, DEL) || is_marked(node_next, MOV))
+	{
+		tmp = tmp->replica;
+		while(tmp == NULL)
+		{
+			read_table(queue);
+			tmp = tmp->replica;
+		}
+		
+		/* DOVREBBE ANDAR BENE ANCHE IN CASO DI NODO INV */
+		node_next = FETCH_AND_OR(&node->next, DEL);
+	}
 	return;
 }
