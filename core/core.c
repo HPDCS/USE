@@ -172,7 +172,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
 	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, lps_num * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
-	if(states == NULL || can_stop == NULL || lp_lock_ret == 0){
+	if(states == NULL || can_stop == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();		
 	}
