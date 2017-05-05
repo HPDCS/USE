@@ -214,6 +214,7 @@ retry_on_replica:
 
 void getMinLP(unsigned int lp){
 	nbc_bucket_node * node;
+restart:
 	simtime_t min = INFTY;
 	
 	new_safe = false;
@@ -224,9 +225,12 @@ void getMinLP(unsigned int lp){
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
     
-    while(node->tag != lp){
-		node = getNext(nbcalqueue, node); 
+    while(node != NULL && node->tag != lp){
+		node = getNext(nbcalqueue, node);
+		if(node == NULL)
+			goto restart;
     }
+
     
     statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
   
