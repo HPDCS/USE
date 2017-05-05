@@ -1338,12 +1338,15 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 	unsigned long long epoch;
 	
 	unsigned int size;
+	unsigned int counter;
 	double bucket_width;
+	bool valid_node_exists;
 
 	tail = g_tail;
 	
 	do
 	{
+		counter = 0;
 		h = read_table(queue);
 		current = h->current;
 		size = h->size;
@@ -1370,8 +1373,9 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 			left_node_next = left_node->next;
 			if(!is_marked(left_node_next))
 			{
-				if(left_node->timestamp < index*bucket_width && (tag == (~0U) || left_node->tag == tag))
+				if(left_node->timestamp < index*bucket_width)
 					return left_node;
+				
 				else
 				{
 					if(left_node == tail && size == 1 )
@@ -1381,6 +1385,12 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 						#endif
 						return NULL;
 					}
+					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
+					{
+						
+						connect_to_be_freed_node_list(min_next, counter);
+					}
+					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
 					break;	
 				}
 				
@@ -1391,6 +1401,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 				break;
 			}
 			left_node = get_unmarked(left_node_next);
+			counter++;
 		}
 
 	}while(1);
