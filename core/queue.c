@@ -15,6 +15,7 @@
 #define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1 << (lp%64)) )
 #define clear_lp_unsafe_set			for(unsigned int x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}	
 //MACROs to manage lock
+
 #define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
 
@@ -64,7 +65,7 @@ void queue_init(void) {
 }
 
 void lock_init(){
-		if((lp_unsafe_set=malloc((n_prc_tot/64 + 1)))==NULL){
+		if((lp_unsafe_set=malloc(n_prc_tot/8 + 8))==NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
@@ -143,14 +144,14 @@ void commit(void) {
 	delete(nbcalqueue, current_msg->node);
 	unlock(current_lp);//current_msg->receiver_id);
 	
-	if(current_lvt > gvt) gvt = current_lvt;
-	else if (current_lvt < gvt+LOOKAHEAD) printf("ERROR: event processed out of order\n");//////////////
-	printf("[%u]I'm freeing %p\n", tid, current_msg);
+	//if(current_lvt > gvt) gvt = current_lvt;
+	//else if (current_lvt < gvt+LOOKAHEAD) printf("ERROR: event processed out of order\n");//////////////
+	//printf("[%u]I'm freeing %p\n", tid, current_msg);
 	//current_msg->receiver_id = -1;
 	//current_msg->timestamp = -1;
 	free(current_msg);
 	
-	//nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
+	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
 
     statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
 
@@ -168,16 +169,16 @@ unsigned int getMinFree(){
 	    
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
-	printf("\tStart getMin\n");
+	//printf("\tStart getMin\n");
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
-	printf("\tEnd   getMin:%f\n",node->timestamp);
+	//printf("\tEnd   getMin:%f\n",node->timestamp);
     
     while(node != NULL){
+		ts = node->timestamp;
+		lp = node->tag;
+		tmp = node->payload;
 		if(!node->reserved){
-			ts = node->timestamp;
-			lp = node->tag;
-			tmp = node->payload;
 			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
 				if(tryLock(lp)){
 retry_on_replica:
@@ -195,13 +196,13 @@ retry_on_replica:
 				}
 			}
 		}
-		printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
+		//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
 	
 		add_lp_unsafe_set(lp);
 		
-		printf("\tStart getNext\n");
+		//printf("\tStart getNext\n");
 		node = getNext(nbcalqueue, node);
-		printf("\tEnd   getNext\n");
+		//printf("\tEnd   getNext\n");
     }
     
     
@@ -213,7 +214,6 @@ retry_on_replica:
     }
     
     node->reserved = true;
-    
     current_msg = (msg_t *) node->payload;
     current_msg->node = node;
 
@@ -241,15 +241,15 @@ restart:
 	
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
-    printf("\t[%u] Min: ts:%f lp:%u resvd:%u addr:%p cp:%u\n", tid, min, node->tag, node->reserved, node, node->copy);
+    //printf("\t[%u] Min: ts:%f lp:%u resvd:%u addr:%p cp:%u\n", tid, min, node->tag, node->reserved, node, node->copy);
 		
     while(node != NULL && node->tag != lp){
-		printf("\t[%u] Motherfucker, give me the lp %u at time %f %u\n", tid, lp, current_lvt, current_lp);
+		//printf("\t[%u] Motherfucker, give me the lp %u at time %f %u\n", tid, lp, current_lvt, current_lp);
 		node = getNext(nbcalqueue, node);
 		if(node == NULL)
 			goto restart;
     }
-    printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
+    //printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
 
     
     statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));

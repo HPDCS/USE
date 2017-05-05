@@ -273,7 +273,7 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	res->timestamp = timestamp;
 	res->tag = -1;
 	res->reserved = false;
-	res->copy = true;////////////////////////////////////////////////////
+	res->copy = false;////////////////////////////////////////////////////
 
 	return res;
 }
@@ -638,7 +638,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 			free(new_h);
 		}
 		else
-			LOG("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
+			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
 	}
 }
 
@@ -1376,7 +1376,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 		if(is_marked(min_next, MOV))
 			continue;
 		
-		while(1)//while(left_node->epoch <= epoch)
+		while(left_node->epoch <= epoch)
 		{	
 			left_node_next = left_node->next;
 			if(!is_marked(left_node_next))
@@ -1464,14 +1464,15 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 
 void delete(nb_calqueue *queue, nbc_bucket_node* node){
     nbc_bucket_node *node_next, *tmp;
-    
+    table *h = read_table(queue);
     node_next = FETCH_AND_OR(&node->next, DEL);
     tmp = node;
     while(tmp->replica != NULL || is_marked(node_next, MOV))
     {
-        read_table(queue);
+        h = read_table(queue);
         tmp = tmp->replica;
         node_next = FETCH_AND_OR(&tmp->next, DEL);
     }
+    ATOMIC_DEC(&(h->counter));
     return;
 }

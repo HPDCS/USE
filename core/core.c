@@ -41,6 +41,10 @@
 //#define CACHE_LINE_SIZE 	64
 
 
+#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
+#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
+
+
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
 __thread unsigned int tid = 0;
@@ -186,6 +190,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 #ifndef NO_DYMELOR
 	    dymelor_init();
 	    printf("Dymelor abilitato\n");
+	    printf("CACHELINESIZE %u\n", CACHE_LINE_SIZE);
 #endif
 	statistics_init();
 	queue_init();
@@ -234,12 +239,12 @@ void thread_loop(unsigned int thread_id) {
 		
 		//mode = retries = 0; //<--possono sparire?
 
-	printf("Start getMinFree\n");
+	//printf("Start getMinFree\n");
 		/// *FETCH* ///
 		if (getMinFree() == 0) {
 			continue;
 		}
-	printf("End   getMinFree\n");
+	//printf("End   getMinFree\n");
 execution:		
 		queue_clean();
 		
@@ -262,6 +267,8 @@ execution:
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
 		}
 		else {
+			((nbc_bucket_node*)current_msg->node)->reserved = false;
+			unlock(current_lp);
 			continue;
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
@@ -323,12 +330,12 @@ execution:
 			stop = check_termination();
 
 		//if(tid == MAIN_PROCESS) {
-			evt_count++;
-
-			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
-				printf("[%u] TIME: %f", tid, current_lvt);
-				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
-			}
+		//	evt_count++;
+        //
+		//	if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
+		//		printf("[%u] TIME: %f", tid, current_lvt);
+		//		printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
+		//	}
 		//}
 		
 	//sleep(1);//////////////////////////77
