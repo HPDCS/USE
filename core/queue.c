@@ -214,12 +214,13 @@ retry_on_replica:
 
 void getMinLP(unsigned int lp){
 	nbc_bucket_node * node;
+	simtime_t min;
+	clock_timer queue_op;
 restart:
-	simtime_t min = INFTY;
+	min = INFTY;
 	
 	new_safe = false;
 	    
-	clock_timer queue_op;
 	clock_timer_start(queue_op);
 	
 	node = getMin(nbcalqueue, -1);

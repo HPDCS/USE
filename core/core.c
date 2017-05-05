@@ -219,7 +219,7 @@ void thread_loop(unsigned int thread_id) {
 	tid = thread_id;
 	
 	//Set the CPU affinity
-	set_affinity(tid);
+	set_affinity(thread_id);
 	
 	reverse_init(REVWIN_SIZE);
 	window = revwin_create();

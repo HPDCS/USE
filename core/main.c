@@ -16,7 +16,7 @@ __thread struct drand48_data seedT;
 
 unsigned short int number_of_threads = 1;
 
-extern double delta_count;
+//extern double delta_count;
 extern int reverse_execution_threshold;
 
 void *start_thread(void *args) {
@@ -80,9 +80,9 @@ int main(int argn, char *argv[]) {
 		int i;
 		for(i = 2; i < argn; i++) {
 			if(!strcmp(argv[i], "-d")) {
-				delta_count = atof(argv[++i]);
+				//delta_count = atof(argv[++i]);
 			} else if(!strcmp(argv[i], "-t")) {
-				reverse_execution_threshold = atoi(argv[++i]);
+				//reverse_execution_threshold = atoi(argv[++i]);
 			}
 		}
 	}

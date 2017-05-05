@@ -267,11 +267,5 @@ void print_statistics() {
 
     printf("STM abort for UNSAFETY..........................: %11u\n\n", system_stats.abort_reverse);
     
-#ifdef THROTTLING
-    printf("Final delta.....................................: %.1f\n", delta_count);
-#endif
-#ifdef REVERSIBLE
-    printf("Final threshold.................................: %u\n\n", reverse_execution_threshold);
-#endif
 }
 
