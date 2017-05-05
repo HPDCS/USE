@@ -13,7 +13,7 @@
 //MACROs to manage lp_unsafe_set
 #define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1 << (lp%64)) )
 #define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1 << (lp%64)) )
-#define clear_lp_unsafe_set			for(unsigned int x = 0; x < n_prc_tot/64; x++){lp_unsafe_set[x] = 0;}	
+#define clear_lp_unsafe_set			for(unsigned int x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}	
 //MACROs to manage lock
 #define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
@@ -64,7 +64,7 @@ void queue_init(void) {
 }
 
 void lock_init(){
-		if((lp_unsafe_set=malloc(256))==NULL){
+		if((lp_unsafe_set=malloc((n_prc_tot/64 + 1)))==NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
@@ -118,7 +118,7 @@ void queue_deliver_msgs(void) {
 		}
         memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
 
-        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole);
+        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
     }
 
     _thr_pool._thr_pool_count = 0;
@@ -144,7 +144,7 @@ void commit(void) {
 	unlock(current_msg->receiver_id);
 	
 	if(current_lvt > gvt) gvt = current_lvt;
-	//else if (current_lvt < gvt+LOOKAHEAD) printf("ERROR: event processed out of order");
+	else if (current_lvt < gvt+LOOKAHEAD) printf("ERROR: event processed out of order\n");//////////////
 	free(current_msg);
 	
 	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
@@ -163,9 +163,10 @@ unsigned int getMinFree(){
 	    
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
-	
+	printf("\tStart getMin\n");
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
+	printf("\tEnd   getMin:%f\n",node->timestamp);
     
     while(node != NULL){
 		if(!node->reserved){
@@ -188,8 +189,10 @@ retry_on_replica:
 			}
 		}
 		add_lp_unsafe_set(lp);
+		
+		printf("\tStart getNext\n");
 		node = getNext(nbcalqueue, node);
-		 
+		printf("\tEnd   getNext\n");
     }
     
     
@@ -229,12 +232,15 @@ restart:
 	
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
-    
+    printf("\t[%u] Min: ts:%f lp:%u resvd:%u addr:%p cp:%u\n", tid, min, node->tag, node->reserved, node, node->copy);
+		
     while(node != NULL && node->tag != lp){
+		printf("\t[%u] Motherfucker, give me the lp %u at time %f %u\n", tid, lp, current_lvt, current_lp);
 		node = getNext(nbcalqueue, node);
 		if(node == NULL)
 			goto restart;
     }
+    printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
 
     
     statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));

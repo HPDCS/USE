@@ -9,7 +9,7 @@
 #include <dymelor.h>
 #include <slab.h>
 
-extern __thread msg_t current_msg;
+extern __thread msg_t * current_msg;
 extern void **states;
 
 /*
@@ -45,7 +45,7 @@ extern void **states;
 //
 
 static inline void revwin_overflow(revwin_t *win) {
-	printf("[LP%d] :: event %d win at %p\n", current_lp, current_msg.type, win);
+	printf("[LP%d] :: event %d win at %p\n", current_lp, current_msg->type, win);
 	printf("Code size is %d bytes and data size is %d bytes\n", (int)((long long)win->code_start - (long long)win->code), (int)((long long)win->data - (long long)win->data_start));
     printf("Reverse window has %d bytes, still available %d bytes\n", (int)((long long)win->code_start - (long long)win), (int)((long long)win->code - (long long)win->data));
 	fprintf(stderr, "Insufficent reverse window memory heap!\n");
@@ -464,7 +464,7 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 
 	// We have to retrieve the current event structure bound to this LP
 	// in order to bind this reverse window to it.
-	win = current_msg.revwin;
+	win = current_msg->revwin;
 	if(win == NULL) {
 		printf("No revwin has been defined for the event\n");
 		abort();

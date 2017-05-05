@@ -74,6 +74,7 @@ struct __bucket_node
 	//char zpad3[36];					// actually used only to distinguish head nodes
 	unsigned int tag;
 	bool reserved;
+	bool copy;
 };
 
 
@@ -108,7 +109,7 @@ struct nb_calqueue
 	table * volatile hashtable;
 };
 
-extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload);
+extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, unsigned int tag);
 extern void* nbc_dequeue(nb_calqueue *queue);
 extern double nbc_prune(nb_calqueue *queue, double timestamp);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_bucket, unsigned int elem_per_bucket);

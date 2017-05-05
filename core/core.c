@@ -220,15 +220,7 @@ void thread_loop(unsigned int thread_id) {
 	
 	//Set the CPU affinity
 	set_affinity(tid);
-	//cpu_set_t mask;
-	//printf("Thread %d set to CPU no %d\n", tid, tid);
-	//CPU_ZERO(&mask);
-	//CPU_SET(tid, &mask);
-	//int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
-	//if(err < 0) {
-	//	printf("Unable to set CPU affinity: %s\n", strerror(errno));
-	//	exit(-1);
-	//}
+	
 	lock_init();
 	
 	reverse_init(REVWIN_SIZE);
@@ -268,7 +260,6 @@ execution:
               
 			statistics_post_data(tid, EVENTS_SAFE, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
-			//sleep(5);//////////////////////////////7
 		}
 		else {
 		/// ==== REVERSIBLE EXECUTION ==== ///
@@ -310,6 +301,9 @@ execution:
 					goto execution;
 					
 				}
+				else{
+					safe = new_safe;
+				}
 			}while(!safe);
 				
 			//Attenzione, ora si sommano i tempi degli eventi squashatu con i relativi eventi eseguiti poi
@@ -335,7 +329,10 @@ execution:
 				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
 		//}
+		
+	//sleep(1);//////////////////////////77
 	}
+	
 
 	statistics_post_data(tid, CLOCK_LOOP, clock_timer_value(main_loop_time));
 

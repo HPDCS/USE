@@ -271,6 +271,9 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	res->payload = payload;
 	res->epoch = 0;
 	res->timestamp = timestamp;
+	res->tag = -1;
+	res->reserved = false;
+	res->copy = true;////////////////////////////////////////////////////
 
 	return res;
 }
@@ -803,6 +806,9 @@ static void migrate_node(nbc_bucket_node *right_node,	table *new_h)
 	
 	//Create a new node inserted in the new table as as INValid
 	replica = node_malloc(right_node->payload, right_node->timestamp,  right_node->counter);
+	replica->reserved = right_node->reserved;
+	replica->tag = right_node->tag;
+	replica->copy = true;////////////////////////////////////////////////////////////////
 	         
     do
 	{ 
@@ -1079,10 +1085,12 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
  *
  * @return true if the event is inserted in the hashtable, else false
  */
-void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload)
+void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned int tag)
 {
 	nbc_bucket_node *new_node = node_malloc(payload, timestamp, 0);
 	table *h, *old_h = NULL;	
+	
+	new_node->tag = tag;
 
 	do
 	{
@@ -1326,7 +1334,7 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 	return (double)committed;
 }
 
-///*---------------- DA FARE --------------*///
+
 nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 		nbc_bucket_node *min, *min_next, 
 					*left_node, *left_node_next, 
@@ -1411,16 +1419,21 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 	/* preferirei avere l'hashtable anche come parametro */
 	/* oppure sfruttare il campo epoca per avere un puntatore a hashtable */
-	nbc_bucket_node  *array, *node_next;
+	nbc_bucket_node  *array, *node_next, *original;
 	table *h;
 	double bucket_width;
 	unsigned int bucket;
 	unsigned int size;
 	h = read_table(queue);
 	
-	bucket = hash(node->timestamp, bucket_width);
+	printf("\t\tInside getNext: %f %u\n", node->timestamp, node->tag);
+	
 	bucket_width = h->bucket_width;
+	bucket = hash(node->timestamp, bucket_width);
+	
 	size  = h->size;
+	
+	
 	
 	do
 	{
@@ -1429,38 +1442,37 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 		if(is_marked(node_next, MOV) || node->replica != NULL)
 			return NULL;
 			
-		while((is_marked(node_next, DEL) || is_marked(node_next, INV) ))
+		do
 		{
 			node = get_unmarked(node_next);
 			node_next = node->next;
-		}
+		}while(
+			(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
+			(node->timestamp < bucket*bucket_width )
+		);
 
 		if(is_marked(node_next, MOV) || node->replica != NULL)
 			return NULL;
 			
-		if(node->timestamp < (bucket+1)*bucket_width)
+		if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width)
+			
 			return node;
 		else
-			node = h->array + (bucket+1)%size;
+			node = h->array + (++bucket%size);
 	}while(1);
 	return NULL;
 }
+
 void delete(nb_calqueue *queue, nbc_bucket_node* node){
-	nbc_bucket_node *node_next, *tmp;
-	
-	node_next = FETCH_AND_OR(&node->next, DEL);
-	tmp = node;
-	while(is_marked(node_next, DEL) || is_marked(node_next, MOV))
-	{
-		tmp = tmp->replica;
-		while(tmp == NULL)
-		{
-			read_table(queue);
-			tmp = tmp->replica;
-		}
-		
-		/* DOVREBBE ANDAR BENE ANCHE IN CASO DI NODO INV */
-		node_next = FETCH_AND_OR(&node->next, DEL);
-	}
-	return;
+    nbc_bucket_node *node_next, *tmp;
+    
+    node_next = FETCH_AND_OR(&node->next, DEL);
+    tmp = node;
+    while(tmp->replica != NULL || is_marked(node_next, MOV))
+    {
+        read_table(queue);
+        tmp = tmp->replica;
+        node_next = FETCH_AND_OR(&tmp->next, DEL);
+    }
+    return;
 }
