@@ -44,7 +44,7 @@
 #define MINIMUM_SIZE 1
 
 #define FLUSH_SMART 1
-#define ENABLE_EXPANSION 1
+#define ENABLE_EXPANSION 0
 #define ENABLE_PRUNE 1
 
 #define TID tid

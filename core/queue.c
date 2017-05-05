@@ -141,13 +141,16 @@ void commit(void) {
 	
 	queue_deliver_msgs();
 	delete(nbcalqueue, current_msg->node);
-	unlock(current_msg->receiver_id);
+	unlock(current_lp);//current_msg->receiver_id);
 	
 	if(current_lvt > gvt) gvt = current_lvt;
 	else if (current_lvt < gvt+LOOKAHEAD) printf("ERROR: event processed out of order\n");//////////////
+	printf("[%u]I'm freeing %p\n", tid, current_msg);
+	//current_msg->receiver_id = -1;
+	//current_msg->timestamp = -1;
 	free(current_msg);
 	
-	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
+	//nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
 
     statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
 
@@ -157,6 +160,8 @@ unsigned int getMinFree(){
 	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
 	unsigned int lp;
+	
+	void* tmp;///////////////////////////
 	
 	safe = false;
 	clear_lp_unsafe_set;
@@ -172,12 +177,14 @@ unsigned int getMinFree(){
 		if(!node->reserved){
 			ts = node->timestamp;
 			lp = node->tag;
+			tmp = node->payload;
 			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
 				if(tryLock(lp)){
 retry_on_replica:
 					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
 						if(node->replica != NULL){
 							node = node->replica;
+							if(tmp != node->payload){ printf("WTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTF\n"); exit(0);}
 							goto retry_on_replica;
 						}
 						unlock(lp);
@@ -188,6 +195,8 @@ retry_on_replica:
 				}
 			}
 		}
+		printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
+	
 		add_lp_unsafe_set(lp);
 		
 		printf("\tStart getNext\n");

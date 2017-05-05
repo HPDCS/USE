@@ -35,7 +35,7 @@
 //#include "atomic.h"
 #include "nb_calqueue.h"
 #include "hpdcs_utils.h"
-//#include "core.h"
+#include "core.h"
 
 
 #define LOG_DEQUEUE 0
@@ -1376,7 +1376,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 		if(is_marked(min_next, MOV))
 			continue;
 		
-		while(left_node->epoch <= epoch)
+		while(1)//while(left_node->epoch <= epoch)
 		{	
 			left_node_next = left_node->next;
 			if(!is_marked(left_node_next))
@@ -1395,7 +1395,6 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 					}
 					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
 					{
-						
 						connect_to_be_freed_node_list(min_next, counter);
 					}
 					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
@@ -1426,7 +1425,7 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 	unsigned int size;
 	h = read_table(queue);
 	
-	printf("\t\tInside getNext: %f %u\n", node->timestamp, node->tag);
+	//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u\n", tid, node->timestamp, node->tag, node->reserved);
 	
 	bucket_width = h->bucket_width;
 	bucket = hash(node->timestamp, bucket_width);

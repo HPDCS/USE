@@ -262,6 +262,7 @@ execution:
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
 		}
 		else {
+			continue;
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
 
