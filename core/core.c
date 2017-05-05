@@ -131,7 +131,7 @@ void _mkdir(const char *path) {
 }
 
 
-inline void set_affinity(unsigned int tid){
+void set_affinity(unsigned int tid){
 	cpu_set_t mask;
 	printf("Thread %d set to CPU no %d\n", tid, tid);
 	CPU_ZERO(&mask);
@@ -219,7 +219,17 @@ void thread_loop(unsigned int thread_id) {
 	tid = thread_id;
 	
 	//Set the CPU affinity
-	set_affinity(thread_id);
+	set_affinity(tid);
+	//cpu_set_t mask;
+	//printf("Thread %d set to CPU no %d\n", tid, tid);
+	//CPU_ZERO(&mask);
+	//CPU_SET(tid, &mask);
+	//int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+	//if(err < 0) {
+	//	printf("Unable to set CPU affinity: %s\n", strerror(errno));
+	//	exit(-1);
+	//}
+	
 	
 	reverse_init(REVWIN_SIZE);
 	window = revwin_create();
