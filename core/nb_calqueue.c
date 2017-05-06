@@ -273,7 +273,11 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	res->timestamp = timestamp;
 	res->tag = -1;
 	res->reserved = false;
-	res->copy = false;////////////////////////////////////////////////////
+#if DEBUG == 1
+	res->copy = 0;////////////////////////////////////////////////////////////////
+	res->deleted = 0;//////////////////////////////////////////////////////////
+	res->executed = 0;//////////////////////////////////////////////////////////	
+#endif
 
 	return res;
 }
@@ -637,9 +641,11 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 			free(new_h->array);
 			free(new_h);
 		}
+#if DEBUG == 1
 		else
 			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
 	}
+#endif
 }
 
 static void block_table(table* h)
@@ -808,7 +814,11 @@ static void migrate_node(nbc_bucket_node *right_node,	table *new_h)
 	replica = node_malloc(right_node->payload, right_node->timestamp,  right_node->counter);
 	replica->reserved = right_node->reserved;
 	replica->tag = right_node->tag;
-	replica->copy = true;////////////////////////////////////////////////////////////////
+#if DEBUG == 1
+	replica->copy = right_node->copy + 1;////////////////////////////////////////////////////////////////
+	replica->deleted = right_node->deleted + 1;//////////////////////////////////////////////////////////
+	replica->executed = right_node->executed + 1;//////////////////////////////////////////////////////////	
+#endif
 	         
     do
 	{ 
@@ -1474,5 +1484,9 @@ void delete(nb_calqueue *queue, nbc_bucket_node* node){
         node_next = FETCH_AND_OR(&tmp->next, DEL);
     }
     ATOMIC_DEC(&(h->counter));
+    
+#if DEBUG == 1
+	tmp->deleted = tmp->deleted + 1;//////////////////////////////////////////////////////////
+#endif
     return;
 }

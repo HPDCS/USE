@@ -11,6 +11,11 @@
  * Thread-safe (non lock-free)
  */
 
+
+#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
+#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
+
+
 typedef struct __msg_t msg_t;
 
 void queue_init(void);

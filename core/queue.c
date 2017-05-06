@@ -16,25 +16,14 @@
 #define clear_lp_unsafe_set			for(unsigned int x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}	
 //MACROs to manage lock
 
-#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
-#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
+//#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
+//#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
 
 
 //used to take locks on LPs
 unsigned int *lp_lock;
 //event pool used by simulation
 nb_calqueue* nbcalqueue;
-
-
-//typedef struct __event_pool_node {
-//    msg_t message;
-//    calqueue_node *calqueue_node_reference;
-//} event_pool_node;
-//
-//typedef struct __queue_t {
-//    event_pool_node *head;
-//    unsigned int size;
-//} queue_t;
 
 __thread msg_t * current_msg __attribute__ ((aligned (64)));
 __thread bool safe;
@@ -44,10 +33,7 @@ __thread bool  new_safe;
 
 __thread unsigned long long * lp_unsafe_set;
 
-//unsigned long long fetched_evt = 0;
-//simtime_t old_ts = 0;
-
-//queue_t _queue;
+//unsigned long long fetchedd_evt = 0;
 
 typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
@@ -142,13 +128,24 @@ void commit(void) {
 	
 	queue_deliver_msgs();
 	delete(nbcalqueue, current_msg->node);
-	unlock(current_lp);//current_msg->receiver_id);
 	
-	//if(current_lvt > gvt) gvt = current_lvt;
-	//else if (current_lvt < gvt+LOOKAHEAD) printf("ERROR: event processed out of order\n");//////////////
+#if DEBUG == 0
+	unlock(current_lp);
+#else				
+	if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
+#endif
+	
+	if(current_lvt > gvt) gvt = current_lvt;
+#if DEBUG == 1
+	else if (current_lvt < gvt-LOOKAHEAD){ 
+		nbc_bucket_node * node = current_msg->node;
+		printf("[%u] ERROR: event coomitted out of order with GVT:%f\n", tid, gvt);
+		printf("\tevent: ts:%f lp:%u resrvd:%u cpy:%u del:%u addr:%p\n", 
+			node->timestamp, node->tag, node->reserved, node->copy, node->deleted, node);
+	}
+#endif
 	//printf("[%u]I'm freeing %p\n", tid, current_msg);
-	//current_msg->receiver_id = -1;
-	//current_msg->timestamp = -1;
+	//current_msg->receiver_id = current_msg->timestamp = -1;
 	free(current_msg);
 	
 	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
@@ -162,33 +159,32 @@ unsigned int getMinFree(){
 	simtime_t ts, min = INFTY;
 	unsigned int lp;
 	
-	void* tmp;///////////////////////////
-	
 	safe = false;
 	clear_lp_unsafe_set;
 	    
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
-	//printf("\tStart getMin\n");
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
-	//printf("\tEnd   getMin:%f\n",node->timestamp);
     
     while(node != NULL){
-		ts = node->timestamp;
 		lp = node->tag;
-		tmp = node->payload;
 		if(!node->reserved){
+			ts = node->timestamp;
 			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
 				if(tryLock(lp)){
 retry_on_replica:
 					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
 						if(node->replica != NULL){
 							node = node->replica;
-							if(tmp != node->payload){ printf("WTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTFWTF\n"); exit(0);}
 							goto retry_on_replica;
 						}
-						unlock(lp);
+#if DEBUG == 0
+							unlock(lp);
+#else				
+							if(!unlock(lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[lp]);
+#endif
+
 					}
 					else{
 						break;
@@ -197,12 +193,8 @@ retry_on_replica:
 			}
 		}
 		//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
-	
 		add_lp_unsafe_set(lp);
-		
-		//printf("\tStart getNext\n");
 		node = getNext(nbcalqueue, node);
-		//printf("\tEnd   getNext\n");
     }
     
     

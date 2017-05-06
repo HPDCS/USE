@@ -35,14 +35,14 @@
 
 //id del processo principale
 #define MAIN_PROCESS		0
-#define PRINT_REPORT_RATE	1
+#define PRINT_REPORT_RATE	1000000000000000
 
 #define MAX_PATHLEN			512
 //#define CACHE_LINE_SIZE 	64
 
 
-#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
-#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
+//#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
+//#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
 
 
 __thread simtime_t current_lvt = 0;
@@ -59,7 +59,7 @@ unsigned int n_prc_tot; //pls cambia nome
 
 
 /* Commit horizon */
-simtime_t gvt = 0;
+__thread simtime_t gvt = 0;
 /* Average time between consecutive events */
 simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 
@@ -239,12 +239,10 @@ void thread_loop(unsigned int thread_id) {
 		
 		//mode = retries = 0; //<--possono sparire?
 
-	//printf("Start getMinFree\n");
 		/// *FETCH* ///
 		if (getMinFree() == 0) {
 			continue;
 		}
-	//printf("End   getMinFree\n");
 execution:		
 		queue_clean();
 		
@@ -267,9 +265,11 @@ execution:
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
 		}
 		else {
+#if REVERSIBLE == 0 
 			((nbc_bucket_node*)current_msg->node)->reserved = false;
 			unlock(current_lp);
 			continue;
+#endif
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
 
@@ -329,16 +329,14 @@ execution:
 		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
 			stop = check_termination();
 
-		//if(tid == MAIN_PROCESS) {
-		//	evt_count++;
-        //
-		//	if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
-		//		printf("[%u] TIME: %f", tid, current_lvt);
-		//		printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
-		//	}
-		//}
-		
-	//sleep(1);//////////////////////////77
+		if(tid == MAIN_PROCESS) {
+			evt_count++;
+        
+			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
+				printf("[%u] TIME: %f", tid, current_lvt);
+				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
+			}
+		}
 	}
 	
 

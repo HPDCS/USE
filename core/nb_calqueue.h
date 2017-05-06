@@ -31,6 +31,7 @@
 #include <float.h>
 #include <math.h>
 #include "atomic.h"
+#include "core.h"
 
 #define INFTY DBL_MAX
 #define LESS(a,b) 		( (a) < (b) && !D_EQUAL((a), (b)) )
@@ -74,7 +75,11 @@ struct __bucket_node
 	//char zpad3[36];					// actually used only to distinguish head nodes
 	unsigned int tag;
 	bool reserved;
-	bool copy;
+#if DEBUG == 1
+	unsigned int copy;
+	unsigned int deleted;
+	unsigned int executed;
+#endif
 };
 
 

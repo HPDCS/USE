@@ -33,6 +33,8 @@
 
 #define THROTTLING
 #define HTM 0
+#define REVERSIBLE 0
+#define DEBUG 1
 
 typedef struct __msg_t
 {
@@ -58,7 +60,7 @@ extern unsigned int n_cores;
 extern unsigned int n_prc_tot;
 
 /* Commit horizon */
-extern simtime_t gvt;
+extern __thread simtime_t gvt;
 /* Average time between consecutive events */
 extern simtime_t t_btw_evts;
 
