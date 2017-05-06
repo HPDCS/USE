@@ -276,6 +276,7 @@ execution:
 			// Get the time of the whole STM execution
 			clock_timer stm_event_processing;
 			clock_timer_start(stm_event_processing);
+			
 			statistics_post_data(tid, EVENTS_STM, 1);
 
 			current_msg->revwin = window;
@@ -297,7 +298,7 @@ execution:
 					execute_undo_event(current_lp, current_msg->revwin);
 
 					statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
-					statistics_post_data(tid, ABORT_REVERSE, 1);
+					statistics_post_data(tid, EVENTS_ROLL, 1);
 
 					// TODO: handle the reverse cache flush
 					//revwin_flush_cache();

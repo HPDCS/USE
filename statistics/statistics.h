@@ -5,6 +5,7 @@
 #define EVENTS_SAFE 0
 #define EVENTS_HTM 1
 #define EVENTS_STM 2
+#define EVENTS_ROLL 30
 #define COMMITS_HTM 3
 #define COMMITS_STM 4
 #define CLOCK_SAFE 5
@@ -33,6 +34,7 @@ struct stats_t {
     unsigned int events_safe;
     unsigned int events_htm;
     unsigned int events_stm;
+    unsigned int events_roll;
     
     unsigned int commits_htm;
     unsigned int commits_stm;

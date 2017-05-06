@@ -33,7 +33,7 @@
 
 #define THROTTLING
 #define HTM 0
-#define REVERSIBLE 0
+#define REVERSIBLE 1
 #define DEBUG 1
 
 typedef struct __msg_t
