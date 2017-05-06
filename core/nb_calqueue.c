@@ -68,8 +68,6 @@
 #define ATOMIC_INC					atomic_inc_x86
 #define ATOMIC_DEC					atomic_dec_x86
 
-#define is_marked_def(pointer,mask)  	( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask )
-
 #define VAL (0ULL)
 #define DEL (1ULL)
 #define INV (2ULL)
@@ -1385,7 +1383,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 
 		left_node = min_next = min->next;
 		
-		if(is_marked_def(min_next, MOV))
+		if(is_marked(min_next, MOV))
 			continue;
 		
 		while(left_node->epoch <= epoch)
@@ -1421,7 +1419,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 				
 			}
 			
-			if(is_marked_def(left_node_next, MOV))
+			if(is_marked(left_node_next, MOV))
 			{
 				break;
 			}
@@ -1456,7 +1454,7 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 	{
 		/* read table recovery*/
 		node_next = node->next;
-		if(is_marked_def(node_next, MOV) || node->replica != NULL)
+		if(is_marked(node_next, MOV) || node->replica != NULL)
 			return NULL;
 			
 		do
@@ -1464,11 +1462,11 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 			node = get_unmarked(node_next);
 			node_next = node->next;
 		}while(
-			(is_marked_def(node_next, DEL) || is_marked_def(node_next, INV) ) ||
+			(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
 			(node->timestamp < bucket*bucket_width )
 		);
 
-		if(is_marked_def(node_next, MOV) || node->replica != NULL)
+		if(is_marked(node_next, MOV) || node->replica != NULL)
 			return NULL;
 			
 		if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width)
