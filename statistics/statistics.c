@@ -219,6 +219,7 @@ void gather_statistics() {
 
 void print_statistics() {
 
+#if REPORT == 1
     gather_statistics();
 
     printf("Simulation final report:\n");
@@ -267,6 +268,6 @@ void print_statistics() {
  //   printf("HTM abort RETRY.................................: %11u (%.2f%%)\n\n", system_stats.abort_retry, ((double)system_stats.abort_retry / abort_total)*100);
  //
  //   printf("STM abort for UNSAFETY..........................: %11u\n\n", system_stats.abort_reverse);
-    
+#endif
 }
 

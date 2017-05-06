@@ -644,8 +644,8 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 #if DEBUG == 1
 		else
 			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
-	}
 #endif
+	}
 }
 
 static void block_table(table* h)

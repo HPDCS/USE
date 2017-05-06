@@ -231,9 +231,10 @@ void thread_loop(unsigned int thread_id) {
 	reverse_init(REVWIN_SIZE);
 	window = revwin_create();
 
+#if REPORT == 1 
 	clock_timer main_loop_time;
 	clock_timer_start(main_loop_time);
-	
+#endif	
 	///* START SIMULATION *///
 	while (!stop && !sim_error) {
 		
@@ -255,14 +256,15 @@ execution:
 		if (safe) {
 		/// ==== SAFE EXECUTION ==== ///
 			//mode = MODE_SAF;
-              
+#if REPORT == 1 
 			clock_timer event_processing;
 			clock_timer_start(event_processing);
-              
+#endif
 			ProcessEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, states[current_lp]);
-              
+#if REPORT == 1              
 			statistics_post_data(tid, EVENTS_SAFE, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
+#endif		
 		}
 		else {
 #if REVERSIBLE == 0 
@@ -273,33 +275,34 @@ execution:
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
 
-			// Get the time of the whole STM execution
+#if REPORT == 1 
 			clock_timer stm_event_processing;
-			clock_timer_start(stm_event_processing);
-			
+			clock_timer_start(stm_event_processing);			
 			statistics_post_data(tid, EVENTS_STM, 1);
+#endif
 
 			current_msg->revwin = window;
 			revwin_reset(current_lp, current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 			
 			ProcessEvent_reverse(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, states[current_lp]);
 
-			// Get the waiting time
+#if REPORT == 1 
 			clock_timer stm_safety_wait;
 			clock_timer_start(stm_safety_wait);
-			
+#endif			
 			do{
 				getMinLP(current_lp);
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
-					// Get the time for undo one event
+
+#if REPORT == 1
 					clock_timer undo_event_processing;
 					clock_timer_start(undo_event_processing);
-					
+#endif					
 					execute_undo_event(current_lp, current_msg->revwin);
-
+#if REPORT == 1
 					statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
 					statistics_post_data(tid, EVENTS_ROLL, 1);
-
+#endif
 					// TODO: handle the reverse cache flush
 					//revwin_flush_cache();
 
@@ -315,13 +318,13 @@ execution:
 				}
 			}while(!safe);
 				
+#if REPORT == 1 
 			//Attenzione, ora si sommano i tempi degli eventi squashatu con i relativi eventi eseguiti poi
 			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
-
 			// Collect the time spend in waiting by a commiting event, only
 			statistics_post_data(tid, CLOCK_STM_WAIT, clock_timer_value(stm_safety_wait));
-			
 			statistics_post_data(tid, COMMITS_STM, 1);
+#endif			
 		}
 
 		///* FLUSH */// 
@@ -339,10 +342,9 @@ execution:
 			}
 		}
 	}
-	
-
+#if REPORT == 1
 	statistics_post_data(tid, CLOCK_LOOP, clock_timer_value(main_loop_time));
-
+#endif
 
 	
 	// FIXME: Produces a segmentation fault, probably due to bad memory

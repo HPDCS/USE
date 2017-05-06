@@ -123,8 +123,8 @@ inline void queue_clean(void) {
 
 
 void commit(void) {
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
+	//clock_timer queue_op;
+	//clock_timer_start(queue_op);
 	
 	queue_deliver_msgs();
 	delete(nbcalqueue, current_msg->node);
@@ -150,7 +150,7 @@ void commit(void) {
 	
 	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
 
-    statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
+    //statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
 
 }
 
@@ -162,8 +162,8 @@ unsigned int getMinFree(){
 	safe = false;
 	clear_lp_unsafe_set;
 	    
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
+	//clock_timer queue_op;
+	//clock_timer_start(queue_op);
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
     
@@ -198,7 +198,7 @@ retry_on_replica:
     }
     
     
-    statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
+    //statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
   
     if(node == NULL){
 		current_msg = NULL;
@@ -213,7 +213,7 @@ retry_on_replica:
 		safe = true;
 	}
     
-    statistics_post_data(tid, EVENTS_FETCHED, 1);
+    //statistics_post_data(tid, EVENTS_FETCHED, 1);
     //statistics_post_data(tid, T_BTW_EVT, current_msg->timestamp-old_ts);
 
     return 1;
@@ -223,13 +223,13 @@ retry_on_replica:
 void getMinLP(unsigned int lp){
 	nbc_bucket_node * node;
 	simtime_t min;
-	clock_timer queue_op;
+	//clock_timer queue_op;
 restart:
 	min = INFTY;
 	
 	new_safe = false;
 	    
-	clock_timer_start(queue_op);
+	//clock_timer_start(queue_op);
 	
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
@@ -244,7 +244,7 @@ restart:
     //printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
 
     
-    statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
+    //statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
   
     node->reserved = true;
     
