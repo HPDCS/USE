@@ -89,11 +89,11 @@
 #define is_marked(...) macro_dispatcher(is_marked, __VA_ARGS__)(__VA_ARGS__)
 #define is_marked2(w,r) is_marked_2(w,r)
 #define is_marked1(w)   is_marked_1(w)
-//#define is_marked_2(pointer, mask)	( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask )
-//#define is_marked_1(pointer)		(UNION_CAST(pointer, unsigned long long) & MASK_MRK)
-//#define get_unmarked(pointer)		(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *))
-//#define get_marked(pointer, mark)	(UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *))
-//#define get_mark(pointer)			(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long))
+#define is_marked_2(pointer, mask)	( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask )
+#define is_marked_1(pointer)		(UNION_CAST(pointer, unsigned long long) & MASK_MRK)
+#define get_unmarked(pointer)		(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *))
+#define get_marked(pointer, mark)	(UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *))
+#define get_mark(pointer)			(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long))
 
 
 __thread nbc_bucket_node *to_free_nodes = NULL;
@@ -168,80 +168,80 @@ static inline unsigned long long hash(double timestamp, double bucket_width)
 	return res;
 
 }
-
-/**
- *  This function returns an unmarked reference
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return the unmarked value of the pointer
- */
-static inline void* get_unmarked(void *pointer)
-{
-	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *);
-	//return (void*) (((unsigned long long) pointer) & MASK_PTR);
-}
-
-/**
- *  This function returns a marked reference
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return the marked value of the pointer
- */
-static inline void* get_marked(void *pointer, unsigned long long mark)
-{
-	return UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *);
-	//return (void*) (((unsigned long long) get_unmarked((pointer))) | (mark));
-}
-
-/**
- *  This function checks if a reference is marked
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return true if the reference is marked, else false
- */
-static inline bool is_marked_2(void *pointer, unsigned long long mask)
-{
-	return ( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask );
-	//return (bool) ((((unsigned long long) pointer) & MASK_MRK) == mask);
-}
-
-/**
- *  This function checks if a reference is generally marked
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return true if the reference is generally marked, else false
- */
-static inline bool is_marked_1(void *pointer)
-{
-	return (UNION_CAST(pointer, unsigned long long) & MASK_MRK);
-	//return (bool) ((((unsigned long long) pointer) & MASK_MRK));
-}
-
-
-/**
- *  This function get the mark
- *
- *  @author Romolo Marotta
- *  @param pointer
- *  @return the mark
- */
-static inline unsigned long long get_mark(void *pointer)
-{
-	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long);
-}
-
+//
+///**
+// *  This function returns an unmarked reference
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return the unmarked value of the pointer
+// */
+//static inline void* get_unmarked(void *pointer)
+//{
+//	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *);
+//	//return (void*) (((unsigned long long) pointer) & MASK_PTR);
+//}
+//
+///**
+// *  This function returns a marked reference
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return the marked value of the pointer
+// */
+//static inline void* get_marked(void *pointer, unsigned long long mark)
+//{
+//	return UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *);
+//	//return (void*) (((unsigned long long) get_unmarked((pointer))) | (mark));
+//}
+//
+///**
+// *  This function checks if a reference is marked
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return true if the reference is marked, else false
+// */
+//static inline bool is_marked_2(void *pointer, unsigned long long mask)
+//{
+//	return ( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask );
+//	//return (bool) ((((unsigned long long) pointer) & MASK_MRK) == mask);
+//}
+//
+///**
+// *  This function checks if a reference is generally marked
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return true if the reference is generally marked, else false
+// */
+//static inline bool is_marked_1(void *pointer)
+//{
+//	return (UNION_CAST(pointer, unsigned long long) & MASK_MRK);
+//	//return (bool) ((((unsigned long long) pointer) & MASK_MRK));
+//}
+//
+//
+///**
+// *  This function get the mark
+// *
+// *  @author Romolo Marotta
+// *  @param pointer
+// *  @return the mark
+// */
+//static inline unsigned long long get_mark(void *pointer)
+//{
+//	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long);
+//}
+//
 
 static inline bool is_marked_for_search(void *pointer, unsigned int research_flag)
 {
@@ -1630,7 +1630,8 @@ void getMinLP_internal(unsigned int lp){
 
 restart:
 	min = INFTY;
-	new_safe = false;
+	safe = false;
+	unsafe_events = 0;
 	    
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
@@ -1654,20 +1655,22 @@ restart:
 				(node->timestamp < bucket*bucket_width )
 			);
 				
-			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width && node->tag == lp){
+			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width){
 				if(is_marked(node_next, MOV) || node->replica != NULL)
 					goto restart;
 				break;
 			}
 			else
 				node = h->array + (++bucket%size);
-		}while(1);	
+		}while(1);
+		if(node->timestamp >= (min + LOOKAHEAD))
+			unsafe_events++;
     }
     node->reserved = true;
     new_current_msg = (msg_t *) node->payload;
     new_current_msg->node = node;
 
 	if( node->timestamp < (min + LOOKAHEAD)){
-		new_safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
+		safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
 	}
 }

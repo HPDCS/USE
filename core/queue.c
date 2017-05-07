@@ -17,7 +17,7 @@ __thread msg_t * current_msg __attribute__ ((aligned (64)));
 __thread bool safe;
 
 __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
-__thread bool  new_safe;
+__thread unsigned int unsafe_events;
 
 __thread unsigned long long * lp_unsafe_set;
 
@@ -233,7 +233,7 @@ void getMinLP(unsigned int lp){
 
 restart:
 	min = INFTY;
-	new_safe = false;
+	safe = false;
 	    
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
@@ -252,7 +252,7 @@ restart:
     new_current_msg->node = node;
 
 	if( node->timestamp < (min + LOOKAHEAD)){
-		new_safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
+		safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
 	}
 //#ifdef REPORT == 1
 	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));

@@ -41,10 +41,11 @@ void commit();
 extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
 extern __thread bool  safe;
 extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
-extern __thread bool  new_safe;
 extern unsigned int *lp_lock;
 extern nb_calqueue* nbcalqueue;
 extern __thread unsigned long long * lp_unsafe_set;
+extern __thread unsigned int unsafe_events;
+
 
 extern void lock_init();
 

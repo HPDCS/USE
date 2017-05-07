@@ -230,7 +230,7 @@ void thread_loop(unsigned int thread_id) {
 	while (!stop && !sim_error) {
 		
 		//mode = retries = 0; //<--possono sparire?
-
+begin:
 		/// *FETCH* ///
 		if (getMinFree_new() == 0) {
 			continue;
@@ -299,13 +299,17 @@ execution:
 
 					((nbc_bucket_node *)(current_msg->node))->reserved = false; //Si può fare?
 					current_msg = new_current_msg;
-					safe = new_safe;
 					
 					goto execution;
 					
 				}
 				else{
-					safe = new_safe;
+					if(unsafe_events > 10000){ //TODO
+						execute_undo_event(current_lp, current_msg->revwin);
+						((nbc_bucket_node*)current_msg->node)->reserved = false;
+						unlock(current_lp);
+						goto begin;
+					}
 				}
 			}while(!safe);
 				
