@@ -102,6 +102,9 @@ void queue_deliver_msgs(void) {
         memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
 
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+//#ifdef REPORT == 1
+		statistics_post_data(tid, EVENTS_FLUSHED, 1); 
+//#endif
     }
 
     _thr_pool._thr_pool_count = 0;
@@ -119,22 +122,32 @@ inline void queue_clean(void) {
 
 
 void commit(void) {
-	//clock_timer queue_op;
-	//clock_timer_start(queue_op);
+//#ifdef REPORT == 1
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
+//#endif
 	// TODO
 	queue_deliver_msgs();
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
+	clock_timer_start(queue_op);
+//#endif
 	delete(nbcalqueue, current_msg->node);
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DELETE, clock_timer_value(queue_op));
+//#endif
 	
 //#if DEBUG == 0
 //	unlock(current_lp);
 //#else				
 	if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
 //#endif
+
+//#if DEBUG == 1
 	simtime_t old_gvt = gvt; 
 	if(current_lvt > old_gvt) 
 		__sync_bool_compare_and_swap((unsigned long long*)&gvt, (unsigned long long)old_gvt, (unsigned long long)current_lvt);
 		//gvt = current_lvt;
-//#if DEBUG == 1
 	else if (current_lvt < old_gvt-LOOKAHEAD){ 
 		nbc_bucket_node * node = current_msg->node;
 		printf("[%u] ERROR: event coomitted out of order with GVT:%f\n", tid, gvt);
@@ -147,22 +160,21 @@ void commit(void) {
 	free(current_msg);
 	
 	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
-
-    //statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
-
 }
 
 unsigned int getMinFree(){
 	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
 	unsigned int lp;
-	
+
+//#ifdef REPORT == 1
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
+//#endif
+
+	node = getMin(nbcalqueue, -1);
 	safe = false;
 	clear_lp_unsafe_set;
-	    
-	//clock_timer queue_op;
-	//clock_timer_start(queue_op);
-	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
     
     while(node != NULL){
@@ -195,9 +207,6 @@ retry_on_replica:
 		node = getNext(nbcalqueue, node);
     }
     
-    
-    //statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
-  
     if(node == NULL){
 		current_msg = NULL;
 	    return 0;
@@ -211,9 +220,12 @@ retry_on_replica:
 		safe = true;
 	}
     
-    //statistics_post_data(tid, EVENTS_FETCHED, 1);
-    //statistics_post_data(tid, T_BTW_EVT, current_msg->timestamp-old_ts);
-
+    
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
+	statistics_post_data(tid, EVENTS_FETCHED, 1);
+//	statistics_post_data(tid, T_BTW_EVT, current_msg->timestamp-old_ts); // TODO : possiamo usarlo per la resize? 
+//#endif
     return 1;
 	
 }
@@ -221,14 +233,16 @@ retry_on_replica:
 void getMinLP(unsigned int lp){
 	nbc_bucket_node * node;
 	simtime_t min;
-	//clock_timer queue_op;
+	
+//#ifdef REPORT == 1
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
+//#endif
+
 restart:
 	min = INFTY;
-	
 	new_safe = false;
 	    
-	//clock_timer_start(queue_op);
-	
 	node = getMin(nbcalqueue, -1);
     min = node->timestamp;
     //printf("\t[%u] Min: ts:%f lp:%u resvd:%u addr:%p cp:%u\n", tid, min, node->tag, node->reserved, node, node->copy);
@@ -241,17 +255,14 @@ restart:
     }
     //printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
 
-    
-    //statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
-  
     node->reserved = true;
-    
     new_current_msg = (msg_t *) node->payload;
     new_current_msg->node = node;
 
 	if( node->timestamp < (min + LOOKAHEAD)){
-		new_safe = true;
+		new_safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
 	}
-    
-//    statistics_post_data(tid, EVENTS_FETCHED, 1);
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
+//#endif
 }

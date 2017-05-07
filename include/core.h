@@ -33,8 +33,8 @@
 
 #define THROTTLING
 #define HTM 0
-#define DEBUG 0
-#define REPORT 0
+#define DEBUG 1
+#define REPORT 1
 
 typedef struct __msg_t
 {
