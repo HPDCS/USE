@@ -33,7 +33,6 @@
 
 #define THROTTLING
 #define HTM 0
-#define REVERSIBLE 1
 #define DEBUG 0
 #define REPORT 0
 
@@ -60,8 +59,8 @@ extern unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 extern unsigned int n_prc_tot;
 
-/* Commit horizon */
-extern __thread simtime_t gvt;
+/* Commit horizon */ //TODO
+extern  simtime_t gvt;
 /* Average time between consecutive events */
 extern simtime_t t_btw_evts;
 

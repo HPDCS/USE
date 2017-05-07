@@ -144,14 +144,15 @@ hash: clean _hash mm core link
 
 
 link:
-#ifdef REVERSIBLE
+ifdef REVERSIBLE
 	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
-#else
-#	cp model/__application.o model/__application_hijacked.o
-#endif
+else
+	cp model/__application.o model/__application_hijacked.o
+endif
 ifdef MALLOC
 #	ld -r -o model/application.o model/__application_hijacked.o  
-	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o $(LIBS)
+	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o mm/reverse.o  mm/slab.o $(LIBS)
+#	ld -r  -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
 #	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o $(LIBS)
 #	gcc $(CFLAGS) -o $(TARGET) model/__application.o core/__core.o $(LIBS)
 else

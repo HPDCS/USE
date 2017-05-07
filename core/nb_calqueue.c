@@ -273,11 +273,11 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	res->timestamp = timestamp;
 	res->tag = -1;
 	res->reserved = false;
-#if DEBUG == 1
+//#if DEBUG == 1 // TODO
 	res->copy = 0;////////////////////////////////////////////////////////////////
 	res->deleted = 0;//////////////////////////////////////////////////////////
 	res->executed = 0;//////////////////////////////////////////////////////////	
-#endif
+//#endif
 
 	return res;
 }
@@ -814,11 +814,11 @@ static void migrate_node(nbc_bucket_node *right_node,	table *new_h)
 	replica = node_malloc(right_node->payload, right_node->timestamp,  right_node->counter);
 	replica->reserved = right_node->reserved;
 	replica->tag = right_node->tag;
-#if DEBUG == 1
+//#if DEBUG == 1 //TODO
 	replica->copy = right_node->copy + 1;
 	replica->deleted = right_node->deleted + 1;
 	replica->executed = right_node->executed + 1;
-#endif
+//#endif
 	         
     do
 	{ 
@@ -1097,6 +1097,7 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
  */
 void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned int tag)
 {
+	// TODO
 	nbc_bucket_node *new_node = node_malloc(payload, timestamp, 0);
 	table *h, *old_h = NULL;	
 	
@@ -1107,11 +1108,11 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned i
 		if(old_h != (h = read_table(queue)))
 		{
 			old_h = h;
-			new_node->epoch = (h->current & MASK_EPOCH);
+			new_node->epoch = 0;//(h->current & MASK_EPOCH);
 		}
 	} while(!insert_std(h, &new_node, REMOVE_DEL_INV));
 
-	nbc_flush_current(h, new_node);
+	//nbc_flush_current(h, new_node);
 	
 	ATOMIC_INC(&(h->counter));
 }
@@ -1132,108 +1133,6 @@ static inline bool CAS_for_increase_cur(table* h, unsigned long long current, un
 			&(h->current),
 			current,
 			newCur				);
-}
-
-/**
- * This function dequeue from the nonblocking queue. The cost of this operation when succeeds should be O(1)
- *
- * @author Romolo Marotta
- *
- * @param queue the interested queue
- *
- * @return a pointer to a node that contains the dequeued value
- *
- */
-void* nbc_dequeue(nb_calqueue *queue)
-{
-	nbc_bucket_node *min, *min_next, 
-					*left_node, *left_node_next, 
-					*res, *tail, *array;
-	table * h;
-	
-	unsigned long long current;
-	unsigned long long index;
-	unsigned long long epoch;
-	
-	unsigned int size;
-	unsigned int counter;
-	double bucket_width;
-
-	tail = g_tail;
-	
-	do
-	{
-		counter = 0;
-		h = read_table(queue);
-		current = h->current;
-		size = h->size;
-		array = h->array;
-		bucket_width = h->bucket_width;
-
-		index = current >> 32;
-		epoch = current & MASK_EPOCH;
-
-		assertf(
-				index+1 > MASK_EPOCH, 
-				"\nOVERFLOW INDEX:%llu  BW:%.10f SIZE:%u TAIL:%p TABLE:%p NUM_ELEM:%u\n",
-				index, bucket_width, size, tail, h, atomic_read(&h->counter)
-			);
-		min = array + (index++ % size);
-
-		left_node = min_next = min->next;
-		
-		if(is_marked(min_next, MOV))
-			continue;
-		
-		while(left_node->epoch <= epoch)
-		{	
-			left_node_next = left_node->next;
-			if(!is_marked(left_node_next))
-			{
-				if(left_node->timestamp < index*bucket_width)
-				{
-					res = left_node->payload;
-					left_node_next = FETCH_AND_OR(&left_node->next, DEL);
-					if(!is_marked(left_node_next))
-					{
-						ATOMIC_DEC(&(h->counter));
-						#if LOG_DEQUEUE == 1
-							LOG("DEQUEUE: %f %u - %llu %llu\n", left_node->timestamp, left_node->counter, index, index % size);
-						#endif
-						return res;
-					}
-				}
-				else
-				{
-					if(left_node == tail && size == 1 )
-					{
-						#if LOG_DEQUEUE == 1
-						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
-						#endif
-						return NULL;
-					}
-					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
-					{
-						
-						connect_to_be_freed_node_list(min_next, counter);
-					}
-					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
-					break;	
-				}
-				
-			}
-			
-			if(is_marked(left_node_next, MOV))
-			{
-				break;
-			}
-			left_node = get_unmarked(left_node_next);
-			counter++;
-		}
-
-	}while(1);
-	
-	return NULL;
 }
 
 /**
@@ -1502,3 +1401,127 @@ void delete(nb_calqueue *queue, nbc_bucket_node* node){
 #endif
     return;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * This function dequeue from the nonblocking queue. The cost of this operation when succeeds should be O(1)
+ *
+ * @author Romolo Marotta
+ *
+ * @param queue the interested queue
+ *
+ * @return a pointer to a node that contains the dequeued value
+ *
+ 
+void* nbc_dequeue(nb_calqueue *queue)
+{
+	nbc_bucket_node *min, *min_next, 
+					*left_node, *left_node_next, 
+					*res, *tail, *array;
+	table * h;
+	
+	unsigned long long current;
+	unsigned long long index;
+	unsigned long long epoch;
+	
+	unsigned int size;
+	unsigned int counter;
+	double bucket_width;
+
+	tail = g_tail;
+	
+	do
+	{
+		counter = 0;
+		h = read_table(queue);
+		current = h->current;
+		size = h->size;
+		array = h->array;
+		bucket_width = h->bucket_width;
+
+		index = current >> 32;
+		epoch = current & MASK_EPOCH;
+
+		assertf(
+				index+1 > MASK_EPOCH, 
+				"\nOVERFLOW INDEX:%llu  BW:%.10f SIZE:%u TAIL:%p TABLE:%p NUM_ELEM:%u\n",
+				index, bucket_width, size, tail, h, atomic_read(&h->counter)
+			);
+		min = array + (index++ % size);
+
+		left_node = min_next = min->next;
+		
+		if(is_marked(min_next, MOV))
+			continue;
+		
+		while(left_node->epoch <= epoch)
+		{	
+			left_node_next = left_node->next;
+			if(!is_marked(left_node_next))
+			{
+				if(left_node->timestamp < index*bucket_width)
+				{
+					res = left_node->payload;
+					left_node_next = FETCH_AND_OR(&left_node->next, DEL);
+					if(!is_marked(left_node_next))
+					{
+						ATOMIC_DEC(&(h->counter));
+						#if LOG_DEQUEUE == 1
+							LOG("DEQUEUE: %f %u - %llu %llu\n", left_node->timestamp, left_node->counter, index, index % size);
+						#endif
+						return res;
+					}
+				}
+				else
+				{
+					if(left_node == tail && size == 1 )
+					{
+						#if LOG_DEQUEUE == 1
+						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
+						#endif
+						return NULL;
+					}
+					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
+					{
+						
+						connect_to_be_freed_node_list(min_next, counter);
+					}
+					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
+					break;	
+				}
+				
+			}
+			
+			if(is_marked(left_node_next, MOV))
+			{
+				break;
+			}
+			left_node = get_unmarked(left_node_next);
+			counter++;
+		}
+
+	}while(1);
+	
+	return NULL;
+}
+
+*/

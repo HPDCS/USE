@@ -29,20 +29,11 @@
 #include "simtypes.h"
 #include "lookahead.h"
 
-//#ifdef REVERSIBLE
-//#undef REVERSIBLE
-//#endif
-
 //id del processo principale
 #define MAIN_PROCESS		0
 #define PRINT_REPORT_RATE	1000000000000000
 
 #define MAX_PATHLEN			512
-//#define CACHE_LINE_SIZE 	64
-
-
-//#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, 1)) )
-//#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 1, 0) //può essere sostituita da una scrittura atomica
 
 
 __thread simtime_t current_lvt = 0;
@@ -58,8 +49,8 @@ unsigned int n_cores; //pls cambia nome
 unsigned int n_prc_tot; //pls cambia nome
 
 
-/* Commit horizon */
-__thread simtime_t gvt = 0;
+/* Commit horizon TODO */
+ simtime_t gvt = 0;
 /* Average time between consecutive events */
 simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 
@@ -267,42 +258,42 @@ execution:
 #endif		
 		}
 		else {
-#if REVERSIBLE == 0 
+#if REVERSIBLE==0 
 			((nbc_bucket_node*)current_msg->node)->reserved = false;
 			unlock(current_lp);
 			continue;
-#endif
+#else
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
-
-#if REPORT == 1 
+	
+	#if REPORT == 1 
 			clock_timer stm_event_processing;
 			clock_timer_start(stm_event_processing);			
 			statistics_post_data(tid, EVENTS_STM, 1);
-#endif
+	#endif
 
 			current_msg->revwin = window;
 			revwin_reset(current_lp, current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 			
 			ProcessEvent_reverse(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, states[current_lp]);
 
-#if REPORT == 1 
+	#if REPORT == 1 
 			clock_timer stm_safety_wait;
 			clock_timer_start(stm_safety_wait);
-#endif			
+	#endif			
 			do{
 				getMinLP(current_lp);
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
 
-#if REPORT == 1
+	#if REPORT == 1
 					clock_timer undo_event_processing;
 					clock_timer_start(undo_event_processing);
-#endif					
+	#endif					
 					execute_undo_event(current_lp, current_msg->revwin);
-#if REPORT == 1
+	#if REPORT == 1
 					statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
 					statistics_post_data(tid, EVENTS_ROLL, 1);
-#endif
+	#endif
 					// TODO: handle the reverse cache flush
 					//revwin_flush_cache();
 
@@ -318,13 +309,14 @@ execution:
 				}
 			}while(!safe);
 				
-#if REPORT == 1 
+	#if REPORT == 1 
 			//Attenzione, ora si sommano i tempi degli eventi squashatu con i relativi eventi eseguiti poi
 			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
 			// Collect the time spend in waiting by a commiting event, only
 			statistics_post_data(tid, CLOCK_STM_WAIT, clock_timer_value(stm_safety_wait));
 			statistics_post_data(tid, COMMITS_STM, 1);
-#endif			
+	#endif	
+#endif		
 		}
 
 		///* FLUSH */// 

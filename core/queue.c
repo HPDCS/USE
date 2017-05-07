@@ -14,10 +14,6 @@
 #define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1 << (lp%64)) )
 #define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1 << (lp%64)) )
 #define clear_lp_unsafe_set			for(unsigned int x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}	
-//MACROs to manage lock
-
-//#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
-//#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
 
 
 //used to take locks on LPs
@@ -125,25 +121,27 @@ inline void queue_clean(void) {
 void commit(void) {
 	//clock_timer queue_op;
 	//clock_timer_start(queue_op);
-	
+	// TODO
 	queue_deliver_msgs();
 	delete(nbcalqueue, current_msg->node);
 	
-#if DEBUG == 0
-	unlock(current_lp);
-#else				
+//#if DEBUG == 0
+//	unlock(current_lp);
+//#else				
 	if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
-#endif
-	
-	if(current_lvt > gvt) gvt = current_lvt;
-#if DEBUG == 1
-	else if (current_lvt < gvt-LOOKAHEAD){ 
+//#endif
+	simtime_t old_gvt = gvt; 
+	if(current_lvt > old_gvt) 
+		__sync_bool_compare_and_swap((unsigned long long*)&gvt, (unsigned long long)old_gvt, (unsigned long long)current_lvt);
+		//gvt = current_lvt;
+//#if DEBUG == 1
+	else if (current_lvt < old_gvt-LOOKAHEAD){ 
 		nbc_bucket_node * node = current_msg->node;
 		printf("[%u] ERROR: event coomitted out of order with GVT:%f\n", tid, gvt);
 		printf("\tevent: ts:%f lp:%u resrvd:%u cpy:%u del:%u addr:%p\n", 
 			node->timestamp, node->tag, node->reserved, node->copy, node->deleted, node);
 	}
-#endif
+//#endif
 	//printf("[%u]I'm freeing %p\n", tid, current_msg);
 	//current_msg->receiver_id = current_msg->timestamp = -1;
 	free(current_msg);

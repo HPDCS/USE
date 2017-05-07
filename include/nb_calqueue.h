@@ -1,8 +1,8 @@
 /*****************************************************************************
-*
+* 
 *	This file is part of NBQueue, a lock-free O(1) priority queue.
-*
-*   Copyright (C) 2015, Romolo Marotta
+* 
+*   Copyright (C) 2015, Romolo Marotta      
 *
 *   This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -21,39 +21,46 @@
 /*
  * nonblockingqueue.h
  *
- *  Created on: Jul 13, 2015
+ *  Created on: Jul 13, 2015    
  *      Author: Romolo Marotta
  */
+
 #ifndef DATATYPES_NONBLOCKING_CALQUEUE_H_
 #define DATATYPES_NONBLOCKING_CALQUEUE_H_
 
-#include <stdbool.h>
 #include <float.h>
+#include <math.h>
 #include "atomic.h"
+#include "core.h"
 
 #define INFTY DBL_MAX
-#define LESS(a,b) 		( (a) < (b) && !D_EQUAL((a), (b)) )
-#define LEQ(a,b)		( (a) < (b) ||  D_EQUAL((a), (b)) )
-#define D_EQUAL(a,b) 	(fabs((a) - (b)) < DBL_EPSILON)
-#define GEQ(a,b) 		( (a) > (b) ||  D_EQUAL((a), (b)) )
-#define GREATER(a,b) 	( (a) > (b) &&  !D_EQUAL((a), (b)) )
-//#define LESS(a,b) 		( (a) <  (b)  )
-//#define LEQ(a,b)		( (a) <= (b) )
-//#define D_EQUAL(a,b) 	( (a) == (b) )
-//#define GEQ(a,b) 		( (a) >= (b) )
-//#define GREATER(a,b) 	( (a) >  (b) )
+
+//#define LESS(a,b) 		( (a) < (b) && !D_EQUAL((a), (b)) )
+//#define LEQ(a,b)		( (a) < (b) ||  D_EQUAL((a), (b)) )
+//#define D_EQUAL(a,b) 	(fabs((a) - (b)) < DBL_EPSILON)
+//#define GEQ(a,b) 		( (a) > (b) ||  D_EQUAL((a), (b)) )
+//#define GREATER(a,b) 	( (a) > (b) &&  !D_EQUAL((a), (b)) )
+
+#define LESS(a,b)            ( (a) <  (b)  )
+#define LEQ(a,b)             ( (a) <= (b) )
+#define D_EQUAL(a,b)         ( (a) == (b) )
+#define GEQ(a,b)             ( (a) >= (b) )
+#define GREATER(a,b)         ( (a) >  (b) )
+
+
 #define SAMPLE_SIZE 25
 #define HEAD_ID 0
 #define MAXIMUM_SIZE 65536//32768 //65536
 #define MINIMUM_SIZE 1
 
-
+#define FLUSH_SMART 1
 #define ENABLE_EXPANSION 1
-#define ENABLE_PRUNE 	 1
-#define FLUSH_SMART		 1
+#define ENABLE_PRUNE 1
 
+#define TID tid
 
-extern __thread unsigned int  lid;
+extern __thread unsigned int TID;
+extern __thread struct drand48_data seedT;
 
 
 /**
@@ -72,11 +79,16 @@ struct __bucket_node
 	//void *generator;	// pointer to the successor
 	void *payload;  				// general payload
 	double timestamp;  				// key
+	unsigned long long epoch;		//enqueue's epoch
 	unsigned int counter; 			// used to resolve the conflict with same timestamp using a FIFO policy
 	//char zpad3[36];					// actually used only to distinguish head nodes
-	/*********************DA SISTEMARE*************************/
-	unsigned int lp;
-	unsigned bool reserved;
+	unsigned int tag;
+	bool reserved;
+//#if DEBUG == 1 // TODO
+	unsigned int copy;
+	unsigned int deleted;
+	unsigned int executed;
+//#endif
 };
 
 
@@ -104,14 +116,16 @@ typedef struct nb_calqueue nb_calqueue;
 struct nb_calqueue
 {
 	unsigned int threshold;
-	char zpad9[56];
+	unsigned elem_per_bucket;
+	double perc_used_bucket;
+	double pub_per_epb;
+	char zpad9[40];
 	table * volatile hashtable;
 };
 
-extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload);
-extern nbc_bucket_node* nbc_dequeue(nb_calqueue *queue);
-extern double nbc_prune(double timestamp);
-extern nb_calqueue* nb_calqueue_init(unsigned int threashold);
+extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, unsigned int tag);
+extern double nbc_prune(nb_calqueue *queue, double timestamp);
+extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_bucket, unsigned int elem_per_bucket);
 
 extern nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag);
 extern nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node);
