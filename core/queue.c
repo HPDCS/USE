@@ -5,16 +5,8 @@
 #include <timer.h>
 
 #include "queue.h"
-#include "calqueue.h"
-#include "nb_calqueue.h"
 #include "core.h"
 #include "lookahead.h"
-
-//MACROs to manage lp_unsafe_set
-#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1 << (lp%64)) )
-#define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1 << (lp%64)) )
-#define clear_lp_unsafe_set			for(unsigned int x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}	
-
 
 //used to take locks on LPs
 unsigned int *lp_lock;
@@ -262,6 +254,30 @@ restart:
 	if( node->timestamp < (min + LOOKAHEAD)){
 		new_safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
 	}
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
+//#endif
+}
+
+unsigned int getMinFree_new(){
+//#ifdef REPORT == 1
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
+//#endif
+	unsigned int res = getMinFree_internal();
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
+	statistics_post_data(tid, EVENTS_FETCHED, 1);
+//#endif
+    return res;
+}
+
+void getMinLP_new(unsigned int lp){
+//#ifdef REPORT == 1
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
+//#endif
+	getMinLP_internal(lp);
 //#ifdef REPORT == 1
 	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
 //#endif

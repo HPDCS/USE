@@ -232,7 +232,7 @@ void thread_loop(unsigned int thread_id) {
 		//mode = retries = 0; //<--possono sparire?
 
 		/// *FETCH* ///
-		if (getMinFree() == 0) {
+		if (getMinFree_new() == 0) {
 			continue;
 		}
 execution:		
@@ -282,7 +282,7 @@ execution:
 			clock_timer_start(stm_safety_wait);
 	#endif			
 			do{
-				getMinLP(current_lp);
+				getMinLP_new(current_lp);
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
 
 	#if REPORT == 1

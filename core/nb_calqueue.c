@@ -36,6 +36,7 @@
 #include "nb_calqueue.h"
 #include "hpdcs_utils.h"
 #include "core.h"
+#include "queue.h"
 
 
 #define LOG_DEQUEUE 0
@@ -88,6 +89,11 @@
 #define is_marked(...) macro_dispatcher(is_marked, __VA_ARGS__)(__VA_ARGS__)
 #define is_marked2(w,r) is_marked_2(w,r)
 #define is_marked1(w)   is_marked_1(w)
+//#define is_marked_2(pointer, mask)	( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask )
+//#define is_marked_1(pointer)		(UNION_CAST(pointer, unsigned long long) & MASK_MRK)
+//#define get_unmarked(pointer)		(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *))
+//#define get_marked(pointer, mark)	(UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *))
+//#define get_mark(pointer)			(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long))
 
 
 __thread nbc_bucket_node *to_free_nodes = NULL;
@@ -223,14 +229,6 @@ static inline bool is_marked_1(void *pointer)
 	//return (bool) ((((unsigned long long) pointer) & MASK_MRK));
 }
 
-static inline bool is_marked_for_search(void *pointer, unsigned int research_flag)
-{
-	unsigned long long mask_value = (UNION_CAST(pointer, unsigned long long) & MASK_MRK);
-	
-	return 
-		(/*research_flag == REMOVE_DEL &&*/ mask_value == DEL) 
-		|| (research_flag == REMOVE_DEL_INV && (mask_value == INV) );
-}
 
 /**
  *  This function get the mark
@@ -244,6 +242,15 @@ static inline unsigned long long get_mark(void *pointer)
 	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long);
 }
 
+
+static inline bool is_marked_for_search(void *pointer, unsigned int research_flag)
+{
+	unsigned long long mask_value = (UNION_CAST(pointer, unsigned long long) & MASK_MRK);
+	
+	return 
+		(/*research_flag == REMOVE_DEL &&*/ mask_value == DEL) 
+		|| (research_flag == REMOVE_DEL_INV && (mask_value == INV) );
+}
 /**
  *  This function is an helper to allocate a node and filling its fields.
  *
@@ -1525,3 +1532,142 @@ void* nbc_dequeue(nb_calqueue *queue)
 }
 
 */
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+unsigned int getMinFree_internal(){
+	nbc_bucket_node * node;
+	simtime_t ts, min = INFTY;
+	unsigned int lp, bucket, size;
+	nbc_bucket_node  *array, *node_next, *original;
+	table *h;
+	double bucket_width;
+	
+	node = getMin(nbcalqueue, -1);
+	safe = false;
+	clear_lp_unsafe_set;
+    min = node->timestamp;
+    
+	h = read_table(nbcalqueue);						//
+	bucket_width = h->bucket_width;					//
+	bucket = hash(node->timestamp, bucket_width);	//
+	size  = h->size;								//
+    
+    while(node != NULL){
+		lp = node->tag;
+		if(!node->reserved){
+			ts = node->timestamp;
+			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
+				if(tryLock(lp)){
+retry_on_replica:
+					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
+						if(node->replica != NULL){
+							node = node->replica;
+							goto retry_on_replica;
+						}
+						unlock(lp);
+
+					}
+					else{
+						break;
+					}
+				}
+			}
+		}
+		add_lp_unsafe_set(lp);
+		do{
+			node_next = node->next;
+			if(is_marked(node_next, MOV) || node->replica != NULL)
+				return 0;
+				
+			do{
+				node = get_unmarked(node_next);
+				node_next = node->next;
+			}while(
+				(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
+				(node->timestamp < bucket*bucket_width )
+			);
+				
+			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width){
+				if(is_marked(node_next, MOV) || node->replica != NULL)
+					return 0;
+				break;
+			}
+			else
+				node = h->array + (++bucket%size);
+		}while(1);
+    }
+    
+    if(node == NULL)
+        return 0;
+    
+    node->reserved = true;
+    current_msg = (msg_t *) node->payload;
+    current_msg->node = node;
+
+	if( ts < (min + LOOKAHEAD) && !is_in_lp_unsafe_set(lp) )
+		safe = true;
+    
+    return 1;
+}
+
+void getMinLP_internal(unsigned int lp){
+	nbc_bucket_node * node;
+	simtime_t min = INFTY;
+	unsigned int bucket, size;
+	nbc_bucket_node  *array, *node_next, *original;
+	table *h;
+	double bucket_width;
+
+restart:
+	min = INFTY;
+	new_safe = false;
+	    
+	node = getMin(nbcalqueue, -1);
+    min = node->timestamp;
+    
+    h = read_table(nbcalqueue);						//
+	bucket_width = h->bucket_width;					//
+	bucket = hash(node->timestamp, bucket_width);	//
+	size  = h->size;								//
+    	
+    while(node != NULL && node->tag != lp){
+		do{
+			node_next = node->next;
+			if(is_marked(node_next, MOV) || node->replica != NULL)
+				goto restart;
+				
+			do{
+				node = get_unmarked(node_next);
+				node_next = node->next;
+			}while(
+				(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
+				(node->timestamp < bucket*bucket_width )
+			);
+				
+			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width && node->tag == lp){
+				if(is_marked(node_next, MOV) || node->replica != NULL)
+					goto restart;
+				break;
+			}
+			else
+				node = h->array + (++bucket%size);
+		}while(1);	
+    }
+    node->reserved = true;
+    new_current_msg = (msg_t *) node->payload;
+    new_current_msg->node = node;
+
+	if( node->timestamp < (min + LOOKAHEAD)){
+		new_safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
+	}
+}
