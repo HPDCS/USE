@@ -56,6 +56,13 @@ else
 CFLAGS:= $(CFLAGS) -DEPB=3
 endif
 
+ifdef SPERIMENTAL
+CFLAGS:= $(CFLAGS) -DSPERIMENTAL=$(SPERIMENTAL)
+endif
+
+ifdef SPERIMENTAL
+CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
+endif
 
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
@@ -96,14 +103,14 @@ CORE_SOURCES =  core/core.c\
 		core/numerical.c\
 		core/hpdcs_math.c\
 		statistics/statistics.c\
-#		mm/reverse.c\
-#		mm/slab.c
+		mm/reverse.c\
+		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
 		mm/recoverable.c\
-		mm/reverse.c\
-		mm/slab.c
+#		mm/reverse.c\
+#		mm/slab.c
 
 
 MM_OBJ=$(MM_SOURCES:.c=.o)
