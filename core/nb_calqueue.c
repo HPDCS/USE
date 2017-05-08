@@ -1547,7 +1547,7 @@ void* nbc_dequeue(nb_calqueue *queue)
 unsigned int getMinFree_internal(){
 	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
-	unsigned int lp, bucket, size;
+	unsigned int lp, bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
 	table *h;
 	double bucket_width;
@@ -1602,8 +1602,16 @@ retry_on_replica:
 					return 0;
 				break;
 			}
-			else
+			else{
+				if(node == g_tail){
+					if(++tail_counter >= size)
+						return 0;
+				}
+				else{
+					tail_counter = 0;
+				}
 				node = h->array + (++bucket%size);
+			}
 		}while(1);
     }
     
@@ -1623,7 +1631,7 @@ retry_on_replica:
 void getMinLP_internal(unsigned int lp){
 	nbc_bucket_node * node;
 	simtime_t min = INFTY;
-	unsigned int bucket, size;
+	unsigned int bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
 	table *h;
 	double bucket_width;
@@ -1660,8 +1668,17 @@ restart:
 					goto restart;
 				break;
 			}
-			else
+			
+			else{
+				if(node == g_tail){
+					if(++tail_counter >= size)
+						return 0;
+				}
+				else{
+					tail_counter = 0;
+				}
 				node = h->array + (++bucket%size);
+			}
 		}while(1);
 		if(node->timestamp >= (min + LOOKAHEAD))
 			unsafe_events++;

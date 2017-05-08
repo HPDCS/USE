@@ -8,7 +8,7 @@
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
 #define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1 << (lp%64)) )
 #define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1 << (lp%64)) )
-#define clear_lp_unsafe_set			for(unsigned int x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
+#define clear_lp_unsafe_set			unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
 
 typedef struct __msg_t msg_t;
 
