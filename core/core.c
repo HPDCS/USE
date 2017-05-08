@@ -232,7 +232,13 @@ void thread_loop(unsigned int thread_id) {
 		//mode = retries = 0; //<--possono sparire?
 begin:
 		/// *FETCH* ///
-		if (getMinFree_new() == 0) {
+		if (
+#ifdef SPERIMENTAL == 1
+			getMinFree_new() == 0
+#else
+			getMinFree() == 0
+#endif
+		) {
 			continue;
 		}
 execution:		
@@ -282,7 +288,11 @@ execution:
 			clock_timer_start(stm_safety_wait);
 	#endif			
 			do{
+#ifdef SPERIMENTAL == 1
 				getMinLP_new(current_lp);
+#elseif
+				getMinLP(current_lp);
+#endif
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
 
 	#if REPORT == 1
@@ -303,14 +313,16 @@ execution:
 					goto execution;
 					
 				}
+#ifdef SPERIMENTAL == 1
 				else{
-					if(unsafe_events > 10000){ //TODO
+					if(unsafe_events > n_cores){ //TODO
 						execute_undo_event(current_lp, current_msg->revwin);
 						((nbc_bucket_node*)current_msg->node)->reserved = false;
 						unlock(current_lp);
 						goto begin;
 					}
 				}
+#endif
 			}while(!safe);
 				
 	#if REPORT == 1 
