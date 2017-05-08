@@ -823,8 +823,8 @@ static void migrate_node(nbc_bucket_node *right_node,	table *new_h)
 	replica->tag = right_node->tag;
 //#if DEBUG == 1 //TODO
 	replica->copy = right_node->copy + 1;
-	replica->deleted = right_node->deleted + 1;
-	replica->executed = right_node->executed + 1;
+	replica->deleted = right_node->deleted;
+	replica->executed = right_node->executed;
 //#endif
 	         
     do
@@ -1308,7 +1308,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 				}
 				else
 				{
-					if(left_node == tail && size == 1 )
+					if(left_node == tail && size == 1 && !is_marked(min->next, MOV))
 					{
 						#if LOG_DEQUEUE == 1
 						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
@@ -1345,6 +1345,7 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 	double bucket_width;
 	unsigned int bucket;
 	unsigned int size;
+	unsigned int tail_counter = 0;
 	h = read_table(queue);
 	
 	//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u\n", tid, node->timestamp, node->tag, node->reserved);
@@ -1384,8 +1385,16 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 #endif
 			return node;
 		}
-		else
-			node = h->array + (++bucket%size);
+		else{
+			if(node == g_tail){
+				if(++tail_counter >= size)
+					return 0;
+			}
+			else{
+				tail_counter = 0;
+			}
+				node = h->array + (++bucket%size);
+		}
 	}while(1);
 	return NULL;
 }
@@ -1545,14 +1554,14 @@ void* nbc_dequeue(nb_calqueue *queue)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 unsigned int getMinFree_internal(){
-	nbc_bucket_node * node;
+	nbc_bucket_node * node, * node_min;
 	simtime_t ts, min = INFTY;
 	unsigned int lp, bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
 	table *h;
 	double bucket_width;
 	
-	node = getMin(nbcalqueue, -1);
+	node_min = node = getMin(nbcalqueue, -1);
 	safe = false;
 	clear_lp_unsafe_set;
     min = node->timestamp;
@@ -1629,7 +1638,7 @@ retry_on_replica:
 }
 
 void getMinLP_internal(unsigned int lp){
-	nbc_bucket_node * node;
+	nbc_bucket_node * node, * node_min;
 	simtime_t min = INFTY;
 	unsigned int bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
@@ -1641,7 +1650,7 @@ restart:
 	safe = false;
 	unsafe_events = 0;
 	    
-	node = getMin(nbcalqueue, -1);
+	node_min = node = getMin(nbcalqueue, -1);
     min = node->timestamp;
     
     h = read_table(nbcalqueue);						//
