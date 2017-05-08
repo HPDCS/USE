@@ -31,10 +31,22 @@
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
-#define THROTTLING
-#define HTM 0
+#ifndef DEBUG
 #define DEBUG 1
+#endif
+
+#ifndef REPORT
 #define REPORT 1
+#endif
+
+#ifndef SPERIMENTAL
+#define SPERIMENTAL 0
+#endif
+
+#ifndef REVERSIBLE
+#define REVERSIBLE 0
+#endif
+
 
 typedef struct __msg_t
 {

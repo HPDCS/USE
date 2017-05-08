@@ -64,6 +64,10 @@ ifdef SPERIMENTAL
 CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
 endif
 
+ifdef REPORT
+CFLAGS:= $(CFLAGS) -DREPORT=$(REPORT)
+endif
+
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
 		    model/pcs-prealloc/functions_app.c\
@@ -103,14 +107,14 @@ CORE_SOURCES =  core/core.c\
 		core/numerical.c\
 		core/hpdcs_math.c\
 		statistics/statistics.c\
-		mm/reverse.c\
-		mm/slab.c
+#		mm/reverse.c\
+#		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
 		mm/recoverable.c\
-#		mm/reverse.c\
-#		mm/slab.c
+		mm/reverse.c\
+		mm/slab.c
 
 
 MM_OBJ=$(MM_SOURCES:.c=.o)
@@ -153,6 +157,7 @@ hash: clean _hash mm core link
 link:
 ifdef REVERSIBLE
 	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+	#/home/ianni/hijacker_install/bin/hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 else
 	cp model/__application.o model/__application_hijacked.o
 endif
