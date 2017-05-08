@@ -3,7 +3,11 @@
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 
-FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
+FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0 
+#-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
+
+#CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
+FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE)
 
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
@@ -21,7 +25,9 @@ CFLAGS:= $(CFLAGS) -DNBC
 endif
 
 ifdef REVERSIBLE
-CFLAGS:= $(CFLAGS) -DREVERSIBLE
+CFLAGS:= $(CFLAGS) -DREVERSIBLE=$(REVERSIBLE)
+else
+CFLAGS:= $(CFLAGS) -DREVERSIBLE=0
 endif
 
 ifdef LOOKAHEAD
@@ -58,15 +64,23 @@ endif
 
 ifdef SPERIMENTAL
 CFLAGS:= $(CFLAGS) -DSPERIMENTAL=$(SPERIMENTAL)
+else
+CFLAGS:= $(CFLAGS) -DSPERIMENTAL=0
 endif
 
 ifdef DEBUG
 CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
+else
+CFLAGS:= $(CFLAGS) -DDEBUG=1
 endif
 
 ifdef REPORT
 CFLAGS:= $(CFLAGS) -DREPORT=$(REPORT)
+else
+CFLAGS:= $(CFLAGS) -DREPORT=1
 endif
+
+
 
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
@@ -155,7 +169,8 @@ hash: clean _hash mm core link
 
 
 link:
-ifdef REVERSIBLE
+ifeq ($(REVERSIBLE),1)
+#ifdef REVERSIBLE
 	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 	#/home/ianni/hijacker_install/bin/hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 else

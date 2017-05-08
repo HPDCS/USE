@@ -1681,7 +1681,7 @@ restart:
 			else{
 				if(node == g_tail){
 					if(++tail_counter >= size)
-						return 0;
+						goto restart;
 				}
 				else{
 					tail_counter = 0;
