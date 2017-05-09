@@ -262,7 +262,7 @@ execution:
 #endif		
 		}
 		else {
-#if REVERSIBLE==0 
+#if REVERSIBLE == 0 
 			((nbc_bucket_node*)current_msg->node)->reserved = false;
 			unlock(current_lp);
 			continue;
@@ -286,11 +286,11 @@ execution:
 			clock_timer_start(stm_safety_wait);
 	#endif			
 			do{
-#if SPERIMENTAL == 1
+	#if SPERIMENTAL == 1
 				getMinLP_new(current_lp);
-#else
+	#else
 				getMinLP(current_lp);
-#endif
+	#endif
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
 
 	#if REPORT == 1
@@ -305,22 +305,24 @@ execution:
 					// TODO: handle the reverse cache flush
 					//revwin_flush_cache();
 
-					((nbc_bucket_node *)(current_msg->node))->reserved = false; //Si può fare?
+					((nbc_bucket_node *)(current_msg->node))->reserved = false;
 					current_msg = new_current_msg;
 					
 					goto execution;
 					
 				}
-#if SPERIMENTAL == 1
+	#if SPERIMENTAL == 1
 				else{
-					if(unsafe_events > n_cores){ //TODO
+					if( (unsafe_events/n_prc_tot)*(avg_clock_2) > (avg_clock_deq + avg_clock_2)){
+					//if(unsafe_events > n_cores){ //TODO
+						statistics_post_data(tid, EVENTS_STASH, 1);
 						execute_undo_event(current_lp, current_msg->revwin);
 						((nbc_bucket_node*)current_msg->node)->reserved = false;
 						unlock(current_lp);
 						goto begin;
 					}
 				}
-#endif
+	#endif
 			}while(!safe);
 				
 	#if REPORT == 1 

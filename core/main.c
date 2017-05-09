@@ -66,18 +66,21 @@ int main(int argn, char *argv[]) {
         init(n, atoi(argv[2]));
     }
 #if SPERIMENTAL == 1
-	printf("Execution started in SPERIMENTAL mode\n");
+	printf("- SPERIMENTAL features enabled.\n");
 #endif
 #if DEBUG == 1
-	printf("Execution started in DEBUG mode\n");
+	printf("- DEBUGDEBUG mode enabled.\n");
+#endif
+#if REPORT == 1
+	printf("- REPORT prints enabled.\n");
 #endif
 #if REVERSIBLE == 1
-	printf("SPECULATIVE SIMULATION\n");
+	printf("- SPECULATIVE SIMULATION\n");
 #else
-	printf("CONSERVATIVE SIMULATION\n");
+	printf("- CONSERVATIVE SIMULATION\n");
 #endif
 
-    printf("**START SIMULATION**-\n\n");
+    printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);
 

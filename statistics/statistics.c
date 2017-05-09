@@ -55,6 +55,10 @@ void statistics_post_data(int tid, int type, double value) {
             thread_stats[tid].events_roll++;
             break;
 
+		case EVENTS_STASH:
+            thread_stats[tid].events_stash++;
+            break;
+
         case COMMITS_STM:
             thread_stats[tid].commits_stm++;
             break;
@@ -129,6 +133,7 @@ void gather_statistics() {
         system_stats.events_safe += thread_stats[i].events_safe;
         system_stats.events_stm += thread_stats[i].events_stm;
         system_stats.events_roll += thread_stats[i].events_roll;
+        system_stats.events_stash += thread_stats[i].events_stash;
 
         system_stats.commits_stm += thread_stats[i].commits_stm;
 
@@ -176,11 +181,12 @@ void print_statistics() {
     printf("Safe events.....................................: %12u (%.2f%%)\n", system_stats.events_safe, ((double)system_stats.events_safe / system_stats.events_total)*100);
     printf("STM events......................................: %12u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
     
-    unsigned int commits_total = system_stats.events_safe + system_stats.commits_htm + system_stats.commits_stm;
+    unsigned int commits_total = system_stats.events_safe + system_stats.commits_stm;
     
     printf("TOT committed...................................: %12u\n", commits_total);
     printf("STM committed...................................: %12u (%.2f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / system_stats.events_stm)*100);
-	printf("STM rollbacked..................................: %12u (%.2f%%)\n\n", system_stats.events_roll, ((double)system_stats.events_roll / system_stats.events_stm)*100);
+	printf("STM out of order rollbacked.....................: %12u (%.2f%%)\n", system_stats.events_roll, ((double)system_stats.events_roll / system_stats.events_stm)*100);
+	printf("STM preemptive stashed..........................: %12u (%.2f%%)\n\n", system_stats.events_stash, ((double)system_stats.events_stash / system_stats.events_stm)*100);
 
     printf("Average time spent in safe execution............: %12llu clocks\n", system_stats.clock_safe);
 
@@ -199,24 +205,6 @@ void print_statistics() {
 	
 	printf("Time spent in main loop.........................: %12llu clocks\n", system_stats.clock_loop);
 
-    unsigned int abort_total = system_stats.abort_unsafe +
-        system_stats.abort_conflict +
-        system_stats.abort_cachefull +
-        system_stats.abort_nested +
-        system_stats.abort_debug;
-
-    system_stats.abort_generic = system_stats.abort_total - abort_total;
-
- //   printf("Total HTM aborts................................: %11u (%.2f%%)\n", system_stats.abort_total,  ((double)system_stats.abort_total/(double)system_stats.events_htm)*100);
- //
- //   printf("HTM aborts for UNSAFETY.........................: %11u (%.2f%%)\n", system_stats.abort_unsafe, ((double)system_stats.abort_unsafe / abort_total)*100);
- //   printf("HTM aborts for CONFLICT.........................: %11u (%.2f%%)\n", system_stats.abort_conflict, ((double)system_stats.abort_conflict / abort_total)*100);
- //   printf("HTM aborts for CACHEFULL........................: %11u (%.2f%%)\n", system_stats.abort_cachefull, ((double)system_stats.abort_cachefull / abort_total)*100);
- //   printf("HTM aborts for NESTED...........................: %11u (%.2f%%)\n", system_stats.abort_nested, ((double)system_stats.abort_nested / abort_total)*100);
- //   printf("HTM aborts for DEBUG............................: %11u (%.2f%%)\n", system_stats.abort_debug, ((double)system_stats.abort_debug / abort_total)*100);
- //   printf("HTM aborts for GENERIC..........................: %11u (%.2f%%)\n", system_stats.abort_generic, ((double)system_stats.abort_generic / abort_total)*100);
- //   printf("HTM abort RETRY.................................: %11u (%.2f%%)\n\n", system_stats.abort_retry, ((double)system_stats.abort_retry / abort_total)*100);
- //
  //   printf("STM abort for UNSAFETY..........................: %11u\n\n", system_stats.abort_reverse);
 #endif
 }
