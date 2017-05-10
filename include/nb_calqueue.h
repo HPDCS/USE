@@ -33,6 +33,7 @@
 #include "atomic.h"
 #include "core.h"
 #include "lookahead.h"
+#include "garbagecollector.h"
 
 #define INFTY DBL_MAX
 

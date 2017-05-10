@@ -130,10 +130,10 @@ void _mkdir(const char *path) {
 void set_affinity(unsigned int tid){
 	cpu_set_t mask;	
 #if DEBUG == 1
-	printf("Thread %d set to CPU no %d\n", tid, tid);
+	printf("Thread %d set to CPU no %d\n", tid, tid%(N_CPU));
 #endif
 	CPU_ZERO(&mask);
-	CPU_SET(tid, &mask);
+	CPU_SET(tid%(N_CPU), &mask);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));

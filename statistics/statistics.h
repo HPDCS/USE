@@ -42,6 +42,7 @@
 #define CLOCK_DEQUEUE 23
 #define CLOCK_DEQ_LP 31
 #define CLOCK_DELETE 32
+#define CLOCK_PRUNE 35
 
 #define ABORT_UNSAFE 11		//DEL
 #define ABORT_REVERSE 12    //DEL
@@ -55,6 +56,7 @@
 
 #define EVENTS_FETCHED 20
 #define EVENTS_FLUSHED 33
+#define PRUNE_COUNTER 36
 #define T_BTW_EVT 21
 
 struct stats_t {
@@ -79,6 +81,7 @@ struct stats_t {
     unsigned long long clock_deq_lp;
     unsigned long long clock_loop;
     unsigned long long clock_delete;
+    unsigned long long clock_prune;
 
     unsigned int abort_total;//
     unsigned int abort_unsafe;//
@@ -92,6 +95,7 @@ struct stats_t {
     
 	unsigned long long events_fetched;
 	unsigned long long events_flushed;
+	unsigned long long prune_counter;
 } __attribute__((aligned (64)));
 
 
