@@ -163,8 +163,8 @@ unsigned int getMinFree(){
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
 //#endif
-
-	node = getMin(nbcalqueue, -1);
+    if((node = getMin(nbcalqueue, -1)) == NULL)
+		return 0;
 	safe = false;
 	clear_lp_unsafe_set;
     min = node->timestamp;
@@ -208,10 +208,8 @@ retry_on_replica:
     current_msg = (msg_t *) node->payload;
     current_msg->node = node;
 
-	if( ts < (min + LOOKAHEAD) && !is_in_lp_unsafe_set(lp) ){
+	if( ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && !is_in_lp_unsafe_set(lp) )
 		safe = true;
-	}
-    
     
 //#ifdef REPORT == 1
 	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
@@ -251,7 +249,7 @@ restart:
     new_current_msg = (msg_t *) node->payload;
     new_current_msg->node = node;
 
-	if( node->timestamp < (min + LOOKAHEAD)){
+	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
 		safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
 	}
 //#ifdef REPORT == 1
