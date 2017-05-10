@@ -1561,10 +1561,12 @@ unsigned int getMinFree_internal(){
 	table *h;
 	double bucket_width;
 	
-	node_min = node = getMin(nbcalqueue, -1);
+    if((node_min = node = getMin(nbcalqueue, -1)) == NULL)
+		return 0;
+	
 	safe = false;
 	clear_lp_unsafe_set;
-    min = node->timestamp;
+	min = node->timestamp;
     
 	h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
@@ -1631,7 +1633,7 @@ retry_on_replica:
     current_msg = (msg_t *) node->payload;
     current_msg->node = node;
 
-	if( ts < (min + LOOKAHEAD) && !is_in_lp_unsafe_set(lp) )
+	if( ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && !is_in_lp_unsafe_set(lp) )
 		safe = true;
     
     return 1;
@@ -1650,7 +1652,10 @@ restart:
 	safe = false;
 	unsafe_events = 0;
 	    
-	node_min = node = getMin(nbcalqueue, -1);
+    if((node_min = node = getMin(nbcalqueue, -1)) == NULL){
+		printf("[%u] ERROR: getMin_LP has found an empty queue\n",tid);
+		exit(0);
+	}
     min = node->timestamp;
     
     h = read_table(nbcalqueue);						//
@@ -1689,14 +1694,14 @@ restart:
 				node = h->array + (++bucket%size);
 			}
 		}while(1);
-		if(node->timestamp >= (min + LOOKAHEAD))
+		if(node->timestamp >= (min + LOOKAHEAD)) //<- non esattissimo
 			unsafe_events++;
     }
     node->reserved = true;
     new_current_msg = (msg_t *) node->payload;
     new_current_msg->node = node;
 
-	if( node->timestamp < (min + LOOKAHEAD)){
+	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
 		safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
 	}
 }

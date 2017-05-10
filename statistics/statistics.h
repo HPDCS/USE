@@ -2,21 +2,23 @@
 #define _STATISTICS_H_
 
 
-#define _clock_safe		(thread_stats[tid].clock_safe)
+#define _clock_safe		(thread_stats[tid].clock_safe)									
 #define avg_clock_safe	(thread_stats[tid].clock_safe/thread_stats[tid].events_safe)
 #define prob_safe		(thread_stats[tid].events_safe /(thread_stats[tid].events_safe+thread_stats[tid].commits_stm))
-
+                        
 #define _clock_stm		(thread_stats[tid].clock_stm)
 #define avg_clock_stm	(thread_stats[tid].clock_stm /thread_stats[tid].events_stm)
-#define avg_clock_roll	(thread_stats[tid].clock_undo_event /thread_stats[tid].events_roll)
+//#define avg_clock_roll	(thread_stats[tid].clock_undo_event /thread_stats[tid].events_roll)
+#define avg_clock_roll	(thread_stats[tid].clock_undo_event /(thread_stats[tid].events_roll+1))
 #define prob_stm		(thread_stats[tid].commits_stm /(thread_stats[tid].events_safe+thread_stats[tid].commits_stm))
 #define perc_util_stm	(thread_stats[tid].commit_stm/thread_stats[tid].events_stm)
 #define clock_stm_util	(thread_stats[tid].clock_stm /thread_stats[tid].commit_stm)
-
+                        
 #define avg_clock_deq	(thread_stats[tid].clock_dequeue /thread_stats[tid].events_fetched)
-
+                        
 #define avg_clock		(avg_clock_safe*prob_safe+avg_clock_stm_util*prob_stm)
-#define avg_clock_2		((_clock_safe + _clock_stm) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm))
+//#define avg_clock_2		((_clock_safe + _clock_stm) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm))
+#define avg_clock_2		((_clock_safe + _clock_stm) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm + 1))
 
 
 #define EVENTS_SAFE 0

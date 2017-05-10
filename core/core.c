@@ -28,6 +28,7 @@
 #include "nb_calqueue.h"
 #include "simtypes.h"
 #include "lookahead.h"
+#include "hpdcs_utils.h"
 
 //id del processo principale
 #define MAIN_PROCESS		0
@@ -127,8 +128,10 @@ void _mkdir(const char *path) {
 
 
 void set_affinity(unsigned int tid){
-	cpu_set_t mask;
+	cpu_set_t mask;	
+#if DEBUG == 1
 	printf("Thread %d set to CPU no %d\n", tid, tid);
+#endif
 	CPU_ZERO(&mask);
 	CPU_SET(tid, &mask);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
@@ -159,7 +162,31 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	unsigned int i;
 	int lp_lock_ret;
 
-	printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
+	printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", _thread_num, lps_num);
+#if SPERIMENTAL == 1
+	printf("\t- SPERIMENTAL features enabled.\n");
+#endif
+#if PREEMPTIVE == 1
+	printf("\t- PREEMPTIVE event realease enabled.\n");
+#endif
+#if DEBUG == 1
+	printf("\t- DEBUGDEBUG mode enabled.\n");
+#endif
+#if MALLOC == 1
+	printf("\t- MALLOC enabled.\n");
+#else
+	printf("\t- DYMELOR enabled.\n");
+#endif
+#if REPORT == 1
+	printf("\t- REPORT prints enabled.\n");
+#endif
+#if REVERSIBLE == 1
+	printf("\t- SPECULATIVE SIMULATION\n");
+#else
+	printf("\t- CONSERVATIVE SIMULATION\n");
+#endif
+	printf("\n" COLOR_RESET);
+
 	n_cores = _thread_num;
 	n_prc_tot = lps_num;
 	
@@ -311,9 +338,9 @@ execution:
 					goto execution;
 					
 				}
-	#if SPERIMENTAL == 1
+	#if PREEMPTIVE == 1
 				else{
-					if( (unsafe_events/n_prc_tot)*(avg_clock_2) > (avg_clock_deq + avg_clock_2)){
+					if(!safe && (unsafe_events/n_cores) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2)){
 					//if(unsafe_events > n_cores){ //TODO
 						statistics_post_data(tid, EVENTS_STASH, 1);
 						execute_undo_event(current_lp, current_msg->revwin);
@@ -368,8 +395,8 @@ execution:
 	//statistics_fini();
 	
 	if(sim_error){
-		printf("\n[%u] Execution ended for an error\n\n", tid);
+		printf(COLOR_RED "\n[%u] Execution ended for an error\n" COLOR_RESET, tid);
 	} else if (stop){
-		printf("\n[%u] Execution ended correctly\n\n", tid);
+		printf(COLOR_GREEN "\n[%u] Execution ended correctly\n" COLOR_RESET, tid);
 	}
 }

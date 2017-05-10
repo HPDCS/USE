@@ -1,5 +1,6 @@
 #pragma once
 
 #ifndef LOOKAHEAD
-#define LOOKAHEAD 0.1
+#define LOOKAHEAD 0.0
 #endif
+
