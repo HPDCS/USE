@@ -1310,7 +1310,7 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 }
 
 
-nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
+nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag, table ** hres){
 		nbc_bucket_node *min, *min_next, 
 					*left_node, *left_node_next, 
 					*tail, *array;
@@ -1363,6 +1363,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 						printf("[%u] ERROR: getNext is returning a tail\n", tid);
 					}
 #endif
+					*hres = h;
 					return left_node;
 				}
 				else
@@ -1396,16 +1397,16 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 	
 	return NULL;
 }
-nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
+nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node, table *h){
 	/* preferirei avere l'hashtable anche come parametro */
 	/* oppure sfruttare il campo epoca per avere un puntatore a hashtable */
 	nbc_bucket_node  *array, *node_next, *original;
-	table *h;
+	//table *h;
 	double bucket_width;
 	unsigned int bucket;
 	unsigned int size;
 	unsigned int tail_counter = 0;
-	h = read_table(queue);
+	//h = read_table(queue);
 	
 	//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u\n", tid, node->timestamp, node->tag, node->reserved);
 	
@@ -1472,7 +1473,7 @@ void delete(nb_calqueue *queue, nbc_bucket_node* node){
     ATOMIC_DEC(&(h->counter));
     
 #if DEBUG == 1
-	tmp->deleted = tmp->deleted + 1;//////////////////////////////////////////////////////////
+	tmp->deleted = tmp->deleted + 1;
 #endif
     return;
 }
@@ -1613,21 +1614,21 @@ void* nbc_dequeue(nb_calqueue *queue)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 unsigned int getMinFree_internal(){
-	nbc_bucket_node * node, * node_min;
+	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
 	unsigned int lp, bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
 	table *h;
 	double bucket_width;
 	
-    if((node_min = node = getMin(nbcalqueue, -1)) == NULL)
+    if((node = getMin(nbcalqueue, -1, &h)) == NULL)
 		return 0;
 	
 	safe = false;
 	clear_lp_unsafe_set;
 	min = node->timestamp;
     
-	h = read_table(nbcalqueue);						//
+	//h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
 	size  = h->size;								//
@@ -1654,6 +1655,7 @@ retry_on_replica:
 			}
 		}
 		add_lp_unsafe_set(lp);
+		//getNext
 		do{
 			node_next = node->next;
 			if(is_marked(node_next, MOV) || node->replica != NULL)
@@ -1699,7 +1701,7 @@ retry_on_replica:
 }
 
 void getMinLP_internal(unsigned int lp){
-	nbc_bucket_node * node, * node_min;
+	nbc_bucket_node * node;
 	simtime_t min = INFTY;
 	unsigned int bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
@@ -1711,13 +1713,13 @@ restart:
 	safe = false;
 	unsafe_events = 0;
 	    
-    if((node_min = node = getMin(nbcalqueue, -1)) == NULL){
+    if((node = getMin(nbcalqueue, -1, &h)) == NULL){
 		printf("[%u] ERROR: getMin_LP has found an empty queue\n",tid);
 		exit(0);
 	}
     min = node->timestamp;
     
-    h = read_table(nbcalqueue);						//
+    //h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
 	size  = h->size;								//
@@ -1761,6 +1763,6 @@ restart:
     new_current_msg->node = node;
 
 	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
-		safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
+		safe = true;
 	}
 }

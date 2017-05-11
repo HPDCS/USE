@@ -15,6 +15,7 @@
 #define clock_stm_util	(thread_stats[tid].clock_stm /thread_stats[tid].commit_stm)
                         
 #define avg_clock_deq	(thread_stats[tid].clock_dequeue /thread_stats[tid].events_fetched)
+#define avg_clock_safe	0//(thread_stats[tid].clock_deq_lp /thread_stats[tid].events_fetched) da fare
                         
 #define avg_clock		(avg_clock_safe*prob_safe+avg_clock_stm_util*prob_stm)
 //#define avg_clock_2		((_clock_safe + _clock_stm) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm))
@@ -43,6 +44,7 @@
 #define CLOCK_DEQ_LP 31
 #define CLOCK_DELETE 32
 #define CLOCK_PRUNE 35
+#define CLOCK_SAFETY_CHECK 37
 
 #define ABORT_UNSAFE 11		//DEL
 #define ABORT_REVERSE 12    //DEL
@@ -57,6 +59,7 @@
 #define EVENTS_FETCHED 20
 #define EVENTS_FLUSHED 33
 #define PRUNE_COUNTER 36
+#define SAFETY_CHECK 38
 #define T_BTW_EVT 21
 
 struct stats_t {
@@ -82,6 +85,7 @@ struct stats_t {
     unsigned long long clock_loop;
     unsigned long long clock_delete;
     unsigned long long clock_prune;
+    unsigned long long clock_safety_check;
 
     unsigned int abort_total;//
     unsigned int abort_unsafe;//
@@ -96,6 +100,7 @@ struct stats_t {
 	unsigned long long events_fetched;
 	unsigned long long events_flushed;
 	unsigned long long prune_counter;
+	unsigned long long safety_check_counter;
 } __attribute__((aligned (64)));
 
 

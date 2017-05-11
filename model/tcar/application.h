@@ -28,7 +28,7 @@
 
 
 #ifndef NUM_CELLE_OCCUPATE
-	#define NUM_CELLE_OCCUPATE	8
+	#define NUM_CELLE_OCCUPATE	80
 #endif
 #ifndef ROBOT_PER_CELLA
 	#define ROBOT_PER_CELLA 2

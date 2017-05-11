@@ -73,9 +73,9 @@ struct __bucket_node
 {
 	//char zpad1[64];
 	nbc_bucket_node * volatile next;	// pointer to the successor
-	char zpad2[56];
+//	char zpad2[56];
 	nbc_bucket_node * volatile replica;	// pointer to the replica
-	char zpad3[56];
+//	char zpad3[56];
 	//volatile unsigned int to_remove; 			// used to resolve the conflict with same timestamp using a FIFO policy
 	//char zpad[60];
 	//void *generator;	// pointer to the successor
@@ -102,15 +102,18 @@ typedef struct table table;
 struct table
 {
 	nbc_bucket_node * array;
-	char zpad1[56];
-	table * volatile new_table;
-	char zpad2[56];
-	atomic_t counter;
-	char zpad3[60];
-	volatile unsigned long long current;
-	char zpad4[56];
-	unsigned int size;
 	double bucket_width;
+	unsigned int size;
+	unsigned int pad;
+	table * volatile new_table;
+	char zpad4[32];
+	atomic_t counter;
+	//atomic_t e_counter;	//TODO: scompattare il counter
+	//char zpad3[60];
+	//atomic_t d_counter;
+	char zpad1[60];
+	volatile unsigned long long current;
+	char zpad2[56];
 };
 
 
@@ -129,8 +132,8 @@ extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, uns
 extern double nbc_prune(nb_calqueue *queue, double timestamp);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_bucket, unsigned int elem_per_bucket);
 
-extern nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag);
-extern nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node);
+extern nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag, table ** h);
+extern nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node, table *h);
 extern void delete(nb_calqueue *queue, nbc_bucket_node* node);
 
 extern void getMinLP_internal(unsigned int lp);

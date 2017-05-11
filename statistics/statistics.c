@@ -105,6 +105,10 @@ void statistics_post_data(int tid, int type, double value) {
             thread_stats[tid].clock_prune += (unsigned long long)value;
             break;
 
+        case CLOCK_SAFETY_CHECK:
+            thread_stats[tid].clock_safety_check += (unsigned long long)value;
+            break;
+
         case EVENTS_FETCHED:
 			thread_stats[tid].events_fetched++;
 			break;
@@ -115,6 +119,10 @@ void statistics_post_data(int tid, int type, double value) {
 
         case PRUNE_COUNTER:
 			thread_stats[tid].prune_counter++;
+			break;
+
+        case SAFETY_CHECK:
+			thread_stats[tid].safety_check_counter++;
 			break;
 			
 		case T_BTW_EVT:
@@ -158,12 +166,14 @@ void gather_statistics() {
         system_stats.clock_stm_wait += thread_stats[i].clock_stm_wait;
         system_stats.clock_undo_event += thread_stats[i].clock_undo_event;
         system_stats.clock_prune += thread_stats[i].clock_prune;
+        system_stats.clock_safety_check += thread_stats[i].clock_safety_check;
 
         system_stats.abort_retry += thread_stats[i].abort_retry;
         
         system_stats.events_fetched += thread_stats[i].events_fetched;
         system_stats.events_flushed += thread_stats[i].events_flushed;
         system_stats.prune_counter += thread_stats[i].prune_counter;
+        system_stats.safety_check_counter += thread_stats[i].safety_check_counter;
     }
 		if(system_stats.events_safe != 0) {
 		        system_stats.clock_safe /= system_stats.events_safe;
@@ -217,6 +227,7 @@ void print_statistics() {
 	printf("Time spent in dequeue...........................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_dequeue, ((unsigned long long)system_stats.clock_dequeue/system_stats.events_fetched));
 	printf("Time spent in deletion..........................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_delete, ((unsigned long long)system_stats.clock_delete/system_stats.events_total));
 	printf("Time spent in dequeue_lp........................: %12llu clocks\n", system_stats.clock_deq_lp);
+	printf("Time spent in safety check......................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_safety_check, ((unsigned long long)system_stats.clock_safety_check/system_stats.safety_check_counter));
 	printf("Time spent in pruning...........................: %12llu clocks \tavg %12llu clocks\n\n", system_stats.clock_prune, ((unsigned long long)system_stats.clock_prune/system_stats.prune_counter));
 	
 	printf("Time spent in main loop.........................: %12llu clocks\n", system_stats.clock_loop);

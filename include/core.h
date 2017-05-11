@@ -2,17 +2,9 @@
 #define __CORE_H
 
 #include "ROOT-Sim.h"
-
-
 #include <stdbool.h>
 #include <math.h>
 #include <float.h>
-
-
-#include <float.h>
-
-#include <ROOT-Sim.h>
-
 #include <reverse.h>
 
 #define MAX_LPs	2048
@@ -20,16 +12,15 @@
 #define MAX_DATA_SIZE		128
 #define THR_POOL_SIZE		128
 
-#define TROT_INIT_DELTA		0.0
-#define REV_INIT_THRESH		0
-
 #define MODE_SAF	1
-#define MODE_HTM	2
-#define MODE_STM	3
+#define MODE_STM	2
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
+
+#define end_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
+#define is_end_sim(lp) 	( sim_ended[lp/64] & (1ULL << (lp%64)) )
 
 
 typedef struct __msg_t
@@ -49,47 +40,25 @@ extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
 
-
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 extern unsigned int n_prc_tot;
-
 /* Commit horizon */ //TODO
 extern  simtime_t gvt;
 /* Average time between consecutive events */
 extern simtime_t t_btw_evts;
 
+
+//Esegue il loop del singolo thread
+void thread_loop(unsigned int thread_id);
 void init(unsigned int _thread_num, unsigned int);
 
-//Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
-
 extern void rootsim_error(bool fatal, const char *msg, ...);
-
-
-//Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
-
-extern __thread simtime_t current_lvt;
-extern __thread unsigned int current_lp;
-
-extern void rootsim_error(bool fatal, const char *msg, ...);
-
 extern void _mkdir(const char *path);
 
 extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
-
-extern void flush(void);
-
-double double_cas(double *addr, double old_val, double new_val);
-
-void execution_time(simtime_t time, unsigned int clp);
-
-unsigned int check_safety(simtime_t time);
-
-void *tuning(void *args);
 
 #endif
