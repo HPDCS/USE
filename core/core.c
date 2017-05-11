@@ -199,7 +199,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 			end_sim(i);
 	}
 	
-#if MALLOC == 1
+#if MALLOC == 0
 	dymelor_init();
 	printf("Dymelor abilitato\nCACHELINESIZE %u\n", CACHE_LINE_SIZE);
 #endif
