@@ -96,6 +96,8 @@
 #define get_marked(pointer, mark)	(UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *))
 #define get_mark(pointer)			(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long))
 
+
+
 __thread hpdcs_gc_status malloc_status =
 {
 	.free_nodes_lists 			= NULL,
@@ -856,11 +858,11 @@ static void migrate_node(nbc_bucket_node *right_node,	table *new_h)
 	replica = node_malloc(right_node->payload, right_node->timestamp,  right_node->counter);
 	replica->reserved = right_node->reserved;
 	replica->tag = right_node->tag;
-//#if DEBUG == 1 //TODO
+#if DEBUG == 1
 	replica->copy = right_node->copy + 1;
 	replica->deleted = right_node->deleted;
 	replica->executed = right_node->executed;
-//#endif
+#endif
 	         
     do
 	{ 
@@ -1701,7 +1703,7 @@ retry_on_replica:
 }
 
 void getMinLP_internal(unsigned int lp){
-	nbc_bucket_node * node;
+	nbc_bucket_node * node, *min_node;
 	simtime_t min = INFTY;
 	unsigned int bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
@@ -1713,7 +1715,7 @@ restart:
 	safe = false;
 	unsafe_events = 0;
 	    
-    if((node = getMin(nbcalqueue, -1, &h)) == NULL){
+    if((min_node=node = getMin(nbcalqueue, -1, &h)) == NULL){
 		printf("[%u] ERROR: getMin_LP has found an empty queue\n",tid);
 		exit(0);
 	}
@@ -1765,4 +1767,8 @@ restart:
 	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
 		safe = true;
 	}
+}
+
+nbc_bucket_node* unmarked(void *pointer){ //da cancellare
+	return (nbc_bucket_node *)((unsigned long long) pointer & MASK_PTR) ;
 }

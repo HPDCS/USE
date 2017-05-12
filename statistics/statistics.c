@@ -215,8 +215,9 @@ else if(system_stats.commits_stm > 0){
 	printf("Time spent in dequeue...........................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_dequeue, ((unsigned long long)system_stats.clock_dequeue/system_stats.events_fetched));
 	printf("Time spent in enqueue...........................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_enqueue, ((unsigned long long)system_stats.clock_enqueue/system_stats.events_flushed));
 	printf("Time spent in deletion..........................: %12llu clocks \tavg %12llu clocks\n\n", system_stats.clock_delete, ((unsigned long long)system_stats.clock_delete/(system_stats.events_safe+system_stats.commits_stm)));
-	
+#if REVERSIBLE==1	
 	printf("Time spent in dequeue(lp).......................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_safety_check, ((unsigned long long)system_stats.clock_safety_check/system_stats.safety_check_counter));
+#endif
 	printf("Time spent in pruning...........................: %12llu clocks \tavg %12llu clocks\n\n", system_stats.clock_prune, ((unsigned long long)system_stats.clock_prune/system_stats.prune_counter));
 	
 	printf("Time spent in main loop.........................: %12llu clocks\n", system_stats.clock_loop);

@@ -81,6 +81,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			delta = LOOKAHEAD + Expent(TAU);
 			timestamp = now + delta;
+#if DEBUG == 1
+			if(timestamp < now){
+				printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
+			}
+#endif
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
@@ -90,6 +95,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				for(j=0;j<FAN_OUT;j++){
 						delta = LOOKAHEAD + Expent(TAU);
 						timestamp = now + delta;
+#if DEBUG == 1
+						if(timestamp < now){
+							printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
+						}
+#endif
 						ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
 				}
 			}

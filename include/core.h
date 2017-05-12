@@ -23,6 +23,7 @@
 #define end_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
 #define is_end_sim(lp) 	( sim_ended[lp/64] & (1ULL << (lp%64)) )
 
+struct __bucket_node;
 
 typedef struct __msg_t
 {
@@ -33,7 +34,7 @@ typedef struct __msg_t
   unsigned int data_size;
   unsigned char data[MAX_DATA_SIZE];
   revwin_t *revwin;			//reverse window to rollback
-  void * node;				//address of the belonging node
+  struct __bucket_node * node;	//address of the belonging node
 } msg_t;
 
 

@@ -75,8 +75,8 @@ int main(int argn, char *argv[]) {
 
 	start_simulation(n);
 
-    printf("Simulation ended: %.5f seconds\n", (double)timer_value_seconds(exec_time));
-    printf("Simulation ended: %llu clocks\n", clock_timer_value(simulation_clocks));
+    printf("Simulation ended (seconds): %.3f\n", (double)timer_value_seconds(exec_time));
+    printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
 
 
     print_statistics();

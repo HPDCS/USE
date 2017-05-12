@@ -350,7 +350,8 @@ execution:
 				}
 	#if PREEMPTIVE == 1
 				else{
-					if(!safe && (unsafe_events/n_cores + 1/*da migliorare*/) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2 - avg_clock_deqlp)){
+					//potrebbe convenire guardare il solo lp, così, in caso di più thread, non si rischia di rimanere appesi
+					if(/*is_end_sim(current_lp)*/stop || (!safe && (unsafe_events/n_cores + 1/*da migliorare*/) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2 - avg_clock_deqlp))){
 					//if(unsafe_events > n_cores){ //TODO
 			#if REPORT == 1
 						clock_timer_start(undo_event_processing);
@@ -381,7 +382,8 @@ execution:
 		
 		if(OnGVT(current_lp, states[current_lp]) && !is_end_sim(current_lp)){
 			end_sim(current_lp);
-			stop = check_termination();
+			if(check_termination())
+				__sync_val_compare_and_swap(&stop, false, true);
 		}
 		
 		if(tid == MAIN_PROCESS) {
