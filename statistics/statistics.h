@@ -15,7 +15,7 @@
 #define clock_stm_util	(thread_stats[tid].clock_stm /thread_stats[tid].commit_stm)
                         
 #define avg_clock_deq	(thread_stats[tid].clock_dequeue /thread_stats[tid].events_fetched)
-#define avg_clock_safe	0//(thread_stats[tid].clock_deq_lp /thread_stats[tid].events_fetched) da fare
+#define avg_clock_deqlp	(thread_stats[tid].clock_safety_check /thread_stats[tid].safety_check_counter)
                         
 #define avg_clock		(avg_clock_safe*prob_safe+avg_clock_stm_util*prob_stm)
 //#define avg_clock_2		((_clock_safe + _clock_stm) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm))
@@ -111,10 +111,6 @@ extern struct stats_t *thread_stats;
 void statistics_init();
 
 void statistics_fini();
-
-unsigned long long get_time_of_an_event();
-
-double get_frac_htm_aborted();
 
 void print_statistics();
 

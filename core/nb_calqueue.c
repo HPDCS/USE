@@ -297,11 +297,11 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	res->timestamp = timestamp;
 	res->tag = -1;
 	res->reserved = false;
-//#if DEBUG == 1 // TODO
+#if DEBUG == 1 // TODO
 	res->copy = 0;
 	res->deleted = 0;
 	res->executed = 0;	
-//#endif
+#endif
 
 	return res;
 }

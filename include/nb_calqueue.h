@@ -86,11 +86,11 @@ struct __bucket_node
 	//char zpad3[36];					// actually used only to distinguish head nodes
 	unsigned int tag;
 	bool reserved;
-//#if DEBUG == 1 // TODO
+#if DEBUG == 1 // TODO
 	unsigned int copy;
 	unsigned int deleted;
 	unsigned int executed;
-//#endif
+#endif
 };
 
 

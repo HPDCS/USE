@@ -33,8 +33,6 @@ extern void lock_init();
 
 void getMinLP(unsigned int lp);
 unsigned int getMinFree();
-void getMinLP_new(unsigned int lp);
-unsigned int getMinFree_new();
 void commit();
 
 extern nb_calqueue* nbcalqueue;

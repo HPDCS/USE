@@ -6,6 +6,7 @@
 #include <math.h>
 #include <float.h>
 #include <reverse.h>
+#include "nb_calqueue.h"
 
 #define MAX_LPs	2048
 

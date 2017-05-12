@@ -87,12 +87,18 @@ void queue_deliver_msgs(void) {
 			abort();		
 		}
         memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
-        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
-    }
-    
-#ifdef REPORT == 1
-	statistics_post_data(tid, EVENTS_FLUSHED, _thr_pool._thr_pool_count); 
+
+#if REPORT == 1
+		clock_timer queue_op;
+		clock_timer_start(queue_op);
 #endif
+        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+
+#if REPORT == 1
+		statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
+		statistics_post_data(tid, EVENTS_FLUSHED, 1);
+#endif
+    }
     _thr_pool._thr_pool_count = 0;
 }
 
@@ -101,17 +107,13 @@ inline void queue_clean(void) {
 }
 
 void commit(void) {
-#ifdef REPORT == 1
+	queue_deliver_msgs();
+#if REPORT == 1
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
 #endif
-	queue_deliver_msgs();
-#ifdef REPORT == 1
-	statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
-	clock_timer_start(queue_op);
-#endif
 	delete(nbcalqueue, current_msg->node);
-#ifdef REPORT == 1
+#if REPORT == 1
 	statistics_post_data(tid, CLOCK_DELETE, clock_timer_value(queue_op));
 #endif
 	
@@ -133,11 +135,11 @@ void commit(void) {
 	}
 #endif
 	free(current_msg);
-#ifdef REPORT == 1
+#if REPORT == 1
 	clock_timer_start(queue_op);
 #endif
 	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
-#ifdef REPORT == 1
+#if REPORT == 1
 	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
 	statistics_post_data(tid, PRUNE_COUNTER, 1);
 #endif
@@ -149,10 +151,10 @@ unsigned int getMinFree(){
 	unsigned int lp;
 	table *h;
 
-//#ifdef REPORT == 1
+#if REPORT == 1
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
-//#endif
+#endif
     if((node = getMin(nbcalqueue, -1, &h)) == NULL)
 		return 0;
 	safe = false;
@@ -201,11 +203,11 @@ retry_on_replica:
 	if( ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && !is_in_lp_unsafe_set(lp) )
 		safe = true;
     
-//#ifdef REPORT == 1
+#if REPORT == 1
 	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
 	statistics_post_data(tid, EVENTS_FETCHED, 1);
 //	statistics_post_data(tid, T_BTW_EVT, current_msg->timestamp-old_ts); // TODO : possiamo usarlo per la resize? 
-//#endif
+#endif
     return 1;
 	
 }
@@ -215,10 +217,10 @@ void getMinLP(unsigned int lp){
 	simtime_t min;
 	table *h;
 	
-//#ifdef REPORT == 1
+#if REPORT == 1
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
-//#endif
+#endif
 
 restart:
 	min = INFTY;
@@ -241,31 +243,8 @@ restart:
 	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
 		safe = true;
 	}
-//#ifdef REPORT == 1
+#if REPORT == 1
 	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
-//#endif
+#endif
 }
 
-unsigned int getMinFree_new(){
-//#ifdef REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-//#endif
-	unsigned int res = getMinFree_internal();
-//#ifdef REPORT == 1
-	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
-	statistics_post_data(tid, EVENTS_FETCHED, 1);
-//#endif
-    return res;
-}
-
-void getMinLP_new(unsigned int lp){
-//#ifdef REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-//#endif
-	getMinLP_internal(lp);
-//#ifdef REPORT == 1
-	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
-//#endif
-}
