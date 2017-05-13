@@ -3,7 +3,7 @@
 
 
 #define _clock_safe		(thread_stats[tid].clock_safe)									
-#define avg_clock_safe	(thread_stats[tid].clock_safe/thread_stats[tid].events_safe)
+#define avg_clock_safe	(thread_stats[tid].clock_safe/(thread_stats[tid].events_safe+1))
 #define prob_safe		(thread_stats[tid].events_safe /(thread_stats[tid].events_safe+thread_stats[tid].commits_stm))
                         
 #define _clock_stm		(thread_stats[tid].clock_stm)
@@ -17,10 +17,7 @@
 #define avg_clock_deq	(thread_stats[tid].clock_dequeue /thread_stats[tid].events_fetched)
 #define avg_clock_deqlp	(thread_stats[tid].clock_safety_check /thread_stats[tid].safety_check_counter)
                         
-#define avg_clock		(avg_clock_safe*prob_safe+avg_clock_stm_util*prob_stm)
-//#define avg_clock_2		((_clock_safe + _clock_stm) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm))
-#define avg_clock_2		((_clock_safe + _clock_stm) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm + 1))
-
+#define avg_tot_clock		(clock_timer_value(main_loop_time) / (thread_stats[tid].events_safe + thread_stats[tid].commits_stm + 1))
 
 #define EVENTS_SAFE 0
 #define EVENTS_HTM 1 //DEL

@@ -238,7 +238,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 }
 
 void thread_loop(unsigned int thread_id) {
-#if REPORT == 1	
+#if REPORT == 1
 	clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
 				queue_min,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
 				event_processing,		//OK: cattura il tempo per processare un evento safe 
@@ -348,11 +348,18 @@ execution:
 					goto execution;
 					
 				}
-	#if PREEMPTIVE == 1
+	
 				else{
-					//potrebbe convenire guardare il solo lp, così, in caso di più thread, non si rischia di rimanere appesi
-					if(/*is_end_sim(current_lp)*/stop || (!safe && (unsafe_events/n_cores + 1/*da migliorare*/) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2 - avg_clock_deqlp))){
-					//if(unsafe_events > n_cores){ //TODO
+					if(stop /*is_end_sim(current_lp)*/ //potrebbe convenire guardare il solo lp, così, in caso di più thread, non si rischia di rimanere appesi
+			#if PREEMPTIVE == 1 
+				#if REPORT == 1		
+						|| (!safe && ((unsafe_events/n_cores) * (avg_tot_clock) > (avg_clock_roll + avg_clock_deq + avg_clock_safe - avg_clock_deqlp)))
+				#else 
+						|| (unsafe_events > n_cores) //TODO
+				#endif
+			#endif
+					){
+						
 			#if REPORT == 1
 						clock_timer_start(undo_event_processing);
 			#endif	
@@ -367,7 +374,7 @@ execution:
 						goto begin;
 					}
 				}
-	#endif
+	
 			}while(!safe);
 				
 	#if REPORT == 1 
