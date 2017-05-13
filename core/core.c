@@ -166,7 +166,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	printf("\t- PREEMPTIVE event realease enabled.\n");
 #endif
 #if DEBUG == 1
-	printf("\t- DEBUGDEBUG mode enabled.\n");
+	printf("\t- DEBUG mode enabled.\n");
 #endif
 #if MALLOC == 1
 	printf("\t- MALLOC enabled.\n");
@@ -198,14 +198,14 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	
 	for (i = 0; i < n_prc_tot; i++) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
-		sim_ended[lps_num/64] = 0;
+		sim_ended[i/64] = 0;
 		can_stop[i] = false;
 	}
 	
-	if(lps_num%(SIZEOF_ULL*8) != 0){
-		for(; i<(LP_ULL_MASK_SIZE*8) ; i++)
+	//if(lps_num%(SIZEOF_ULL*8) != 0){  //////////////////////
+		for(; i<(LP_BIT_MASK_SIZE) ; i++)
 			end_sim(i);
-	}
+	//}
 	
 #if MALLOC == 0
 	dymelor_init();
@@ -225,10 +225,23 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 //Nota: ho visto che viene invocato solo a fine esecuzione
 bool check_termination(void) {
 	unsigned int i;
+	
+	
+	//for (i = 0; i < n_prc_tot; i++) {
+	//	if(!is_end_sim(i)) //[i] != ~(0ULL))
+	//		return false; 
+	//}
+	
+	//for (i = 0; i < n_prc_tot/64; i++) {
+	//	if(sim_ended[i] != ~(0ULL))
+	//		return false; 
+	//}
+	
 	for (i = 0; i < LP_MASK_SIZE; i++) {
 		if(sim_ended[i] != ~(0ULL))
 			return false; 
 	}
+	
 	return true;
 }
 
@@ -387,8 +400,10 @@ execution:
 		///* FLUSH */// 
 		commit();
 		
-		if(OnGVT(current_lp, states[current_lp]) && !is_end_sim(current_lp)){
+		if(OnGVT(current_lp, states[current_lp])){// && !is_end_sim(current_lp)){
+			
 			end_sim(current_lp);
+			
 			if(check_termination())
 				__sync_val_compare_and_swap(&stop, false, true);
 		}

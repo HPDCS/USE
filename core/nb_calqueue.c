@@ -626,14 +626,14 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 //	else if (size == thp2/pub_per_epb && counter < threshold/pub_per_epb)
 //		new_size = 1;
 
-	if 		(size >= thp2 && counter > 2   * (pub_per_epb*size))
-		new_size = 2   * size;
-	else if (size >  thp2 && counter < 0.5 * (pub_per_epb*size))
-		new_size = 0.5 * size;
-	else if	(size == 1    && counter > thp2)
-		new_size = thp2;
-	else if (size == thp2 && counter < threshold)
-		new_size = 1;
+	//if 		(size >= thp2 && counter > 2   * (pub_per_epb*size))
+	//	new_size = 2   * size;
+	//else if (size >  thp2 && counter < 0.5 * (pub_per_epb*size))
+	//	new_size = 0.5 * size;
+	//else if	(size == 1    && counter > thp2)
+	//	new_size = thp2;
+	//else if (size == thp2 && counter < threshold)
+	//	new_size = 1;
 
 	//if 		(size >= thp2 && counter > 2*size)
 	//	new_size = 2*size;
@@ -644,6 +644,12 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 	//else if (size == thp2 && counter < threshold)
 	//	new_size = 1;
 	
+	
+	
+	new_size += (-(size >= thp2 && counter > 2   * pub_per_epb * (size)) )	&(size <<1 );
+	new_size += (-(size >  thp2 && counter < 0.5 * pub_per_epb * (size)) )	&(size >>1);
+	new_size += (-(size == 1    && counter > thp2) 					   )	& thp2;
+	new_size += (-(size == thp2 && counter < threshold)				   )	& 1;
 	
 	if(new_size != 0 && new_size <= MAXIMUM_SIZE)
 	{

@@ -21,7 +21,14 @@
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 #define end_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
-#define is_end_sim(lp) 	( sim_ended[lp/64] & (1ULL << (lp%64)) )
+#define start_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], ~(1ULL << (lp%64))) )
+#define is_end_sim(lp) 	(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
+
+
+#define SIZEOF_ULL					(sizeof(unsigned long long))
+#define LP_BIT_MASK_SIZE			((n_prc_tot/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL*8)
+#define LP_ULL_MASK_SIZE			((n_prc_tot/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL)
+#define LP_MASK_SIZE				((n_prc_tot/(SIZEOF_ULL*8) + 1))
 
 struct __bucket_node;
 

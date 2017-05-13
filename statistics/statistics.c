@@ -204,7 +204,10 @@ if(system_stats.events_stm > 0){	//Nota: è una stima e non rispecchia esattamen
     printf("Average time spent in STM execution.............: %12llu clocks\n", tot_avg_stm_cloks);
     printf("    Avg time spent to EXE  STM event............: %12llu clocks (%.2f%%)\n", system_stats.clock_stm/system_stats.events_stm, ((double)(system_stats.clock_stm/system_stats.events_stm) / tot_avg_stm_cloks)*100);
     printf("    Avg time spent to WAIT STM safety...........: %12llu clocks (%.2f%%)\n", system_stats.clock_stm_wait/system_stats.commits_stm, ((double)(system_stats.clock_stm_wait/system_stats.commits_stm) / tot_avg_stm_cloks)*100);
-    printf("Avg time spent to ROLLBACK STM event............: %12llu clocks\n", system_stats.clock_undo_event/system_stats.events_roll);
+    if(system_stats.events_roll == 0)
+		printf("Avg time spent to ROLLBACK STM event............: 0 clocks\n");
+    else
+		printf("Avg time spent to ROLLBACK STM event............: %12llu clocks\n", system_stats.clock_undo_event/system_stats.events_roll);
     printf("Average useful time spent in STM execution......: %12llu clocks\n\n", (unsigned long long)(tot_avg_stm_cloks/((double)system_stats.commits_stm / system_stats.events_stm)));
 }
 else if(system_stats.commits_stm > 0){
