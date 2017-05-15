@@ -400,9 +400,9 @@ execution:
 		///* FLUSH */// 
 		commit();
 		
-		if(OnGVT(current_lp, states[current_lp])){// && !is_end_sim(current_lp)){
-			
-			end_sim(current_lp);
+		if(OnGVT(current_lp, states[current_lp]) /*|| sim_ended[lp/64]==~(0ULL)*/){
+			if(!is_end_sim(current_lp))
+				end_sim(current_lp);
 			
 			if(check_termination())
 				__sync_val_compare_and_swap(&stop, false, true);
