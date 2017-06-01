@@ -271,6 +271,8 @@ clean:
 	@find . -type f -name "traffic "  	  -exec rm {} \;
 	@find . -type f -name "tcar" 		  -exec rm {} \;
 	@find . -type f -name "phold" 		  -exec rm {} \;
+	@find . -type f -name "pholdcount" 	  -exec rm {} \;
+	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
 	

@@ -5,8 +5,8 @@ THREAD_list="1 4 8 16 24 32"	#numero di thread
 TEST_list="tcar"			#test
 RUN_list="1 2"				#lista del numero di run
 
-LOOKAHEAD_list="0.2 0.002"	#lookahead
 LOOP_COUNT_list="4500 1000"		#loop_count
+LOOKAHEAD_list="0.2 0.002"	#lookahead
 ROB_PER_CELLA_list="2"		#robot per cella
 NUM_CELLE_OCC="80 160"		#numero di celle occupate
 
@@ -50,8 +50,8 @@ do
 					do
 						EX2="./${test}_lf_nohi $threads $lp"
 						EX4="./${test}_lf_hi $threads $lp"
-						FILE2="${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"; touch $FILE2
-						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count_$run"; touch $FILE4
+						FILE2="${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count-$run"; touch $FILE2
+						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count-$run"; touch $FILE4
 					
 						N=0
 						while [[ $(grep -c "Simulation ended" $FILE2) -eq 0 ]]
