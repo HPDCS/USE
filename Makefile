@@ -170,6 +170,7 @@ hash: clean _hash mm core link
 link:
 ifdef REVERSIBLE
 	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+	#/home/ianni/hijacker_install/bin/hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 else
 	cp model/__application.o model/__application_hijacked.o
 endif
