@@ -1,13 +1,20 @@
 #ifndef __QUEUE_H
 #define __QUEUE_H
 
+
+#include <stdbool.h>
+
+
 /* Struttura dati "Coda con priorità" per la schedulazione degli eventi (provissoria):
  * Estrazione a costo O(n)
  * Dimensione massima impostata a tempo di compilazione
  * Thread-safe (non lock-free)
  */
 
-#include "simtypes.h"
+
+#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
+#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
+
 
 typedef struct __msg_t msg_t;
 
@@ -24,12 +31,6 @@ unsigned int queue_pool_size(void);
 
 void queue_register_thread(void);
 
-int queue_min(void);
-
-int fetch(void);
-
-void flush(void);
-
 int queue_pending_message_size(void);
 
 void queue_deliver_msgs(void);
@@ -38,7 +39,20 @@ void queue_destroy(void);
 
 void queue_clean(void);
 
-extern __thread msg_t current_msg __attribute__ ((aligned (64)));
+
+void getMinLP(unsigned int lp);
+
+unsigned int getMinFree();
+
+void commit();
+
+extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
+extern __thread bool  safe;
+extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
+extern __thread bool  new_safe;
+extern unsigned int *lp_lock;
+
+extern void lock_init();
 
 
 

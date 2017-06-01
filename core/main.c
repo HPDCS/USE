@@ -16,8 +16,8 @@ __thread struct drand48_data seedT;
 
 unsigned short int number_of_threads = 1;
 
-extern double delta_count;
-double reverse_execution_threshold_main;
+//extern double delta_count;
+extern int reverse_execution_threshold;
 
 void *start_thread(void *args) {
 
@@ -45,16 +45,6 @@ void start_simulation(unsigned short int number_of_threads) {
         }
     }
 
-#ifdef THROTTLING
-	if(number_of_threads>1){
-		pthread_t p_tun;
-		if( (ret = pthread_create(&p_tun, NULL, tuning, NULL)) != 0) {
-			fprintf(stderr, "%s\n", strerror(errno));
-			abort();
-		}
-	}
-#endif
-
     //Main thread
     thread_loop(0,0);
 
@@ -75,19 +65,15 @@ int main(int argn, char *argv[]) {
         n = atoi(argv[1]);
         init(n, atoi(argv[2]));
     }
+#if DEBUG == 1
+	printf("Execution started in DEBUG mode\n");
+#endif
+#if REVERSIBLE == 1
+	printf("SPECULATIVE SIMULATION\n");
+#else
+	printf("CONSERVATIVE SIMULATION\n");
+#endif
 
-	if(argn > 3) {
-		int i;
-		for(i = 2; i < argn; i++) {
-			if(!strcmp(argv[i], "-d")) {
-				delta_count = atof(argv[++i]);
-			} else if(!strcmp(argv[i], "-t")) {
-				reverse_execution_threshold_main = atof(argv[++i]);
-			}
-		}
-	}
-
-//    printf("Start simulation with DELTA=%f and THRESHOLD=%d\n",TROT_INIT_DELTA , REV_INIT_THRESH);
     printf("**START SIMULATION**-\n\n");
 
     timer_start(exec_time);
@@ -97,16 +83,12 @@ int main(int argn, char *argv[]) {
 
 	start_simulation(n);
 
-    printf("Simulation ended (seconds): %.5f\n", (double)timer_value_seconds(exec_time));
-    printf("Simulation ended (clocks): %llu\n", clock_timer_value(simulation_clocks));
+    printf("Simulation ended: %.5f seconds\n", (double)timer_value_seconds(exec_time));
+    printf("Simulation ended: %llu clocks\n", clock_timer_value(simulation_clocks));
+
 
     print_statistics();
 
-#ifndef NBC
-    	printf("Using SPINLOCK CALQUEUE\n");
-#else
-    	printf("Using NONBLOCKING CALQUEUE\n");
-#endif
     //statistics_fini();
 
     return 0;

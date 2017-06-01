@@ -33,19 +33,21 @@
 
 #define THROTTLING
 #define HTM 0
+#define DEBUG 1
+#define REPORT 1
 
 #define INCARNATION_DISP 13 
 
 typedef struct __msg_t
 {
-  unsigned int sender_id;
-  unsigned int receiver_id;
+  unsigned int sender_id;	//Sednder LP
+  unsigned int receiver_id;	//Receiver LP
   simtime_t timestamp;
   int type;
   unsigned int data_size;
   unsigned char data[MAX_DATA_SIZE];
-  revwin_t *revwin;
-
+  revwin_t *revwin;			//reverse window to rollback
+  void * node;				//address of the belonging node
 } msg_t;
 
 
@@ -58,6 +60,11 @@ extern __thread unsigned int tid;
 extern unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 extern unsigned int n_prc_tot;
+
+/* Commit horizon */ //TODO
+extern  simtime_t gvt;
+/* Average time between consecutive events */
+extern simtime_t t_btw_evts;
 
 void init(unsigned int _thread_num, unsigned int);
 

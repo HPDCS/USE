@@ -1,11 +1,3 @@
-
-/* Struttura dati "Coda con priorità" per la schedulazione degli eventi (provissoria):
- * Estrazione a costo O(n)
- * Dimensione massima impostata a tempo di compilazione
- * Estrazione Thread-safe (non lock-free)
- * Inserimenti avvengono in transazioni
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,27 +10,26 @@
 #include "core.h"
 #include "lookahead.h"
 
+//MACROs to manage lp_unsafe_set
+#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1 << (lp%64)) )
+#define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1 << (lp%64)) )
+#define clear_lp_unsafe_set			for(unsigned int x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}	
 
-typedef struct __event_pool_node {
-    msg_t message;
-    calqueue_node *calqueue_node_reference;
-} event_pool_node;
 
-typedef struct __queue_t {
-    event_pool_node *head;
-    unsigned int size;
-} queue_t;
-
-__thread msg_t current_msg __attribute__ ((aligned (64)));
-
-unsigned long long fetched_evt = 0;
-simtime_t old_ts = 0;
+//used to take locks on LPs
+unsigned int *lp_lock;
+//event pool used by simulation
 nb_calqueue* nbcalqueue;
 
-/* commit horizon */
-simtime_t gvt = 0;
-/* Average time between consecutive events */
-simtime_t t_btw_evts = 0.1;
+__thread msg_t * current_msg __attribute__ ((aligned (64)));
+__thread bool safe;
+
+__thread msg_t * new_current_msg __attribute__ ((aligned (64)));
+__thread bool  new_safe;
+
+__thread unsigned long long * lp_unsafe_set;
+
+//unsigned long long fetchedd_evt = 0;
 
 typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
@@ -47,14 +38,20 @@ typedef struct __temp_thread_pool {
 
 __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
-int queue_lock = 0;
+
+
 
 void queue_init(void) {
-#ifdef NBC
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
-#else
-	calqueue_init();
-#endif
+	//if((lp_unsafe_set=malloc(n_prc_tot/8))==NULL){
+}
+
+void lock_init(){
+		if((lp_unsafe_set=malloc(n_prc_tot/8 + 8))==NULL){
+		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+		abort();	
+	}
+	clear_lp_unsafe_set;
 }
 
 void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
@@ -80,9 +77,12 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
     memcpy(msg_ptr->data, event_content, event_size);
+    //event_content andrebbe liberato poi? Chi la libera?
+    //Vedese se ha senso non copiarsi i dati ma portarsi il puntatore (perdendo la località)
+
 }
 
-unsigned int queue_pool_size(void) {
+inline unsigned int queue_pool_size(void) {
     return _thr_pool._thr_pool_count;
 }
 
@@ -94,17 +94,17 @@ void queue_deliver_msgs(void) {
     //printf("flush: pool_size = %u\n", _thr_pool._thr_pool_count);
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
-        new_hole = malloc(sizeof(msg_t));
+        new_hole = malloc(sizeof(msg_t)); //<-Si può eliminare questa malloc? Vedi queue insert
         if(new_hole == NULL){
 			printf("Out of memory in %s:%d", __FILE__, __LINE__);
 			abort();
 		}
         memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
-#ifndef NBC
-        calqueue_put(new_hole->timestamp, new_hole);
-#else
-        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole);
-#endif
+
+        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+//#ifdef REPORT == 1
+		statistics_post_data(tid, EVENTS_FLUSHED, 1); 
+//#endif
     }
 
     _thr_pool._thr_pool_count = 0;
@@ -112,76 +112,157 @@ void queue_deliver_msgs(void) {
     //printf("flush: flushed an event with type %i\n", new_hole->type);
 }
 
-int queue_min(void) {
-	//printf("queue_min: start\n");
-    msg_t *node_ret;
+//void queue_destroy(void) {
+//    free(_queue.head);
+//}
 
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-#ifdef NBC
-    node_ret = (msg_t *)nbc_dequeue(nbcalqueue);
-    if(node_ret == NULL){
-		//printf("NONONON\n");
-        return 0;
-    }
-#else
-    while(__sync_lock_test_and_set(&queue_lock, 1))
-        while(queue_lock);
-	node_ret = calqueue_get();
-    if(node_ret == NULL){
-		__sync_lock_release(&queue_lock);
-        return 0;
-    }
-#endif
-    statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
-
-    memcpy(&current_msg, node_ret, sizeof(msg_t));
-    free(node_ret);
-
-    execution_time(current_msg.timestamp, current_msg.receiver_id);
-
-    statistics_post_data(tid, EVENTS_FETCHED, 1);
-    statistics_post_data(tid, T_BTW_EVT, current_msg.timestamp-old_ts);
-	old_ts = current_msg.timestamp;
-#ifndef NBC	
-    __sync_lock_release(&queue_lock);
-#endif
-
-	//printf("fetch: taken an event of type %i\n", node_ret->type);
-    return 1;
-
-}
-
-
-int fetch(void) {
-	//printf("fetch: start\n");
-    return queue_min();
-}
-
-void queue_clean(void) {
+inline void queue_clean(void) {
     _thr_pool._thr_pool_count = 0;
 }
 
-void flush(void) {
+
+void commit(void) {
+//#ifdef REPORT == 1
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
-#ifndef NBC
-    while(__sync_lock_test_and_set(&queue_lock, 1))
-        while(queue_lock);
-
-	if(current_lvt>gvt) gvt = current_lvt;
-	else if(current_lvt+LOOKAHEAD < gvt)  printf("GVT: WTF!!! old=%f new=%f\n", gvt, current_lvt);
-
+//#endif
+	// TODO
 	queue_deliver_msgs();
-
-    __sync_lock_release(&queue_lock);
-#else 
-	queue_deliver_msgs();
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
+	clock_timer_start(queue_op);
+//#endif
+	delete(nbcalqueue, current_msg->node);
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DELETE, clock_timer_value(queue_op));
+//#endif
 	
-	if(current_lvt>gvt) gvt = current_lvt;
+//#if DEBUG == 0
+//	unlock(current_lp);
+//#else				
+	if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
+//#endif
+
+//#if DEBUG == 1
+	simtime_t old_gvt = gvt; 
+	if(current_lvt > old_gvt) 
+		__sync_bool_compare_and_swap((unsigned long long*)&gvt, (unsigned long long)old_gvt, (unsigned long long)current_lvt);
+		//gvt = current_lvt;
+	else if (current_lvt < old_gvt-LOOKAHEAD){ 
+		nbc_bucket_node * node = current_msg->node;
+		printf("[%u] ERROR: event coomitted out of order with GVT:%f\n", tid, gvt);
+		printf("\tevent: ts:%f lp:%u resrvd:%u cpy:%u del:%u addr:%p\n", 
+			node->timestamp, node->tag, node->reserved, node->copy, node->deleted, node);
+	}
+//#endif
+	//printf("[%u]I'm freeing %p\n", tid, current_msg);
+	//current_msg->receiver_id = current_msg->timestamp = -1;
+	free(current_msg);
 	
 	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
-#endif
-    statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
+}
 
+unsigned int getMinFree(){
+	nbc_bucket_node * node;
+	simtime_t ts, min = INFTY;
+	unsigned int lp;
+
+//#ifdef REPORT == 1
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
+//#endif
+
+	node = getMin(nbcalqueue, -1);
+	safe = false;
+	clear_lp_unsafe_set;
+    min = node->timestamp;
+    
+    while(node != NULL){
+		lp = node->tag;
+		if(!node->reserved){
+			ts = node->timestamp;
+			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
+				if(tryLock(lp)){
+retry_on_replica:
+					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
+						if(node->replica != NULL){
+							node = node->replica;
+							goto retry_on_replica;
+						}
+#if DEBUG == 0
+							unlock(lp);
+#else				
+							if(!unlock(lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[lp]);
+#endif
+
+					}
+					else{
+						break;
+					}
+				}
+			}
+		}
+		//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
+		add_lp_unsafe_set(lp);
+		node = getNext(nbcalqueue, node);
+    }
+    
+    if(node == NULL){
+		current_msg = NULL;
+	    return 0;
+    }
+    
+    node->reserved = true;
+    current_msg = (msg_t *) node->payload;
+    current_msg->node = node;
+
+	if( ts < (min + LOOKAHEAD) && !is_in_lp_unsafe_set(lp) ){
+		safe = true;
+	}
+    
+    
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
+	statistics_post_data(tid, EVENTS_FETCHED, 1);
+//	statistics_post_data(tid, T_BTW_EVT, current_msg->timestamp-old_ts); // TODO : possiamo usarlo per la resize? 
+//#endif
+    return 1;
+	
+}
+
+void getMinLP(unsigned int lp){
+	nbc_bucket_node * node;
+	simtime_t min;
+	
+//#ifdef REPORT == 1
+	clock_timer queue_op;
+	clock_timer_start(queue_op);
+//#endif
+
+restart:
+	min = INFTY;
+	new_safe = false;
+	    
+	node = getMin(nbcalqueue, -1);
+    min = node->timestamp;
+    //printf("\t[%u] Min: ts:%f lp:%u resvd:%u addr:%p cp:%u\n", tid, min, node->tag, node->reserved, node, node->copy);
+		
+    while(node != NULL && node->tag != lp){
+		//printf("\t[%u] Motherfucker, give me the lp %u at time %f %u\n", tid, lp, current_lvt, current_lp);
+		node = getNext(nbcalqueue, node);
+		if(node == NULL)
+			goto restart;
+    }
+    //printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
+
+    node->reserved = true;
+    new_current_msg = (msg_t *) node->payload;
+    new_current_msg->node = node;
+
+	if( node->timestamp < (min + LOOKAHEAD)){
+		new_safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
+	}
+//#ifdef REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
+//#endif
 }

@@ -35,7 +35,7 @@
 //#include "atomic.h"
 #include "nb_calqueue.h"
 #include "hpdcs_utils.h"
-//#include "core.h"
+#include "core.h"
 
 
 #define LOG_DEQUEUE 0
@@ -271,6 +271,13 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	res->payload = payload;
 	res->epoch = 0;
 	res->timestamp = timestamp;
+	res->tag = -1;
+	res->reserved = false;
+//#if DEBUG == 1 // TODO
+	res->copy = 0;////////////////////////////////////////////////////////////////
+	res->deleted = 0;//////////////////////////////////////////////////////////
+	res->executed = 0;//////////////////////////////////////////////////////////	
+//#endif
 
 	return res;
 }
@@ -634,8 +641,10 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 			free(new_h->array);
 			free(new_h);
 		}
+#if DEBUG == 1
 		else
-			LOG("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
+			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
+#endif
 	}
 }
 
@@ -803,6 +812,13 @@ static void migrate_node(nbc_bucket_node *right_node,	table *new_h)
 	
 	//Create a new node inserted in the new table as as INValid
 	replica = node_malloc(right_node->payload, right_node->timestamp,  right_node->counter);
+	replica->reserved = right_node->reserved;
+	replica->tag = right_node->tag;
+//#if DEBUG == 1 //TODO
+	replica->copy = right_node->copy + 1;
+	replica->deleted = right_node->deleted + 1;
+	replica->executed = right_node->executed + 1;
+//#endif
 	         
     do
 	{ 
@@ -1079,21 +1095,24 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
  *
  * @return true if the event is inserted in the hashtable, else false
  */
-void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload)
+void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned int tag)
 {
+	// TODO
 	nbc_bucket_node *new_node = node_malloc(payload, timestamp, 0);
 	table *h, *old_h = NULL;	
+	
+	new_node->tag = tag;
 
 	do
 	{
 		if(old_h != (h = read_table(queue)))
 		{
 			old_h = h;
-			new_node->epoch = (h->current & MASK_EPOCH);
+			new_node->epoch = 0;//(h->current & MASK_EPOCH);
 		}
 	} while(!insert_std(h, &new_node, REMOVE_DEL_INV));
 
-	nbc_flush_current(h, new_node);
+	//nbc_flush_current(h, new_node);
 	
 	ATOMIC_INC(&(h->counter));
 }
@@ -1114,108 +1133,6 @@ static inline bool CAS_for_increase_cur(table* h, unsigned long long current, un
 			&(h->current),
 			current,
 			newCur				);
-}
-
-/**
- * This function dequeue from the nonblocking queue. The cost of this operation when succeeds should be O(1)
- *
- * @author Romolo Marotta
- *
- * @param queue the interested queue
- *
- * @return a pointer to a node that contains the dequeued value
- *
- */
-void* nbc_dequeue(nb_calqueue *queue)
-{
-	nbc_bucket_node *min, *min_next, 
-					*left_node, *left_node_next, 
-					*res, *tail, *array;
-	table * h;
-	
-	unsigned long long current;
-	unsigned long long index;
-	unsigned long long epoch;
-	
-	unsigned int size;
-	unsigned int counter;
-	double bucket_width;
-
-	tail = g_tail;
-	
-	do
-	{
-		counter = 0;
-		h = read_table(queue);
-		current = h->current;
-		size = h->size;
-		array = h->array;
-		bucket_width = h->bucket_width;
-
-		index = current >> 32;
-		epoch = current & MASK_EPOCH;
-
-		assertf(
-				index+1 > MASK_EPOCH, 
-				"\nOVERFLOW INDEX:%llu  BW:%.10f SIZE:%u TAIL:%p TABLE:%p NUM_ELEM:%u\n",
-				index, bucket_width, size, tail, h, atomic_read(&h->counter)
-			);
-		min = array + (index++ % size);
-
-		left_node = min_next = min->next;
-		
-		if(is_marked(min_next, MOV))
-			continue;
-		
-		while(left_node->epoch <= epoch)
-		{	
-			left_node_next = left_node->next;
-			if(!is_marked(left_node_next))
-			{
-				if(left_node->timestamp < index*bucket_width)
-				{
-					res = left_node->payload;
-					left_node_next = FETCH_AND_OR(&left_node->next, DEL);
-					if(!is_marked(left_node_next))
-					{
-						ATOMIC_DEC(&(h->counter));
-						#if LOG_DEQUEUE == 1
-							LOG("DEQUEUE: %f %u - %llu %llu\n", left_node->timestamp, left_node->counter, index, index % size);
-						#endif
-						return res;
-					}
-				}
-				else
-				{
-					if(left_node == tail && size == 1 )
-					{
-						#if LOG_DEQUEUE == 1
-						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
-						#endif
-						return NULL;
-					}
-					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
-					{
-						
-						connect_to_be_freed_node_list(min_next, counter);
-					}
-					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
-					break;	
-				}
-				
-			}
-			
-			if(is_marked(left_node_next, MOV))
-			{
-				break;
-			}
-			left_node = get_unmarked(left_node_next);
-			counter++;
-		}
-
-	}while(1);
-	
-	return NULL;
 }
 
 /**
@@ -1326,3 +1243,285 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 	return (double)committed;
 }
 
+
+nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
+		nbc_bucket_node *min, *min_next, 
+					*left_node, *left_node_next, 
+					*tail, *array;
+	table * h;
+	
+	unsigned long long current;
+	unsigned long long index;
+	unsigned long long epoch;
+	
+	unsigned int size;
+	unsigned int counter;
+	double bucket_width;
+	bool valid_node_exists;
+
+	tail = g_tail;
+	
+	do
+	{
+		counter = 0;
+		h = read_table(queue);
+		current = h->current;
+		size = h->size;
+		array = h->array;
+		bucket_width = h->bucket_width;
+
+		index = current >> 32;
+		epoch = current & MASK_EPOCH;
+
+		assertf(
+				index+1 > MASK_EPOCH, 
+				"\nOVERFLOW INDEX:%llu  BW:%.10f SIZE:%u TAIL:%p TABLE:%p NUM_ELEM:%u\n",
+				index, bucket_width, size, tail, h, atomic_read(&h->counter)
+			);
+		min = array + (index++ % size);
+
+		left_node = min_next = min->next;
+		
+		if(is_marked(min_next, MOV))
+			continue;
+		
+		while(left_node->epoch <= epoch)
+		{	
+			left_node_next = left_node->next;
+			if(!is_marked(left_node_next))
+			{
+				if(left_node->timestamp < index*bucket_width)
+				{
+#if DEBUG == 1
+					if(left_node == g_tail){
+						printf("[%u] ERROR: getNext is returning a tail\n", tid);
+					}
+#endif
+					return left_node;
+				}
+				else
+				{
+					if(left_node == tail && size == 1 )
+					{
+						#if LOG_DEQUEUE == 1
+						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
+						#endif
+						return NULL;
+					}
+					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
+					{
+						connect_to_be_freed_node_list(min_next, counter);
+					}
+					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
+					break;	
+				}
+				
+			}
+			
+			if(is_marked(left_node_next, MOV))
+			{
+				break;
+			}
+			left_node = get_unmarked(left_node_next);
+			counter++;
+		}
+
+	}while(1);
+	
+	return NULL;
+}
+nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
+	/* preferirei avere l'hashtable anche come parametro */
+	/* oppure sfruttare il campo epoca per avere un puntatore a hashtable */
+	nbc_bucket_node  *array, *node_next, *original;
+	table *h;
+	double bucket_width;
+	unsigned int bucket;
+	unsigned int size;
+	h = read_table(queue);
+	
+	//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u\n", tid, node->timestamp, node->tag, node->reserved);
+	
+	bucket_width = h->bucket_width;
+	bucket = hash(node->timestamp, bucket_width);
+	
+	size  = h->size;
+	
+	
+	
+	do
+	{
+		/* read table recovery*/
+		node_next = node->next;
+		if(is_marked(node_next, MOV) || node->replica != NULL)
+			return NULL;
+			
+		do
+		{
+			node = get_unmarked(node_next);
+			node_next = node->next;
+		}while(
+			(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
+			(node->timestamp < bucket*bucket_width )
+		);
+
+		if(is_marked(node_next, MOV) || node->replica != NULL)
+			return NULL;
+			
+		if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width)
+		{
+#if DEBUG == 1
+			if(node == g_tail){
+				printf("[%u] ERROR: getNext is returning a tail\n", tid);
+			}
+#endif
+			return node;
+		}
+		else
+			node = h->array + (++bucket%size);
+	}while(1);
+	return NULL;
+}
+
+void delete(nb_calqueue *queue, nbc_bucket_node* node){
+    nbc_bucket_node *node_next, *tmp;
+    table *h = read_table(queue);
+    node_next = FETCH_AND_OR(&node->next, DEL);
+    tmp = node;
+    while(tmp->replica != NULL || is_marked(node_next, MOV))
+    {
+        h = read_table(queue);
+        tmp = tmp->replica;
+        node_next = FETCH_AND_OR(&tmp->next, DEL);
+    }
+    ATOMIC_DEC(&(h->counter));
+    
+#if DEBUG == 1
+	tmp->deleted = tmp->deleted + 1;//////////////////////////////////////////////////////////
+#endif
+    return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * This function dequeue from the nonblocking queue. The cost of this operation when succeeds should be O(1)
+ *
+ * @author Romolo Marotta
+ *
+ * @param queue the interested queue
+ *
+ * @return a pointer to a node that contains the dequeued value
+ *
+ 
+void* nbc_dequeue(nb_calqueue *queue)
+{
+	nbc_bucket_node *min, *min_next, 
+					*left_node, *left_node_next, 
+					*res, *tail, *array;
+	table * h;
+	
+	unsigned long long current;
+	unsigned long long index;
+	unsigned long long epoch;
+	
+	unsigned int size;
+	unsigned int counter;
+	double bucket_width;
+
+	tail = g_tail;
+	
+	do
+	{
+		counter = 0;
+		h = read_table(queue);
+		current = h->current;
+		size = h->size;
+		array = h->array;
+		bucket_width = h->bucket_width;
+
+		index = current >> 32;
+		epoch = current & MASK_EPOCH;
+
+		assertf(
+				index+1 > MASK_EPOCH, 
+				"\nOVERFLOW INDEX:%llu  BW:%.10f SIZE:%u TAIL:%p TABLE:%p NUM_ELEM:%u\n",
+				index, bucket_width, size, tail, h, atomic_read(&h->counter)
+			);
+		min = array + (index++ % size);
+
+		left_node = min_next = min->next;
+		
+		if(is_marked(min_next, MOV))
+			continue;
+		
+		while(left_node->epoch <= epoch)
+		{	
+			left_node_next = left_node->next;
+			if(!is_marked(left_node_next))
+			{
+				if(left_node->timestamp < index*bucket_width)
+				{
+					res = left_node->payload;
+					left_node_next = FETCH_AND_OR(&left_node->next, DEL);
+					if(!is_marked(left_node_next))
+					{
+						ATOMIC_DEC(&(h->counter));
+						#if LOG_DEQUEUE == 1
+							LOG("DEQUEUE: %f %u - %llu %llu\n", left_node->timestamp, left_node->counter, index, index % size);
+						#endif
+						return res;
+					}
+				}
+				else
+				{
+					if(left_node == tail && size == 1 )
+					{
+						#if LOG_DEQUEUE == 1
+						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
+						#endif
+						return NULL;
+					}
+					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
+					{
+						
+						connect_to_be_freed_node_list(min_next, counter);
+					}
+					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
+					break;	
+				}
+				
+			}
+			
+			if(is_marked(left_node_next, MOV))
+			{
+				break;
+			}
+			left_node = get_unmarked(left_node_next);
+			counter++;
+		}
+
+	}while(1);
+	
+	return NULL;
+}
+
+*/
