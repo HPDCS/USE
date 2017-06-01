@@ -7,7 +7,7 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
-FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE)
+FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 
 INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
 LIBS=-pthread -lm
@@ -139,7 +139,8 @@ CORE_SOURCES =  core/core.c\
 		core/main.c\
 		core/numerical.c\
 		core/hpdcs_math.c\
-		statistics/statistics.c
+		statistics/statistics.c\
+		mm/garbagecollector.c
 #		mm/reverse.c\
 #		mm/slab.c
 

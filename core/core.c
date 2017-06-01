@@ -7,7 +7,7 @@
 #include <sched.h>
 #include <pthread.h>
 #include <string.h>
-#include <immintrin.h> //supporto transazionale
+//#include <immintrin.h> //supporto transazionale
 #include <stdarg.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -62,6 +62,7 @@ void **states;
 //used to check termination conditions
 bool stop = false;
 bool *can_stop;
+unsigned long long *sim_ended;
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -130,10 +131,10 @@ void _mkdir(const char *path) {
 void set_affinity(unsigned int tid){
 	cpu_set_t mask;	
 #if DEBUG == 1
-	printf("Thread %d set to CPU no %d\n", tid, tid);
+	printf("Thread %d set to CPU no %d\n", tid, tid%(N_CPU));
 #endif
 	CPU_ZERO(&mask);
-	CPU_SET(tid, &mask);
+	CPU_SET(tid%(N_CPU), &mask);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
@@ -141,21 +142,8 @@ void set_affinity(unsigned int tid){
 	}
 }
 
-
 inline void SetState(void *ptr) { //può diventare una macro?
 	states[current_lp] = ptr; //è corretto fare questa assegnazione così? Credo andrebbe fatto con una scrittura atomica
-}
-
-static void process_init_event(void) { //Spostare direttamente dentro init? Solo per pulizia
-	unsigned int i;
-
-	for (i = 0; i < n_prc_tot; i++) {
-		current_lp = i;//Si possono eliminare?
-		current_lvt = 0;
-		//ProcessEvent(i, 0, INIT, NULL, 0, states[i]);
-		ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
-		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
-	}
 }
 
 void init(unsigned int _thread_num, unsigned int lps_num) {
@@ -192,40 +180,48 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	
 	states = malloc(sizeof(void *) * n_prc_tot);
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
+	sim_ended = malloc(LP_ULL_MASK_SIZE);
 	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, lps_num * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
-	if(states == NULL || can_stop == NULL || lp_lock_ret == 1){
+	if(states == NULL || can_stop == NULL || sim_ended == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();
 	}
 	
-	for (i = 0; i < lps_num; i++) {
+	for (i = 0; i < n_prc_tot; i++) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
+		sim_ended[lps_num/64] = 0;
 		can_stop[i] = false;
 	}
-
 	
-#ifndef NO_DYMELOR
-	    dymelor_init();
-	    printf("Dymelor abilitato\n");
-	    printf("CACHELINESIZE %u\n", CACHE_LINE_SIZE);
+	if(lps_num%(SIZEOF_ULL*8) != 0){
+		for(; i<(LP_ULL_MASK_SIZE*8) ; i++)
+			end_sim(i);
+	}
+	
+#if MALLOC == 0
+	dymelor_init();
+	printf("Dymelor abilitato\nCACHELINESIZE %u\n", CACHE_LINE_SIZE);
 #endif
 	statistics_init();
 	queue_init();
 	numerical_init();
-	process_init_event();
+	//process_init_event
+	for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
+		ProcessEvent(current_lp, 0, INIT, NULL, 0, states[current_lp]); //current_lp = i;
+		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
+	}
 }
 
-//potrebbe essere pesante da fare ogni volta? Sostituirlo con una fetch&Add creerebbe troppo conflitti?
-//Almeno sostituirlo con una bitmap!
+//Sostituirlo con una bitmap!
 //Nota: ho visto che viene invocato solo a fine esecuzione
 bool check_termination(void) {
 	unsigned int i;
-	bool ret = true;
-	for (i = 0; i < n_prc_tot; i++) {
-		ret &= can_stop[i];
+	for (i = 0; i < LP_MASK_SIZE; i++) {
+		if(sim_ended[i] != ~(0ULL))
+			return false; 
 	}
-	return ret;
+	return true;
 }
 
 //può diventare una macro?
@@ -316,13 +312,20 @@ execution:
 			clock_timer_start(stm_safety_wait);
 	#endif			
 			do{
+	#if REPORT == 1
+				clock_timer safety_op;
+				clock_timer_start(safety_op);
+	#endif
 	#if SPERIMENTAL == 1
 				getMinLP_new(current_lp);
 	#else
 				getMinLP(current_lp);
 	#endif
+	#if REPORT == 1
+				statistics_post_data(tid, CLOCK_SAFETY_CHECK, clock_timer_value(safety_op));
+				statistics_post_data(tid, SAFETY_CHECK, 1);
+	#endif
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
-
 	#if REPORT == 1
 					clock_timer undo_event_processing;
 					clock_timer_start(undo_event_processing);
@@ -343,7 +346,7 @@ execution:
 				}
 	#if PREEMPTIVE == 1
 				else{
-					if(!safe && (unsafe_events/n_cores) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2)){
+					if(!safe && (unsafe_events/n_cores) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2 - avg_clock_safe)){
 					//if(unsafe_events > n_cores){ //TODO
 						statistics_post_data(tid, EVENTS_STASH, 1);
 						execute_undo_event(current_lp, current_msg->revwin);
@@ -367,10 +370,12 @@ execution:
 
 		///* FLUSH */// 
 		commit();
-
-		if ((can_stop[current_lp] = OnGVT(current_lp, states[current_lp]))) //va bene cosi?
+		
+		if(OnGVT(current_lp, states[current_lp]) && !is_end_sim(current_lp)){
+			end_sim(current_lp);
 			stop = check_termination();
-
+		}
+		
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
         

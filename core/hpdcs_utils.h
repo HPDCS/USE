@@ -18,6 +18,9 @@
 #define macro_dispatcher_(func, nargs) macro_dispatcher__(func, nargs)
 #define macro_dispatcher__(func, nargs) func ## nargs
 
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
+
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 #ifndef NDEBUG

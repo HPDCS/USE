@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <pthread.h>
 #include <math.h>
@@ -95,6 +96,15 @@
 #define get_marked(pointer, mark)	(UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *))
 #define get_mark(pointer)			(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long))
 
+__thread hpdcs_gc_status malloc_status =
+{
+	.free_nodes_lists 			= NULL,
+	.to_free_nodes 				= NULL,
+	.to_free_nodes_old 			= NULL,
+	.block_size 				= sizeof(nbc_bucket_node),
+	.offset_next 				= offsetof(nbc_bucket_node, next),
+	.to_remove_nodes_count 		= 0LL
+};
 
 __thread nbc_bucket_node *to_free_nodes = NULL;
 __thread nbc_bucket_node *to_free_nodes_old = NULL;
@@ -264,9 +274,16 @@ static inline bool is_marked_for_search(void *pointer, unsigned int research_fla
  */
 static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned int tie_breaker)
 {
-	nbc_bucket_node* res = malloc(sizeof(nbc_bucket_node));
+	nbc_bucket_node* res;// = malloc(sizeof(nbc_bucket_node));
 
-	if (is_marked(res) || res == NULL)
+	//if (is_marked(res) || res == NULL)
+	//{
+	//	error("%lu - Not aligned Node or No memory\n", pthread_self());
+	//	abort();
+	//}
+	res = mm_node_malloc(&malloc_status);
+	
+	if (unlikely(is_marked(res) || res == NULL))
 	{
 		error("%lu - Not aligned Node or No memory\n", pthread_self());
 		abort();
@@ -281,12 +298,17 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	res->tag = -1;
 	res->reserved = false;
 //#if DEBUG == 1 // TODO
-	res->copy = 0;////////////////////////////////////////////////////////////////
-	res->deleted = 0;//////////////////////////////////////////////////////////
-	res->executed = 0;//////////////////////////////////////////////////////////	
+	res->copy = 0;
+	res->deleted = 0;
+	res->executed = 0;	
 //#endif
 
 	return res;
+}
+
+static void node_free(nbc_bucket_node *pointer)
+{
+	mm_node_free(&malloc_status, pointer);
 }
 
 /**
@@ -538,7 +560,8 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 			// node already exists
 			if(D_EQUAL(new_node_timestamp, left_node->timestamp ) && left_node->counter == new_node_counter)
 			{
-				free(new_node_pointer);
+				node_free(new_node_pointer);//<--------NEW
+				//free(new_node_pointer);
 				*new_node = left_node;
 				return true;
 			}
@@ -583,6 +606,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 	unsigned int size = h->size;
 	unsigned int thp2, size_thp2;
 	unsigned int new_size = 0;
+	unsigned int res = 0;
 	double pub_per_epb = pub*epb;
 	table *new_h;
 	nbc_bucket_node *array;
@@ -621,9 +645,13 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 	
 	if(new_size != 0 && new_size <= MAXIMUM_SIZE)
 	{
-		new_h = malloc(sizeof(table));
-		if(new_h == NULL)
+		res = posix_memalign((void**)&new_h, CACHE_LINE_SIZE, sizeof(table));
+		if(res != 0)
 			error("No enough memory to new table structure\n");
+
+		//new_h = malloc(sizeof(table));
+		//if(new_h == NULL)
+		//	error("No enough memory to new table structure\n");
 
 		new_h->bucket_width  = -1.0;
 		new_h->size 		 = new_size;
@@ -631,7 +659,8 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		new_h->counter.count = 0;
 		new_h->current 		 = ((unsigned long long)-1) << 32;
 
-		array =  calloc(new_size, sizeof(nbc_bucket_node));
+		//array =  calloc(new_size, sizeof(nbc_bucket_node));
+		array =  alloc_array_nodes(&malloc_status, new_size);
 		if(array == NULL)
 		{
 			free(new_h);
@@ -639,14 +668,20 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		}
 
 		for (i = 0; i < new_size; i++)
+		{
 			array[i].next = tail;
+			array[i].counter = 0;
+			array[i].epoch = 0;
+		}
 
 		new_h->array = array;
 
 		if(!BOOL_CAS(&(h->new_table), NULL,	new_h))
 		{
-			free(new_h->array);
+			free_array_nodes(&malloc_status, new_h->array);
 			free(new_h);
+			//free(new_h->array);
+			//free(new_h);
 		}
 #if DEBUG == 1
 		else
@@ -1044,6 +1079,8 @@ static table* read_table(nb_calqueue *queue)
 nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, unsigned int elem_per_bucket)
 {
 	unsigned int i = 0;
+	//unsigned int new_threshold = 1;		//<-----NEW
+	unsigned int res_mem_posix = 0;		//<-----NEW
 
 	threads = threshold;
 	prune_array = calloc(threshold*threshold, sizeof(unsigned int));
@@ -1051,14 +1088,19 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
 	nb_calqueue* res = calloc(1, sizeof(nb_calqueue));
 	if(res == NULL)
 		error("No enough memory to allocate queue\n");
+		
+	//while(new_threshold <= threshold)	//<-----NEW
+	//	new_threshold <<=1;				//<-----NEW
 
 	res->threshold = threshold;
 	res->perc_used_bucket = perc_used_bucket;
 	res->elem_per_bucket = elem_per_bucket;
 	res->pub_per_epb = perc_used_bucket * elem_per_bucket;
 
-	res->hashtable = malloc(sizeof(table));
-	if(res->hashtable == NULL)
+	//res->hashtable = malloc(sizeof(table));
+	//if(res->hashtable == NULL)
+	res_mem_posix = posix_memalign((void**)&res->hashtable, CACHE_LINE_SIZE, sizeof(table));//<-----NEW
+	if(res_mem_posix != 0)				//<-----NEW
 	{
 		free(res);
 		error("No enough memory to allocate queue\n");
@@ -1067,7 +1109,8 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
 	res->hashtable->new_table = NULL;
 	res->hashtable->size = MINIMUM_SIZE;
 
-	res->hashtable->array = calloc(MINIMUM_SIZE, sizeof(nbc_bucket_node) );
+	//res->hashtable->array = calloc(MINIMUM_SIZE, sizeof(nbc_bucket_node) );
+	res->hashtable->array =  alloc_array_nodes(&malloc_status, MINIMUM_SIZE);//<-----NEW
 	if(res->hashtable->array == NULL)
 	{
 		free(res->hashtable);
@@ -1165,7 +1208,7 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 	unsigned int i=0;
 	unsigned int flag = 1;
 
-	if(++prune_count < 1)
+	if(++prune_count < 1)// TODO
 		return 0.0;
 	
 	prune_count = 0;
@@ -1185,17 +1228,30 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 		to_free_tables_old = to_free_tables_old->next;
     
 		table *h = (table*) my_tmp->payload;
-		free(h->array);
+		//free(h->array);
+		free_array_nodes(&malloc_status, h->array); //<-------NEW
 		free(h);
-		free(my_tmp);
+		//free(my_tmp);
+		node_free(my_tmp); //<-------NEW
 	}
 	
 	current_meta_node = to_free_nodes_old;
 	meta_prec = (nbc_bucket_node**)&(to_free_nodes_old);
+	
+	do 														//<-----NEW
+    {	                                                    //<-----NEW
+		tmp = mm_node_collect(&malloc_status, &counter);    //<-----NEW
+		while(tmp != NULL && counter-- != 0)                //<-----NEW
+		{                                                   //<-----NEW
+			tmp_next = tmp->next;                           //<-----NEW
+			node_free(tmp);                                 //<-----NEW
+			tmp =  get_unmarked(tmp_next);                  //<-----NEW
+		}                                                   //<-----NEW
+	}                                                       //<-----NEW
+    while(tmp != NULL);										//<-----NEW
     
 	while(current_meta_node != NULL)
 	{
-		
 		counter = current_meta_node->counter;
 		prec = (nbc_bucket_node**)&(current_meta_node->payload);
 		tmp = *prec;
@@ -1225,7 +1281,8 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 //						counter,
 //						current_meta_node->counter);
        
-			free(tmp);
+			//free(tmp);
+			node_free(tmp);			//<-------NEW
 			committed++;
 
 			tmp =  get_unmarked(tmp_next);
@@ -1234,8 +1291,8 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 		meta_tmp = current_meta_node;
 		*meta_prec = current_meta_node->next;
 		current_meta_node = current_meta_node->next;
-		free(meta_tmp);
-       
+		//free(meta_tmp);
+		node_free(meta_tmp);
 	}
 		
 	to_free_tables_old = to_free_tables_new;
@@ -1244,6 +1301,8 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 	to_free_nodes_old = to_free_nodes;
 	to_free_nodes = NULL;
 	
+	mm_new_era(&malloc_status);
+	
 	for(i=0;i<threads;i++)
 		prune_array[(TID)*threads +i] = 0;
     
@@ -1251,7 +1310,7 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 }
 
 
-nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
+nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag, table ** hres){
 		nbc_bucket_node *min, *min_next, 
 					*left_node, *left_node_next, 
 					*tail, *array;
@@ -1304,6 +1363,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 						printf("[%u] ERROR: getNext is returning a tail\n", tid);
 					}
 #endif
+					*hres = h;
 					return left_node;
 				}
 				else
@@ -1337,16 +1397,16 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 	
 	return NULL;
 }
-nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
+nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node, table *h){
 	/* preferirei avere l'hashtable anche come parametro */
 	/* oppure sfruttare il campo epoca per avere un puntatore a hashtable */
 	nbc_bucket_node  *array, *node_next, *original;
-	table *h;
+	//table *h;
 	double bucket_width;
 	unsigned int bucket;
 	unsigned int size;
 	unsigned int tail_counter = 0;
-	h = read_table(queue);
+	//h = read_table(queue);
 	
 	//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u\n", tid, node->timestamp, node->tag, node->reserved);
 	
@@ -1413,7 +1473,7 @@ void delete(nb_calqueue *queue, nbc_bucket_node* node){
     ATOMIC_DEC(&(h->counter));
     
 #if DEBUG == 1
-	tmp->deleted = tmp->deleted + 1;//////////////////////////////////////////////////////////
+	tmp->deleted = tmp->deleted + 1;
 #endif
     return;
 }
@@ -1554,21 +1614,21 @@ void* nbc_dequeue(nb_calqueue *queue)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 unsigned int getMinFree_internal(){
-	nbc_bucket_node * node, * node_min;
+	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
 	unsigned int lp, bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
 	table *h;
 	double bucket_width;
 	
-    if((node_min = node = getMin(nbcalqueue, -1)) == NULL)
+    if((node = getMin(nbcalqueue, -1, &h)) == NULL)
 		return 0;
 	
 	safe = false;
 	clear_lp_unsafe_set;
 	min = node->timestamp;
     
-	h = read_table(nbcalqueue);						//
+	//h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
 	size  = h->size;								//
@@ -1595,6 +1655,7 @@ retry_on_replica:
 			}
 		}
 		add_lp_unsafe_set(lp);
+		//getNext
 		do{
 			node_next = node->next;
 			if(is_marked(node_next, MOV) || node->replica != NULL)
@@ -1640,7 +1701,7 @@ retry_on_replica:
 }
 
 void getMinLP_internal(unsigned int lp){
-	nbc_bucket_node * node, * node_min;
+	nbc_bucket_node * node;
 	simtime_t min = INFTY;
 	unsigned int bucket, size, tail_counter=0;
 	nbc_bucket_node  *array, *node_next, *original;
@@ -1652,13 +1713,13 @@ restart:
 	safe = false;
 	unsafe_events = 0;
 	    
-    if((node_min = node = getMin(nbcalqueue, -1)) == NULL){
+    if((node = getMin(nbcalqueue, -1, &h)) == NULL){
 		printf("[%u] ERROR: getMin_LP has found an empty queue\n",tid);
 		exit(0);
 	}
     min = node->timestamp;
     
-    h = read_table(nbcalqueue);						//
+    //h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
 	size  = h->size;								//
@@ -1702,6 +1763,6 @@ restart:
     new_current_msg->node = node;
 
 	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
-		safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
+		safe = true;
 	}
 }
