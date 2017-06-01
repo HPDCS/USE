@@ -50,6 +50,14 @@ ifdef ROBOT_PER_CELLA
 CFLAGS:= $(CFLAGS) -DROBOT_PER_CELLA=$(ROBOT_PER_CELLA)
 endif
 
+ifdef HOTSPOTS
+CFLAGS:= $(CFLAGS) -DHOTSPOTS=$(HOTSPOTS)
+endif
+
+ifdef P_HOTSPOT
+CFLAGS:= $(CFLAGS) -DP_HOTSPOT=$(P_HOTSPOT)
+endif
+
 ifdef PERC_USED_BUCKET
 CFLAGS:= $(CFLAGS) -DPUB=$(PERC_USED_BUCKET)
 else
@@ -101,6 +109,8 @@ PHOLD_SOURCES=model/phold/application.c
 
 PHOLDCOUNT_SOURCES=model/phold_count/application.c
 
+PHOLDHOTSPOT_SOURCES=model/phold_hotspot/application.c
+
 HASH_SOURCES=model/hash/application.c\
 				 model/hash/functions.c
 
@@ -150,6 +160,7 @@ TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
+PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
@@ -174,6 +185,9 @@ phold: clean  _phold executable
 
 pholdcount: TARGET=pholdcount 
 pholdcount: clean  _pholdcount executable
+
+pholdhotspot: TARGET=pholdhotspot 
+pholdhotspot: clean  _pholdhotspot executable
 
 robot_explore: TARGET=robot_explore 
 robot_explore: clean _robot_explore executable
@@ -234,6 +248,9 @@ _phold: $(PHOLD_OBJ)
 	
 _pholdcount: $(PHOLDCOUNT_OBJ)
 	@ld -r -g $(PHOLDCOUNT_OBJ) -o model/__application.o
+
+_pholdhotspot: $(PHOLDHOTSPOT_OBJ)
+	@ld -r -g $(PHOLDHOTSPOT_OBJ) -o model/__application.o
 
 _hash: $(HASH_OBJ)
 	@ld -r -g $(HASH_OBJ) -o model/__application.o
