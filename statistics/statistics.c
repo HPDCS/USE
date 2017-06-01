@@ -2,6 +2,8 @@
 
 #include <statistics.h>
 #include <core.h>
+#include <hpdcs_utils.h>
+
 
 
 //Variabili da tunare durante l'esecuzione per throttling e threshold
@@ -53,6 +55,10 @@ void statistics_post_data(int tid, int type, double value) {
             
         case EVENTS_ROLL:
             thread_stats[tid].events_roll++;
+            break;
+
+		case EVENTS_STASH:
+            thread_stats[tid].events_stash++;
             break;
 
         case COMMITS_STM:
@@ -151,6 +157,7 @@ void gather_statistics() {
         system_stats.events_safe += thread_stats[i].events_safe;
         system_stats.events_stm += thread_stats[i].events_stm;
         system_stats.events_roll += thread_stats[i].events_roll;
+        system_stats.events_stash += thread_stats[i].events_stash;
 
         system_stats.commits_stm += thread_stats[i].commits_stm;
 
@@ -193,29 +200,33 @@ void print_statistics() {
 #if REPORT == 1
     gather_statistics();
 
-    printf("Simulation final report:\n");
+    printf(COLOR_CYAN "Simulation final report:\n");
     printf("Thread: %d\tLP: %d\t\n", n_cores, n_prc_tot);
     //printf("Lookahead: %d", 0);
     printf("\n");
 
     printf("Total events....................................: %12u\n", system_stats.events_total);
     printf("Safe events.....................................: %12u (%.2f%%)\n", system_stats.events_safe, ((double)system_stats.events_safe / system_stats.events_total)*100);
+#if REVERSIBLE==1
     printf("STM events......................................: %12u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
-    
-    unsigned int commits_total = system_stats.events_safe + system_stats.commits_htm + system_stats.commits_stm;
+#endif
+    unsigned int commits_total = system_stats.events_safe + system_stats.commits_stm;
     
     printf("TOT committed...................................: %12u\n", commits_total);
+#if REVERSIBLE==1
     printf("STM committed...................................: %12u (%.2f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / system_stats.events_stm)*100);
-	printf("STM rollbacked..................................: %12u (%.2f%%)\n\n", system_stats.events_roll, ((double)system_stats.events_roll / system_stats.events_stm)*100);
-
+	printf("STM out of order rollbacked.....................: %12u (%.2f%%)\n", system_stats.events_roll, ((double)system_stats.events_roll / system_stats.events_stm)*100);
+	printf("STM preemptive stashed..........................: %12u (%.2f%%)\n\n", system_stats.events_stash, ((double)system_stats.events_stash / system_stats.events_stm)*100);
+#endif
     printf("Average time spent in safe execution............: %12llu clocks\n", system_stats.clock_safe);
 
 //NOTA: queste info derivano dai soli eventi arrivati a commit, non da quelli rollbackati
+#if REVERSIBLE==1
     printf("Average time spent committed STM execution......: %12llu clocks\n", system_stats.clock_stm);
     printf("    Avg time spent to EXE  STM event............: %12llu clocks (%.2f%%)\n", (system_stats.clock_stm-system_stats.clock_stm_wait), ((double)(system_stats.clock_stm-system_stats.clock_stm_wait) / system_stats.clock_stm)*100);
     printf("    Avg time spent to WAIT STM safety...........: %12llu clocks (%.2f%%)\n", system_stats.clock_stm_wait, ((double)system_stats.clock_stm_wait / system_stats.clock_stm)*100);
     printf("    Avg time spent to ROLLBACK STM event........: %12llu clocks\n\n", system_stats.clock_undo_event);
-
+#endif
 //    printf("Average useful time spent in STM execution....: %.2f clocks\n\n", system_stats.clock_stm/((double)system_stats.commits_stm / system_stats.events_stm));
     
 	printf("Time spent in enqueue...........................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_enqueue, ((unsigned long long)system_stats.clock_enqueue/system_stats.events_flushed));
@@ -225,25 +236,8 @@ void print_statistics() {
 	
 	printf("Time spent in main loop.........................: %12llu clocks\n", system_stats.clock_loop);
 
-    unsigned int abort_total = system_stats.abort_unsafe +
-        system_stats.abort_conflict +
-        system_stats.abort_cachefull +
-        system_stats.abort_nested +
-        system_stats.abort_debug;
-
-    system_stats.abort_generic = system_stats.abort_total - abort_total;
-
- //   printf("Total HTM aborts................................: %11u (%.2f%%)\n", system_stats.abort_total,  ((double)system_stats.abort_total/(double)system_stats.events_htm)*100);
- //
- //   printf("HTM aborts for UNSAFETY.........................: %11u (%.2f%%)\n", system_stats.abort_unsafe, ((double)system_stats.abort_unsafe / abort_total)*100);
- //   printf("HTM aborts for CONFLICT.........................: %11u (%.2f%%)\n", system_stats.abort_conflict, ((double)system_stats.abort_conflict / abort_total)*100);
- //   printf("HTM aborts for CACHEFULL........................: %11u (%.2f%%)\n", system_stats.abort_cachefull, ((double)system_stats.abort_cachefull / abort_total)*100);
- //   printf("HTM aborts for NESTED...........................: %11u (%.2f%%)\n", system_stats.abort_nested, ((double)system_stats.abort_nested / abort_total)*100);
- //   printf("HTM aborts for DEBUG............................: %11u (%.2f%%)\n", system_stats.abort_debug, ((double)system_stats.abort_debug / abort_total)*100);
- //   printf("HTM aborts for GENERIC..........................: %11u (%.2f%%)\n", system_stats.abort_generic, ((double)system_stats.abort_generic / abort_total)*100);
- //   printf("HTM abort RETRY.................................: %11u (%.2f%%)\n\n", system_stats.abort_retry, ((double)system_stats.abort_retry / abort_total)*100);
- //
  //   printf("STM abort for UNSAFETY..........................: %11u\n\n", system_stats.abort_reverse);
+	printf("\n" COLOR_RESET);
 #endif
 }
 

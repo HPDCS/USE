@@ -28,6 +28,7 @@
 #include "nb_calqueue.h"
 #include "simtypes.h"
 #include "lookahead.h"
+#include "hpdcs_utils.h"
 
 //id del processo principale
 #define MAIN_PROCESS		0
@@ -127,8 +128,10 @@ void _mkdir(const char *path) {
 
 
 void set_affinity(unsigned int tid){
-	cpu_set_t mask;
+	cpu_set_t mask;	
+#if DEBUG == 1
 	printf("Thread %d set to CPU no %d\n", tid, tid);
+#endif
 	CPU_ZERO(&mask);
 	CPU_SET(tid, &mask);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
@@ -159,12 +162,31 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	unsigned int i;
 	int lp_lock_ret;
 
-	if(lps_num < _thread_num) {
-		printf("The number of LPs must be grater or equal then the number of threads\n");
-		exit(-1);
-	}
+	printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", _thread_num, lps_num);
+#if SPERIMENTAL == 1
+	printf("\t- SPERIMENTAL features enabled.\n");
+#endif
+#if PREEMPTIVE == 1
+	printf("\t- PREEMPTIVE event realease enabled.\n");
+#endif
+#if DEBUG == 1
+	printf("\t- DEBUGDEBUG mode enabled.\n");
+#endif
+#if MALLOC == 1
+	printf("\t- MALLOC enabled.\n");
+#else
+	printf("\t- DYMELOR enabled.\n");
+#endif
+#if REPORT == 1
+	printf("\t- REPORT prints enabled.\n");
+#endif
+#if REVERSIBLE == 1
+	printf("\t- SPECULATIVE SIMULATION\n");
+#else
+	printf("\t- CONSERVATIVE SIMULATION\n");
+#endif
+	printf("\n" COLOR_RESET);
 
-	printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
 	n_cores = _thread_num;
 	n_prc_tot = lps_num;
 	
@@ -238,9 +260,13 @@ void thread_loop(unsigned int thread_id) {
 	while (!stop && !sim_error) {
 		
 		//mode = retries = 0; //<--possono sparire?
-
+begin:
 		/// *FETCH* ///
-		if (getMinFree() == 0) {
+#if SPERIMENTAL == 1
+		if(getMinFree_new() == 0){
+#else
+		if(getMinFree() == 0){
+#endif
 			continue;
 		}
 execution:		
@@ -266,7 +292,7 @@ execution:
 #endif		
 		}
 		else {
-#if REVERSIBLE==0 
+#if REVERSIBLE == 0 
 			((nbc_bucket_node*)current_msg->node)->reserved = false;
 			unlock(current_lp);
 			continue;
@@ -290,7 +316,11 @@ execution:
 			clock_timer_start(stm_safety_wait);
 	#endif			
 			do{
+	#if SPERIMENTAL == 1
+				getMinLP_new(current_lp);
+	#else
 				getMinLP(current_lp);
+	#endif
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
 
 	#if REPORT == 1
@@ -305,16 +335,24 @@ execution:
 					// TODO: handle the reverse cache flush
 					//revwin_flush_cache();
 
-					((nbc_bucket_node *)(current_msg->node))->reserved = false; //Si può fare?
+					((nbc_bucket_node *)(current_msg->node))->reserved = false;
 					current_msg = new_current_msg;
-					safe = new_safe;
 					
 					goto execution;
 					
 				}
+	#if PREEMPTIVE == 1
 				else{
-					safe = new_safe;
+					if(!safe && (unsafe_events/n_cores) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2)){
+					//if(unsafe_events > n_cores){ //TODO
+						statistics_post_data(tid, EVENTS_STASH, 1);
+						execute_undo_event(current_lp, current_msg->revwin);
+						((nbc_bucket_node*)current_msg->node)->reserved = false;
+						unlock(current_lp);
+						goto begin;
+					}
 				}
+	#endif
 			}while(!safe);
 				
 	#if REPORT == 1 
@@ -360,8 +398,8 @@ execution:
 	//statistics_fini();
 	
 	if(sim_error){
-		printf("\n[%u] Execution ended for an error\n\n", tid);
+		printf(COLOR_RED "\n[%u] Execution ended for an error\n" COLOR_RESET, tid);
 	} else if (stop){
-		printf("\n[%u] Execution ended correctly\n\n", tid);
+		printf(COLOR_GREEN "\n[%u] Execution ended correctly\n" COLOR_RESET, tid);
 	}
 }

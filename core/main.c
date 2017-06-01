@@ -65,16 +65,8 @@ int main(int argn, char *argv[]) {
         n = atoi(argv[1]);
         init(n, atoi(argv[2]));
     }
-#if DEBUG == 1
-	printf("Execution started in DEBUG mode\n");
-#endif
-#if REVERSIBLE == 1
-	printf("SPECULATIVE SIMULATION\n");
-#else
-	printf("CONSERVATIVE SIMULATION\n");
-#endif
-
-    printf("**START SIMULATION**-\n\n");
+  
+    printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);
 

@@ -32,6 +32,7 @@
 #include <math.h>
 #include "atomic.h"
 #include "core.h"
+#include "lookahead.h"
 
 #define INFTY DBL_MAX
 
@@ -130,5 +131,8 @@ extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_b
 extern nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag);
 extern nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node);
 extern void delete(nb_calqueue *queue, nbc_bucket_node* node);
+
+extern void getMinLP_internal(unsigned int lp);
+extern unsigned int getMinFree_internal();
 
 #endif /* DATATYPES_NONBLOCKING_QUEUE_H_ */

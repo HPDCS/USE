@@ -307,14 +307,14 @@ static bool check_dominance(unsigned long long address) {
 
 	// Update cache usefulness as:
 	// U = distinct_hits / width
-	cache.usefulness = ((double)entry->distinct_hits / (double)CACHE_LINE_SIZE);
+	cache.usefulness = ((double)entry->distinct_hits / (double)SW_CACHE_LINE_SIZE);
 
 	return false;
 }
 
 
 void revwin_flush_cache(void) {
-	//memset(cache.lines, 0, CACHE_LINE_SIZE*sizeof(reverse_cache_line_t));
+	//memset(cache.lines, 0, SW_CACHE_LINE_SIZE*sizeof(reverse_cache_line_t));
 	memset(&cache, 0, sizeof(cache));
 }
 

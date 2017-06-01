@@ -31,10 +31,6 @@
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
-#define THROTTLING
-#define HTM 0
-#define DEBUG 1
-#define REPORT 1
 
 #define INCARNATION_DISP 13 
 

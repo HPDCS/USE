@@ -36,6 +36,7 @@
 #include "nb_calqueue.h"
 #include "hpdcs_utils.h"
 #include "core.h"
+#include "queue.h"
 
 
 #define LOG_DEQUEUE 0
@@ -88,6 +89,11 @@
 #define is_marked(...) macro_dispatcher(is_marked, __VA_ARGS__)(__VA_ARGS__)
 #define is_marked2(w,r) is_marked_2(w,r)
 #define is_marked1(w)   is_marked_1(w)
+#define is_marked_2(pointer, mask)	( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask )
+#define is_marked_1(pointer)		(UNION_CAST(pointer, unsigned long long) & MASK_MRK)
+#define get_unmarked(pointer)		(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *))
+#define get_marked(pointer, mark)	(UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *))
+#define get_mark(pointer)			(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long))
 
 
 __thread nbc_bucket_node *to_free_nodes = NULL;
@@ -162,66 +168,80 @@ static inline unsigned long long hash(double timestamp, double bucket_width)
 	return res;
 
 }
-
-/**
- *  This function returns an unmarked reference
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return the unmarked value of the pointer
- */
-static inline void* get_unmarked(void *pointer)
-{
-	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *);
-	//return (void*) (((unsigned long long) pointer) & MASK_PTR);
-}
-
-/**
- *  This function returns a marked reference
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return the marked value of the pointer
- */
-static inline void* get_marked(void *pointer, unsigned long long mark)
-{
-	return UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *);
-	//return (void*) (((unsigned long long) get_unmarked((pointer))) | (mark));
-}
-
-/**
- *  This function checks if a reference is marked
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return true if the reference is marked, else false
- */
-static inline bool is_marked_2(void *pointer, unsigned long long mask)
-{
-	return ( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask );
-	//return (bool) ((((unsigned long long) pointer) & MASK_MRK) == mask);
-}
-
-/**
- *  This function checks if a reference is generally marked
- *
- *  @author Romolo Marotta
- *
- *  @param pointer
- *
- *  @return true if the reference is generally marked, else false
- */
-static inline bool is_marked_1(void *pointer)
-{
-	return (UNION_CAST(pointer, unsigned long long) & MASK_MRK);
-	//return (bool) ((((unsigned long long) pointer) & MASK_MRK));
-}
+//
+///**
+// *  This function returns an unmarked reference
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return the unmarked value of the pointer
+// */
+//static inline void* get_unmarked(void *pointer)
+//{
+//	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *);
+//	//return (void*) (((unsigned long long) pointer) & MASK_PTR);
+//}
+//
+///**
+// *  This function returns a marked reference
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return the marked value of the pointer
+// */
+//static inline void* get_marked(void *pointer, unsigned long long mark)
+//{
+//	return UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *);
+//	//return (void*) (((unsigned long long) get_unmarked((pointer))) | (mark));
+//}
+//
+///**
+// *  This function checks if a reference is marked
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return true if the reference is marked, else false
+// */
+//static inline bool is_marked_2(void *pointer, unsigned long long mask)
+//{
+//	return ( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask );
+//	//return (bool) ((((unsigned long long) pointer) & MASK_MRK) == mask);
+//}
+//
+///**
+// *  This function checks if a reference is generally marked
+// *
+// *  @author Romolo Marotta
+// *
+// *  @param pointer
+// *
+// *  @return true if the reference is generally marked, else false
+// */
+//static inline bool is_marked_1(void *pointer)
+//{
+//	return (UNION_CAST(pointer, unsigned long long) & MASK_MRK);
+//	//return (bool) ((((unsigned long long) pointer) & MASK_MRK));
+//}
+//
+//
+///**
+// *  This function get the mark
+// *
+// *  @author Romolo Marotta
+// *  @param pointer
+// *  @return the mark
+// */
+//static inline unsigned long long get_mark(void *pointer)
+//{
+//	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long);
+//}
+//
 
 static inline bool is_marked_for_search(void *pointer, unsigned int research_flag)
 {
@@ -231,19 +251,6 @@ static inline bool is_marked_for_search(void *pointer, unsigned int research_fla
 		(/*research_flag == REMOVE_DEL &&*/ mask_value == DEL) 
 		|| (research_flag == REMOVE_DEL_INV && (mask_value == INV) );
 }
-
-/**
- *  This function get the mark
- *
- *  @author Romolo Marotta
- *  @param pointer
- *  @return the mark
- */
-static inline unsigned long long get_mark(void *pointer)
-{
-	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long);
-}
-
 /**
  *  This function is an helper to allocate a node and filling its fields.
  *
@@ -816,8 +823,8 @@ static void migrate_node(nbc_bucket_node *right_node,	table *new_h)
 	replica->tag = right_node->tag;
 //#if DEBUG == 1 //TODO
 	replica->copy = right_node->copy + 1;
-	replica->deleted = right_node->deleted + 1;
-	replica->executed = right_node->executed + 1;
+	replica->deleted = right_node->deleted;
+	replica->executed = right_node->executed;
 //#endif
 	         
     do
@@ -1301,7 +1308,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag){
 				}
 				else
 				{
-					if(left_node == tail && size == 1 )
+					if(left_node == tail && size == 1 && !is_marked(min->next, MOV))
 					{
 						#if LOG_DEQUEUE == 1
 						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
@@ -1338,6 +1345,7 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 	double bucket_width;
 	unsigned int bucket;
 	unsigned int size;
+	unsigned int tail_counter = 0;
 	h = read_table(queue);
 	
 	//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u\n", tid, node->timestamp, node->tag, node->reserved);
@@ -1377,8 +1385,16 @@ nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node){
 #endif
 			return node;
 		}
-		else
-			node = h->array + (++bucket%size);
+		else{
+			if(node == g_tail){
+				if(++tail_counter >= size)
+					return 0;
+			}
+			else{
+				tail_counter = 0;
+			}
+				node = h->array + (++bucket%size);
+		}
 	}while(1);
 	return NULL;
 }
@@ -1525,3 +1541,167 @@ void* nbc_dequeue(nb_calqueue *queue)
 }
 
 */
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+unsigned int getMinFree_internal(){
+	nbc_bucket_node * node, * node_min;
+	simtime_t ts, min = INFTY;
+	unsigned int lp, bucket, size, tail_counter=0;
+	nbc_bucket_node  *array, *node_next, *original;
+	table *h;
+	double bucket_width;
+	
+    if((node_min = node = getMin(nbcalqueue, -1)) == NULL)
+		return 0;
+	
+	safe = false;
+	clear_lp_unsafe_set;
+	min = node->timestamp;
+    
+	h = read_table(nbcalqueue);						//
+	bucket_width = h->bucket_width;					//
+	bucket = hash(node->timestamp, bucket_width);	//
+	size  = h->size;								//
+    
+    while(node != NULL){
+		lp = node->tag;
+		if(!node->reserved){
+			ts = node->timestamp;
+			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
+				if(tryLock(lp)){
+retry_on_replica:
+					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
+						if(node->replica != NULL){
+							node = node->replica;
+							goto retry_on_replica;
+						}
+						unlock(lp);
+
+					}
+					else{
+						break;
+					}
+				}
+			}
+		}
+		add_lp_unsafe_set(lp);
+		do{
+			node_next = node->next;
+			if(is_marked(node_next, MOV) || node->replica != NULL)
+				return 0;
+				
+			do{
+				node = get_unmarked(node_next);
+				node_next = node->next;
+			}while(
+				(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
+				(node->timestamp < bucket*bucket_width )
+			);
+				
+			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width){
+				if(is_marked(node_next, MOV) || node->replica != NULL)
+					return 0;
+				break;
+			}
+			else{
+				if(node == g_tail){
+					if(++tail_counter >= size)
+						return 0;
+				}
+				else{
+					tail_counter = 0;
+				}
+				node = h->array + (++bucket%size);
+			}
+		}while(1);
+    }
+    
+    if(node == NULL)
+        return 0;
+    
+    node->reserved = true;
+    current_msg = (msg_t *) node->payload;
+    current_msg->node = node;
+
+	if( ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && !is_in_lp_unsafe_set(lp) )
+		safe = true;
+    
+    return 1;
+}
+
+void getMinLP_internal(unsigned int lp){
+	nbc_bucket_node * node, * node_min;
+	simtime_t min = INFTY;
+	unsigned int bucket, size, tail_counter=0;
+	nbc_bucket_node  *array, *node_next, *original;
+	table *h;
+	double bucket_width;
+
+restart:
+	min = INFTY;
+	safe = false;
+	unsafe_events = 0;
+	    
+    if((node_min = node = getMin(nbcalqueue, -1)) == NULL){
+		printf("[%u] ERROR: getMin_LP has found an empty queue\n",tid);
+		exit(0);
+	}
+    min = node->timestamp;
+    
+    h = read_table(nbcalqueue);						//
+	bucket_width = h->bucket_width;					//
+	bucket = hash(node->timestamp, bucket_width);	//
+	size  = h->size;								//
+    	
+    while(node != NULL && node->tag != lp){
+		do{
+			node_next = node->next;
+			if(is_marked(node_next, MOV) || node->replica != NULL)
+				goto restart;
+				
+			do{
+				node = get_unmarked(node_next);
+				node_next = node->next;
+			}while(
+				(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
+				(node->timestamp < bucket*bucket_width )
+			);
+				
+			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width){
+				if(is_marked(node_next, MOV) || node->replica != NULL)
+					goto restart;
+				break;
+			}
+			
+			else{
+				if(node == g_tail){
+					if(++tail_counter >= size)
+						goto restart;
+				}
+				else{
+					tail_counter = 0;
+				}
+				node = h->array + (++bucket%size);
+			}
+		}while(1);
+		if(node->timestamp >= (min + LOOKAHEAD)) //<- non esattissimo
+			unsafe_events++;
+    }
+    node->reserved = true;
+    new_current_msg = (msg_t *) node->payload;
+    new_current_msg->node = node;
+
+	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
+		safe = true; //* TODO : eliminare la new_safe che non serve ed usare solo safe
+	}
+}
