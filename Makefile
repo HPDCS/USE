@@ -9,7 +9,7 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
 FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 
-INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
+INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/ -Ireverse/
 LIBS=-pthread -lm
 ARCH_X86=1
 ARCH_X86_64=1
@@ -126,7 +126,7 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 		    model/robot_explore/neighbours.c
 
 
-TARGET=test
+TARGET=phold
 
 CORE_SOURCES =  core/core.c\
 		core/calqueue.c\
@@ -146,8 +146,8 @@ MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
 		mm/recoverable.c
 		
-REVERSE_SOURCES=	mm/reverse.c\
-		mm/slab.c
+REVERSE_SOURCES=	reverse/reverse.c\
+		reverse/slab.c
 
 
 MM_OBJ=$(MM_SOURCES:.c=.o)

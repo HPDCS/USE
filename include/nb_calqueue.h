@@ -129,7 +129,7 @@ struct nb_calqueue
 };
 
 extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, unsigned int tag);
-extern double nbc_prune(nb_calqueue *queue, double timestamp);
+extern void nbc_prune(double timestamp);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_bucket, unsigned int elem_per_bucket);
 
 extern nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag, table ** h);

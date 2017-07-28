@@ -19,8 +19,8 @@ unsigned short int number_of_threads = 1;
 //extern double delta_count;
 extern int reverse_execution_threshold;
 
-void *start_thread(void *args) {
-
+void *start_thread(){
+	
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 	
     srand48_r(tid+254, &seedT);

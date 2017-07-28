@@ -405,7 +405,7 @@ execution:
 				end_sim(current_lp);
 			
 			if(check_termination())
-				__sync_val_compare_and_swap(&stop, false, true);
+				__sync_bool_compare_and_swap(&stop, false, true);
 		}
 		
 		if(tid == MAIN_PROCESS) {

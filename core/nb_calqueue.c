@@ -108,15 +108,14 @@ __thread hpdcs_gc_status malloc_status =
 	.to_remove_nodes_count 		= 0LL
 };
 
-__thread nbc_bucket_node *to_free_nodes = NULL;
-__thread nbc_bucket_node *to_free_nodes_old = NULL;
+//__thread nbc_bucket_node *to_free_nodes = NULL;
+//__thread nbc_bucket_node *to_free_nodes_old = NULL;
 
 __thread nbc_bucket_node *to_free_tables_old = NULL;
 __thread nbc_bucket_node *to_free_tables_new = NULL;
 
 __thread unsigned long long mark;
 __thread unsigned int to_remove_nodes_count = 0;
-__thread unsigned int prune_count = 0;
 
 //__thread unsigned long long cantor_p1 = ((TID)*((TID)+1)/2);
 //__thread unsigned long long cantor_p2 = (TID); 
@@ -325,8 +324,8 @@ static void node_free(nbc_bucket_node *pointer)
  * @param timestamp   the timestamp of the last disconnected node
  *
  *
- */
-static inline void connect_to_be_freed_node_list(nbc_bucket_node *start, unsigned int counter)
+ 
+static inline void connect_to_be_freed_node_list2(nbc_bucket_node *start, unsigned int counter)
 {
 	nbc_bucket_node* new_node;
 	start = get_unmarked(start);
@@ -336,7 +335,52 @@ static inline void connect_to_be_freed_node_list(nbc_bucket_node *start, unsigne
 
 	to_free_nodes = new_node;
 	to_remove_nodes_count += counter;
+	
 }
+*/
+ 
+static inline void connect_to_be_freed_node_list(nbc_bucket_node *start, unsigned int counter)
+{
+	
+	nbc_bucket_node* new_node;
+	start = get_unmarked(start);
+
+	//new_node = node_malloc(start, start->timestamp, counter);
+	//new_node->next = to_free_nodes;
+
+	//to_free_nodes = new_node;
+	//to_remove_nodes_count += counter;
+	
+	mm_node_trash(&malloc_status, start, counter);
+	
+	//current_meta_node = to_free_nodes_old;
+	//meta_prec = (nbc_bucket_node**)&(to_free_nodes_old);
+	//
+	//while(current_meta_node != NULL)
+	//{
+	//	counter = current_meta_node->counter;
+	//	prec = (nbc_bucket_node**)&(current_meta_node->payload);
+	//	tmp = *prec;
+	//	tmp = get_unmarked(tmp);
+    //   
+	//	while(counter-- != 0)
+	//	{
+	//		tmp_next = tmp->next;
+	//		mm_node_connect_to_be_freed(&malloc_status, tmp);			//<-------NEW
+	//		committed++;
+    //
+	//		tmp =  get_unmarked(tmp_next);
+	//	}
+    //   
+	//	meta_tmp = current_meta_node;
+	//	*meta_prec = current_meta_node->next;
+	//	current_meta_node = current_meta_node->next;
+	//	//free(meta_tmp);
+	//	node_free(meta_tmp);
+	//}
+
+}
+
 
 static inline void connect_to_be_freed_table_list(table *h)
 {
@@ -1204,31 +1248,25 @@ static inline bool CAS_for_increase_cur(table* h, unsigned long long current, un
  * @param timestamp the threshold such that any node with timestamp strictly less than it is removed and freed
  *
  */
-double nbc_prune(nb_calqueue *queue, double timestamp)
+ 
+ 
+void nbc_prune(double timestamp)
 {
 #if ENABLE_PRUNE == 0
 	return 0.0;
 #endif
+	
 	unsigned int committed = 0;
 	nbc_bucket_node **prec, *tmp, *tmp_next;
 	nbc_bucket_node **meta_prec, *meta_tmp, *current_meta_node;
 	unsigned int counter;
-	unsigned int i=0;
+	unsigned int i = 0;
 	unsigned int flag = 1;
-
-	if(++prune_count < 1)// TODO
-		return 0.0;
 	
-	prune_count = 0;
-
-	for(;i<threads;i++)
-	{
-		prune_array[(TID) + i*threads] = 1;
-		flag &= prune_array[(TID)*threads +i];
-	}
-
-	if(flag != 1)
+	
+	if(!mm_safe(prune_array, threads, TID))
 		return 0.0;
+		
 	
 	while(to_free_tables_old != NULL)
 	{
@@ -1243,23 +1281,26 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 		node_free(my_tmp); //<-------NEW
 	}
 	
-	current_meta_node = to_free_nodes_old;
-	meta_prec = (nbc_bucket_node**)&(to_free_nodes_old);
+//	current_meta_node = to_free_nodes_old;
+//	meta_prec = (nbc_bucket_node**)&(to_free_nodes_old);
 	
 	do 														//<-----NEW
     {	                                                    //<-----NEW
 		tmp = mm_node_collect(&malloc_status, &counter);    //<-----NEW
 		while(tmp != NULL && counter-- != 0)                //<-----NEW
 		{                                                   //<-----NEW
+		//printf("IMHERE\n");
 			tmp_next = tmp->next;                           //<-----NEW
 			node_free(tmp);                                 //<-----NEW
 			tmp =  get_unmarked(tmp_next);                  //<-----NEW
 		}                                                   //<-----NEW
 	}                                                       //<-----NEW
     while(tmp != NULL);										//<-----NEW
-    
+
+/*    
 	while(current_meta_node != NULL)
-	{
+	{                              //<-----NEW
+		//printf("IM THERE\n");
 		counter = current_meta_node->counter;
 		prec = (nbc_bucket_node**)&(current_meta_node->payload);
 		tmp = *prec;
@@ -1302,18 +1343,15 @@ double nbc_prune(nb_calqueue *queue, double timestamp)
 		//free(meta_tmp);
 		node_free(meta_tmp);
 	}
-		
+*/	
 	to_free_tables_old = to_free_tables_new;
 	to_free_tables_new = NULL;
 	
-	to_free_nodes_old = to_free_nodes;
-	to_free_nodes = NULL;
+//	to_free_nodes_old = to_free_nodes;
+//	to_free_nodes = NULL;
 	
-	mm_new_era(&malloc_status);
+	mm_new_era(&malloc_status, prune_array, threads, TID);
 	
-	for(i=0;i<threads;i++)
-		prune_array[(TID)*threads +i] = 0;
-    
 	return (double)committed;
 }
 

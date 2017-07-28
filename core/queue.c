@@ -138,7 +138,7 @@ void commit(void) {
 #if REPORT == 1
 	clock_timer_start(queue_op);
 #endif
-	nbc_prune(nbcalqueue, current_lvt - LOOKAHEAD);
+	nbc_prune(current_lvt - LOOKAHEAD);
 #if REPORT == 1
 	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
 	statistics_post_data(tid, PRUNE_COUNTER, 1);
