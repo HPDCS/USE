@@ -30,7 +30,7 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
-#if SPERIMENTAL == 1
+#if SPERIMENTAL == 0
 	#define gmf getMinFree_internal
 	#define gml getMinLP_internal
 #else
@@ -254,17 +254,27 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1
 	clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
 				queue_min,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
-				event_processing,		//OK: cattura il tempo per processare un evento safe 
+				event_processing		//OK: cattura il tempo per processare un evento safe 
+#if REVERSIBLE == 1
+				,
 				stm_event_processing,	//OK: cattura il tempo per processare un evento in stm (solo evento)
 				safety_check_op,		//OK: cattura il tempo per estrarre dalla coda il minimo evento associato ad un LP 
 				undo_event_processing,	//OK: cattura il tempo per rollbackare un evento (solo rollback)
-				stm_safety_wait;		//OK: cattura il tempo per aspettare che un evento stm diventi safe
+				stm_safety_wait			//OK: cattura il tempo per aspettare che un evento stm diventi safe
 #endif
-	
+				;
+#endif
+
+
+#if REVERSIBLE == 1
+	revwin_t *window;
+	reverse_init(REVWIN_SIZE);
+	window = revwin_create();
+#endif
+
 	//unsigned int mode, old_mode, retries;
 	//double pending_events;
-	revwin_t *window;
-
+	
 	tid = thread_id;
 	
 	//Set the CPU affinity
@@ -272,8 +282,6 @@ void thread_loop(unsigned int thread_id) {
 	
 	lock_init();
 	
-	reverse_init(REVWIN_SIZE);
-	window = revwin_create();
 
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
@@ -281,7 +289,10 @@ void thread_loop(unsigned int thread_id) {
 	///* START SIMULATION *///
 	while (!stop && !sim_error) {
 		//mode = retries = 0; //<--possono sparire?
+
+#if REVERSIBLE == 1
 begin:
+#endif
 		/// *FETCH* ///
 #if REPORT == 1
 	clock_timer_start(queue_min);
@@ -293,7 +304,11 @@ begin:
 	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min));
 	statistics_post_data(tid, EVENTS_FETCHED, 1);
 #endif
+
+#if REVERSIBLE == 1
 execution:		
+#endif
+
 		queue_clean();
 		
 		current_lp = current_msg->receiver_id;	//identificatore lp
@@ -324,7 +339,7 @@ execution:
 			//mode = MODE_STM;
 			
 			current_msg->revwin = window;
-			revwin_reset(current_lp, current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
+			revwin_reset(current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 	#if REPORT == 1 
 			clock_timer_start(stm_event_processing);			
 			statistics_post_data(tid, EVENTS_STM, 1);

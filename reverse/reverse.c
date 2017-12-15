@@ -97,6 +97,7 @@ static void revwin_add_code(revwin_t *win, unsigned char *bytes, size_t size) {
 //	printf("Added %ld bytes to the reverse window\n", size);
 }
 
+/*
 static void revwin_add_data(revwin_t *win, void *address, size_t size) {
 
 	revwin_check_space(win, size);
@@ -105,7 +106,7 @@ static void revwin_add_data(revwin_t *win, void *address, size_t size) {
 
 	win->data = (void *)((char *)win->data + size);
 }
-
+*/
 
 /*
  * Generates the reversing instruction for the whole chunk.
@@ -172,7 +173,7 @@ static void reverse_chunk(revwin_t *win, unsigned long long address, size_t size
  * @parm bsize The size of the single reverse block (must be 4, 8 or 16)
  *
  */
-static void reverse_single_xmm(revwin_t *win, const unsigned long long address, int bsize) {
+static void reverse_single_xmm(revwin_t *win, const unsigned long long address, size_t bsize) {
 	unsigned int rip_relative;
 
 	unsigned char revasm[22] = {
@@ -217,6 +218,8 @@ static void reverse_single_xmm(revwin_t *win, const unsigned long long address, 
  * @param address The starting address from which to copy
  * @param size The number of bytes to reverse
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 static void reverse_single_embedded(revwin_t *win, const unsigned long long address, size_t size) {
 	unsigned long long value, value_lower;
 	unsigned char *code;
@@ -245,6 +248,7 @@ static void reverse_single_embedded(revwin_t *win, const unsigned long long addr
 	// Now 'code' contains the right code to add in the reverse window
 	revwin_add_code(win, code, size_code);
 }
+#pragma GCC diagnostic pop
 
 
 /**
@@ -364,7 +368,7 @@ revwin_t *revwin_create(void) {
 }
 
 
-void revwin_free(unsigned int lid, revwin_t *win) {
+void revwin_free(revwin_t *win) {
 
 	// Sanity check
 	if (win == NULL) {
@@ -426,7 +430,7 @@ void reverse_fini(void) {
 /*
  * Reset the reverse window intruction pointer
  */
-void revwin_reset(unsigned int lid, revwin_t *win) {
+void revwin_reset(revwin_t *win) {
 
 	// Sanity check
 	if (win == NULL) {
@@ -457,7 +461,6 @@ static bool use_xmm = false;
 
 
 void reverse_code_generator(const unsigned long long address, const size_t size) {
-	unsigned long long chunk_address;
 	bool dominant;
 	revwin_t *win;
 

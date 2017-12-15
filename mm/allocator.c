@@ -77,7 +77,7 @@ void audit_map(unsigned int sobj){
 	mdt_entry* mdte;
 	int i;
 		
-	if( (sobj >= handled_sobjs) ){
+	if( ((int) sobj >= handled_sobjs) ){
 		printf("audit request on invalid sobj\n");
 		return ; 
 	}
@@ -284,11 +284,11 @@ void *pool_get_memory(unsigned int lid, size_t size) {
 	return allocate_segment(lid, size);
 }
 
-
+/*
 void pool_release_memory(unsigned int lid, void *ptr) {
 	// TODO
 }
-
+*/
 
 int allocator_init(unsigned int sobjs) {
 	unsigned int i;

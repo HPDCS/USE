@@ -223,9 +223,9 @@ void mm_node_free(hpdcs_gc_status *status, void* pointer)
 
 void mm_node_connect_to_be_freed(hpdcs_gc_status *status, void* pointer)
 {
-	linked_pointer *res;
-	linked_pointer *tmp_lists 	= status->to_free_nodes 	;
-	res = (linked_pointer*) ( ((char*)pointer)- HEADER_SIZE );
+	linked_gc_node *res;
+	linked_gc_node *tmp_lists 	= status->to_free_nodes 	;
+	res = (linked_gc_node*) ( ((char*)pointer)- HEADER_SIZE );
 	
 	res->next = tmp_lists;
 	status->to_free_nodes = (void*)res;

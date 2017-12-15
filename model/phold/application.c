@@ -14,7 +14,7 @@
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
-	int 	i, j = 123;
+	unsigned int 	i, j = 123;
 	//event_content_type new_event;
 	int err;
 	unsigned int loops; 

@@ -372,8 +372,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 
 // TODO: multiple checks on m_area->is_recoverable. The code should be refactored
-// TODO: lid non necessario qui
-void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
+void do_free(malloc_state *mem_pool, void *ptr) {
 	
 	malloc_area * m_area;
 	int idx, bitmap_blocks;

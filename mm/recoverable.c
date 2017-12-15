@@ -156,7 +156,7 @@ void *__wrap_malloc(size_t size) {
 *
 */
 void __wrap_free(void *ptr) {
-	do_free(current_lp, recoverable_state[current_lp], ptr);
+	do_free(recoverable_state[current_lp], ptr);
 }
 
 

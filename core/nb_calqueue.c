@@ -108,17 +108,12 @@ __thread hpdcs_gc_status malloc_status =
 	.to_remove_nodes_count 		= 0LL
 };
 
-//__thread nbc_bucket_node *to_free_nodes = NULL;
-//__thread nbc_bucket_node *to_free_nodes_old = NULL;
-
 __thread nbc_bucket_node *to_free_tables_old = NULL;
 __thread nbc_bucket_node *to_free_tables_new = NULL;
 
 __thread unsigned long long mark;
 __thread unsigned int to_remove_nodes_count = 0;
 
-//__thread unsigned long long cantor_p1 = ((TID)*((TID)+1)/2);
-//__thread unsigned long long cantor_p2 = (TID); 
 
 static unsigned int * volatile prune_array;
 static unsigned int threads;
@@ -179,80 +174,6 @@ static inline unsigned long long hash(double timestamp, double bucket_width)
 	return res;
 
 }
-//
-///**
-// *  This function returns an unmarked reference
-// *
-// *  @author Romolo Marotta
-// *
-// *  @param pointer
-// *
-// *  @return the unmarked value of the pointer
-// */
-//static inline void* get_unmarked(void *pointer)
-//{
-//	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_PTR), void *);
-//	//return (void*) (((unsigned long long) pointer) & MASK_PTR);
-//}
-//
-///**
-// *  This function returns a marked reference
-// *
-// *  @author Romolo Marotta
-// *
-// *  @param pointer
-// *
-// *  @return the marked value of the pointer
-// */
-//static inline void* get_marked(void *pointer, unsigned long long mark)
-//{
-//	return UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *);
-//	//return (void*) (((unsigned long long) get_unmarked((pointer))) | (mark));
-//}
-//
-///**
-// *  This function checks if a reference is marked
-// *
-// *  @author Romolo Marotta
-// *
-// *  @param pointer
-// *
-// *  @return true if the reference is marked, else false
-// */
-//static inline bool is_marked_2(void *pointer, unsigned long long mask)
-//{
-//	return ( (UNION_CAST(pointer, unsigned long long) & MASK_MRK) == mask );
-//	//return (bool) ((((unsigned long long) pointer) & MASK_MRK) == mask);
-//}
-//
-///**
-// *  This function checks if a reference is generally marked
-// *
-// *  @author Romolo Marotta
-// *
-// *  @param pointer
-// *
-// *  @return true if the reference is generally marked, else false
-// */
-//static inline bool is_marked_1(void *pointer)
-//{
-//	return (UNION_CAST(pointer, unsigned long long) & MASK_MRK);
-//	//return (bool) ((((unsigned long long) pointer) & MASK_MRK));
-//}
-//
-//
-///**
-// *  This function get the mark
-// *
-// *  @author Romolo Marotta
-// *  @param pointer
-// *  @return the mark
-// */
-//static inline unsigned long long get_mark(void *pointer)
-//{
-//	return UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long);
-//}
-//
 
 static inline bool is_marked_for_search(void *pointer, unsigned int research_flag)
 {
@@ -275,13 +196,8 @@ static inline bool is_marked_for_search(void *pointer, unsigned int research_fla
  */
 static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned int tie_breaker)
 {
-	nbc_bucket_node* res;// = malloc(sizeof(nbc_bucket_node));
-
-	//if (is_marked(res) || res == NULL)
-	//{
-	//	error("%lu - Not aligned Node or No memory\n", pthread_self());
-	//	abort();
-	//}
+	nbc_bucket_node* res;
+	
 	res = mm_node_malloc(&malloc_status);
 	
 	if (unlikely(is_marked(res) || res == NULL))
@@ -323,64 +239,11 @@ static void node_free(nbc_bucket_node *pointer)
  * @param number of node to connect to the to_be_free queue
  * @param timestamp   the timestamp of the last disconnected node
  *
- *
- 
-static inline void connect_to_be_freed_node_list2(nbc_bucket_node *start, unsigned int counter)
-{
-	nbc_bucket_node* new_node;
-	start = get_unmarked(start);
-
-	new_node = node_malloc(start, start->timestamp, counter);
-	new_node->next = to_free_nodes;
-
-	to_free_nodes = new_node;
-	to_remove_nodes_count += counter;
-	
-}
-*/
- 
+ */
 static inline void connect_to_be_freed_node_list(nbc_bucket_node *start, unsigned int counter)
 {
-	
-	nbc_bucket_node* new_node;
-	start = get_unmarked(start);
-
-	//new_node = node_malloc(start, start->timestamp, counter);
-	//new_node->next = to_free_nodes;
-
-	//to_free_nodes = new_node;
-	//to_remove_nodes_count += counter;
-	
-	mm_node_trash(&malloc_status, start, counter);
-	
-	//current_meta_node = to_free_nodes_old;
-	//meta_prec = (nbc_bucket_node**)&(to_free_nodes_old);
-	//
-	//while(current_meta_node != NULL)
-	//{
-	//	counter = current_meta_node->counter;
-	//	prec = (nbc_bucket_node**)&(current_meta_node->payload);
-	//	tmp = *prec;
-	//	tmp = get_unmarked(tmp);
-    //   
-	//	while(counter-- != 0)
-	//	{
-	//		tmp_next = tmp->next;
-	//		mm_node_connect_to_be_freed(&malloc_status, tmp);			//<-------NEW
-	//		committed++;
-    //
-	//		tmp =  get_unmarked(tmp_next);
-	//	}
-    //   
-	//	meta_tmp = current_meta_node;
-	//	*meta_prec = current_meta_node->next;
-	//	current_meta_node = current_meta_node->next;
-	//	//free(meta_tmp);
-	//	node_free(meta_tmp);
-	//}
-
+	mm_node_trash(&malloc_status, get_unmarked(start), counter);
 }
-
 
 static inline void connect_to_be_freed_table_list(table *h)
 {
@@ -650,7 +513,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 	unsigned int counter = (unsigned int) ( (-(signed_counter >= 0)) & signed_counter);
 	unsigned int i = 0;
 	unsigned int size = h->size;
-	unsigned int thp2, size_thp2;
+	unsigned int thp2;
 	unsigned int new_size = 0;
 	unsigned int res = 0;
 	double pub_per_epb = pub*epb;
@@ -805,7 +668,7 @@ static double compute_mean_separation_time(table* h,
 	double average = 0.0;
 	double newaverage = 0.0;
 	double tmp_timestamp;
-	int counter = 0;
+	unsigned int counter = 0;
 	
 	double min_next_round = INFTY;
 	double lower_bound, upper_bound;
@@ -820,7 +683,7 @@ static double compute_mean_separation_time(table* h,
 	if(new_size <= threashold*2)
 		return 1.0;
 	
-	sample_size = (new_size <= 5) ? (new_size/2) : (5 + (int)((double)new_size / 10));
+	sample_size = (new_size <= 5) ? (new_size/2) : (5 + (unsigned int)((double)new_size / 10));
 	sample_size = (sample_size > SAMPLE_SIZE) ? SAMPLE_SIZE : sample_size;
     
 	double sample_array[SAMPLE_SIZE+1]; //<--DA SISTEMARE STANDARD C90
@@ -1250,22 +1113,18 @@ static inline bool CAS_for_increase_cur(table* h, unsigned long long current, un
  */
  
  
-void nbc_prune(double timestamp)
+void nbc_prune(void)
 {
 #if ENABLE_PRUNE == 0
-	return 0.0;
+	return;
 #endif
 	
-	unsigned int committed = 0;
-	nbc_bucket_node **prec, *tmp, *tmp_next;
-	nbc_bucket_node **meta_prec, *meta_tmp, *current_meta_node;
+	nbc_bucket_node  *tmp, *tmp_next;
 	unsigned int counter;
-	unsigned int i = 0;
-	unsigned int flag = 1;
 	
 	
 	if(!mm_safe(prune_array, threads, TID))
-		return 0.0;
+		return;
 		
 	
 	while(to_free_tables_old != NULL)
@@ -1274,22 +1133,16 @@ void nbc_prune(double timestamp)
 		to_free_tables_old = to_free_tables_old->next;
     
 		table *h = (table*) my_tmp->payload;
-		//free(h->array);
 		free_array_nodes(&malloc_status, h->array); //<-------NEW
 		free(h);
-		//free(my_tmp);
 		node_free(my_tmp); //<-------NEW
 	}
-	
-//	current_meta_node = to_free_nodes_old;
-//	meta_prec = (nbc_bucket_node**)&(to_free_nodes_old);
 	
 	do 														//<-----NEW
     {	                                                    //<-----NEW
 		tmp = mm_node_collect(&malloc_status, &counter);    //<-----NEW
 		while(tmp != NULL && counter-- != 0)                //<-----NEW
 		{                                                   //<-----NEW
-		//printf("IMHERE\n");
 			tmp_next = tmp->next;                           //<-----NEW
 			node_free(tmp);                                 //<-----NEW
 			tmp =  get_unmarked(tmp_next);                  //<-----NEW
@@ -1297,66 +1150,15 @@ void nbc_prune(double timestamp)
 	}                                                       //<-----NEW
     while(tmp != NULL);										//<-----NEW
 
-/*    
-	while(current_meta_node != NULL)
-	{                              //<-----NEW
-		//printf("IM THERE\n");
-		counter = current_meta_node->counter;
-		prec = (nbc_bucket_node**)&(current_meta_node->payload);
-		tmp = *prec;
-		tmp = get_unmarked(tmp);
-       
-		while(counter-- != 0)
-		{
-			tmp_next = tmp->next;
-//			if(!is_marked(tmp_next, DEL) && !is_marked(tmp_next, INV))
-//				error("Found a %s node during prune "
-//						"NODE %p "
-//						"NEXT %p "
-//						"TAIL %p "
-//						"MARK %llu "
-//						"TS %f "
-//						"PRUNE TS %f "
-//						"TIE %u "
-//						"TIE META %u "
-//						"\n",
-//						is_marked(tmp_next, MOV) ? "MOV" : "VAL",
-//						tmp,
-//						tmp->next,
-//						g_tail,
-//						(unsigned long long) tmp->next & (3ULL),
-//						tmp->timestamp,
-//						timestamp,
-//						counter,
-//						current_meta_node->counter);
-       
-			//free(tmp);
-			node_free(tmp);			//<-------NEW
-			committed++;
-
-			tmp =  get_unmarked(tmp_next);
-		}
-       
-		meta_tmp = current_meta_node;
-		*meta_prec = current_meta_node->next;
-		current_meta_node = current_meta_node->next;
-		//free(meta_tmp);
-		node_free(meta_tmp);
-	}
-*/	
 	to_free_tables_old = to_free_tables_new;
 	to_free_tables_new = NULL;
 	
-//	to_free_nodes_old = to_free_nodes;
-//	to_free_nodes = NULL;
-	
 	mm_new_era(&malloc_status, prune_array, threads, TID);
 	
-	return (double)committed;
 }
 
 
-nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag, table ** hres){
+nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 		nbc_bucket_node *min, *min_next, 
 					*left_node, *left_node_next, 
 					*tail, *array;
@@ -1369,7 +1171,6 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag, table ** hres){
 	unsigned int size;
 	unsigned int counter;
 	double bucket_width;
-	bool valid_node_exists;
 
 	tail = g_tail;
 	
@@ -1443,10 +1244,10 @@ nbc_bucket_node* getMin(nb_calqueue *queue, unsigned int tag, table ** hres){
 	
 	return NULL;
 }
-nbc_bucket_node* getNext(nb_calqueue *queue, nbc_bucket_node* node, table *h){
+nbc_bucket_node* getNext(nbc_bucket_node* node, table *h){
 	/* preferirei avere l'hashtable anche come parametro */
 	/* oppure sfruttare il campo epoca per avere un puntatore a hashtable */
-	nbc_bucket_node  *array, *node_next, *original;
+	nbc_bucket_node  *node_next;
 	//table *h;
 	double bucket_width;
 	unsigned int bucket;
@@ -1663,11 +1464,11 @@ unsigned int getMinFree_internal(){
 	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
 	unsigned int lp, bucket, size, tail_counter=0;
-	nbc_bucket_node  *array, *node_next, *original;
+	nbc_bucket_node  *node_next;
 	table *h;
 	double bucket_width;
 	
-    if((node = getMin(nbcalqueue, -1, &h)) == NULL)
+    if((node = getMin(nbcalqueue,  &h)) == NULL)
 		return 0;
 	
 	safe = false;
@@ -1750,7 +1551,7 @@ void getMinLP_internal(unsigned int lp){
 	nbc_bucket_node * node, *min_node;
 	simtime_t min = INFTY;
 	unsigned int bucket, size, tail_counter=0;
-	nbc_bucket_node  *array, *node_next, *original;
+	nbc_bucket_node  *node_next;
 	table *h;
 	double bucket_width;
 
@@ -1759,7 +1560,7 @@ restart:
 	safe = false;
 	unsafe_events = 0;
 	    
-    if((min_node=node = getMin(nbcalqueue, -1, &h)) == NULL){
+    if((min_node=node = getMin(nbcalqueue, &h)) == NULL){
 		printf("[%u] ERROR: getMin_LP has found an empty queue\n",tid);
 		exit(0);
 	}

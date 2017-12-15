@@ -139,8 +139,6 @@ CORE_SOURCES =  core/core.c\
 		core/hpdcs_math.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
-#		mm/reverse.c\
-#		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\

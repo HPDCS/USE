@@ -138,7 +138,8 @@ void commit(void) {
 #if REPORT == 1
 	clock_timer_start(queue_op);
 #endif
-	nbc_prune(current_lvt - LOOKAHEAD);
+	//nbc_prune(current_lvt - LOOKAHEAD);
+	nbc_prune();
 #if REPORT == 1
 	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
 	statistics_post_data(tid, PRUNE_COUNTER, 1);
@@ -155,7 +156,7 @@ unsigned int getMinFree(){
 	clock_timer queue_op;
 	clock_timer_start(queue_op);
 #endif
-    if((node = getMin(nbcalqueue, -1, &h)) == NULL)
+    if((node = getMin(nbcalqueue, &h)) == NULL)
 		return 0;
 	safe = false;
 	clear_lp_unsafe_set;
@@ -188,7 +189,7 @@ retry_on_replica:
 		}
 		//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
 		add_lp_unsafe_set(lp);
-		node = getNext(nbcalqueue, node, h);
+		node = getNext(node, h);
     }
     
     if(node == NULL){
@@ -226,11 +227,11 @@ restart:
 	min = INFTY;
 	safe = false;
 	    
-	node = getMin(nbcalqueue, -1, &h);
+	node = getMin(nbcalqueue, &h);
     min = node->timestamp;
    	
     while(node != NULL && node->tag != lp){
-		node = getNext(nbcalqueue, node, h);
+		node = getNext( node, h);
 		if(node == NULL)
 			goto restart;
     }
