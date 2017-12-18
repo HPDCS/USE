@@ -47,6 +47,10 @@ void statistics_fini() {
 }
 
 
+void statistics_post_lp_data(int tid, int type, double value) {
+
+}
+
 void statistics_post_data(int tid, int type, double value) {
 
     switch(type) {

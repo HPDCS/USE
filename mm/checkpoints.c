@@ -38,6 +38,10 @@
 #include <statistics.h>
 
 
+
+#define rsalloc malloc
+#define rsfree free
+
 /**
 * This function creates a full log of the current simulation states and returns a pointer to it.
 * The algorithm behind this function is based on packing of the really allocated memory chunks into

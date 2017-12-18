@@ -32,8 +32,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include <core/core.h>
-#include <arch/atomic.h>
+//#include <core.h>
+#include <atomic.h>
 
 // The basic implementation of the list is such that each node of any list is allocated in
 // a separate memory region which is associated with a LP.
@@ -46,6 +46,8 @@
 // In case this facility is used to handle a list which is shared across different worker threads,
 // then accesses to the list must be protected within critical sections.
 
+
+#define IDLE_PROCESS	UINT_MAX
 #define GENERIC_LIST IDLE_PROCESS
 
 /// This is the encapsulating structure of a list node. Any payload can be contained by this.

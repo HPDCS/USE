@@ -30,7 +30,7 @@
 
 
 #include <ROOT-Sim.h>
-#include <simtypes.h>
+#include <events.h>
 #include <list.h>
 
 
@@ -44,6 +44,8 @@
 
 extern bool processing_silent_execution;
 
+
+#define lvt(lid) (LPS[lid]->bound != NULL ? LPS[lid]->bound->timestamp : 0.0)
 
 /// Structure for LP's state
 typedef struct _state_t {

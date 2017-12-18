@@ -31,18 +31,23 @@
 #include <math.h>
 #include <string.h>
 
-#include <core/core.h>
-#include <core/timer.h>
-#include <datatypes/list.h>
-#include <scheduler/process.h>
-#include <scheduler/scheduler.h>
-#include <mm/state.h>
-#include <communication/communication.h>
-#include <mm/dymelor.h>
-#include <statistics/statistics.h>
+#include <core.h>
+#include <timer.h>
+#include <list.h>
+//#include <scheduler/process.h>
+//#include <scheduler/scheduler.h>
+#include <state.h>
+//#include <communication/communication.h>
+#include <dymelor.h>
+#include <statistics.h>
+
+
+#define rsalloc malloc
+#define rsfree free
+
 
 /// Function pointer to switch between the parallel and serial version of SetState
-void (*SetState)(void *new_state);
+//void (*SetState)(void *new_state);
 
 
 /**
@@ -158,10 +163,11 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	// the simulation has been already executed at least once
 	while(evt != NULL && evt != final_evt) {
 
-		if(!reprocess_control_msg(evt)) {
-			evt = list_next(evt);
-			continue;
-		}
+		// TODO
+		//if(!reprocess_control_msg(evt)) {
+		//	evt = list_next(evt);
+		//	continue;
+		//}
 
 		events++;
 		activate_LP(lid, evt->timestamp, evt, state_buffer);
@@ -195,7 +201,7 @@ void rollback(unsigned int lid) {
 
 	// Sanity check
 	if(LPS[lid]->state != LP_STATE_ROLLBACK) {
-		rootsim_error(false, "I'm asked to roll back LP %d's execution, but rollback_bound is not set. Ignoring...\n", LidToGid(lid));
+		rootsim_error(false, "I'm asked to roll back LP %d's execution, but rollback_bound is not set. Ignoring...\n", lid);
 		return;
 	}
 

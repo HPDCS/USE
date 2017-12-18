@@ -163,6 +163,7 @@ struct stats_lp_t {
 
 extern struct stats_t *thread_stats;
 
+enum stat_levels {STATS_GLOBAL, STATS_PERF, STATS_LP, STATS_ALL};
 
 
 void statistics_init();

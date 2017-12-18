@@ -26,8 +26,60 @@
 
 
 
-#include <datatypes/list.h>
-#include <mm/dymelor.h>
+#include <list.h>
+#include <dymelor.h>
+
+
+#define rsalloc malloc
+#define rsfree free
+
+
+
+
+void *umalloc(unsigned int lid, size_t s) {
+	if(rootsim_config.serial)
+		return rsalloc(s);
+
+	#ifdef HAVE_PARALLEL_ALLOCATOR
+	if(rootsim_config.disable_allocator)
+		return rsalloc(s);
+
+	return do_malloc(lid, unrecoverable_state[lid], s);
+	#else
+	(void)lid;
+	return rsalloc(s);
+	#endif
+}
+
+
+void ufree(unsigned int lid, void *ptr) {
+	
+//	printf("id of process requesting ufree: GID: %d LID: %d\n",LidToGid(lid),lid);
+	
+	if(rootsim_config.serial) {
+		rsfree(ptr);
+		return;
+	}
+
+	#ifdef HAVE_PARALLEL_ALLOCATOR
+	if(rootsim_config.disable_allocator) {
+		rsfree(ptr);
+		return;
+	}
+		
+/*	if(lid >=n_prc){
+		printf("kernel is: %d LP is %d (%d) belonging to kernel: %d, try to change recoverable[%d] to recoverable[%d]: %p\n",kid,lid,GidToLid(lid),GidToKernel(lid),lid,GidToLid(lid),unrecoverable_state[GidToLid(lid)]);
+		fflush(stdout);
+		do_free(GidToLid(lid), unrecoverable_state[GidToLid(lid)], ptr);
+		return;
+	}else*/
+
+	do_free(lid, unrecoverable_state[lid], ptr);
+	#else
+	(void)lid;
+	rsfree(ptr);
+	#endif
+}
 
 
 /**

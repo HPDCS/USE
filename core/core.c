@@ -53,6 +53,12 @@ __thread unsigned long long evt_count = 0;
 
 
 
+
+simulation_configuration rootsim_config;
+
+
+
+
 /* Total number of cores required for simulation */
 unsigned int n_cores; //pls cambia nome
 /* Total number of logical processes running in the simulation */
@@ -154,6 +160,7 @@ void set_affinity(unsigned int tid){
 
 inline void SetState(void *ptr) { //può diventare una macro?
 	states[current_lp] = ptr; //è corretto fare questa assegnazione così? Credo andrebbe fatto con una scrittura atomica
+	return NULL;
 }
 
 void init(unsigned int _thread_num, unsigned int lps_num) {
