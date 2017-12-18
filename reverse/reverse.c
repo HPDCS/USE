@@ -539,6 +539,9 @@ void reverse_code_generator(const unsigned long long address, const size_t size)
 void execute_undo_event(unsigned int lid, revwin_t *win) {
 	unsigned char push = 0x50;
 
+	//TO REMOVE WARNING
+	(void)lid;
+	
 	// Sanity check
 	if (win == NULL) {
 		// There is nothing to execute, actually
