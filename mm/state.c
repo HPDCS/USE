@@ -236,7 +236,7 @@ void rollback(unsigned int lid) {
 	// TODO: silent execution resets the LP state to the previous
 	// value, so it should be the last function to be called within rollback()
 	// Control messages must be rolled back as well
-	rollback_control_message(lid, last_correct_event->timestamp);
+	//rollback_control_message(lid, last_correct_event->timestamp);
 }
 
 
