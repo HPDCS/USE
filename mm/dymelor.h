@@ -235,10 +235,10 @@ extern void *urealloc(unsigned int, void *, size_t);
 extern void *ucalloc(unsigned int, size_t nmemb, size_t size);
 
 /* Simulation Platform Memory APIs */
-extern inline void *rsalloc(size_t);
-extern inline void rsfree(void *);
-extern inline void *rsrealloc(void *, size_t);
-extern inline void *rscalloc(size_t, size_t);
+extern  void *rsalloc(size_t);
+extern  void rsfree(void *);
+extern  void *rsrealloc(void *, size_t);
+extern  void *rscalloc(size_t, size_t);
 
 
 extern void ecs_init(void);

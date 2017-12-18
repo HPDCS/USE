@@ -35,7 +35,7 @@ extern void *__real_realloc(void *, size_t);
 extern void *__real_calloc(size_t, size_t);
 
 
-inline void *rsalloc(size_t size) {
+void *rsalloc(size_t size) {
 	void *mem_block = __real_malloc(size);
 	if(mem_block == NULL) {
 		rootsim_error(true, "Error in Memory Allocation, aborting...");
@@ -44,17 +44,17 @@ inline void *rsalloc(size_t size) {
 }
 
 
-inline void rsfree(void *ptr) {
+void rsfree(void *ptr) {
 	__real_free(ptr);
 }
 
 
-inline void *rsrealloc(void *ptr, size_t size) {
+void *rsrealloc(void *ptr, size_t size) {
 	return __real_realloc(ptr, size);
 }
 
 
-inline void *rscalloc(size_t nmemb, size_t size) {
+void *rscalloc(size_t nmemb, size_t size) {
 	return __real_calloc(nmemb, size);
 }
 
