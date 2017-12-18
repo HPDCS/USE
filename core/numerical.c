@@ -55,6 +55,7 @@ double Random(void) {
 	uint32_t *seed1;
 	uint32_t *seed2;
 
+	//UPDATED
 	if(rootsim_config.serial) {
 		seed1 = (uint32_t *)&master_seed;
 		seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
