@@ -52,6 +52,8 @@ __thread unsigned int tid = 0;
 __thread unsigned long long evt_count = 0;
 
 
+unsigned int ready_wt = 0;
+
 
 
 simulation_configuration rootsim_config;
@@ -230,7 +232,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 		can_stop[i] = false;
 		LPS[i] = malloc(sizeof(LP_state));
 		LPS[i]->lid 					= i;
-		LPS[i]->seed 					= 0; //TODO;
+		LPS[i]->seed 					= i; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
 		LPS[i]->ckpt_period 			= 10;
 		LPS[i]->from_last_ckpt 			= 0;
@@ -324,10 +326,16 @@ void thread_loop(unsigned int thread_id) {
 	
 	lock_init();
 	
+	__sync_fetch_and_add(&ready_wt, 1);
+	while(ready_wt!=n_cores);
 
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
+
+
+
+
 	///* START SIMULATION *///
 	while (!stop && !sim_error) {
 		//mode = retries = 0; //<--possono sparire?
