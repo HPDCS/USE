@@ -142,7 +142,9 @@ CORE_SOURCES =  core/core.c\
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
-		mm/recoverable.c
+		mm/recoverable.c\
+		mm/checkpoints.c\
+		mm/state.c\
 		
 REVERSE_SOURCES=	reverse/reverse.c\
 		reverse/slab.c

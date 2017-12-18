@@ -11,6 +11,7 @@ extern double delta_count;
 extern unsigned int reverse_execution_threshold;
 
 struct stats_t *thread_stats;
+struct stats_lp_t *lp_stats;
 struct stats_t system_stats;
 
 //unsigned long long events_fetched;
@@ -28,7 +29,13 @@ void statistics_init() {
         printf("Unable to allocate statistics vector\n");
         abort();
     }
+
+    if(posix_memalign((void**)&lp_stats, 64, n_prc_tot * sizeof(struct stats_lp_t)) < 0) {
+        printf("memalign failed\n");
+    }
+
     memset(thread_stats, 0, n_cores * sizeof(struct stats_t));
+    memset(lp_stats, 0, n_prc_tot * sizeof(struct stats_t));
     
     memset(&system_stats, 0, sizeof(struct stats_t));
     //events_fetched = 0;

@@ -13,4 +13,20 @@
 typedef double simtime_t;
 
 
+
+typedef struct __msg_t
+{
+  unsigned int sender_id;	//Sednder LP
+  unsigned int receiver_id;	//Receiver LP
+  simtime_t timestamp;
+  int type;
+  unsigned int data_size;
+  unsigned char data[MAX_DATA_SIZE];
+  revwin_t *revwin;			//reverse window to rollback
+  struct __bucket_node * node;	//address of the belonging node
+} msg_t;
+
+
+
+
 #endif

@@ -6,6 +6,7 @@
 #include <math.h>
 #include <float.h>
 #include <reverse.h>
+#include "state.h"
 #include "nb_calqueue.h"
 
 #define MAX_LPs	2048
@@ -32,19 +33,6 @@
 
 struct __bucket_node;
 
-typedef struct __msg_t
-{
-  unsigned int sender_id;	//Sednder LP
-  unsigned int receiver_id;	//Receiver LP
-  simtime_t timestamp;
-  int type;
-  unsigned int data_size;
-  unsigned char data[MAX_DATA_SIZE];
-  revwin_t *revwin;			//reverse window to rollback
-  struct __bucket_node * node;	//address of the belonging node
-} msg_t;
-
-
 extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
@@ -57,7 +45,7 @@ extern unsigned int n_prc_tot;
 extern  simtime_t gvt;
 /* Average time between consecutive events */
 extern simtime_t t_btw_evts;
-
+extern LP_state **LPS;
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);

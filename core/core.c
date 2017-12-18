@@ -52,6 +52,7 @@ __thread unsigned int tid = 0;
 __thread unsigned long long evt_count = 0;
 
 
+
 /* Total number of cores required for simulation */
 unsigned int n_cores; //pls cambia nome
 /* Total number of logical processes running in the simulation */
@@ -66,6 +67,7 @@ simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 bool sim_error = false;
 
 void **states;
+LP_state **LPS = NULL;
 
 //used to check termination conditions
 bool stop = false;
