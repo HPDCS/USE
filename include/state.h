@@ -30,7 +30,8 @@
 
 
 #include <ROOT-Sim.h>
-#include "core.h"
+#include <simtypes.h>
+#include <list.h>
 
 
 /// Checkpointing interval not yet set

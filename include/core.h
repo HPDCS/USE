@@ -6,12 +6,12 @@
 #include <math.h>
 #include <float.h>
 #include <reverse.h>
+#include "simtypes.h"
 #include "state.h"
 #include "nb_calqueue.h"
 
 #define MAX_LPs	2048
 
-#define MAX_DATA_SIZE		128
 #define THR_POOL_SIZE		128
 
 #define MODE_SAF	1
