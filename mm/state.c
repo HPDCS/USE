@@ -50,6 +50,16 @@
 //void (*SetState)(void *new_state);
 
 
+void send_antimessages(unsigned int lid, simtime_t lvt)
+{
+
+}
+
+
+void activate_LP(unsigned int lp, simtime_t lvt, void *evt, void *state) 
+{
+	
+}
 /**
 * This function is used to create a state log to be added to the LP's log chain
 *
