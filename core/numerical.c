@@ -64,9 +64,6 @@ double Random(void) {
 		seed2 = (uint32_t *)((char *)&(LPS[current_lp]->seed) + (sizeof(uint32_t)));
 	}
 
-	seed1 = (uint32_t *)&thread_seed;
-	seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
-
 	*seed1 = 36969u * (*seed1 & 0xFFFFu) + (*seed1 >> 16u);
 	*seed2 = 18000u * (*seed2 & 0xFFFFu) + (*seed2 >> 16u);
 
