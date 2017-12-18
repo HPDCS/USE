@@ -72,7 +72,7 @@ simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 
 bool sim_error = false;
 
-void **states;
+//void **states;
 LP_state **LPS = NULL;
 
 //used to check termination conditions
@@ -159,13 +159,32 @@ void set_affinity(unsigned int tid){
 }
 
 inline void SetState(void *ptr) { //può diventare una macro?
-	states[current_lp] = ptr; //è corretto fare questa assegnazione così? Credo andrebbe fatto con una scrittura atomica
-	return NULL;
+	ParallelSetState(ptr); 
 }
 
 void init(unsigned int _thread_num, unsigned int lps_num) {
 	unsigned int i;
 	int lp_lock_ret;
+
+	//rootsim_config.output_dir = DEFAULT_OUTPUT_DIR;
+	//rootsim_config.gvt_time_period = 1000;
+	//rootsim_config.scheduler = SMALLEST_TIMESTAMP_FIRST;
+	rootsim_config.checkpointing = PERIODIC_STATE_SAVING;
+	rootsim_config.ckpt_period = 10;
+	rootsim_config.gvt_snapshot_cycles = 2;
+	rootsim_config.simulation_time = 0;
+	//rootsim_config.lps_distribution = LP_DISTRIBUTION_BLOCK;
+	//rootsim_config.check_termination_mode = NORM_CKTRM;
+	rootsim_config.blocking_gvt = false;
+	rootsim_config.snapshot = 2001;
+	rootsim_config.deterministic_seed = false;
+	rootsim_config.set_seed = 0;
+	//rootsim_config.verbose = VERBOSE_INFO;
+	//rootsim_config.stats = STATS_ALL;
+	rootsim_config.serial = false;
+	rootsim_config.core_binding = true;
+
+
 
 	printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", _thread_num, lps_num);
 #if SPERIMENTAL == 1
@@ -195,12 +214,12 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	n_cores = _thread_num;
 	n_prc_tot = lps_num;
 	
-	states = malloc(sizeof(void *) * n_prc_tot);
+	LPS = malloc(sizeof(void*) * n_prc_tot);
 	can_stop = malloc(sizeof(bool) * n_prc_tot);
 	sim_ended = malloc(LP_ULL_MASK_SIZE);
 	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, lps_num * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
-	if(states == NULL || can_stop == NULL || sim_ended == NULL || lp_lock_ret == 1){
+	if(LPS == NULL || can_stop == NULL || sim_ended == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();		
 	}
@@ -209,6 +228,20 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
 		sim_ended[i/64] = 0;
 		can_stop[i] = false;
+		LPS[i] = malloc(sizeof(LP_state));
+		LPS[i]->lid 					= i;
+		LPS[i]->seed 					= 0; //TODO;
+		LPS[i]->state 					= LP_STATE_READY;
+		LPS[i]->ckpt_period 			= 10;
+		LPS[i]->from_last_ckpt 			= 0;
+		LPS[i]->state_log_forced  		= false;
+		LPS[i]->current_base_pointer 	= NULL;
+		LPS[i]->queue_in 				= new_list(i, msg_t);
+		LPS[i]->bound 					= NULL;
+		LPS[i]->queue_out 				= new_list(i, msg_hdr_t);
+		LPS[i]->queue_states 			= new_list(i, state_t);
+		LPS[i]->mark 					= 0;
+
 	}
 	
 	//if(lps_num%(SIZEOF_ULL*8) != 0){  //////////////////////
@@ -225,7 +258,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	numerical_init();
 	//process_init_event
 	for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
-		ProcessEvent(current_lp, 0, INIT, NULL, 0, states[current_lp]); //current_lp = i;
+		ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 	}
 }
@@ -331,7 +364,7 @@ execution:
 #if REPORT == 1 
 			clock_timer_start(event_processing);
 #endif
-			ProcessEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, states[current_lp]);
+			ProcessEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer);
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_SAFE, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
@@ -353,11 +386,14 @@ execution:
 			clock_timer_start(stm_event_processing);			
 			statistics_post_data(tid, EVENTS_STM, 1);
 	#endif
-			ProcessEvent_reverse(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, states[current_lp]);
+			ProcessEvent_reverse(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer);
 	#if REPORT == 1 
 			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
 			clock_timer_start(stm_safety_wait);
-	#endif			
+	#endif	
+
+			LogState(current_lp);
+
 			do{
 	#if REPORT == 1
 				clock_timer_start(safety_check_op);
@@ -424,7 +460,7 @@ execution:
 		///* FLUSH */// 
 		commit();
 		
-		if(OnGVT(current_lp, states[current_lp]) /*|| sim_ended[lp/64]==~(0ULL)*/){
+		if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer) /*|| sim_ended[lp/64]==~(0ULL)*/){
 			if(!is_end_sim(current_lp))
 				end_sim(current_lp);
 			

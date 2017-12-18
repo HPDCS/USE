@@ -30,11 +30,6 @@
 #include <dymelor.h>
 
 
-#define rsalloc malloc
-#define rsfree free
-
-
-
 
 void *umalloc(unsigned int lid, size_t s) {
 	if(rootsim_config.serial)

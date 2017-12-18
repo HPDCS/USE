@@ -9,7 +9,7 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
 FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 
-INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/ -Ireverse/ -Idatatypes
+INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
 LIBS=-pthread -lm
 ARCH_X86=1
 ARCH_X86_64=1
@@ -79,7 +79,7 @@ endif
 ifdef DEBUG
 CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
 else
-CFLAGS:= $(CFLAGS) -DDEBUG=1
+CFLAGS:= $(CFLAGS) -DDEBUG=0
 endif
 
 ifdef REPORT
@@ -145,7 +145,8 @@ MM_SOURCES=mm/allocator.c\
 		mm/recoverable.c\
 		mm/checkpoints.c\
 		mm/state.c\
-		datatypes/list.c
+		datatypes/list.c\
+		mm/platform.c
 		
 REVERSE_SOURCES=	reverse/reverse.c\
 		reverse/slab.c

@@ -8,9 +8,10 @@
 #include <reverse.h>
 #include <dymelor.h>
 #include <slab.h>
+#include <simtypes.h>
 
 extern __thread msg_t * current_msg;
-extern void **states;
+extern LP_state **LPS;
 
 /*
 // #define revwin_overflow() do { \
@@ -549,7 +550,8 @@ void execute_undo_event(unsigned int lid, revwin_t *win) {
 	timer reverse_block_timer;
 	timer_start(reverse_block_timer);
 
-	unsigned int events_before = *((unsigned int *)(states[lid]+sizeof(simtime_t)));
+	//// UNUSED
+	//unsigned int events_before = *((unsigned int *)(states[lid]+sizeof(simtime_t)));
 
 	// Add the complementary push %rax instruction to the top
 	revwin_add_code(win, &push, sizeof(push));
@@ -559,12 +561,13 @@ void execute_undo_event(unsigned int lid, revwin_t *win) {
 	// Calls the reversing function
 	((void (*)(void))win->code) ();
 
-	unsigned int events_after = *((unsigned int *)(states[lid]+sizeof(simtime_t)));
+	//// UNUSED
+	//unsigned int events_after = *((unsigned int *)(states[lid]+sizeof(simtime_t)));
 
-	if(events_after != (events_before-1)) {
-		//printf("Simulation state corruption on lid %d\n", lid);
-		//printf("BEFORE= %d\nAFTER= %d\n\n", events_before, events_after);
-	}
+	//if(events_after != (events_before-1)) {
+	//	//printf("Simulation state corruption on lid %d\n", lid);
+	//	//printf("BEFORE= %d\nAFTER= %d\n\n", events_before, events_after);
+	//}
 
 	//printf("[%d] AFTER :: %d\n", lid, *(unsigned int *)(states[lid]+sizeof(simtime_t)));
 

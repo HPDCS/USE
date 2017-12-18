@@ -42,9 +42,6 @@
 #include <statistics.h>
 
 
-#define rsalloc malloc
-#define rsfree free
-
 
 /// Function pointer to switch between the parallel and serial version of SetState
 //void (*SetState)(void *new_state);
@@ -97,6 +94,7 @@ bool LogState(unsigned int lid) {
 
 		case PERIODIC_STATE_SAVING:
 			if(LPS[lid]->from_last_ckpt >= LPS[lid]->ckpt_period) {
+				//printf("%s %d %d\n", "BANANA", lid, LPS[lid]->from_last_ckpt);
 				take_snapshot = true;
 				LPS[lid]->from_last_ckpt = 0;
 			}
