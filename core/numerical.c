@@ -40,6 +40,7 @@
 
 
 static seed_type master_seed;
+static __thread seed_type thread_seed = 0;
 
 
 /**
@@ -56,6 +57,14 @@ double Random(void) {
 	uint32_t *seed2;
 
 	//UPDATED
+
+
+	//if(thread_seed == 0)
+	//	thread_seed = master_seed;
+	//
+	//seed1 = (uint32_t *)&thread_seed;
+	//seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
+
 	if(rootsim_config.serial) {
 		seed1 = (uint32_t *)&master_seed;
 		seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
