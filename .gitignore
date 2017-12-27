@@ -38,6 +38,7 @@ tcar
 robot_explore
 hash 		 
 phold
+pholdcount
 pcs
 /tcar
 log_test/*
