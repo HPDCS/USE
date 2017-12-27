@@ -240,9 +240,11 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 		LPS[i]->current_base_pointer 	= NULL;
 		LPS[i]->queue_in 				= new_list(i, msg_t);
 		LPS[i]->bound 					= NULL;
-		LPS[i]->queue_out 				= new_list(i, msg_hdr_t);
+		//LPS[i]->queue_out 				= new_list(i, msg_hdr_t);
 		LPS[i]->queue_states 			= new_list(i, state_t);
 		LPS[i]->mark 					= 0;
+		LPS[i]->epoch 					= 0;
+		LPS[i]->num_executed_frames		= 0;
 
 	}
 	
@@ -312,6 +314,7 @@ void thread_loop(unsigned int thread_id) {
 
 #if REVERSIBLE == 1
 	revwin_t *window;
+	uint64_t previous_seed = 0; 
 	reverse_init(REVWIN_SIZE);
 	window = revwin_create();
 #endif
@@ -394,6 +397,7 @@ execution:
 			clock_timer_start(stm_event_processing);			
 			statistics_post_data(tid, EVENTS_STM, 1);
 	#endif
+			previous_seed = LPS[current_lp]->seed;
 			ProcessEvent_reverse(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer);
 	#if REPORT == 1 
 			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
@@ -416,6 +420,7 @@ execution:
 					clock_timer_start(undo_event_processing);
 	#endif					
 					execute_undo_event(current_lp, current_msg->revwin);
+					LPS[current_lp]->seed = previous_seed;
 	#if REPORT == 1
 					statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
 					statistics_post_data(tid, EVENTS_ROLL, 1);
@@ -445,6 +450,7 @@ execution:
 						clock_timer_start(undo_event_processing);
 			#endif	
 						execute_undo_event(current_lp, current_msg->revwin);
+						LPS[current_lp]->seed = previous_seed;
 			#if REPORT == 1
 						statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
 						statistics_post_data(tid, EVENTS_STASH, 1);
