@@ -94,7 +94,6 @@ bool LogState(unsigned int lid) {
 
 		case PERIODIC_STATE_SAVING:
 			if(LPS[lid]->from_last_ckpt >= LPS[lid]->ckpt_period) {
-				//printf("%s %d %d\n", "BANANA", lid, LPS[lid]->from_last_ckpt);
 				take_snapshot = true;
 				LPS[lid]->from_last_ckpt = 0;
 			}
@@ -110,10 +109,14 @@ skip_switch:
 	if (take_snapshot) {
 
 		// Take a log and set the associated LVT
+		//printf("%s %d %d\n", "BANANA", lid, LPS[lid]->from_last_ckpt);
 		new_state.log = log_state(lid);
 		new_state.lvt = lvt(lid);
 		new_state.last_event = LPS[lid]->bound;
 		new_state.state = LPS[lid]->state;
+
+		new_state.seed 					= LPS[lid]->seed 					;
+		new_state.num_executed_frames	= LPS[lid]->num_executed_frames		;
 
 		// We take as the buffer state the last one associated with a SetState() call, if any
 		new_state.base_pointer = LPS[lid]->current_base_pointer;
@@ -127,10 +130,14 @@ skip_switch:
 }
 
 
-void RestoreState(unsigned int lid, state_t *restore_state) {
+unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 	log_restore(lid, restore_state);
-	LPS[lid]->current_base_pointer = restore_state->base_pointer;
-	LPS[lid]->state = restore_state->state;
+	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
+	LPS[lid]->state 				= restore_state->state 					;
+	LPS[lid]->bound 				= restore_state->last_event 			; 	
+	LPS[lid]->seed 					= restore_state->seed 					;
+	return restore_state->num_executed_frames	;
+
 #ifdef HAVE_CROSS_STATE
 	LPS[lid]->ECS_index = 0;
 	LPS[lid]->wait_on_rendezvous = 0;
@@ -205,6 +212,7 @@ void rollback(unsigned int lid) {
 	msg_t *last_correct_event;
 	msg_t *last_restored_event;
 	unsigned int reprocessed_events;
+	unsigned long long starting_frame;
 
 
 	// Sanity check
@@ -222,8 +230,11 @@ void rollback(unsigned int lid) {
 	statistics_post_lp_data(lid, STAT_ROLLBACK, 1.0);
 
 	last_correct_event = LPS[lid]->bound;
-	// Send antimessages
-	send_antimessages(lid, last_correct_event->timestamp);
+
+
+	// ANTIMESSAGES ARE NOT REQUIRED 
+	// // Send antimessages
+	//send_antimessages(lid, last_correct_event->timestamp);
 
 	// Find the state to be restored, and prune the wrongly computed states
 	restore_state = list_tail(LPS[lid]->queue_states);
@@ -235,11 +246,13 @@ void rollback(unsigned int lid) {
 		list_delete_by_content(lid, LPS[lid]->queue_states, s);
 	}
 	// Restore the simulation state and correct the state base pointer
-	RestoreState(lid, restore_state);
+	starting_frame = RestoreState(lid, restore_state);
 
 	last_restored_event = restore_state->last_event;
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, last_correct_event);
 	statistics_post_lp_data(lid, STAT_SILENT, (double)reprocessed_events);
+
+	LPS[lid]->num_executed_frames = starting_frame + reprocessed_events;
 
 	// TODO: silent execution resets the LP state to the previous
 	// value, so it should be the last function to be called within rollback()

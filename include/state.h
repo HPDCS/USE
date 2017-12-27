@@ -32,6 +32,7 @@
 #include <ROOT-Sim.h>
 #include <events.h>
 #include <list.h>
+#include <numerical.h>
 
 
 /// Checkpointing interval not yet set
@@ -57,6 +58,11 @@ typedef struct _state_t {
 	void		*log;
 	/// This log has been taken after the execution of this event. This is useful to speedup silent execution.
 	msg_t		*last_event;
+
+	/* ADDED FOR PADS 2018 */
+	seed_type	seed;
+	unsigned long long num_executed_frames;
+	
 	/// Execution state
 	short unsigned int state;
 } state_t;
@@ -64,7 +70,7 @@ typedef struct _state_t {
 
 extern void ParallelSetState(void *new_state);
 extern bool LogState(unsigned int);
-extern void RestoreState(unsigned int lid, state_t *restore_state);
+extern unsigned long long RestoreState(unsigned int lid, state_t *restore_state);
 extern void rollback(unsigned int lid);
 extern state_t *find_time_barrier(int lid,  simtime_t time);
 extern state_t *update_time_barrier(unsigned int, state_t *, simtime_t);
