@@ -54,6 +54,9 @@ typedef struct _LP_state {
 //	list(msg_t)	bottom_halves;
 //	/// Buffer used by KLTs for buffering outgoing messages during the execution of an event
 //	outgoing_t outgoing_buffer;
+//	/// Output messages queue
+//	list(msg_hdr_t)	queue_out;
+
 
 	/// Local ID of the thread (used to translate from bound LPs to local id)
 	unsigned int 	lid;
@@ -82,14 +85,17 @@ typedef struct _LP_state {
 	/// Pointer to the last correctly elaborated event
 	msg_t		*bound;
 
-	/// Output messages queue
-	list(msg_hdr_t)	queue_out;
 
 	/// Saved states queue
 	list(state_t)	queue_states;
 
 	/// Unique identifier within the LP
 	unsigned long long	mark;
+
+	/* ADDED FOR PADS 2018 */
+
+	unsigned long long num_executed_frames;
+	unsigned long long epoch;
 
 
 
