@@ -14,6 +14,10 @@ typedef struct __msg_t
   unsigned char data[MAX_DATA_SIZE];
   revwin_t *revwin;			//reverse window to rollback
   struct __bucket_node * node;	//address of the belonging node
+  struct __msg_t * father;	//address of the belonging node
+  unsigned long long fatherFrame;	
+  unsigned long long fatherEpoch;	
+  unsigned long long epoch;			
 } msg_t;
 
 typedef struct _msg_hdr_t {

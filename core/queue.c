@@ -87,6 +87,9 @@ void queue_deliver_msgs(void) {
 			abort();		
 		}
         memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
+        new_hole->father = current_msg;
+        new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
+        new_hole->fatherEpoch = LPS[current_lp]->epoch;
 
 #if REPORT == 1
 		clock_timer queue_op;

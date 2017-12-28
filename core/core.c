@@ -471,6 +471,8 @@ execution:
 #endif		
 		}
 
+		current_msg->epoch = LPS[current_lp]->epoch;
+		LPS[current_lp]->num_executed_frames++;
 		///* FLUSH */// 
 		commit();
 		
