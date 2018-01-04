@@ -207,7 +207,7 @@ out:
 *
 * @param lid The Logical Process Id
 */
-void rollback(unsigned int lid) {
+void rollback(unsigned int lid, simtime_t destination_time) {
 	state_t *restore_state, *s;
 	msg_t *last_correct_event;
 	msg_t *last_restored_event;
@@ -238,7 +238,12 @@ void rollback(unsigned int lid) {
 
 	// Find the state to be restored, and prune the wrongly computed states
 	restore_state = list_tail(LPS[lid]->queue_states);
-	while (restore_state != NULL && restore_state->lvt > last_correct_event->timestamp) { // It's > rather than >= because we have already taken into account simultaneous events
+
+	//// It's > rather than >= because we have already taken into account simultaneous events
+	//while (restore_state != NULL && restore_state->lvt > last_correct_event->timestamp) { 
+
+	// It's >= rather than > because we have NOT taken into account simultaneous events YET
+	while (restore_state != NULL && restore_state->lvt >= destination_time) { 
 		s = restore_state;
 		restore_state = list_prev(restore_state);
 		log_delete(s->log);
