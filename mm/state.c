@@ -54,8 +54,9 @@ void send_antimessages(unsigned int lid, simtime_t lvt)
 
 
 void activate_LP(unsigned int lp, simtime_t lvt, void *evt, void *state) 
-{
-	
+{			
+	//queue_clean();
+	//ProcessEvent(lp, lvt, evt->type, evt->data, evt->data_size, state);		
 }
 /**
 * This function is used to create a state log to be added to the LP's log chain
@@ -135,7 +136,7 @@ unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
 	LPS[lid]->state 				= restore_state->state 					;
 	LPS[lid]->bound 				= restore_state->last_event 			; 	
-	LPS[lid]->seed 					= restore_state->seed 					;
+	//LPS[lid]->seed 					= restore_state->seed 				;//Sembra lo faccia già chekpoint/log_restore/restore_full
 	return restore_state->num_executed_frames	;
 
 #ifdef HAVE_CROSS_STATE

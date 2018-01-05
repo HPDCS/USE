@@ -4,20 +4,34 @@
 
 #define MAX_DATA_SIZE		128
 
+#define EXTRACTED 	0x1
+#define ELIMINATED	0x2
+#define ANTI_EVENT	0x3
+
 typedef struct __msg_t
 {
-  unsigned int sender_id;	//Sednder LP
-  unsigned int receiver_id;	//Receiver LP
-  simtime_t timestamp;
-  int type;
-  unsigned int data_size;
-  unsigned char data[MAX_DATA_SIZE];
-  revwin_t *revwin;			//reverse window to rollback
-  struct __bucket_node * node;	//address of the belonging node
-  struct __msg_t * father;	//address of the belonging node
-  unsigned long long fatherFrame;	
-  unsigned long long fatherEpoch;	
-  unsigned long long epoch;			
+	/* event's attributes */
+	unsigned int sender_id;		//Sednder LP
+	unsigned int receiver_id;	//Receiver LP
+	simtime_t timestamp;		//Timestamp execution of the event
+	int type;					//Type of event (e.g. INIT_STATE)
+	unsigned int data_size;		//size of the payload of the vent
+	unsigned char data[MAX_DATA_SIZE];	//payload of the event
+	
+	struct __bucket_node * node;	//address of the belonging node
+	
+	/* Support to undo event mechanism */ 
+	revwin_t *revwin;			//reverse window to rollback
+	unsigned int previous_seed;	//seed to generate random number taken before the execution
+	
+	/* validity attributes */
+	unsigned int state;	//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
+	unsigned long long epoch;	//LP's epoch at executing time		
+	unsigned long long executed_frame; //order of execution of the event in the tymeling
+	struct __msg_t * father;	//address of the father event
+	unsigned long long fatherFrame; //order of execution of the father in the tymeling	
+	unsigned long long fatherEpoch; //father LP's epoch at executing time
+	simtime_t max_outgoing_ts; //maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 	
 } msg_t;
 
 typedef struct _msg_hdr_t {

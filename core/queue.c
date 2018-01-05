@@ -50,7 +50,6 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 
     if(_thr_pool._thr_pool_count == THR_POOL_SIZE) {
         printf("queue overflow for thread %u at time %f: inserting event %d over %d\n", tid, current_lvt, _thr_pool._thr_pool_count, THR_POOL_SIZE);
-        printf("-----------------------------------------------------------------\n");
         abort();
     }
     if(event_size > MAX_DATA_SIZE) {
@@ -79,6 +78,7 @@ inline unsigned int queue_pool_size(void) {
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
+    simtime_t max = 0; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
         new_hole = malloc(sizeof(msg_t)); //<-Si può eliminare questa malloc? Vedi queue insert
@@ -91,6 +91,9 @@ void queue_deliver_msgs(void) {
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
 
+		if(max < new_hole->timestamp)
+			max = new_hole->timestamp;
+
 #if REPORT == 1
 		clock_timer queue_op;
 		clock_timer_start(queue_op);
@@ -102,6 +105,7 @@ void queue_deliver_msgs(void) {
 		statistics_post_data(tid, EVENTS_FLUSHED, 1);
 #endif
     }
+    current_msg->max_outgoing_ts = max;
     _thr_pool._thr_pool_count = 0;
 }
 
@@ -148,6 +152,7 @@ void commit(void) {
 	statistics_post_data(tid, PRUNE_COUNTER, 1);
 #endif
 }
+
 
 unsigned int getMinFree(){
 	nbc_bucket_node * node;

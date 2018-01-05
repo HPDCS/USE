@@ -296,6 +296,39 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	queue_insert(receiver, timestamp, event_type, event_content, event_size);
 }
 
+void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
+//LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
+//inoltre, se passiamo solo il msg_t, possiamo evitare di passare gli altri parametri...era stato fatto così per mantenere il parallelismo con ProcessEvent
+	unsigned int mode;
+	
+	queue_clean();
+	
+	event->epoch = LPS[current_lp]->epoch; //forse è più corretto metterlo nel MAIN_LOOP
+	LPS[current_lp]->num_executed_frames++; //forse è più corretto metterlo nel MAIN_LOOP
+	
+	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
+	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
+	
+	mode = 1;// ← ASK_EXECUTION_MODE_TO_MATH_MODEL(LP, evt.ts)
+#if REVERSIBLE == 1
+	if (safety || mode == 1){
+#endif
+		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);		
+#if REVERSIBLE == 1
+	}
+	else{
+		event->seed = lp_state->seed;
+		event->revwin = revwin_create();
+		revwin_reset(event->revwin);	//<-da mettere una volta sola ad inizio esecuzione
+		ProcessEvent_reverse(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+	}
+#endif	
+	//Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
+	//LPS[current_lp]->lvt = event_ts; //forse è più corretto metterlo nel MAIN_LOOP
+	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
+}
+
+
 void thread_loop(unsigned int thread_id) {
 #if REPORT == 1
 	clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
@@ -368,6 +401,8 @@ execution:
 		current_lvt = current_msg->timestamp;	//local virtual time
 				
 		//old_mode = mode;
+
+		LogState(current_lp);
 				
 		if (safe) {
 		/// ==== SAFE EXECUTION ==== ///
@@ -391,20 +426,18 @@ execution:
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
 			
-			current_msg->revwin = window;
-			revwin_reset(current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
+			current_msg->revwin = window; //dentro executeEvent
+			revwin_reset(current_msg->revwin);	 //dentro executeEvent//<-da mettere una volta sola ad inizio esecuzione
 	#if REPORT == 1 
 			clock_timer_start(stm_event_processing);			
 			statistics_post_data(tid, EVENTS_STM, 1);
 	#endif
-			previous_seed = LPS[current_lp]->seed;
+			previous_seed = LPS[current_lp]->seed; //dentro executeEvent
 			ProcessEvent_reverse(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer);
 	#if REPORT == 1 
 			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
 			clock_timer_start(stm_safety_wait);
 	#endif	
-
-			LogState(current_lp);
 
 			do{
 	#if REPORT == 1
@@ -471,8 +504,8 @@ execution:
 #endif		
 		}
 
-		current_msg->epoch = LPS[current_lp]->epoch;
-		LPS[current_lp]->num_executed_frames++;
+		current_msg->epoch = LPS[current_lp]->epoch; //dentro executeEvent
+		LPS[current_lp]->num_executed_frames++; //dentro executeEvent
 		///* FLUSH */// 
 		commit();
 		
