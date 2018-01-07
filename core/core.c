@@ -51,6 +51,16 @@ __thread unsigned int tid = 0;
 
 __thread unsigned long long evt_count = 0;
 
+//timer
+#if REPORT == 1
+__thread clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
+				queue_min_time,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
+				event_processing_time		//OK: cattura il tempo per processare un evento safe 
+#if REVERSIBLE == 1
+				,stm_event_processing_time
+#endif
+				;
+#endif
 
 unsigned int ready_wt = 0;
 
@@ -81,6 +91,7 @@ LP_state **LPS = NULL;
 bool stop = false;
 bool *can_stop;
 unsigned long long *sim_ended;
+
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -293,45 +304,15 @@ bool check_termination(void) {
 
 //può diventare una macro?
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
-	queue_insert(receiver, timestamp, event_type, event_content, event_size);
-}
-
-void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
-//LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
-//inoltre, se passiamo solo il msg_t, possiamo evitare di passare gli altri parametri...era stato fatto così per mantenere il parallelismo con ProcessEvent
-	unsigned int mode;
-	
-	queue_clean();
-	
-	event->epoch = LPS[current_lp]->epoch; //forse è più corretto metterlo nel MAIN_LOOP
-	LPS[current_lp]->num_executed_frames++; //forse è più corretto metterlo nel MAIN_LOOP
-	
-	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
-	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
-	
-	mode = 1;// ← ASK_EXECUTION_MODE_TO_MATH_MODEL(LP, evt.ts)
-#if REVERSIBLE == 1
-	if (safety || mode == 1){
-#endif
-		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);		
-#if REVERSIBLE == 1
+	if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
+		queue_insert(receiver, timestamp, event_type, event_content, event_size);
 	}
-	else{
-		event->seed = lp_state->seed;
-		event->revwin = revwin_create();
-		revwin_reset(event->revwin);	//<-da mettere una volta sola ad inizio esecuzione
-		ProcessEvent_reverse(LP, event_ts, event_type, event_data, event_data_size, lp_state);
-	}
-#endif	
-	//Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
-	//LPS[current_lp]->lvt = event_ts; //forse è più corretto metterlo nel MAIN_LOOP
-	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
 
 
 void thread_loop(unsigned int thread_id) {
 #if REPORT == 1
-	clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
+	clock_timer //main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
 				queue_min,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
 				event_processing		//OK: cattura il tempo per processare un evento safe 
 #if REVERSIBLE == 1
@@ -523,6 +504,200 @@ execution:
 			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
 				printf("[%u] TIME: %f", tid, current_lvt);
 				printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
+			}
+		}
+	}
+#if REPORT == 1
+	statistics_post_data(tid, CLOCK_LOOP, clock_timer_value(main_loop_time));
+#endif
+
+	
+	// FIXME: Produces a segmentation fault, probably due to bad memory
+	// alignement return by the posix_memalign (!!?)
+	//revwin_free(current_lp, current_msg->revwin);
+
+	// Destroy SLAB's structures
+	// FIXME
+	//reverse_fini();
+
+	// Unmount statistical data
+	// FIXME
+	//statistics_fini();
+	
+	if(sim_error){
+		printf(COLOR_RED "[%u] Execution ended for an error\n" COLOR_RESET, tid);
+	} else if (stop){
+		printf(COLOR_GREEN "[%u] Execution ended correctly\n" COLOR_RESET, tid);
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////						PADS-2018							////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
+//LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
+//inoltre, se passiamo solo il msg_t, possiamo evitare di passare gli altri parametri...era stato fatto così per mantenere il parallelismo con ProcessEvent
+	unsigned int mode;
+	
+	queue_clean();
+	
+	//event->epoch = LPS[current_lp]->epoch; //forse è più corretto metterlo nel MAIN_LOOP
+	//LPS[current_lp]->num_executed_frames++; //forse è più corretto metterlo nel MAIN_LOOP
+	
+	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
+	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
+	
+	mode = 1;// ← ASK_EXECUTION_MODE_TO_MATH_MODEL(LP, evt.ts)
+#if REVERSIBLE == 1
+	if (safety || mode == 1){
+#endif
+#if REPORT == 1 
+		clock_timer_start(event_processing_time);
+#endif
+		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);		
+#if REPORT == 1              
+		statistics_post_data(tid, EVENTS_SAFE, 1);
+		statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing_time));
+#endif
+#if REVERSIBLE == 1
+	}
+	else{
+#if REPORT == 1 
+		clock_timer_start(stm_event_processing_time);			
+		statistics_post_data(tid, EVENTS_STM, 1);
+#endif
+		event->seed = LPS[current_lp]->seed; //forse lo farei a prescindere mettendolo a fattor comune...son dati in cache
+		event->revwin = revwin_create();
+		revwin_reset(event->revwin);	//<-da mettere una volta sola ad inizio esecuzione
+		ProcessEvent_reverse(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+#if REPORT == 1 
+		statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing_time));
+		clock_timer_start(stm_safety_wait);
+#endif
+	}
+#endif
+
+	//Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
+	//LPS[current_lp]->lvt = event_ts;
+		
+	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
+}
+
+
+void main_loop(unsigned int thread_id) {
+
+
+	tid = thread_id;
+	
+#if REVERSIBLE == 1
+	reverse_init(REVWIN_SIZE);
+#endif
+
+	//Set the CPU affinity
+	set_affinity(tid);
+	
+	lock_init();
+	
+	//wait all threads to end the init phase to start togheter
+	__sync_fetch_and_add(&ready_wt, 1);
+	while(ready_wt!=n_cores);
+
+#if REPORT == 1 
+	clock_timer_start(main_loop_time);
+#endif	
+
+	///* START SIMULATION *///
+	while (!stop && !sim_error) {
+		
+		/// *FETCH* ///
+#if REPORT == 1
+	clock_timer_start(queue_min_time);
+#endif
+	if(gmf() == 0){
+		continue;
+	}
+#if REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
+	statistics_post_data(tid, EVENTS_FETCHED, 1);
+#endif
+
+		//locally copy lp and ts to processing event
+		current_lp = current_msg->receiver_id;	//identificatore lp
+		current_lvt = current_msg->timestamp;	//local virtual time
+
+		//update event and LP control variables
+		current_msg->epoch = LPS[current_lp]->epoch;
+		LPS[current_lp]->num_executed_frames++;
+
+
+	///DA VERIFICARE
+	///TUTTA QUESTA PARTE POTREBBE ESSERE MEGLIO SCOMPORLA IN DUE PARTI, UNA PRIMA FATTA PRIMA DELL'ESECUZIONE
+	///(OVVERO SPOSTANDO LA FETCH AND OR NEL FETCH)
+	///ED UNA SECONDA FATTA DOPO L'ESECUZIONE (OVVERO VERIFICANDO CHE NON E' GIA' COLLEGATA IN LISTA)
+	///NON CAMBIA MOLTO FARLA PRIMA O DOPO, E' PIU CONCETTUALE
+		/* eventi NON-STRAGGLER assenti => connetti evento estratto alla coda locale */
+		//IF evt.state = NULL
+		if(current_msg->state == NULL){
+			///* Segnala che l’evento è stato estratto almeno una volta */
+			//IF OR_AND_FETCH(&evt.state, ESTRATTO)=TO_REMOVE 
+			if(__sync_or_and_fetch(&(current_msg->state),EXTRACTED) != EXTRACTED){
+				//DELETE_FROM_QUEUE(evt)
+				//MANCA//secondo me non dovrebbe stare qui TODO
+				//goto exit
+				//MANCA TODO
+			}
+			//evt.localNext ← evt.LP.lastExecuted
+			current_msg->local_next = LPS[current_lp]->bound->local_next; //forse ci sono già delle liste per LP
+			//IF evt.LP.lastExecuted != NULL
+			if(LPS[current_lp]->bound->local_next != NULL){ //forse ci sono già delle liste per LP
+				//evt.LP.lastExecuted.localPrevious ← evt
+				LPS[current_lp]->bound->local_next->local_previous = current_msg; //forse ci sono già delle liste per LP
+			}
+			//evt.LP.lastExecuted.localNext ← evt
+			LPS[current_lp]->bound->local_next = current_msg; //forse ci sono già delle liste per LP
+			//evt.localPrevious ← evt.LP.lastExecuted
+			current_msg->local_previous = LPS[current_lp]->bound; //forse ci sono già delle liste per LP
+		}
+	///DA_VERIFICARE
+				
+		//save in some way the state of the simulation
+		LogState(current_lp);
+		
+		/// *PROCESS* ///
+		//execute the event in the proper modality
+		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
+
+		//update event and LP control variables
+		LPS[current_lp]->bound = current_msg;
+		//LPS[current_lp]->lvt = event_ts; //Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
+				
+		///* FLUSH */// 
+		commit();
+		
+		//if the LP has ended its life, check the state of the simulation to end it
+		if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer) /*|| sim_ended[lp/64]==~(0ULL)*/){
+			if(!is_end_sim(current_lp))
+				end_sim(current_lp);
+			
+			if(check_termination())
+				__sync_bool_compare_and_swap(&stop, false, true);
+		}
+		
+		if(tid == MAIN_PROCESS) {
+			evt_count++;
+        
+			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
+				printf("[%u] TIME: %f", tid, current_lvt);
+				//printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
 		}
 	}

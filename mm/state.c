@@ -47,16 +47,13 @@
 //void (*SetState)(void *new_state);
 
 
-void send_antimessages(unsigned int lid, simtime_t lvt)
-{
+void send_antimessages(unsigned int lid, simtime_t lvt) {
 
 }
 
 
-void activate_LP(unsigned int lp, simtime_t lvt, void *evt, void *state) 
-{			
-	//queue_clean();
-	//ProcessEvent(lp, lvt, evt->type, evt->data, evt->data_size, state);		
+void activate_LP(unsigned int lp, simtime_t lvt, void *evt, void *state) {			
+	//executeEvent(lp, lvt, evt->type, evt->data, evt->data_size, state, true, evt);		
 }
 /**
 * This function is used to create a state log to be added to the LP's log chain
@@ -172,8 +169,8 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	if(evt == final_evt)
 		goto out;
 
-	evt = list_next(evt);
-	final_evt = list_next(final_evt);
+	evt = list_next(evt); //evt = evt->local_next; (?)
+	final_evt = list_next(final_evt); //final_evt = final_evt->local_next; (?)
 
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
@@ -187,7 +184,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 
 		events++;
 		activate_LP(lid, evt->timestamp, evt, state_buffer);
-		evt = list_next(evt);
+		evt = list_next(evt); //evt = evt->local_next; (?)
 	}
 
 out:
