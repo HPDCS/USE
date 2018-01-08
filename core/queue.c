@@ -57,7 +57,8 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         abort();
     }
 
-    msg_ptr = &_thr_pool.messages[_thr_pool._thr_pool_count++];
+	//TODO: slaballoc al posto della malloc per creare il desrittore dell'evento
+	msg_ptr = &_thr_pool.messages[_thr_pool._thr_pool_count++];
 
     msg_ptr->sender_id = current_lp;
     msg_ptr->receiver_id = receiver;
@@ -81,6 +82,7 @@ void queue_deliver_msgs(void) {
     simtime_t max = 0; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
+		//TODO: impiegare il nodo allocato con lo slab come payload della nbcalqueue
         new_hole = malloc(sizeof(msg_t)); //<-Si può eliminare questa malloc? Vedi queue insert
         if(new_hole == NULL){
 			printf("Out of memory in %s:%d", __FILE__, __LINE__);
@@ -255,5 +257,10 @@ restart:
 #if REPORT == 1
 	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
 #endif
+}
+
+bool is_valid(msg_t * event){
+	printf("IS_VALID TODO\n");
+	return true;
 }
 

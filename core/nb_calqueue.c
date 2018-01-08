@@ -1453,7 +1453,7 @@ void* nbc_dequeue(nb_calqueue *queue)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////			DSRT - 2017						////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1616,4 +1616,147 @@ restart:
 
 nbc_bucket_node* unmarked(void *pointer){ //da cancellare
 	return (nbc_bucket_node *)((unsigned long long) pointer & MASK_PTR) ;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////			 _	 _	 _	 _	      _   __      __		//////////////////////////////////////////////////////////////////////////////////////
+///////////			| \	| |	| \	/ \      / \ |  | /| |  |		//////////////////////////////////////////////////////////////////////////////////////
+///////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		//////////////////////////////////////////////////////////////////////////////////////
+///////////			|	| |	|_/	\_/      /__ |__|  | |__|		//////////////////////////////////////////////////////////////////////////////////////
+///////////														//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+unsigned int fetch_internal(){
+	nbc_bucket_node * node;
+	simtime_t ts, min = INFTY;
+	unsigned int lp_idx, bucket, size, tail_counter=0;
+	nbc_bucket_node  *node_next;
+	table *h;
+	double bucket_width;
+	LP_state * lp_ptr;
+	msg_t * event, * local_next_evt;
+	
+    if((node = getMin(nbcalqueue,  &h)) == NULL)
+		return 0;
+	
+	safe = false;
+	clear_lp_unsafe_set; //Set S ← NULL
+	min = node->timestamp; //time min ← evt.ts
+    
+	//h = read_table(nbcalqueue);						//
+	bucket_width = h->bucket_width;					//
+	bucket = hash(node->timestamp, bucket_width);	//
+	size  = h->size;								//
+    
+    while(node != NULL){ //WHILE node != TAIL
+		lp_idx = node->tag;
+		ts = node->timestamp;
+		event = (msg_t *)node->payload;
+		lp_ptr = LPS[lp_idx];
+		
+		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && 
+				!is_in_lp_unsafe_set(lp_idx);
+				
+		if(is_valid(node->payload)){
+			if(ts < lp_ptr->current_LP_lvt && (event->state == EXTRACTED)){
+				if(safe){
+					delete(nbcalqueue, node);
+					printf("DELETE FROM QUEUE\n");/* DELETE_FROM_QUEUE */
+				}
+			}
+			else if(tryLock(lp_idx)){
+				printf("GET_NEXT_EXECUTED_AND_VALID\n");
+				
+				//GET_NEXT_EXECUTED_AND_VALID
+				local_next_evt = event;
+				if((local_next_evt = list_next(local_next_evt)) != NULL && local_next_evt->timestamp < ts){
+					if(!is_valid(local_next_evt)){
+						//list_remove(local_next_evt);//TODO//poi posso ancora prendere il next?
+					}
+					else{
+							event = local_next_evt;
+							break;
+					}
+				}
+				
+			    //Marco l'evento come estratto se ancora non lo è
+				if(event->state == 0x0){ //IF evt.state = NULL
+					///* Segnala che l’evento è stato estratto almeno una volta */
+					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){ //IF OR_AND_FETCH(&evt.state, ESTRATTO)=TO_REMOVE 
+						delete(nbcalqueue, node);
+						printf("DELETE FROM QUEUE\n");/* DELETE_FROM_QUEUE */
+						unlock(lp_idx);
+					}
+				}
+				else{
+					break;
+				}
+			}
+			else{
+				add_lp_unsafe_set(lp_idx);
+			}
+		}
+		else{ //is_not_valid
+			if(event->state != ANTI_EVENT && 
+				__sync_or_and_fetch(&event->state, ELIMINATED)==ELIMINATED){
+				delete(nbcalqueue, node);
+				printf("DELETE FROM QUEUE\n");/* DELETE_FROM_QUEUE */
+			}
+			else if(tryLock(lp_idx)){
+				delete(nbcalqueue, node);
+				printf("DELETE FROM QUEUE\n");/* DELETE_FROM_QUEUE */
+				break;
+			}
+			else{
+				add_lp_unsafe_set(lp_idx);
+			} 
+		}
+//getNext
+		do{
+			node_next = node->next;
+			if(is_marked(node_next, MOV) || node->replica != NULL)
+				return 0;
+				
+			do{
+				node = get_unmarked(node_next);
+				node_next = node->next;
+			}while(
+				(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
+				(node->timestamp < bucket*bucket_width )
+			);
+				
+			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width){
+				if(is_marked(node_next, MOV) || node->replica != NULL)
+					return 0;
+				break;
+			}
+			else{
+				if(node == g_tail){
+					if(++tail_counter >= size)
+						return 0;
+				}
+				else{
+					tail_counter = 0;
+				}
+				node = h->array + (++bucket%size);
+			}
+		}while(1);
+    }
+    
+    if(node == NULL)
+        return 0;
+
+    
+    //node->reserved = true;
+    current_msg = (msg_t *) node->payload;
+    current_msg->node = node;
+    
+
+    
+    return 1;
 }

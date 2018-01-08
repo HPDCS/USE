@@ -13,6 +13,7 @@
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
 
+#define current_LP_lvt bound->timestamp //used to retrieve the current LVT TODO: usare questo metodo o inserire il campo nella struttura?
 
 /// This defines the type with whom timestamps are represented
 typedef double simtime_t;
@@ -96,9 +97,6 @@ typedef struct _LP_state {
 
 	unsigned long long num_executed_frames;
 	unsigned long long epoch;
-
-
-
 
 } LP_state;
 

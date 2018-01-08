@@ -58,6 +58,7 @@ __thread clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzio
 				event_processing_time		//OK: cattura il tempo per processare un evento safe 
 #if REVERSIBLE == 1
 				,stm_event_processing_time
+				,stm_safety_wait
 #endif
 				;
 #endif
@@ -531,33 +532,31 @@ execution:
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////						PADS-2018							////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////															////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////			 _	 _	 _	 _	      _   __      __		//////////////////////////////////////////////////////////////////////////////////////
+///////////			| \	| |	| \	/ \      / \ |  | /| |  |		//////////////////////////////////////////////////////////////////////////////////////
+///////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		//////////////////////////////////////////////////////////////////////////////////////
+///////////			|	| |	|_/	\_/      /__ |__|  | |__|		//////////////////////////////////////////////////////////////////////////////////////
+///////////														//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
 //LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
 //inoltre, se passiamo solo il msg_t, possiamo evitare di passare gli altri parametri...era stato fatto così per mantenere il parallelismo con ProcessEvent
+#if REVERSIBLE == 1
 	unsigned int mode;
-	
+#endif	
 	queue_clean();
-	
-	//event->epoch = LPS[current_lp]->epoch; //forse è più corretto metterlo nel MAIN_LOOP
-	//LPS[current_lp]->num_executed_frames++; //forse è più corretto metterlo nel MAIN_LOOP
 	
 	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
 	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
-	
-	mode = 1;// ← ASK_EXECUTION_MODE_TO_MATH_MODEL(LP, evt.ts)
+
 #if REVERSIBLE == 1
+	mode = 1;// ← ASK_EXECUTION_MODE_TO_MATH_MODEL(LP, evt.ts)
 	if (safety || mode == 1){
 #endif
 #if REPORT == 1 
@@ -575,7 +574,7 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 		clock_timer_start(stm_event_processing_time);			
 		statistics_post_data(tid, EVENTS_STM, 1);
 #endif
-		event->seed = LPS[current_lp]->seed; //forse lo farei a prescindere mettendolo a fattor comune...son dati in cache
+		event->previous_seed = LPS[current_lp]->seed; //forse lo farei a prescindere mettendolo a fattor comune...son dati in cache
 		event->revwin = revwin_create();
 		revwin_reset(event->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 		ProcessEvent_reverse(LP, event_ts, event_type, event_data, event_data_size, lp_state);
@@ -585,9 +584,6 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 #endif
 	}
 #endif
-
-	//Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
-	//LPS[current_lp]->lvt = event_ts;
 		
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
@@ -622,7 +618,7 @@ void main_loop(unsigned int thread_id) {
 #if REPORT == 1
 	clock_timer_start(queue_min_time);
 #endif
-	if(gmf() == 0){
+	if(fetch_internal() == 0){
 		continue;
 	}
 #if REPORT == 1
@@ -634,40 +630,38 @@ void main_loop(unsigned int thread_id) {
 		current_lp = current_msg->receiver_id;	//identificatore lp
 		current_lvt = current_msg->timestamp;	//local virtual time
 
+		if(current_lvt < LPS[current_lp]->current_LP_lvt || current_msg->state == ANTI_EVENT){
+			rollback(current_lp, current_lvt);
+			if(current_msg->state ==ANTI_EVENT){
+				unlock(current_lp);
+				continue; //TODO: verificare
+			}
+		}
+
+
 		//update event and LP control variables
 		current_msg->epoch = LPS[current_lp]->epoch;
-		LPS[current_lp]->num_executed_frames++;
+		
 
+///DA VERIFICARE vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+///TUTTA QUESTA PARTE POTREBBE ESSERE MEGLIO SCOMPORLA IN DUE PARTI, UNA PRIMA FATTA PRIMA DELL'ESECUZIONE
+///(OVVERO SPOSTANDO LA FETCH AND OR NEL FETCH)
+///ED UNA SECONDA FATTA DOPO L'ESECUZIONE (OVVERO VERIFICANDO CHE NON E' GIA' COLLEGATA IN LISTA)
+///NON CAMBIA MOLTO FARLA PRIMA O DOPO, E' PIU CONCETTUALE		
 
-	///DA VERIFICARE
-	///TUTTA QUESTA PARTE POTREBBE ESSERE MEGLIO SCOMPORLA IN DUE PARTI, UNA PRIMA FATTA PRIMA DELL'ESECUZIONE
-	///(OVVERO SPOSTANDO LA FETCH AND OR NEL FETCH)
-	///ED UNA SECONDA FATTA DOPO L'ESECUZIONE (OVVERO VERIFICANDO CHE NON E' GIA' COLLEGATA IN LISTA)
-	///NON CAMBIA MOLTO FARLA PRIMA O DOPO, E' PIU CONCETTUALE
-		/* eventi NON-STRAGGLER assenti => connetti evento estratto alla coda locale */
-		//IF evt.state = NULL
-		if(current_msg->state == NULL){
-			///* Segnala che l’evento è stato estratto almeno una volta */
-			//IF OR_AND_FETCH(&evt.state, ESTRATTO)=TO_REMOVE 
-			if(__sync_or_and_fetch(&(current_msg->state),EXTRACTED) != EXTRACTED){
-				//DELETE_FROM_QUEUE(evt)
-				//MANCA//secondo me non dovrebbe stare qui TODO
-				//goto exit
-				//MANCA TODO
+		
+		//Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
+		if(current_msg->local_previous != NULL){
+			//Ci sono già delle liste per LP, usare quelle? 
+			//TODO: list_insert(current_lp, LPS[current_lp]->queue_in, current_msg->timestamp, current_msg);
+			LPS[current_lp]->bound->local_next = current_msg;
+			current_msg->local_previous = LPS[current_lp]->bound;
+			current_msg->local_next = LPS[current_lp]->bound->local_next;
+			if(LPS[current_lp]->bound->local_next != NULL){ //IF evt.LP.lastExecuted != NULL
+				LPS[current_lp]->bound->local_next->local_previous = current_msg; //evt.LP.lastExecuted.localPrevious ← evt
 			}
-			//evt.localNext ← evt.LP.lastExecuted
-			current_msg->local_next = LPS[current_lp]->bound->local_next; //forse ci sono già delle liste per LP
-			//IF evt.LP.lastExecuted != NULL
-			if(LPS[current_lp]->bound->local_next != NULL){ //forse ci sono già delle liste per LP
-				//evt.LP.lastExecuted.localPrevious ← evt
-				LPS[current_lp]->bound->local_next->local_previous = current_msg; //forse ci sono già delle liste per LP
-			}
-			//evt.LP.lastExecuted.localNext ← evt
-			LPS[current_lp]->bound->local_next = current_msg; //forse ci sono già delle liste per LP
-			//evt.localPrevious ← evt.LP.lastExecuted
-			current_msg->local_previous = LPS[current_lp]->bound; //forse ci sono già delle liste per LP
 		}
-	///DA_VERIFICARE
+///DA_VERIFICARE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				
 		//save in some way the state of the simulation
 		LogState(current_lp);
@@ -678,6 +672,7 @@ void main_loop(unsigned int thread_id) {
 
 		//update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
+		LPS[current_lp]->num_executed_frames++;
 		//LPS[current_lp]->lvt = event_ts; //Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
 				
 		///* FLUSH */// 

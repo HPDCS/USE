@@ -138,5 +138,6 @@ extern void delete(nb_calqueue *queue, nbc_bucket_node* node);
 
 extern void getMinLP_internal(unsigned int lp);
 extern unsigned int getMinFree_internal();
+extern unsigned int fetch_internal();
 
 #endif /* DATATYPES_NONBLOCKING_QUEUE_H_ */

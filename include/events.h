@@ -27,7 +27,7 @@ typedef struct __msg_t
 	/* validity attributes */
 	unsigned int state;	//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
 	unsigned long long epoch;	//LP's epoch at executing time		
-	unsigned long long executed_frame; //order of execution of the event in the tymeling
+	//unsigned long long executed_frame; //order of execution of the event in the tymeling
 	struct __msg_t * father;	//address of the father event
 	unsigned long long fatherFrame; //order of execution of the father in the tymeling	
 	unsigned long long fatherEpoch; //father LP's epoch at executing time
@@ -35,6 +35,8 @@ typedef struct __msg_t
 	
 	struct __msg_t * local_next;	//address of the next event executed on the relative LP //occhio, potrebbe non servire
 	struct __msg_t * local_previous;	//address of the previous event executed on the relative LP ////occhio, potrebbe non servire
+	
+	//struct state_t * previous_checkpoint; //the last checkpoint taken before the execution of the current event
 		
 } msg_t;
 
