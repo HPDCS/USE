@@ -224,43 +224,10 @@ retry_on_replica:
 	
 }
 
-void getMinLP(unsigned int lp){
-	nbc_bucket_node * node;
-	simtime_t min;
-	table *h;
-	
-#if REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-#endif
-
-restart:
-	min = INFTY;
-	safe = false;
-	    
-	node = getMin(nbcalqueue, &h);
-    min = node->timestamp;
-   	
-    while(node != NULL && node->tag != lp){
-		node = getNext( node, h);
-		if(node == NULL)
-			goto restart;
-    }
-    //printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
-
-    node->reserved = true;
-    new_current_msg = (msg_t *) node->payload;
-    new_current_msg->node = node;
-
-	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
-		safe = true;
-	}
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
-#endif
-}
 
 bool is_valid(msg_t * event){
-		return ((event->stato & ELIMNATED) != ELIMINATED) || (event->epoch == event->father->epoch);
+	return ((event->state & ELIMINATED) != ELIMINATED) || 
+		((event->father->state & ELIMINATED) != ELIMINATED) || 
+			(event->epoch == event->father->epoch);
 }
 
