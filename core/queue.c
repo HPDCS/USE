@@ -8,9 +8,11 @@
 #include "core.h"
 #include "lookahead.h"
 
+
 //used to take locks on LPs
 unsigned int *lp_lock;
-//event pool used by simulation
+
+//event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;
 
 __thread msg_t * current_msg __attribute__ ((aligned (64)));
@@ -35,7 +37,7 @@ void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
 }
 
-void lock_init(){
+void unsafe_set_init(){
 	if( ( lp_unsafe_set=malloc(LP_ULL_MASK_SIZE)) == NULL ){
 	//if((lp_unsafe_set=malloc(n_prc_tot/8 + 8))==NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
@@ -108,82 +110,15 @@ void queue_deliver_msgs(void) {
 		statistics_post_data(tid, EVENTS_FLUSHED, 1);
 #endif
     }
-    current_msg->max_outgoing_ts = max;
+    // THIS HANDLES INIT EVENT
+    if(current_msg != NULL)
+ 	   current_msg->max_outgoing_ts = max;
     _thr_pool._thr_pool_count = 0;
 }
 
 inline void queue_clean(void) {
     _thr_pool._thr_pool_count = 0;
 }
-
-
-unsigned int getMinFree(){
-	nbc_bucket_node * node;
-	simtime_t ts, min = INFTY;
-	unsigned int lp;
-	table *h;
-
-#if REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-#endif
-    if((node = getMin(nbcalqueue, &h)) == NULL)
-		return 0;
-	safe = false;
-	clear_lp_unsafe_set;
-    min = node->timestamp;
-    
-    while(node != NULL){
-		lp = node->tag;
-		if(!node->reserved){
-			ts = node->timestamp;
-			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
-				if(tryLock(lp)){
-retry_on_replica:
-					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
-						if(node->replica != NULL){
-							node = node->replica;
-							goto retry_on_replica;
-						}
-#if DEBUG == 0
-							unlock(lp);
-#else				
-							if(!unlock(lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[lp]);
-#endif
-
-					}
-					else{
-						break;
-					}
-				}
-			}
-		}
-		//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
-		add_lp_unsafe_set(lp);
-		node = getNext(node, h);
-    }
-    
-    if(node == NULL){
-		current_msg = NULL;
-	    return 0;
-    }
-    
-    node->reserved = true;
-    current_msg = (msg_t *) node->payload;
-    current_msg->node = node;
-
-	if( ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && !is_in_lp_unsafe_set(lp) )
-		safe = true;
-    
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
-	statistics_post_data(tid, EVENTS_FETCHED, 1);
-//	statistics_post_data(tid, T_BTW_EVT, current_msg->timestamp-old_ts); // TODO : possiamo usarlo per la resize? 
-#endif
-    return 1;
-	
-}
-
 
 bool is_valid(msg_t * event){
 	return ((event->state & ELIMINATED) != ELIMINATED) || 

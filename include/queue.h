@@ -26,7 +26,7 @@ void queue_destroy(void);
 
 void queue_clean(void);
 
-extern void lock_init();
+extern void unsafe_set_init();
 
 void getMinLP(unsigned int lp);
 unsigned int getMinFree();

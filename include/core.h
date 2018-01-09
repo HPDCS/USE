@@ -98,7 +98,7 @@ extern LP_state **LPS;
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
-void init(unsigned int _thread_num, unsigned int);
+//void init(unsigned int _thread_num, unsigned int);
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event);
 
 extern void rootsim_error(bool fatal, const char *msg, ...);

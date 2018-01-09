@@ -169,7 +169,7 @@ inline void SetState(void *ptr) { //può diventare una macro?
 	ParallelSetState(ptr); 
 }
 
-void init(unsigned int _thread_num, unsigned int lps_num) {
+void init() {
 	unsigned int i;
 	int lp_lock_ret;
 
@@ -193,7 +193,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 
 
 
-	printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", _thread_num, lps_num);
+	printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
 #if SPERIMENTAL == 1
 	printf("\t- SPERIMENTAL features enabled.\n");
 #endif
@@ -208,6 +208,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 #else
 	printf("\t- DYMELOR enabled.\n");
 #endif
+	printf("CACHELINESIZE %u\n", CACHE_LINE_SIZE);
 #if REPORT == 1
 	printf("\t- REPORT prints enabled.\n");
 #endif
@@ -217,14 +218,11 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	printf("\t- CONSERVATIVE SIMULATION\n");
 #endif
 	printf("\n" COLOR_RESET);
-
-	n_cores = _thread_num;
-	n_prc_tot = lps_num;
 	
 	LPS = malloc(sizeof(void*) * n_prc_tot);
-	can_stop = malloc(sizeof(bool) * n_prc_tot);
+	can_stop = malloc(sizeof(bool) * n_prc_tot); // RIMUOVERE??
 	sim_ended = malloc(LP_ULL_MASK_SIZE);
-	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, lps_num * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
+	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, n_prc_tot * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
 	if(LPS == NULL || can_stop == NULL || sim_ended == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
@@ -260,13 +258,12 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	
 #if MALLOC == 0
 	dymelor_init();
-	printf("Dymelor abilitato\nCACHELINESIZE %u\n", CACHE_LINE_SIZE);
 #endif
 	statistics_init();
 	queue_init();
 	numerical_init();
 	//process_init_event
-	for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
+	for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
 		ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 	}
@@ -373,13 +370,19 @@ void thread_loop(unsigned int thread_id) {
 	//Set the CPU affinity
 	set_affinity(tid);
 	
-	lock_init();
-	
+	unsafe_set_init();
+
 
 	to_remove_local_evts = new_list(tid, msg_t);
+	freed_local_evts = new_list(tid, msg_t);
+	
+	if(tid == 0){
+		init();
+	}
 
 	//wait all threads to end the init phase to start togheter
 	__sync_fetch_and_add(&ready_wt, 1);
+	__sync_synchronize();
 	while(ready_wt!=n_cores);
 
 #if REPORT == 1 
@@ -405,8 +408,10 @@ void thread_loop(unsigned int thread_id) {
 		current_lp = current_msg->receiver_id;	//identificatore lp
 		current_lvt = current_msg->timestamp;	//local virtual time
 
-		if(current_lvt < LPS[current_lp]->current_LP_lvt){
-			rollback(current_lp, current_lvt);
+		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
+			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker < LPS[current_lp]->bound->tie_breaker)
+			){
+			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 		}
 		if(current_msg->state ==ANTI_EVENT){
 			unlock(current_lp);

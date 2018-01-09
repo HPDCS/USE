@@ -14,14 +14,14 @@
 
 __thread struct drand48_data seedT;
 
-unsigned short int number_of_threads = 1;
+unsigned long long tid_ticket = 1;
 
 //extern double delta_count;
 extern int reverse_execution_threshold;
 
 void *start_thread(){
 	
-	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+	int tid = (int) __sync_fetch_and_add(&tid_ticket, 1);
 	
     srand48_r(tid+254, &seedT);
 
@@ -32,13 +32,13 @@ void *start_thread(){
 
 }
 
-void start_simulation(unsigned short int number_of_threads) {
+void start_simulation() {
 
-    pthread_t p_tid[number_of_threads-1];//pthread_t p_tid[number_of_threads];//
+    pthread_t p_tid[n_cores-1];//pthread_t p_tid[number_of_threads];//
     int ret, i;
 
     //Child thread
-    for(i = 0; i < number_of_threads - 1; i++) {
+    for(i = 0; i < n_cores - 1; i++) {
         if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
             fprintf(stderr, "%s\n", strerror(errno));
             abort();
@@ -48,7 +48,7 @@ void start_simulation(unsigned short int number_of_threads) {
     //Main thread
     thread_loop(0);
 
-    for(i = 0; i < number_of_threads-1; i++){
+    for(i = 0; i < n_cores-1; i++){
         pthread_join(p_tid[i], NULL);
     }
 }
@@ -62,8 +62,8 @@ int main(int argn, char *argv[]) {
         exit(EXIT_FAILURE);
 
     } else {
-        n = atoi(argv[1]);
-        init(n, atoi(argv[2]));
+        n_cores = atoi(argv[1]);
+        n_prc_tot = atoi(argv[2]);
     }
   
     printf("***START SIMULATION***\n\n");
@@ -73,7 +73,7 @@ int main(int argn, char *argv[]) {
 	clock_timer simulation_clocks;
 	clock_timer_start(simulation_clocks);
 
-	start_simulation(n);
+	start_simulation();
 
     printf("Simulation ended (seconds): %.3f\n", (double)timer_value_seconds(exec_time));
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
