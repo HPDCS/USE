@@ -6,9 +6,10 @@
 #include <string.h>
 #include <errno.h>
 
+
 #include <core.h>
 #include <timer.h>
-
+#include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
 
@@ -36,6 +37,29 @@ void start_simulation() {
 
     pthread_t p_tid[n_cores-1];//pthread_t p_tid[number_of_threads];//
     int ret, i;
+
+
+    printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
+#if SPERIMENTAL == 1
+    printf("\t- SPERIMENTAL features enabled.\n");
+#endif
+#if PREEMPTIVE == 1
+    printf("\t- PREEMPTIVE event realease enabled.\n");
+#endif
+#if DEBUG == 1
+    printf("\t- DEBUG mode enabled.\n");
+#endif
+    printf("\t- DYMELOR enabled.\n");
+    printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
+#if REPORT == 1
+    printf("\t- REPORT prints enabled.\n");
+#endif
+#if REVERSIBLE == 1
+    printf("\t- SPECULATIVE SIMULATION\n");
+#else
+    printf("\t- CONSERVATIVE SIMULATION\n");
+#endif
+    printf("\n" COLOR_RESET);
 
     //Child thread
     for(i = 0; i < n_cores - 1; i++) {

@@ -46,7 +46,7 @@ __thread unsigned long long evt_count = 0;
 
 //timer
 #if REPORT == 1
-__thread clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
+__thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
 				queue_min_time,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
 				event_processing_time		//OK: cattura il tempo per processare un evento safe 
 #if REVERSIBLE == 1
@@ -168,7 +168,7 @@ inline void SetState(void *ptr) { //può diventare una macro?
 	ParallelSetState(ptr); 
 }
 
-void init() {
+void LPs_metada_init() {
 	unsigned int i;
 	int lp_lock_ret;
 
@@ -189,30 +189,6 @@ void init() {
 	//rootsim_config.stats = STATS_ALL;
 	rootsim_config.serial = false;
 	rootsim_config.core_binding = true;
-
-
-
-	printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
-#if SPERIMENTAL == 1
-	printf("\t- SPERIMENTAL features enabled.\n");
-#endif
-#if PREEMPTIVE == 1
-	printf("\t- PREEMPTIVE event realease enabled.\n");
-#endif
-#if DEBUG == 1
-	printf("\t- DEBUG mode enabled.\n");
-#endif
-	printf("\t- DYMELOR enabled.\n");
-	printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
-#if REPORT == 1
-	printf("\t- REPORT prints enabled.\n");
-#endif
-#if REVERSIBLE == 1
-	printf("\t- SPECULATIVE SIMULATION\n");
-#else
-	printf("\t- CONSERVATIVE SIMULATION\n");
-#endif
-	printf("\n" COLOR_RESET);
 	
 	LPS = malloc(sizeof(void*) * n_prc_tot);
 	sim_ended = malloc(LP_ULL_MASK_SIZE);
@@ -244,10 +220,9 @@ void init() {
 
 	}
 	
-	//if(lps_num%(SIZEOF_ULL*8) != 0){  //////////////////////
-		for(; i<(LP_BIT_MASK_SIZE) ; i++)
-			end_sim(i);
-	//}
+	for(; i<(LP_BIT_MASK_SIZE) ; i++)
+		end_sim(i);
+
 	
 }
 
@@ -359,15 +334,19 @@ void thread_loop(unsigned int thread_id) {
 	freed_local_evts = new_list(tid, msg_t);
 	
 	if(tid == 0){
-		init();
+		LPs_metada_init();
 		dymelor_init();
 		statistics_init();
 		queue_init();
 		numerical_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
+       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), freed_local_evts);
+			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
+			LPS[current_lp]->bound = current_msg;
+			LPS[current_lp]->num_executed_frames++;
 		}
 
 	}
