@@ -431,13 +431,14 @@ void thread_loop(unsigned int thread_id) {
 		//execute the event in the proper modality
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
+		///* FLUSH */// 
+		queue_deliver_msgs();
+
 		//update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
 		LPS[current_lp]->num_executed_frames++;
 		//LPS[current_lp]->lvt = event_ts; //Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
 				
-		///* FLUSH */// 
-		queue_deliver_msgs();
 		
 	#if DEBUG == 0
 		unlock(current_lp);
