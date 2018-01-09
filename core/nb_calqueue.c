@@ -113,7 +113,9 @@ __thread nbc_bucket_node *to_free_tables_new = NULL;
 
 __thread unsigned long long mark;
 __thread unsigned int to_remove_nodes_count = 0;
+
 __thread list(msg_t) to_remove_local_evts = NULL;
+__thread list(msg_t) freed_local_evts = NULL;
 
 
 static unsigned int * volatile prune_array;
@@ -1540,6 +1542,7 @@ unsigned int fetch_internal(){
 					list_place_after_given_node_by_content(TID, to_remove_local_evts, 
 														local_next_evt, ((rootsim_list *)to_remove_local_evts)->head);
 					local_next_evt = list_next(event);
+					// TODO: valutare cancellazione da coda globale
 				}
 
 				
@@ -1622,3 +1625,13 @@ unsigned int fetch_internal(){
 
 
 
+void prune_local_queue_with_ts(simtime_t ts){
+
+	msg_t *current = ((rootsim_list*)to_remove_local_evts)->head;
+	while(current!=NULL){
+		if(current->max_outgoing_ts < ts){
+			list_extract_given_node(tid, to_remove_local_evts, current);
+			list_place_after_given_node_by_content(tid, freed_local_evts, current, ((rootsim_list*)freed_local_evts)->head);
+		}
+	}
+}

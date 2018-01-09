@@ -270,6 +270,7 @@ extern void list_deallocate_node_buffer(unsigned int lid, void *ptr);
 
 extern char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struct rootsim_list_node *new_n, struct rootsim_list_node *previous);
 extern char *__list_extract_given_node(unsigned int lid, void *li, struct rootsim_list_node *n);
+extern void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct rootsim_list *free_list);
 
 /**
  * Given a pointer to a list node's payload, this macro returns true if such payload is connected to some list.

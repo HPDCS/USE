@@ -821,3 +821,17 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 }
 
 
+
+void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct rootsim_list *free_list) {
+	char *ptr;
+
+	if(free_list->head != NULL){
+		return 	list_extract_given_node(lid, free_list, free_list->head);
+	}
+	ptr = list_allocate_node(lid, size);
+
+	if(ptr == NULL)
+		return NULL;
+
+	return (void *)(ptr + sizeof(struct rootsim_list_node));
+}
