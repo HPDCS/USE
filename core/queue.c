@@ -116,46 +116,6 @@ inline void queue_clean(void) {
     _thr_pool._thr_pool_count = 0;
 }
 
-void commit(void) {
-	queue_deliver_msgs();
-#if REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-#endif
-	delete(nbcalqueue, current_msg->node);
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_DELETE, clock_timer_value(queue_op));
-#endif
-	
-#if DEBUG == 0
-	unlock(current_lp);
-#else				
-	if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
-#endif
-
-#if DEBUG == 1
-	simtime_t old_gvt = gvt; 
-	if(current_lvt > old_gvt) 
-		__sync_bool_compare_and_swap((unsigned long long*)&gvt, (unsigned long long)old_gvt, (unsigned long long)current_lvt);
-	else if (current_lvt < old_gvt-LOOKAHEAD){ 
-		nbc_bucket_node * node = current_msg->node;
-		printf("[%u] ERROR: event coomitted out of order with GVT:%f\n", tid, gvt);
-		printf("\tevent: ts:%f lp:%u resrvd:%u cpy:%u del:%u addr:%p\n", 
-			node->timestamp, node->tag, node->reserved, node->copy, node->deleted, node);
-	}
-#endif
-	free(current_msg);
-#if REPORT == 1
-	clock_timer_start(queue_op);
-#endif
-	//nbc_prune(current_lvt - LOOKAHEAD);
-	nbc_prune();
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
-	statistics_post_data(tid, PRUNE_COUNTER, 1);
-#endif
-}
-
 
 unsigned int getMinFree(){
 	nbc_bucket_node * node;

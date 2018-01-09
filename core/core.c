@@ -437,7 +437,14 @@ void thread_loop(unsigned int thread_id) {
 		//LPS[current_lp]->lvt = event_ts; //Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
 				
 		///* FLUSH */// 
-		commit();
+		queue_deliver_msgs();
+		
+	#if DEBUG == 0
+		unlock(current_lp);
+	#else				
+		if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
+	#endif
+		nbc_prune();
 		
 		//if the LP has ended its life, check the state of the simulation to end it
 		if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer) /*|| sim_ended[lp/64]==~(0ULL)*/){
