@@ -603,6 +603,9 @@ void main_loop(unsigned int thread_id) {
 	
 	lock_init();
 	
+
+	to_remove_local_evts = new_list(tid, msg_t);
+
 	//wait all threads to end the init phase to start togheter
 	__sync_fetch_and_add(&ready_wt, 1);
 	while(ready_wt!=n_cores);
@@ -651,16 +654,20 @@ void main_loop(unsigned int thread_id) {
 
 		
 		//Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
-		if(current_msg->local_previous != NULL){
-			//Ci sono già delle liste per LP, usare quelle? 
-			//TODO: list_insert(current_lp, LPS[current_lp]->queue_in, current_msg->timestamp, current_msg);
-			LPS[current_lp]->bound->local_next = current_msg;
-			current_msg->local_previous = LPS[current_lp]->bound;
-			current_msg->local_next = LPS[current_lp]->bound->local_next;
-			if(LPS[current_lp]->bound->local_next != NULL){ //IF evt.LP.lastExecuted != NULL
-				LPS[current_lp]->bound->local_next->local_previous = current_msg; //evt.LP.lastExecuted.localPrevious ← evt
-			}
+		// The current_msg should be allocated with list allocator
+		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)){
+			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 		}
+		//if(current_msg->local_previous != NULL){
+		//	//Ci sono già delle liste per LP, usare quelle? 
+		//	//TODO: list_insert(current_lp, LPS[current_lp]->queue_in, current_msg->timestamp, current_msg);
+		//	LPS[current_lp]->bound->local_next = current_msg;
+		//	current_msg->local_previous = LPS[current_lp]->bound;
+		//	current_msg->local_next = LPS[current_lp]->bound->local_next;
+		//	if(LPS[current_lp]->bound->local_next != NULL){ //IF evt.LP.lastExecuted != NULL
+		//		LPS[current_lp]->bound->local_next->local_previous = current_msg; //evt.LP.lastExecuted.localPrevious ← evt
+		//	}
+		//}
 ///DA_VERIFICARE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				
 		//save in some way the state of the simulation
