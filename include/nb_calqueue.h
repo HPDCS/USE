@@ -63,6 +63,7 @@
 
 extern __thread unsigned int TID;
 extern __thread struct drand48_data seedT;
+extern __thread list(msg_t) to_remove_local_evts;
 
 
 /**

@@ -113,6 +113,7 @@ __thread nbc_bucket_node *to_free_tables_new = NULL;
 
 __thread unsigned long long mark;
 __thread unsigned int to_remove_nodes_count = 0;
+__thread list(msg_t) to_remove_local_evts = NULL;
 
 
 static unsigned int * volatile prune_array;
@@ -1631,6 +1632,8 @@ nbc_bucket_node* unmarked(void *pointer){ //da cancellare
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
 unsigned int fetch_internal(){
 	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
@@ -1673,16 +1676,25 @@ unsigned int fetch_internal(){
 				printf("GET_NEXT_EXECUTED_AND_VALID\n");
 				
 				//GET_NEXT_EXECUTED_AND_VALID
-				local_next_evt = event;
-				if((local_next_evt = list_next(local_next_evt)) != NULL && local_next_evt->timestamp < ts){
-					if(!is_valid(local_next_evt)){
-						//list_remove(local_next_evt);//TODO//poi posso ancora prendere il next?
-					}
-					else{
-							event = local_next_evt;
-							break;
-					}
+				//local_next_evt = event;
+				//if((local_next_evt = list_next(local_next_evt)) != NULL && local_next_evt->timestamp < ts){
+				//	if(!is_valid(local_next_evt)){
+				//		//list_remove(local_next_evt);//TODO//poi posso ancora prendere il next?
+				//	}
+				//	else{
+				//			event = local_next_evt;
+				//			break;
+				//	}
+				//}
+
+				local_next_evt = list_next(event);
+				while(local_next_evt != NULL || !is_valid(local_next_evt)){
+					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
+					list_place_after_given_node_by_content(TID, to_remove_local_evts, 
+														local_next_evt, ((rootsim_list *)to_remove_local_evts)->head);
+					local_next_evt = list_next(event);
 				}
+
 				
 			    //Marco l'evento come estratto se ancora non lo è
 				if(event->state == 0x0){ //IF evt.state = NULL
@@ -1760,3 +1772,6 @@ unsigned int fetch_internal(){
     
     return 1;
 }
+
+
+
