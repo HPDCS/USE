@@ -83,7 +83,6 @@ LP_state **LPS = NULL;
 
 //used to check termination conditions
 bool stop = false;
-bool *can_stop;
 unsigned long long *sim_ended;
 
 
@@ -203,12 +202,8 @@ void init() {
 #if DEBUG == 1
 	printf("\t- DEBUG mode enabled.\n");
 #endif
-#if MALLOC == 1
-	printf("\t- MALLOC enabled.\n");
-#else
 	printf("\t- DYMELOR enabled.\n");
-#endif
-	printf("CACHELINESIZE %u\n", CACHE_LINE_SIZE);
+	printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
 #if REPORT == 1
 	printf("\t- REPORT prints enabled.\n");
 #endif
@@ -220,11 +215,10 @@ void init() {
 	printf("\n" COLOR_RESET);
 	
 	LPS = malloc(sizeof(void*) * n_prc_tot);
-	can_stop = malloc(sizeof(bool) * n_prc_tot); // RIMUOVERE??
 	sim_ended = malloc(LP_ULL_MASK_SIZE);
 	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, n_prc_tot * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
-	if(LPS == NULL || can_stop == NULL || sim_ended == NULL || lp_lock_ret == 1){
+	if(LPS == NULL || sim_ended == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();		
 	}
@@ -232,7 +226,6 @@ void init() {
 	for (i = 0; i < n_prc_tot; i++) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
 		sim_ended[i/64] = 0;
-		can_stop[i] = false;
 		LPS[i] = malloc(sizeof(LP_state));
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i; //TODO;
@@ -256,17 +249,6 @@ void init() {
 			end_sim(i);
 	//}
 	
-#if MALLOC == 0
-	dymelor_init();
-#endif
-	statistics_init();
-	queue_init();
-	numerical_init();
-	//process_init_event
-	for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
-		ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
-	}
 }
 
 //Sostituirlo con una bitmap!
@@ -378,6 +360,16 @@ void thread_loop(unsigned int thread_id) {
 	
 	if(tid == 0){
 		init();
+		dymelor_init();
+		statistics_init();
+		queue_init();
+		numerical_init();
+		//process_init_event
+		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
+			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
+			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
+		}
+
 	}
 
 	//wait all threads to end the init phase to start togheter

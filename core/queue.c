@@ -110,9 +110,8 @@ void queue_deliver_msgs(void) {
 		statistics_post_data(tid, EVENTS_FLUSHED, 1);
 #endif
     }
-    // THIS HANDLES INIT EVENT
-    if(current_msg != NULL)
- 	   current_msg->max_outgoing_ts = max;
+
+ 	current_msg->max_outgoing_ts = max;
     _thr_pool._thr_pool_count = 0;
 }
 
