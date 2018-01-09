@@ -308,7 +308,6 @@ char *__list_place(unsigned int lid, void *li, size_t key_position, struct roots
 
 
 
-
 /**
 * This function extracts an element from the list, if a corresponding key value is
 * found in any element.
@@ -685,4 +684,140 @@ void list_deallocate_node_buffer(unsigned int lid, void *ptr) {
 	else
 		ufree(lid, list_container_of(ptr));
 }
+
+
+
+
+
+
+/**
+* This function inserts a new element into the specified ordered doubly-linked list.
+* The paylaod of a new node can be any pointer to any data structure, provided that
+* the key to be used for ordering is either a long long or a double.
+* It is not safe (and not easily readable) to call this function directly. Rather,
+* there is the list_insert() macro (defined in <datatypes/list.h>) which sets
+* correctly many parameters, and provides a more useful API.
+* This function allocates new memory to copy the payload pointed by data. If
+* data points to a malloc'd data structure, then the caller should free it after
+* calling list_insert(), to prevent memory leaks.
+*
+* @author Alessandro Pellegrini,
+*		  Romolo Marotta			
+*
+* @param li a pointer to the list data strucuture. Note that if passed through the
+*           list_insert() macro, the type of the pointer is the same as the content,
+*           but the pointed memory contains a buffer whose actual type is rootsim_list.
+*           This allows to retrieve the size of the data being kept by this current
+*           incarnation of the list, but it is not safe to access the list directly.
+* @param key_position offset (in bytes) of the key field in the data structure kept
+*           by the list. This is used to maintain the list ordered.
+* @param new_n a pointer to the data buffer to be inserted into the list.
+*
+* @return a pointer to the payload of the node just linked to the list.
+*           This is different from the container node, which is not exposed to the caller.
+*/
+char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struct rootsim_list_node *new_n, struct rootsim_list_node *previous) {
+	(void)lid;
+
+	rootsim_list *l = (rootsim_list *)li;
+
+	assert(l);
+	size_t size_before = l->size;
+
+	struct rootsim_list_node *n = previous;
+
+	// Is the list empty?
+	if(l->size == 0) {
+		new_n->prev = NULL;
+		new_n->next = NULL;
+		l->head = new_n;
+		l->tail = new_n;
+		goto insert_end;
+	}
+
+	// Insert after the node n
+ 	if(n == l->tail) { // tail
+		new_n->next = NULL;
+		l->tail->next = new_n;
+		new_n->prev = l->tail;
+		l->tail = new_n;
+	} else if(n == NULL) { // head
+		new_n->prev = NULL;
+		new_n->next = l->head;
+		l->head->prev = new_n;
+		l->head = new_n;
+	} else { // middle
+		new_n->prev = n;
+		new_n->next = n->next;
+		n->next->prev = new_n;
+		n->next = new_n;
+	}
+
+    insert_end:
+	l->size++;
+	assert(l->size == (size_before + 1));
+	return new_n->data;
+}
+
+
+
+/**
+* This function extracts an element from the list, if a corresponding key value is
+* found in any element.
+* The payload of the list node is copied into a newly malloc'd buffer, which
+* is returned by this function (if a node is found). After calling this function,
+* the node containing the original copy of the payload is free'd.
+* It is not safe (and not easily readable) to call this function directly. Rather,
+* there is the list_extract() macro (defined in <datatypes/list.h>) which sets
+* correctly many parameters, and provides a more useful API.
+*
+* @author Alessandro Pellegrini,
+*		  Romolo Marotta
+*
+* @param li a pointer to the list data strucuture. Note that if passed through the
+*           list_extract() macro, the type of the pointer is the same as the content,
+*           but the pointed memory contains a buffer whose actual type is rootsim_list.
+*           This allows to retrieve the size of the data being kept by this current
+*           incarnation of the list, but it is not safe to access the list directly.
+* @param size the size of the payload of the list. This is automatically set by
+*           the list_insert() macro.
+* @param key the key value to perform list search.
+* @param key_position offset (in bytes) of the key field in the data structure kept
+*           by the list. This is used to maintain the list ordered.
+*
+* @return a pointer to the payload of the corresponding node, if found, or NULL.
+*/
+char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list_node *n) {
+
+	rootsim_list *l = (rootsim_list *)li;
+
+	assert(l);
+	size_t size_before = l->size;
+
+	char *content = n + sizeof(struct rootsim_list_node);
+
+	if(l->head == n) {
+		l->head = n->next;
+		l->head->prev = NULL;
+	}
+
+	if(l->tail == n) {
+		l->tail = n->prev;
+		l->tail->next = NULL;
+	}
+
+	if(n->next != NULL) {
+		n->next->prev = n->prev;
+	}
+
+	if(n->prev != NULL) {
+		n->prev->next = n->next;
+	}
+
+	l->size--;
+	assert(l->size == (size_before - 1));
+	return content;
+
+}
+
 

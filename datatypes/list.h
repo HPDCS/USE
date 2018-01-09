@@ -229,11 +229,6 @@ struct rootsim_list {
 
 
 
-
-
-
-
-
 /// This macro allows to get a pointer to the struct rootsim_list_node containing the passed ptr
 #define list_container_of(ptr) ((struct rootsim_list_node *)( (char *)(ptr) - offsetof(struct rootsim_list_node, data) ))
 
@@ -260,6 +255,36 @@ extern char *__list_place(unsigned int lid, void *li, size_t key_position, struc
 extern void *list_allocate_node(unsigned int lid, size_t size);
 extern void *list_allocate_node_buffer(unsigned int lid, size_t size);
 extern void list_deallocate_node_buffer(unsigned int lid, void *ptr);
+
+
+
+
+#define list_place_after_given_node_by_content(lid, list, node, previous) \
+			(__typeof__(list))__list_place_after_given_node_by_content((lid), (list), list_container_of(node), list_container_of(previous))
+
+
+#define list_extract_given_node(lid, list, node) \
+			(__typeof__(list))__list_extract_given_node((lid), (list), list_container_of(node))
+
+
+
+extern char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struct rootsim_list_node *new_n, struct rootsim_list_node *previous);
+extern char *__list_extract_given_node(unsigned int lid, void *li, struct rootsim_list_node *n);
+
+/**
+ * Given a pointer to a list node's payload, this macro returns true if such payload is connected to some list.
+ *
+ * @param list a pointer to a list created using the <new_list>() macro.
+ */
+#define list_is_connected(list, ptr) ({\
+				bool __isheadbool = list_prev(ptr) != NULL || list_is_head(list, ptr);\
+				if(ptr == NULL) {\
+					__isheadbool = false;\
+				}\
+				__isheadbool;\
+				})
+
+
 
 
 #endif /* __LIST_DATATYPE_H */
