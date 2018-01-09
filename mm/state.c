@@ -159,29 +159,42 @@ unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 *
 * @return The number of events re-processed during the silent execution
 */
-unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, msg_t *final_evt, simtime_t until_ts) {
+unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, simtime_t until_ts, unsigned int tie_breaker) {
 	unsigned int events = 0;
 	unsigned short int old_state;
-
-	// current state can be either idle READY, BLOCKED or ROLLBACK, so we save it and then put it back in place
+	LP_state *lp_ptr = LPS[lid];
+	msg_t * local_next_evt;
+	// current state can be either idle READY, or ROLLBACK, so we save it and then put it back in place
 	old_state = LPS[lid]->state;
 	LPS[lid]->state = LP_STATE_SILENT_EXEC;
 
 	// This is true if the restored state was taken after the new bound
-	if(evt == final_evt)
-		goto out;
-
-	evt = list_next(evt); //evt = evt->local_next; (?)
-	final_evt = list_next(final_evt); //final_evt = final_evt->local_next; (?)
+	//if(evt == final_evt)
+	//	goto out;
+	//
+	//evt = list_next(evt); //evt = evt->local_next; (?)
+	//final_evt = list_next(final_evt); //final_evt = final_evt->local_next; (?)
 
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
-	while(evt != NULL && evt->timestamp < until_ts) {
-		if(is_valid(evt)){
-			events++;
-			activate_LP(lid, evt->timestamp, evt, state_buffer);
+
+	while(1){
+		local_next_evt = list_next(evt);
+
+		while(local_next_evt != NULL || !is_valid(local_next_evt)){
+			list_extract_given_node(lid, lp_ptr->queue_in, local_next_evt);
+			list_place_after_given_node_by_content(TID, to_remove_local_evts, 
+												local_next_evt, ((rootsim_list *)to_remove_local_evts)->head);
+			local_next_evt = list_next(evt);
+			// TODO: valutare cancellazione da coda globale
 		}
-		evt = list_next(evt); //evt = evt->local_next; (?)
+
+		evt = local_next_evt;
+		if(evt == NULL && (evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker) ) ) 
+			break;
+
+		events++;
+		activate_LP(lid, evt->timestamp, evt, state_buffer);
 	}
 
 out:
@@ -202,9 +215,9 @@ out:
 *
 * @param lid The Logical Process Id
 */
-void rollback(unsigned int lid, simtime_t destination_time) {
+void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker) {
 	state_t *restore_state, *s;
-	msg_t *last_correct_event;
+	//msg_t *last_correct_event;
 	msg_t *last_restored_event;
 	unsigned int reprocessed_events;
 	unsigned long long starting_frame;
@@ -224,8 +237,7 @@ void rollback(unsigned int lid, simtime_t destination_time) {
 
 	statistics_post_lp_data(lid, STAT_ROLLBACK, 1.0);
 
-	last_correct_event = LPS[lid]->bound;
-
+	//last_correct_event = LPS[lid]->bound;
 
 	// ANTIMESSAGES ARE NOT REQUIRED 
 	// // Send antimessages
@@ -249,7 +261,7 @@ void rollback(unsigned int lid, simtime_t destination_time) {
 	starting_frame = RestoreState(lid, restore_state);
 
 	last_restored_event = restore_state->last_event;
-	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, last_correct_event, destination_time);
+	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 	statistics_post_lp_data(lid, STAT_SILENT, (double)reprocessed_events);
 
 	LPS[lid]->num_executed_frames = starting_frame + reprocessed_events;

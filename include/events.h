@@ -32,6 +32,7 @@ typedef struct __msg_t
 	unsigned long long fatherFrame; //order of execution of the father in the tymeling	
 	unsigned long long fatherEpoch; //father LP's epoch at executing time
 	simtime_t max_outgoing_ts; //maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
+	unsigned long long tie_breaker; //maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
 	
 	struct __msg_t * local_next;	//address of the next event executed on the relative LP //occhio, potrebbe non servire
 	struct __msg_t * local_previous;	//address of the previous event executed on the relative LP ////occhio, potrebbe non servire
