@@ -1247,67 +1247,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 	
 	return NULL;
 }
-nbc_bucket_node* getNext(nbc_bucket_node* node, table *h){
-	/* preferirei avere l'hashtable anche come parametro */
-	/* oppure sfruttare il campo epoca per avere un puntatore a hashtable */
-	nbc_bucket_node  *node_next;
-	//table *h;
-	double bucket_width;
-	unsigned int bucket;
-	unsigned int size;
-	unsigned int tail_counter = 0;
-	//h = read_table(queue);
-	
-	//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u\n", tid, node->timestamp, node->tag, node->reserved);
-	
-	bucket_width = h->bucket_width;
-	bucket = hash(node->timestamp, bucket_width);
-	
-	size  = h->size;
-	
-	
-	
-	do
-	{
-		/* read table recovery*/
-		node_next = node->next;
-		if(is_marked(node_next, MOV) || node->replica != NULL)
-			return NULL;
-			
-		do
-		{
-			node = get_unmarked(node_next);
-			node_next = node->next;
-		}while(
-			(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
-			(node->timestamp < bucket*bucket_width )
-		);
 
-		if(is_marked(node_next, MOV) || node->replica != NULL)
-			return NULL;
-			
-		if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width)
-		{
-#if DEBUG == 1
-			if(node == g_tail){
-				printf("[%u] ERROR: getNext is returning a tail\n", tid);
-			}
-#endif
-			return node;
-		}
-		else{
-			if(node == g_tail){
-				if(++tail_counter >= size)
-					return 0;
-			}
-			else{
-				tail_counter = 0;
-			}
-				node = h->array + (++bucket%size);
-		}
-	}while(1);
-	return NULL;
-}
 
 void delete(nb_calqueue *queue, nbc_bucket_node* node){
     nbc_bucket_node *node_next, *tmp;
@@ -1327,141 +1267,6 @@ void delete(nb_calqueue *queue, nbc_bucket_node* node){
 #endif
     return;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * This function dequeue from the nonblocking queue. The cost of this operation when succeeds should be O(1)
- *
- * @author Romolo Marotta
- *
- * @param queue the interested queue
- *
- * @return a pointer to a node that contains the dequeued value
- *
- 
-void* nbc_dequeue(nb_calqueue *queue)
-{
-	nbc_bucket_node *min, *min_next, 
-					*left_node, *left_node_next, 
-					*res, *tail, *array;
-	table * h;
-	
-	unsigned long long current;
-	unsigned long long index;
-	unsigned long long epoch;
-	
-	unsigned int size;
-	unsigned int counter;
-	double bucket_width;
-
-	tail = g_tail;
-	
-	do
-	{
-		counter = 0;
-		h = read_table(queue);
-		current = h->current;
-		size = h->size;
-		array = h->array;
-		bucket_width = h->bucket_width;
-
-		index = current >> 32;
-		epoch = current & MASK_EPOCH;
-
-		assertf(
-				index+1 > MASK_EPOCH, 
-				"\nOVERFLOW INDEX:%llu  BW:%.10f SIZE:%u TAIL:%p TABLE:%p NUM_ELEM:%u\n",
-				index, bucket_width, size, tail, h, atomic_read(&h->counter)
-			);
-		min = array + (index++ % size);
-
-		left_node = min_next = min->next;
-		
-		if(is_marked(min_next, MOV))
-			continue;
-		
-		while(left_node->epoch <= epoch)
-		{	
-			left_node_next = left_node->next;
-			if(!is_marked(left_node_next))
-			{
-				if(left_node->timestamp < index*bucket_width)
-				{
-					res = left_node->payload;
-					left_node_next = FETCH_AND_OR(&left_node->next, DEL);
-					if(!is_marked(left_node_next))
-					{
-						ATOMIC_DEC(&(h->counter));
-						#if LOG_DEQUEUE == 1
-							LOG("DEQUEUE: %f %u - %llu %llu\n", left_node->timestamp, left_node->counter, index, index % size);
-						#endif
-						return res;
-					}
-				}
-				else
-				{
-					if(left_node == tail && size == 1 )
-					{
-						#if LOG_DEQUEUE == 1
-						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
-						#endif
-						return NULL;
-					}
-					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
-					{
-						
-						connect_to_be_freed_node_list(min_next, counter);
-					}
-					BOOL_CAS(&(h->current), current, ((index << 32) | epoch) );
-					break;	
-				}
-				
-			}
-			
-			if(is_marked(left_node_next, MOV))
-			{
-				break;
-			}
-			left_node = get_unmarked(left_node_next);
-			counter++;
-		}
-
-	}while(1);
-	
-	return NULL;
-}
-
-*/
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////			DSRT - 2017						////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 nbc_bucket_node* unmarked(void *pointer){ //da cancellare
@@ -1511,11 +1316,17 @@ unsigned int fetch_internal(){
 		event = (msg_t *)node->payload;
 		lp_ptr = LPS[lp_idx];
 		
+
+		//TODO verificare
 		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && 
 				!is_in_lp_unsafe_set(lp_idx);
 				
 		if(is_valid(node->payload)){
-			if(ts < lp_ptr->current_LP_lvt && (event->state == EXTRACTED)){
+			if(	
+				(ts < lp_ptr->current_LP_lvt || (ts == lp_ptr->current_LP_lvt && node->counter <= lp_ptr->bound->tie_breaker) )
+				 && 
+				 (event->state == EXTRACTED)
+			  ){
 				if(safe){
 					delete(nbcalqueue, node);
 					printf("DELETE FROM QUEUE\n");/* DELETE_FROM_QUEUE */
@@ -1617,6 +1428,7 @@ unsigned int fetch_internal(){
     //node->reserved = true;
     current_msg = (msg_t *) node->payload;
     current_msg->node = node;
+    current_msg->tie_breaker = node->counter;
     
 
     
