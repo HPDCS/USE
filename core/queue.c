@@ -261,7 +261,6 @@ restart:
 }
 
 bool is_valid(msg_t * event){
-	printf("IS_VALID TODO\n");
-	return true;
+		return ((event->stato & ELIMNATED) != ELIMINATED) || (event->epoch == event->father->epoch);
 }
 

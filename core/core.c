@@ -159,12 +159,12 @@ void _mkdir(const char *path) {
 
 
 void set_affinity(unsigned int tid){
+	unsigned int id_cpu;
 	cpu_set_t mask;	
-#if DEBUG == 1
-	printf("Thread %d set to CPU no %d\n", tid, tid%(N_CPU));
-#endif
+	id_cpu = (tid % 8) * 4 + (tid/((unsigned int)8));
+	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
 	CPU_ZERO(&mask);
-	CPU_SET(tid%(N_CPU), &mask);
+	CPU_SET(id_cpu, &mask);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
@@ -621,9 +621,9 @@ void main_loop(unsigned int thread_id) {
 #if REPORT == 1
 	clock_timer_start(queue_min_time);
 #endif
-	if(fetch_internal() == 0){
-		continue;
-	}
+		if(fetch_internal() == 0){
+			continue;
+		}
 #if REPORT == 1
 	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
 	statistics_post_data(tid, EVENTS_FETCHED, 1);
@@ -633,12 +633,12 @@ void main_loop(unsigned int thread_id) {
 		current_lp = current_msg->receiver_id;	//identificatore lp
 		current_lvt = current_msg->timestamp;	//local virtual time
 
-		if(current_lvt < LPS[current_lp]->current_LP_lvt || current_msg->state == ANTI_EVENT){
+		if(current_lvt < LPS[current_lp]->current_LP_lvt){
 			rollback(current_lp, current_lvt);
-			if(current_msg->state ==ANTI_EVENT){
-				unlock(current_lp);
-				continue; //TODO: verificare
-			}
+		}
+		if(current_msg->state ==ANTI_EVENT){
+			unlock(current_lp);
+			continue; //TODO: verificare
 		}
 
 
@@ -646,29 +646,11 @@ void main_loop(unsigned int thread_id) {
 		current_msg->epoch = LPS[current_lp]->epoch;
 		
 
-///DA VERIFICARE vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-///TUTTA QUESTA PARTE POTREBBE ESSERE MEGLIO SCOMPORLA IN DUE PARTI, UNA PRIMA FATTA PRIMA DELL'ESECUZIONE
-///(OVVERO SPOSTANDO LA FETCH AND OR NEL FETCH)
-///ED UNA SECONDA FATTA DOPO L'ESECUZIONE (OVVERO VERIFICANDO CHE NON E' GIA' COLLEGATA IN LISTA)
-///NON CAMBIA MOLTO FARLA PRIMA O DOPO, E' PIU CONCETTUALE		
-
-		
 		//Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
 		// The current_msg should be allocated with list allocator
 		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)){
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 		}
-		//if(current_msg->local_previous != NULL){
-		//	//Ci sono già delle liste per LP, usare quelle? 
-		//	//TODO: list_insert(current_lp, LPS[current_lp]->queue_in, current_msg->timestamp, current_msg);
-		//	LPS[current_lp]->bound->local_next = current_msg;
-		//	current_msg->local_previous = LPS[current_lp]->bound;
-		//	current_msg->local_next = LPS[current_lp]->bound->local_next;
-		//	if(LPS[current_lp]->bound->local_next != NULL){ //IF evt.LP.lastExecuted != NULL
-		//		LPS[current_lp]->bound->local_next->local_previous = current_msg; //evt.LP.lastExecuted.localPrevious ← evt
-		//	}
-		//}
-///DA_VERIFICARE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				
 		//save in some way the state of the simulation
 		LogState(current_lp);

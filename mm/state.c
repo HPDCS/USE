@@ -52,8 +52,10 @@ void send_antimessages(unsigned int lid, simtime_t lvt) {
 }
 
 
-void activate_LP(unsigned int lp, simtime_t lvt, void *evt, void *state) {			
-	//executeEvent(lp, lvt, evt->type, evt->data, evt->data_size, state, true, evt);		
+void activate_LP(unsigned int lp, simtime_t lvt, msg_t *evt, void *state) {		
+	((msg_t *)evt)->epoch = LPS[lp]->epoch;
+	executeEvent(lp, lvt, evt->type, evt->data, evt->data_size, state, true, evt);	
+	LPS[lp]->bound = evt; //sicuramente si può fare una volta sola alla fine		
 }
 /**
 * This function is used to create a state log to be added to the LP's log chain
@@ -157,7 +159,7 @@ unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 *
 * @return The number of events re-processed during the silent execution
 */
-unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, msg_t *final_evt) {
+unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, msg_t *final_evt, simtime_t until_ts) {
 	unsigned int events = 0;
 	unsigned short int old_state;
 
@@ -174,16 +176,11 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
-	while(evt != NULL && evt != final_evt) {
-
-		// TODO
-		//if(!reprocess_control_msg(evt)) {
-		//	evt = list_next(evt);
-		//	continue;
-		//}
-
-		events++;
-		activate_LP(lid, evt->timestamp, evt, state_buffer);
+	while(evt != NULL && evt->timestamp < until_ts) {
+		if(is_valid(evt)){
+			events++;
+			activate_LP(lid, evt->timestamp, evt, state_buffer);
+		}
 		evt = list_next(evt); //evt = evt->local_next; (?)
 	}
 
@@ -252,7 +249,7 @@ void rollback(unsigned int lid, simtime_t destination_time) {
 	starting_frame = RestoreState(lid, restore_state);
 
 	last_restored_event = restore_state->last_event;
-	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, last_correct_event);
+	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, last_correct_event, destination_time);
 	statistics_post_lp_data(lid, STAT_SILENT, (double)reprocessed_events);
 
 	LPS[lid]->num_executed_frames = starting_frame + reprocessed_events;
