@@ -1276,31 +1276,32 @@ nbc_bucket_node* unmarked(void *pointer){ //da cancellare
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////			 _	 _	 _	 _	      _   __      __		//////////////////////////////////////////////////////////////////////////////////////
-///////////			| \	| |	| \	/ \      / \ |  | /| |  |		//////////////////////////////////////////////////////////////////////////////////////
-///////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		//////////////////////////////////////////////////////////////////////////////////////
-///////////			|	| |	|_/	\_/      /__ |__|  | |__|		//////////////////////////////////////////////////////////////////////////////////////
-///////////														//////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+/////////////////			 _	 _	 _	 _	      _   __      __		//////////////////
+/////////////////			| \	| |	| \	/ \      / \ |  | /| |  |		//////////////////
+/////////////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		//////////////////
+/////////////////			|	| |	|_/	\_/      /__ |__|  | |__|		//////////////////
+/////////////////														//////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
 
 
 
 unsigned int fetch_internal(){
 	nbc_bucket_node * node;
 	simtime_t ts, min = INFTY;
-	unsigned int lp_idx, bucket, size, tail_counter=0;
-	nbc_bucket_node  *node_next;
+	unsigned int lp_idx, bucket, size, tail_counter = 0;
+	nbc_bucket_node *node_next;
 	table *h;
 	double bucket_width;
-	LP_state * lp_ptr;
-	msg_t * event, * local_next_evt, * tmp_node;
+	LP_state *lp_ptr;
+	msg_t *event, *local_next_evt, *tmp_node;
 	
-    if((node = getMin(nbcalqueue,  &h)) == NULL)
+	// Get the minimum node from the calendar queue
+    if((node = getMin(nbcalqueue, &h)) == NULL)
 		return 0;
 	
 	safe = false;
@@ -1311,21 +1312,32 @@ unsigned int fetch_internal(){
 	//h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
-	size  = h->size;								//
+	size = h->size;								//
     
-    while(node != NULL){ //WHILE node != TAIL
-		lp_idx = node->tag;
-		ts = node->timestamp;
-		event = (msg_t *)node->payload;
-		lp_ptr = LPS[lp_idx];
+    // Explore the queue looking for the next event
+    // which is 'processable', namely one of the following:
+    // 1. Valid executable event (in the future wrt lp's lvt)
+    // 2. Valid straggler executable event (in the past wrt lp's lvt)
+    // 3. Invalid event which must be rolled back
+    // The loop will terminate if one of the above conditions is met OR
+    // if the queue has no more event to explore.
+    while(node != NULL){
+		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
+		ts = node->timestamp;				// Timestamp of the event under exploration
+		event = (msg_t *)node->payload;		// Event under exploration
+		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 		
 
 		//TODO verificare
-		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && 
+		// Set the safety of the current event under exploration
+		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && 
 				!is_in_lp_unsafe_set(lp_idx);
 		
-		///* VALID *///		
-		if(is_valid(node->payload)){
+		///* VALID *///
+		// The event under exploration is considered valid if it does belong to
+		// current and correct timeline. The correct timeline is the one will be
+		// observable at the end of a correct simulation process.
+		if(is_valid(event)) {
 			///* VALID AND EXECUTED *///
 			if(	
 				(ts < lp_ptr->current_LP_lvt || (ts == lp_ptr->current_LP_lvt && node->counter <= lp_ptr->bound->tie_breaker) )
@@ -1333,16 +1345,22 @@ unsigned int fetch_internal(){
 				 (event->state == EXTRACTED)
 			  ){
 				///* VALID AND EXECUTED AND SAFE*///
-				if(safe){
-					delete(nbcalqueue, node);
-					//printf("DELETE FROM QUEUE SAFE\n");/* DELETE_FROM_QUEUE */
+				if(safe) {
+					// delete(nbcalqueue, node);
+					// printf("DELETE FROM QUEUE SAFE\n");/* DELETE_FROM_QUEUE */
 				}
 			}
 			///* VALID AND NOT EXECUTED AND LOCK TAKEN *///
-			else if(tryLock(lp_idx)){
+			// The event under exploration is valid, not extracte yet and appears to be in the
+			// future of the LP, therefore we need to check whether to execute it or the one
+			// within the LP's local queue.
+			else if(tryLock(lp_idx)) {
 				//printf("GET_NEXT_EXECUTED_AND_VALID\n");
+
+				// TODO: perché non spostare questa operazione nel thread loop?
 				local_next_evt = list_next(event);
-				while(local_next_evt != NULL && !is_valid(local_next_evt)){
+				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
+					tmp_node = list_next(local_next_evt);
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					list_place_after_given_node_by_content(TID, to_remove_local_evts, 
 														local_next_evt, ((rootsim_list *)to_remove_local_evts)->head);
@@ -1355,12 +1373,12 @@ unsigned int fetch_internal(){
 						local_next_evt->timestamp < ts || 
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < node->counter)
 					)
-				  ){
+				  ) {
 					event = local_next_evt;
 				}
 			    //Marco l'evento come estratto se ancora non lo è
 			    ///* VALID AND NOT EXECUTED AND LOCK TAKEN AND NOT EXTRACTED YET *///
-				if(event->state == 0x0){ //IF evt.state = NULL
+				if(event->state == 0x0) { //IF evt.state = NULL
 					///* VALID AND NOT EXECUTED AND LOCK TAKEN AND NOT EXTRACTED YET BUT CONCURRENTLY ANNILATED *///
 					/* Segnala che l’evento è stato estratto almeno una volta */
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){ //IF OR_AND_FETCH(&evt.state, ESTRATTO)=TO_REMOVE 
@@ -1368,22 +1386,22 @@ unsigned int fetch_internal(){
 						printf("DELETE FROM QUEUE A\n");/* DELETE_FROM_QUEUE */
 						unlock(lp_idx);
 					}
-					else{
+					else {
 						break;
 					}
 				}
 				///* VALID AND NOT EXECUTED AND LOCK TAKEN AND EXTRACTED *///
-				else{
+				else {
 					break;
 				}
 			}
 			///* VALID AND NOT EXECUTED AND LOCK NOT TAKEN *///
-			else{
+			else {
 				add_lp_unsafe_set(lp_idx);
 			}
 		}
 		///* NOT VALID *///		
-		else{
+		else {
 			///* NOT VALID AND ELIMINATED*///
 			if(event->state != ANTI_EVENT && 
 				( event->state == ELIMINATED || __sync_or_and_fetch(&event->state, ELIMINATED)==ELIMINATED)){
@@ -1391,32 +1409,32 @@ unsigned int fetch_internal(){
 				printf("DELETE FROM QUEUE B\n");/* DELETE_FROM_QUEUE */
 			}
 			///* NOT VALID AND TO BE ROLLBACKED AND LOCK TAKEN *///
-			else if(tryLock(lp_idx)){
+			else if(tryLock(lp_idx)) {
 				delete(nbcalqueue, node);
 				printf("DELETE FROM QUEUE C\n");/* DELETE_FROM_QUEUE */
 				break;
 			}
 			///* NOT VALID AND TO BE ROLLBACKED AND LOCK NOT TAKEN *///
-			else{
+			else {
 				add_lp_unsafe_set(lp_idx);
 			} 
 		}
-		
-//getNext
-		do{
+
+		// GET NEXT NODE PRECEDURE
+		// From this point over the code is to retrieve the next event on the queue
+		do {
 			node_next = node->next;
-			if(is_marked(node_next, MOV) || node->replica != NULL){
-    					printf("FETCH DONE 4 TABLE:%p NODE:%p NODE_NEXT:%p NODE_REPLICA:%p TAIL:%p counter:%u\n",
-    					 h, node,node->next, node->replica, g_tail, node->counter);
-						return 0;
-					}
-				
-			do{
+			if(is_marked(node_next, MOV) || node->replica != NULL) {
+					printf("FETCH DONE 4 TABLE:%p NODE:%p NODE_NEXT:%p NODE_REPLICA:%p TAIL:%p counter:%u\n", h, node,node->next, node->replica, g_tail, node->counter);
+					return 0;
+				}
+			
+			do {
 				node = get_unmarked(node_next);
 				node_next = node->next;
-			}while(
+			} while(
 				(is_marked(node_next, DEL) || is_marked(node_next, INV) ) ||
-				(node->timestamp < bucket*bucket_width )
+				(node->timestamp < bucket * bucket_width )
 			);
 				
 			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width){
@@ -1426,25 +1444,27 @@ unsigned int fetch_internal(){
 					}
 				break;
 			}
-			else{
+			else {
 				if(node == g_tail){
 					if(++tail_counter >= size){
     					printf("FETCH DONE 2: SIZE:%u\n", size);
 						return 0;
 					}
 				}
-				else{
+				else {
 					tail_counter = 0;
 				}
-				node = h->array + (++bucket%size);
+				node = h->array + (++bucket % size);
 			}
-		}while(1);
+		} while(1);
     }
  
  	if(node == NULL)
         return 0;
  
     //node->reserved = true;
+    // Set the global variables with the selected event to be processed
+    // in the thread main loop.
     current_msg = (msg_t *) node->payload;
     current_msg->node = node;
     current_msg->tie_breaker = node->counter;

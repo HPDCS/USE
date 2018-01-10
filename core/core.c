@@ -376,11 +376,11 @@ void thread_loop(unsigned int thread_id) {
 	///* START SIMULATION *///
 	while (!stop && !sim_error) {
 		
-		/// *FETCH* ///
+		///* FETCH *///
 #if REPORT == 1
 		clock_timer_start(queue_min_time);
 #endif
-		if(fetch_internal() == 0){
+		if(fetch_internal() == 0) {
 			continue;
 		}
 #if REPORT == 1
@@ -388,13 +388,19 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_data(tid, EVENTS_FETCHED, 1);
 #endif
 
-		//locally copy lp and ts to processing event
-		current_lp = current_msg->receiver_id;	//identificatore lp
-		current_lvt = current_msg->timestamp;	//local virtual time
+		///* HOUSEKEEPING *///
+		// Here we have the lock on the LP //
 
+		// Locally (within the thread) copy lp and ts to processing event
+		current_lp = current_msg->receiver_id;	// LP index
+		current_lvt = current_msg->timestamp;	// Local Virtual Time
+
+
+		// Check whether the event is in the past, if this is the case
+		// fire a rollback procedure.
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker < LPS[current_lp]->bound->tie_breaker)
-			){
+			) {
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 #if REPORT == 1 
@@ -408,37 +414,37 @@ void thread_loop(unsigned int thread_id) {
 			LPS[current_lp]->state = old_state;
 		
 		}
-		if(current_msg->state ==ANTI_EVENT){
+		// If, in addition, the event is no more valid, we have to
+		// continue by fetching another event form the calendar queue.
+		if(current_msg->state == ANTI_EVENT) {
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
 
-
-		//update event and LP control variables
+		// Update event and LP control variables
 		current_msg->epoch = LPS[current_lp]->epoch;
 		
-
-		//Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
+		// Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
 		// The current_msg should be allocated with list allocator
-		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)){
+		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 		}
 				
-		//save in some way the state of the simulation
+		// Take a simulation state snapshot, in some way
 		LogState(current_lp);
 		
-		/// *PROCESS* ///
-		//execute the event in the proper modality
+		///* PROCESS *///
+		// Execute the event in the proper modality
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
 		///* FLUSH */// 
 		queue_deliver_msgs();
 
-		//update event and LP control variables
+		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
 		LPS[current_lp]->num_executed_frames++;
 				
-		if(safe){
+		if(safe) {
 			delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
 		}
 		
@@ -457,7 +463,6 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_data(tid, PRUNE_COUNTER, 1);
 #endif
 		
-	
 		///* ON_GVT *///
 		if((LPS[current_lp]->until_ongvt++) >= ONGVT_PERIOD){
 			LPS[current_lp]->until_ongvt = 0;
@@ -468,6 +473,7 @@ void thread_loop(unsigned int thread_id) {
 				LPS[current_lp]->state = LP_STATE_ONGVT;
 				rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
 				
+				// If the LP has ended its life, check the state of the simulation to end it
 				if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
 					end_sim(current_lp);
 				}
