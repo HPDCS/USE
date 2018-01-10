@@ -198,7 +198,7 @@ void print_statistics() {
     printf("STM events......................................: %12u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
 #endif
     unsigned int commits_total = system_stats.events_safe + system_stats.commits_stm;
-    
+    printf("Number of Rolback...............................: %12u\n", (system_stats.events_roll));
     printf("TOT committed...................................: %12u\n", commits_total);
 #if REVERSIBLE==1
     printf("STM committed...................................: %12u (%.2f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / system_stats.events_stm)*100);

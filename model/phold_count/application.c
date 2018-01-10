@@ -39,11 +39,12 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			//	state_ptr = states[me];
 
 			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
-			err = posix_memalign((void **)(&state_ptr), 64, 64);
-			if(err < 0) {
-				printf("memalign failed: (%s)\n", strerror(errno));
-				exit(-1);
-			}
+			//err = posix_memalign((void **)(&state_ptr), 64, 64);
+			state_ptr = malloc(sizeof(lp_state_type));
+			//if(err < 0) {
+			//	printf("memalign failed: (%s)\n", strerror(errno));
+			//	exit(-1);
+			//}
 
             if(state_ptr == NULL){
 				printf("LP state allocation failed: (%s)\n", strerror(errno));
@@ -83,8 +84,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			if(event_type == LOOP && state_ptr->events < COMPLETE_EVENTS){
 				state_ptr->events++;
-				if(now < state_ptr->lvt)
+				if(now < state_ptr->lvt){
 					printf("\x1b[31m""ERROR: event %f received out of order respect %f\n""\x1b[0m", now, state_ptr->lvt);
+					exit(1);
+				}
 				state_ptr->lvt = now;
 				if(state_ptr->events < COMPLETE_EVENTS)
 				//	ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);

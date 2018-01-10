@@ -52,7 +52,8 @@ __thread unsigned int 	commit_horizon_tb = 0;
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
 				queue_min_time,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
 				event_processing_time,		//OK: cattura il tempo per processare un evento safe 
-				queue_op;
+				queue_op,
+				rollback_time;
 #if REVERSIBLE == 1
 				,stm_event_processing_time
 				,stm_safety_wait
@@ -396,8 +397,16 @@ void thread_loop(unsigned int thread_id) {
 			){
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
-			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			LPS[current_lp]->state = old_state;//
+#if REPORT == 1 
+			clock_timer_start(rollback_time);
+#endif
+			rollback(current_lp, current_lvt, current_msg->tie_breaker);		
+#if REPORT == 1              
+			statistics_post_data(tid, EVENTS_ROLL, 1);
+			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
+#endif
+			LPS[current_lp]->state = old_state;
+		
 		}
 		if(current_msg->state ==ANTI_EVENT){
 			unlock(current_lp);
@@ -428,7 +437,6 @@ void thread_loop(unsigned int thread_id) {
 		//update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
 		LPS[current_lp]->num_executed_frames++;
-		//LPS[current_lp]->lvt = event_ts; //Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
 				
 		if(safe){
 			delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
@@ -441,23 +449,17 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 
 #if REPORT == 1
-	clock_timer_start(queue_op);
+		clock_timer_start(queue_op);
 #endif
 		nbc_prune();
 #if REPORT == 1
-	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
-	statistics_post_data(tid, PRUNE_COUNTER, 1);
+		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
+		statistics_post_data(tid, PRUNE_COUNTER, 1);
 #endif
 		
-		
-		
-		
-		
-		
-		
-		LPS[current_lp]->until_ongvt++;
-		
-		if(LPS[current_lp]->until_ongvt >= ONGVT_PERIOD){
+	
+		///* ON_GVT *///
+		if((LPS[current_lp]->until_ongvt++) >= ONGVT_PERIOD){
 			LPS[current_lp]->until_ongvt = 0;
 			
 			if(!is_end_sim(current_lp)){
@@ -468,45 +470,23 @@ void thread_loop(unsigned int thread_id) {
 				
 				if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
 					end_sim(current_lp);
-					if(check_termination()){
-						__sync_bool_compare_and_swap(&stop, false, true);
-					}
 				}
+				
 				// Ripristina stato sul bound
 				LPS[current_lp]->state = LP_STATE_ROLLBACK;
 				rollback(current_lp, INFTY, commit_horizon_tb);
 				LPS[current_lp]->state = old_state;
 			}
-			else{
-				if(check_termination()){
-					__sync_bool_compare_and_swap(&stop, false, true);
-				}
-			}
 		}
 		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		//if the LP has ended its life, check the state of the simulation to end it
-		if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer) /*|| sim_ended[lp/64]==~(0ULL)*/){
-			if(!is_end_sim(current_lp))
-				end_sim(current_lp);
-			
-			if(check_termination())
+		if(is_end_sim(current_lp)){
+			if(check_termination()){
 				__sync_bool_compare_and_swap(&stop, false, true);
+			}
 		}
 		
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
-        
 			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
 				printf("[%u] TIME: %f", tid, current_lvt);
 				//printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
