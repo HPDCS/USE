@@ -8,6 +8,9 @@
 #include "core.h"
 #include "lookahead.h"
 
+#define queue_clean _thr_pool._thr_pool_count = 0;
+
+#define queue_pool_size _thr_pool._thr_pool_count;
 
 //used to take locks on LPs
 unsigned int *lp_lock;
@@ -39,7 +42,6 @@ void queue_init(void) {
 
 void unsafe_set_init(){
 	if( ( lp_unsafe_set=malloc(LP_ULL_MASK_SIZE)) == NULL ){
-	//if((lp_unsafe_set=malloc(n_prc_tot/8 + 8))==NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
@@ -59,7 +61,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         abort();
     }
 
-	//TODO: slaballoc al posto della malloc per creare il desrittore dell'evento
+	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
 	msg_ptr = &_thr_pool.messages[_thr_pool._thr_pool_count++];
 
     msg_ptr->sender_id = current_lp;
@@ -69,13 +71,6 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
     memcpy(msg_ptr->data, event_content, event_size);
-    //event_content andrebbe liberato poi? Chi la libera?
-    //Vedese se ha senso non copiarsi i dati ma portarsi il puntatore (perdendo la località)
-
-}
-
-inline unsigned int queue_pool_size(void) {
-    return _thr_pool._thr_pool_count;
 }
 
 void queue_deliver_msgs(void) {
@@ -115,9 +110,6 @@ void queue_deliver_msgs(void) {
     _thr_pool._thr_pool_count = 0;
 }
 
-inline void queue_clean(void) {
-    _thr_pool._thr_pool_count = 0;
-}
 
 bool is_valid(msg_t * event){
 	return ((event->state & ELIMINATED) != ELIMINATED) || 

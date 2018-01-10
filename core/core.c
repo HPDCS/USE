@@ -270,6 +270,49 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void init_simulation(unsigned int thread_id){
+	tid = thread_id;
+	
+#if REVERSIBLE == 1
+	reverse_init(REVWIN_SIZE);
+#endif
+
+	//Set the CPU affinity
+	set_affinity(tid);
+	
+	unsafe_set_init();
+
+
+	to_remove_local_evts = new_list(tid, msg_t);
+	freed_local_evts = new_list(tid, msg_t);
+	
+	if(tid == 0){
+		LPs_metada_init();
+		dymelor_init();
+		statistics_init();
+		queue_init();
+		numerical_init();
+		//process_init_event
+		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
+       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), freed_local_evts);
+			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
+			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
+			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
+			LPS[current_lp]->bound = current_msg;
+			LPS[current_lp]->num_executed_frames++;
+			LPS[current_lp]->state_log_forced = true;
+			LogState(current_lp);
+			LPS[current_lp]->state_log_forced = false;
+		}
+		printf("EXECUTED ALL INIT EVENTS\n");
+	}
+
+
+	//wait all threads to end the init phase to start togheter
+	__sync_fetch_and_add(&ready_wt, 1);
+	__sync_synchronize();
+	while(ready_wt!=n_cores);
+}
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
 //LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
@@ -277,7 +320,7 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 #if REVERSIBLE == 1
 	unsigned int mode;
 #endif	
-	queue_clean();
+	queue_clean;//che succede se lascio le parentesi ad una macro?
 	
 	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
 	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
@@ -318,49 +361,10 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 
 void thread_loop(unsigned int thread_id) {
 
-
-	tid = thread_id;
+	unsigned int old_state;
 	
-#if REVERSIBLE == 1
-	reverse_init(REVWIN_SIZE);
-#endif
-
-	//Set the CPU affinity
-	set_affinity(tid);
+	init_simulation(thread_id);
 	
-	unsafe_set_init();
-
-
-	to_remove_local_evts = new_list(tid, msg_t);
-	freed_local_evts = new_list(tid, msg_t);
-	
-	if(tid == 0){
-		LPs_metada_init();
-		dymelor_init();
-		statistics_init();
-		queue_init();
-		numerical_init();
-		//process_init_event
-		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
-       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), freed_local_evts);
-			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
-			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
-			LPS[current_lp]->bound = current_msg;
-			LPS[current_lp]->num_executed_frames++;
-			LPS[current_lp]->state_log_forced = true;
-			LogState(current_lp);
-			LPS[current_lp]->state_log_forced = false;
-		}
-		printf("EXECUTED ALL INIT EVENTS\n");
-	}
-
-
-	//wait all threads to end the init phase to start togheter
-	__sync_fetch_and_add(&ready_wt, 1);
-	__sync_synchronize();
-	while(ready_wt!=n_cores);
-
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
@@ -370,15 +374,15 @@ void thread_loop(unsigned int thread_id) {
 		
 		/// *FETCH* ///
 #if REPORT == 1
-	clock_timer_start(queue_min_time);
+		clock_timer_start(queue_min_time);
 #endif
 		if(fetch_internal() == 0){
 			printf("END FETCH\n");
 			continue;
 		}
 #if REPORT == 1
-	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
-	statistics_post_data(tid, EVENTS_FETCHED, 1);
+		statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
+		statistics_post_data(tid, EVENTS_FETCHED, 1);
 #endif
 
 		//locally copy lp and ts to processing event
@@ -388,9 +392,10 @@ void thread_loop(unsigned int thread_id) {
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker < LPS[current_lp]->bound->tie_breaker)
 			){
-			unsigned int old_state = LPS[current_lp]->state;
+			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
+			LPS[current_lp]->state = old_state;//
 		}
 		if(current_msg->state ==ANTI_EVENT){
 			unlock(current_lp);
