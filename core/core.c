@@ -48,7 +48,8 @@ __thread unsigned long long evt_count = 0;
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
 				queue_min_time,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
-				event_processing_time		//OK: cattura il tempo per processare un evento safe 
+				event_processing_time,		//OK: cattura il tempo per processare un evento safe 
+				queue_op;
 #if REVERSIBLE == 1
 				,stm_event_processing_time
 				,stm_safety_wait
@@ -348,8 +349,9 @@ void thread_loop(unsigned int thread_id) {
 			LPS[current_lp]->bound = current_msg;
 			LPS[current_lp]->num_executed_frames++;
 		}
-
+		printf("EXECUTED ALL INIT EVENTS\n");
 	}
+
 
 	//wait all threads to end the init phase to start togheter
 	__sync_fetch_and_add(&ready_wt, 1);
@@ -368,6 +370,7 @@ void thread_loop(unsigned int thread_id) {
 	clock_timer_start(queue_min_time);
 #endif
 		if(fetch_internal() == 0){
+			printf("END FETCH\n");
 			continue;
 		}
 #if REPORT == 1
@@ -421,7 +424,15 @@ void thread_loop(unsigned int thread_id) {
 	#else				
 		if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
 	#endif
+
+#if REPORT == 1
+	clock_timer_start(queue_op);
+#endif
 		nbc_prune();
+#if REPORT == 1
+	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
+	statistics_post_data(tid, PRUNE_COUNTER, 1);
+#endif
 		
 		//if the LP has ended its life, check the state of the simulation to end it
 		if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer) /*|| sim_ended[lp/64]==~(0ULL)*/){
