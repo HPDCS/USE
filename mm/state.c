@@ -190,7 +190,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		}
 
 		evt = local_next_evt;
-		if(evt == NULL && (evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker) ) ) 
+		if(evt == NULL || evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
 			break;
 
 		events++;
