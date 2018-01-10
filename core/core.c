@@ -360,7 +360,6 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 
 
 void thread_loop(unsigned int thread_id) {
-
 	unsigned int old_state;
 	
 	init_simulation(thread_id);
@@ -377,7 +376,6 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(queue_min_time);
 #endif
 		if(fetch_internal() == 0){
-			printf("END FETCH\n");
 			continue;
 		}
 #if REPORT == 1
@@ -428,6 +426,9 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->num_executed_frames++;
 		//LPS[current_lp]->lvt = event_ts; //Non esiste il campo lvt, evidentemente sfrutta quello dell'evento bound...lo aggiungiamo?
 				
+		if(safe){
+			delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
+		}
 		
 	#if DEBUG == 0
 		unlock(current_lp);

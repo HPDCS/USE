@@ -590,6 +590,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 			array[i].next = tail;
 			array[i].counter = 0;
 			array[i].epoch = 0;
+			array[i].replica = NULL;
 		}
 
 		new_h->array = array;
@@ -1340,11 +1341,10 @@ unsigned int fetch_internal(){
 				//printf("GET_NEXT_EXECUTED_AND_VALID\n");
 				local_next_evt = list_next(event);
 				while(local_next_evt != NULL && !is_valid(local_next_evt)){
-					tmp_node = list_next(local_next_evt);
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					list_place_after_given_node_by_content(TID, to_remove_local_evts, 
 														local_next_evt, ((rootsim_list *)to_remove_local_evts)->head);
-					local_next_evt = tmp_node;
+					local_next_evt = list_next(event);
 					// TODO: valutare cancellazione da coda globale
 				}
 
@@ -1382,6 +1382,8 @@ unsigned int fetch_internal(){
 		}
 		///* NOT VALID *///		
 		else{ //is_not_valid
+			printf("WTF!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+			exit(0);
 			///* NOT VALID AND ELIMINATED*///
 			if(event->state != ANTI_EVENT && 
 				( event->state == ELIMINATED || __sync_or_and_fetch(&event->state, ELIMINATED)==ELIMINATED)){
@@ -1399,11 +1401,13 @@ unsigned int fetch_internal(){
 				add_lp_unsafe_set(lp_idx);
 			} 
 		}
+		
 //getNext
 		do{
 			node_next = node->next;
 			if(is_marked(node_next, MOV) || node->replica != NULL){
-    					printf("FETCH DONE 4 TABLE:%p NODE:%p NODE_REPLICA:%p\n", h, node, node->replica);
+    					printf("FETCH DONE 4 TABLE:%p NODE:%p NODE_NEXT:%p NODE_REPLICA:%p TAIL:%p counter:%u\n",
+    					 h, node,node->next, node->replica, g_tail, node->counter);
 						return 0;
 					}
 				
@@ -1439,14 +1443,11 @@ unsigned int fetch_internal(){
  
  	if(node == NULL)
         return 0;
-
-    
+ 
     //node->reserved = true;
     current_msg = (msg_t *) node->payload;
     current_msg->node = node;
     current_msg->tie_breaker = node->counter;
-    
-
     
     return 1;
 }
