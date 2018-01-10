@@ -46,18 +46,15 @@
 
 /// Function pointer to switch between the parallel and serial version of SetState
 //void (*SetState)(void *new_state);
+//
+//void send_antimessages(unsigned int lid, simtime_t lvt) {
+//
+//}
+//
+//void activate_LP(unsigned int lp, simtime_t lvt, msg_t *evt, void *state) {		
+//	executeEvent(lp, lvt, evt->type, evt->data, evt->data_size, state, true, evt);	
+//}
 
-
-void send_antimessages(unsigned int lid, simtime_t lvt) {
-
-}
-
-
-void activate_LP(unsigned int lp, simtime_t lvt, msg_t *evt, void *state) {		
-	((msg_t *)evt)->epoch = LPS[lp]->epoch;
-	executeEvent(lp, lvt, evt->type, evt->data, evt->data_size, state, true, evt);	
-	LPS[lp]->bound = evt; //sicuramente si può fare una volta sola alla fine		
-}
 /**
 * This function is used to create a state log to be added to the LP's log chain
 *
@@ -135,15 +132,7 @@ unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 	log_restore(lid, restore_state);
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
 	LPS[lid]->state 				= restore_state->state 					;
-	LPS[lid]->bound 				= restore_state->last_event 			; 	
-	//LPS[lid]->seed 					= restore_state->seed 				;//Sembra lo faccia già chekpoint/log_restore/restore_full
 	return restore_state->num_executed_frames	;
-
-#ifdef HAVE_CROSS_STATE
-	LPS[lid]->ECS_index = 0;
-	LPS[lid]->wait_on_rendezvous = 0;
-	LPS[lid]->wait_on_object = 0;
-#endif
 }
 
 
@@ -164,20 +153,15 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	unsigned int events = 0;
 	unsigned short int old_state;
 	LP_state *lp_ptr = LPS[lid];
-	msg_t * local_next_evt, * tmp_node;
+	msg_t * local_next_evt, * last_executed_event;
 	// current state can be either idle READY, or ROLLBACK, so we save it and then put it back in place
 	old_state = LPS[lid]->state;
 	LPS[lid]->state = LP_STATE_SILENT_EXEC;
 
-	// This is true if the restored state was taken after the new bound
-	//if(evt == final_evt)
-	//	goto out;
-	//
-	//evt = list_next(evt); //evt = evt->local_next; (?)
-	//final_evt = list_next(final_evt); //final_evt = final_evt->local_next; (?)
-
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
+	
+	last_executed_event = evt;
 
 	while(1){
 		local_next_evt = list_next(evt);
@@ -195,31 +179,14 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			break;
 
 		events++;
-		activate_LP(lid, evt->timestamp, evt, state_buffer);
+		//activate_LP(lid, evt->timestamp, evt, state_buffer);
+		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
+		last_executed_event = evt;
 	}
-
-
-	//evt = list_next(evt);
-	//while(evt != NULL && ((evt->timestamp < until_ts) 
-	//					|| (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)) 
-	//	){
-	//	evt = list_next(evt);
-	//
-	//	if(!is_valid(evt)){
-	//		tmp_node = list_next(evt);
-	//		list_extract_given_node(lid, lp_ptr->queue_in, evt);
-	//		list_place_after_given_node_by_content(TID, to_remove_local_evts, evt, ((rootsim_list *)to_remove_local_evts)->head);
-	//		// TODO: valutare cancellazione da coda globale
-	//		evt = tmp_node;
-	//	}
-	//	else{
-	//		events++;
-	//		activate_LP(lid, evt->timestamp, evt, state_buffer);
-	//	}
-	//	evt = list_next(evt);
-	//}
-
-out:
+	if(old_state != LP_STATE_ONGVT){
+		LPS[lid]->bound = last_executed_event;
+	}
+	
 	LPS[lid]->state = old_state;
 	return events;
 }
@@ -227,10 +194,11 @@ out:
 
 /**
 * This function rolls back the execution of a certain LP. The point where the
-* execution is rolled back is identified by the event pointed by the rollback_bound
-* entry in the LP control block.
+* execution is rolled back is identified by the timestamp <destination_time,tie_breaker>.
 * For a rollback operation to take place, that pointer must be set before calling
 * this function.
+* If the ts is in the future it restore the state in the future (if available).
+* If the ts is INFTY it restore the last event executed (LP->bound) (if available).
 *
 * @author Francesco Quaglia
 * @author Alessandro Pellegrini
@@ -239,59 +207,52 @@ out:
 */
 void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker) {
 	state_t *restore_state, *s;
-	//msg_t *last_correct_event;
 	msg_t *last_restored_event;
+	msg_t * bound_next;
 	unsigned int reprocessed_events;
 	unsigned long long starting_frame;
 
-
 	// Sanity check
-	if(LPS[lid]->state != LP_STATE_ROLLBACK) {
+	if(LPS[lid]->state != LP_STATE_ROLLBACK && LPS[lid]->state != LP_STATE_ONGVT) {
 		rootsim_error(false, "I'm asked to roll back LP %d's execution, but rollback_bound is not set. Ignoring...\n", lid);
 		return;
 	}
-
-
-	// Discard any possible execution state related to a blocked execution
-	#ifdef ENABLE_ULT
-	memcpy(&LPS[lid]->context, &LPS[lid]->default_context, sizeof(LP_context_t));
-	#endif
+	if(destination_time == INFTY){
+		bound_next = list_next(LPS[lid]->bound);
+		if(bound_next != NULL){
+			destination_time = bound_next->timestamp;
+			tie_breaker = bound_next->tie_breaker;
+		}
+	}
 
 	statistics_post_lp_data(lid, STAT_ROLLBACK, 1.0);
-
-	//last_correct_event = LPS[lid]->bound;
-
-	// ANTIMESSAGES ARE NOT REQUIRED 
-	// // Send antimessages
-	//send_antimessages(lid, last_correct_event->timestamp);
 
 	// Find the state to be restored, and prune the wrongly computed states
 	restore_state = list_tail(LPS[lid]->queue_states);
 
-	//// It's > rather than >= because we have already taken into account simultaneous events
-	//while (restore_state != NULL && restore_state->lvt > last_correct_event->timestamp) { 
-
 	// It's >= rather than > because we have NOT taken into account simultaneous events YET
-	while (restore_state != NULL && restore_state->lvt >= destination_time) { 
+	while (restore_state != NULL && restore_state->lvt >= destination_time) { //TODO: aggiungere tie_breaker e mettere solo >
 		s = restore_state;
 		restore_state = list_prev(restore_state);
-		log_delete(s->log);
-		s->last_event = (void *)0xBABEBEEF;
-		list_delete_by_content(lid, LPS[lid]->queue_states, s);
+		if(LPS[lid]->state != LP_STATE_ONGVT){
+			log_delete(s->log);
+			s->last_event = (void *)0xBABEBEEF;
+			list_delete_by_content(lid, LPS[lid]->queue_states, s);
+		}
 	}
 	// Restore the simulation state and correct the state base pointer
-	starting_frame = RestoreState(lid, restore_state);
-
+	log_restore(lid, restore_state);
+	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
+	
 	last_restored_event = restore_state->last_event;
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 	statistics_post_lp_data(lid, STAT_SILENT, (double)reprocessed_events);
 
-	LPS[lid]->num_executed_frames = starting_frame + reprocessed_events;
-
-	// TODO: silent execution resets the LP state to the previous
-	// value, so it should be the last function to be called within rollback()
-	// Control messages must be rolled back as well
-	//rollback_control_message(lid, last_correct_event->timestamp);
+	//The bound variable is set in silent_execution.
+	if(LPS[lid]->state != LP_STATE_ONGVT){
+		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
+	}
+	LPS[lid]->state 				= restore_state->state 					;
 }
 
 

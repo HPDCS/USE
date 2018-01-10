@@ -44,6 +44,9 @@ __thread unsigned int tid = 0;
 
 __thread unsigned long long evt_count = 0;
 
+__thread simtime_t 		commit_horizon_ts = 0;
+__thread unsigned int 	commit_horizon_tb = 0;
+
 //timer
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
@@ -303,6 +306,7 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->state_log_forced = true;
 			LogState(current_lp);
 			LPS[current_lp]->state_log_forced = false;
+			LPS[current_lp]->until_ongvt = 0;
 		}
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -444,6 +448,52 @@ void thread_loop(unsigned int thread_id) {
 	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
 	statistics_post_data(tid, PRUNE_COUNTER, 1);
 #endif
+		
+		
+		
+		
+		
+		
+		
+		LPS[current_lp]->until_ongvt++;
+		
+		if(LPS[current_lp]->until_ongvt >= ONGVT_PERIOD){
+			LPS[current_lp]->until_ongvt = 0;
+			
+			if(!is_end_sim(current_lp)){
+				// Ripristina stato sul commit_horizon
+				old_state = LPS[current_lp]->state;
+				LPS[current_lp]->state = LP_STATE_ONGVT;
+				rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
+				
+				if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+					end_sim(current_lp);
+					if(check_termination()){
+						__sync_bool_compare_and_swap(&stop, false, true);
+					}
+				}
+				// Ripristina stato sul bound
+				LPS[current_lp]->state = LP_STATE_ROLLBACK;
+				rollback(current_lp, INFTY, commit_horizon_tb);
+				LPS[current_lp]->state = old_state;
+			}
+			else{
+				if(check_termination()){
+					__sync_bool_compare_and_swap(&stop, false, true);
+				}
+			}
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		//if the LP has ended its life, check the state of the simulation to end it
 		if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer) /*|| sim_ended[lp/64]==~(0ULL)*/){

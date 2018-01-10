@@ -1224,6 +1224,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 						#if LOG_DEQUEUE == 1
 						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
 						#endif
+						//printf("CODA VUOTA!!!!\n");
 						return NULL;
 					}
 					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
@@ -1304,7 +1305,8 @@ unsigned int fetch_internal(){
 	
 	safe = false;
 	clear_lp_unsafe_set; //Set S ← NULL
-	min = node->timestamp; //time min ← evt.ts
+	commit_horizon_ts = min = node->timestamp; //time min ← evt.ts
+    commit_horizon_tb = node->counter;
     
 	//h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
@@ -1381,9 +1383,7 @@ unsigned int fetch_internal(){
 			}
 		}
 		///* NOT VALID *///		
-		else{ //is_not_valid
-			printf("WTF!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-			exit(0);
+		else{
 			///* NOT VALID AND ELIMINATED*///
 			if(event->state != ANTI_EVENT && 
 				( event->state == ELIMINATED || __sync_or_and_fetch(&event->state, ELIMINATED)==ELIMINATED)){
@@ -1429,7 +1429,7 @@ unsigned int fetch_internal(){
 			else{
 				if(node == g_tail){
 					if(++tail_counter >= size){
-    					printf("FETCH DONE 2\n");
+    					printf("FETCH DONE 2: SIZE:%u\n", size);
 						return 0;
 					}
 				}

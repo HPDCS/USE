@@ -97,6 +97,8 @@ typedef struct _LP_state {
 
 	unsigned long long num_executed_frames;
 	unsigned long long epoch;
+	
+	unsigned int until_ongvt;
 
 } LP_state;
 

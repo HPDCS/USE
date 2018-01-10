@@ -34,20 +34,22 @@
 #define LP_MASK_SIZE				((n_prc_tot/(SIZEOF_ULL*8) + 1))
 
 
-#define LP_STATE_READY			0x00001
-#define LP_STATE_RUNNING		0x00002
+#define LP_STATE_READY				0x00001
+#define LP_STATE_RUNNING			0x00002
 #define LP_STATE_RUNNING_ECS		0x00004
-#define LP_STATE_ROLLBACK		0x00008
+#define LP_STATE_ROLLBACK			0x00008
 #define LP_STATE_SILENT_EXEC		0x00010
-#define LP_STATE_SUSPENDED		0x01010
+#define LP_STATE_SUSPENDED			0x01010
 #define LP_STATE_READY_FOR_SYNCH	0x00011	// This should be a blocked state! Check schedule() and stf()
 #define LP_STATE_WAIT_FOR_SYNCH		0x01001
 #define LP_STATE_WAIT_FOR_UNBLOCK	0x01002
 #define LP_STATE_WAIT_FOR_DATA		0x01004
+#define LP_STATE_ONGVT				0x00100
 
 #define BLOCKED_STATE			0x01000
 #define is_blocked_state(state)	(bool)(state & BLOCKED_STATE)
 
+#define ONGVT_PERIOD 100
 
 struct __bucket_node;
 
@@ -85,6 +87,8 @@ extern simulation_configuration rootsim_config;
 extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
+extern __thread simtime_t commit_horizon_ts;
+extern __thread unsigned int commit_horizon_tb;
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
