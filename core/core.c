@@ -348,6 +348,9 @@ void thread_loop(unsigned int thread_id) {
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 			LPS[current_lp]->bound = current_msg;
 			LPS[current_lp]->num_executed_frames++;
+			LPS[current_lp]->state_log_forced = true;
+			LogState(current_lp);
+			LPS[current_lp]->state_log_forced = false;
 		}
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -385,6 +388,8 @@ void thread_loop(unsigned int thread_id) {
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker < LPS[current_lp]->bound->tie_breaker)
 			){
+			unsigned int old_state = LPS[current_lp]->state;
+			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 		}
 		if(current_msg->state ==ANTI_EVENT){
