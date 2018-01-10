@@ -40,6 +40,7 @@
 //#include <communication/communication.h>
 #include <dymelor.h>
 #include <statistics.h>
+#include <queue.h>
 
 
 
@@ -163,7 +164,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	unsigned int events = 0;
 	unsigned short int old_state;
 	LP_state *lp_ptr = LPS[lid];
-	msg_t * local_next_evt;
+	msg_t * local_next_evt, * tmp_node;
 	// current state can be either idle READY, or ROLLBACK, so we save it and then put it back in place
 	old_state = LPS[lid]->state;
 	LPS[lid]->state = LP_STATE_SILENT_EXEC;
@@ -182,10 +183,11 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		local_next_evt = list_next(evt);
 
 		while(local_next_evt != NULL && !is_valid(local_next_evt)){
+			tmp_node = list_next(local_next_evt);
 			list_extract_given_node(lid, lp_ptr->queue_in, local_next_evt);
 			list_place_after_given_node_by_content(TID, to_remove_local_evts, 
 												local_next_evt, ((rootsim_list *)to_remove_local_evts)->head);
-			local_next_evt = list_next(evt);
+			local_next_evt = tmp_node;
 			// TODO: valutare cancellazione da coda globale
 		}
 
@@ -196,6 +198,27 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		events++;
 		activate_LP(lid, evt->timestamp, evt, state_buffer);
 	}
+
+
+	//evt = list_next(evt);
+	//while(evt != NULL && ((evt->timestamp < until_ts) 
+	//					|| (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)) 
+	//	){
+	//	evt = list_next(evt);
+	//
+	//	if(!is_valid(evt)){
+	//		tmp_node = list_next(evt);
+	//		list_extract_given_node(lid, lp_ptr->queue_in, evt);
+	//		list_place_after_given_node_by_content(TID, to_remove_local_evts, evt, ((rootsim_list *)to_remove_local_evts)->head);
+	//		// TODO: valutare cancellazione da coda globale
+	//		evt = tmp_node;
+	//	}
+	//	else{
+	//		events++;
+	//		activate_LP(lid, evt->timestamp, evt, state_buffer);
+	//	}
+	//	evt = list_next(evt);
+	//}
 
 out:
 	LPS[lid]->state = old_state;

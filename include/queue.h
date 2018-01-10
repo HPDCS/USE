@@ -10,6 +10,7 @@
 #define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1ULL << (lp%64)) )
 #define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1ULL << (lp%64)) )
 #define clear_lp_unsafe_set			unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
+#define queue_pool_size _thr_pool._thr_pool_count;
 
 
 typedef struct __msg_t msg_t;
@@ -18,19 +19,21 @@ void queue_init(void);
 
 void queue_insert(unsigned int receiver, double timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
 
-unsigned int queue_pool_size(void);
+//unsigned int queue_pool_size(void);
 
 void queue_deliver_msgs(void);
 
-void queue_destroy(void);
+//void queue_destroy(void);
 
 void queue_clean(void);
 
 extern void unsafe_set_init();
 
-void getMinLP(unsigned int lp);
-unsigned int getMinFree();
-void commit();
+//void getMinLP(unsigned int lp);
+//unsigned int getMinFree();
+//void commit();
+
+extern bool is_valid(msg_t * event);
 
 extern nb_calqueue* nbcalqueue;
 

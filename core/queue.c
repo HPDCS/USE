@@ -8,9 +8,6 @@
 #include "core.h"
 #include "lookahead.h"
 
-#define queue_clean _thr_pool._thr_pool_count = 0;
-
-#define queue_pool_size _thr_pool._thr_pool_count;
 
 //used to take locks on LPs
 unsigned int *lp_lock;
@@ -73,6 +70,10 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     memcpy(msg_ptr->data, event_content, event_size);
 }
 
+void queue_clean(){ 
+	_thr_pool._thr_pool_count = 0;
+}
+
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
@@ -116,4 +117,5 @@ bool is_valid(msg_t * event){
 		((event->father->state & ELIMINATED) != ELIMINATED) || 
 			(event->epoch == event->father->epoch);
 }
+
 
