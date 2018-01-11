@@ -719,43 +719,49 @@ void list_deallocate_node_buffer(unsigned int lid, void *ptr) {
 char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struct rootsim_list_node *new_n, struct rootsim_list_node *previous) {
 	(void)lid;
 
-	rootsim_list *l = (rootsim_list *)li;
+	rootsim_list *list = (rootsim_list *)li;
 
-	assert(l);
-	size_t size_before = l->size;
+	assert(list);
+	size_t size_before = list->size;
 
-	struct rootsim_list_node *n = previous;
+	//struct rootsim_list_node *n = previous;
 
 	// Is the list empty?
-	if(l->size == 0) {
+	// In this case we insert the new node `new_n` at the beginning of the list
+	// and we must to update accordingly the list pointer to head and tail.
+	if(list->size == 0) {
 		new_n->prev = NULL;
 		new_n->next = NULL;
-		l->head = new_n;
-		l->tail = new_n;
-		goto insert_end;
+		list->head = new_n;
+		list->tail = new_n;
+	}
+	else {
+
+		// We want to insert the new node `new_n` at the beginning of the list
+		if(previous == NULL) {
+			new_n->prev = 0xBAD71570;
+			new_n->next = list->head->next;
+			list->head->prev = new_n;
+			
+			// We need to update the pointer `head` of the list
+			list->head = new_n;
+		}
+		else {
+			new_n->prev = previous;
+			new_n->next = NULL;
+			previous->next = new_n;
+
+			// If the node where insert the new node is the tail of the passed list
+			// we need to change also the pointer `tail` of that list
+			if(previous == list->tail) {
+				list->tail = new_n;
+			}
+		}
 	}
 
-	// Insert after the node n
- 	if(n == l->tail) { // tail
-		new_n->next = NULL;
-		l->tail->next = new_n;
-		new_n->prev = l->tail;
-		l->tail = new_n;
-	} else if(n == NULL) { // head
-		new_n->prev = NULL;
-		new_n->next = l->head;
-		l->head->prev = new_n;
-		l->head = new_n;
-	} else { // middle
-		new_n->prev = n;
-		new_n->next = n->next;
-		n->next->prev = new_n;
-		n->next = new_n;
-	}
+	list->size++;
+	assert(list->size == (size_before + 1));
 
-    insert_end:
-	l->size++;
-	assert(l->size == (size_before + 1));
 	return new_n->data;
 }
 
