@@ -47,7 +47,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			//}
 
             if(state_ptr == NULL){
-				printf("LP state allocation failed: (%s)\n", strerror(errno));
+				printf("%d- APP: LP state allocation failed: (%s)\n", me, strerror(errno));
 				exit(-1);
             }
 
@@ -85,8 +85,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			if(event_type == LOOP && state_ptr->events < COMPLETE_EVENTS){
 				state_ptr->events++;
 				if(now < state_ptr->lvt){
-					printf("\x1b[31m""ERROR: event %f received out of order respect %f\n""\x1b[0m", now, state_ptr->lvt);
-					exit(1);
+					printf("\x1b[31m""%d- APP: ERROR: event %f received out of order respect %f\n""\x1b[0m", me, now, state_ptr->lvt);
+					state_ptr =NULL;
+					state_ptr->lvt *10;
 				}
 				state_ptr->lvt = now;
 				if(state_ptr->events < COMPLETE_EVENTS)
