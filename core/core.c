@@ -53,7 +53,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 				queue_min_time,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
 				event_processing_time,		//OK: cattura il tempo per processare un evento safe 
 				queue_op,
-				rollback_time;
+				rollback_time
 #if REVERSIBLE == 1
 				,stm_event_processing_time
 				,stm_safety_wait
@@ -400,7 +400,9 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
-			rollback(current_lp, current_lvt, current_msg->tie_breaker);		
+			//printf("LID:%d-  BUILD STATE FOR ROLLBACK START %f %f %d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			rollback(current_lp, current_lvt, current_msg->tie_breaker);
+			//printf("LID:%d- TID:%d BUILD STATE FOR ROLLBACK END\n", current_lp, tid);		
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
@@ -442,6 +444,37 @@ void thread_loop(unsigned int thread_id) {
 			delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
 		}
 		
+
+
+		///* ON_GVT *///
+		if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == ONGVT_PERIOD){
+			//LPS[current_lp]->until_ongvt = 0;
+			
+			if(!is_end_sim(current_lp)){
+				// Ripristina stato sul commit_horizon
+				old_state = LPS[current_lp]->state;
+				LPS[current_lp]->state = LP_STATE_ONGVT;
+				//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
+				rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
+				//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
+				
+				if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+					end_sim(current_lp);
+				}
+				
+				// Ripristina stato sul bound
+				LPS[current_lp]->state = LP_STATE_ROLLBACK;
+				//printf("%d- BUILD STATE AFTER GVT START LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
+				rollback(current_lp, INFTY, commit_horizon_tb);
+				//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
+				LPS[current_lp]->state = old_state;
+			}
+		}
+		
+
+
+
+
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
@@ -458,27 +491,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		
 	
-		///* ON_GVT *///
-		if((LPS[current_lp]->until_ongvt++) >= ONGVT_PERIOD){
-			LPS[current_lp]->until_ongvt = 0;
-			
-			if(!is_end_sim(current_lp)){
-				// Ripristina stato sul commit_horizon
-				old_state = LPS[current_lp]->state;
-				LPS[current_lp]->state = LP_STATE_ONGVT;
-				rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
-				
-				if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
-					end_sim(current_lp);
-				}
-				
-				// Ripristina stato sul bound
-				LPS[current_lp]->state = LP_STATE_ROLLBACK;
-				rollback(current_lp, INFTY, commit_horizon_tb);
-				LPS[current_lp]->state = old_state;
-			}
-		}
-		
 		if(is_end_sim(current_lp)){
 			if(check_termination()){
 				__sync_bool_compare_and_swap(&stop, false, true);
