@@ -180,7 +180,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 
 		events++;
 		//activate_LP(lid, evt->timestamp, evt, state_buffer);
+		//printf("%d- SILENT_EXECUTE: %f....\n", lid, evt->timestamp);
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
+		//printf("%d- SILENT_EXECUTE: %f....DONE\n", lid, evt->timestamp);
 		last_executed_event = evt;
 	}
 	if(old_state != LP_STATE_ONGVT){
@@ -234,7 +236,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	while (restore_state != NULL && restore_state->lvt >= destination_time) { //TODO: aggiungere tie_breaker e mettere solo >
 		s = restore_state;
 		restore_state = list_prev(restore_state);
-		if(LPS[lid]->state != LP_STATE_ONGVT){
+		if(LPS[lid]->state == LP_STATE_ROLLBACK){
 			log_delete(s->log);
 			s->last_event = (void *)0xBABEBEEF;
 			list_delete_by_content(lid, LPS[lid]->queue_states, s);
@@ -249,9 +251,11 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	statistics_post_lp_data(lid, STAT_SILENT, (double)reprocessed_events);
 
 	//The bound variable is set in silent_execution.
-	if(LPS[lid]->state != LP_STATE_ONGVT){
+	if(LPS[lid]->state == LP_STATE_ROLLBACK){
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
+		LPS[lid]->epoch++;
 	}
+
 	LPS[lid]->state 				= restore_state->state 					;
 }
 
