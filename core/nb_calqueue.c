@@ -38,6 +38,7 @@
 #include "hpdcs_utils.h"
 #include "core.h"
 #include "queue.h"
+#include "prints.h"
 
 
 #define LOG_DEQUEUE 0

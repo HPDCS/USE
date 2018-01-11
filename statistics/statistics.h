@@ -160,7 +160,6 @@ struct stats_lp_t {
     unsigned long long safety_check_counter;
 } __attribute__((aligned (64)));
 
-
 extern struct stats_t *thread_stats;
 
 enum stat_levels {STATS_GLOBAL, STATS_PERF, STATS_LP, STATS_ALL};

@@ -29,6 +29,7 @@
 #include "simtypes.h"
 #include "lookahead.h"
 #include "hpdcs_utils.h"
+#include "prints.h"
 
 
 //id del processo principale
@@ -63,12 +64,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 
 unsigned int ready_wt = 0;
 
-
-
 simulation_configuration rootsim_config;
-
-
-
 
 /* Total number of cores required for simulation */
 unsigned int n_cores; //pls cambia nome
@@ -89,7 +85,6 @@ LP_state **LPS = NULL;
 //used to check termination conditions
 bool stop = false;
 unsigned long long *sim_ended;
-
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -255,7 +250,8 @@ bool check_termination(void) {
 	return true;
 }
 
-//può diventare una macro?
+// può diventare una macro?
+// [D] no, non potrebbe più essere invocata lato modello altrimenti
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 	if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
 		queue_insert(receiver, timestamp, event_type, event_content, event_size);
@@ -263,17 +259,17 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////			 _	 _	 _	 _	      _   __      __		//////////////////////////////////////////////////////////////////////////////////////
-///////////			| \	| |	| \	/ \      / \ |  | /| |  |		//////////////////////////////////////////////////////////////////////////////////////
-///////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		//////////////////////////////////////////////////////////////////////////////////////
-///////////			|	| |	|_/	\_/      /__ |__|  | |__|		//////////////////////////////////////////////////////////////////////////////////////
-///////////														//////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////			 _	 _	 _	 _	      _   __      __		/////////////////////////////////////
+///////////			| \	| |	| \	/ \      / \ |  | /| |  |		/////////////////////////////////////
+///////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		/////////////////////////////////////
+///////////			|	| |	|_/	\_/      /__ |__|  | |__|		/////////////////////////////////////
+///////////														/////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 void init_simulation(unsigned int thread_id){
 	tid = thread_id;
 	
@@ -281,9 +277,10 @@ void init_simulation(unsigned int thread_id){
 	reverse_init(REVWIN_SIZE);
 #endif
 
-	//Set the CPU affinity
+	// Set the CPU affinity
 	set_affinity(tid);
 	
+	// Initialize the set ??
 	unsafe_set_init();
 
 
@@ -383,6 +380,7 @@ void thread_loop(unsigned int thread_id) {
 		if(fetch_internal() == 0) {
 			continue;
 		}
+
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
 		statistics_post_data(tid, EVENTS_FETCHED, 1);
@@ -403,20 +401,24 @@ void thread_loop(unsigned int thread_id) {
 			) {
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
+
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
-			rollback(current_lp, current_lvt, current_msg->tie_breaker);		
+			printlp("Straggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n", current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
+			rollback(current_lp, current_lvt, current_msg->tie_breaker);
+
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
 #endif
 			LPS[current_lp]->state = old_state;
-		
 		}
+
 		// If, in addition, the event is no more valid, we have to
 		// continue by fetching another event form the calendar queue.
 		if(current_msg->state == ANTI_EVENT) {
+			printlp("The event is invalid, I will continue to the next event fetched\n");
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
@@ -443,26 +445,13 @@ void thread_loop(unsigned int thread_id) {
 		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
 		LPS[current_lp]->num_executed_frames++;
+		
+		printlp("Execute - Event [%.5f, %llu], LVT %.5f\n", current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 				
 		if(safe) {
 			delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
 		}
-		
-	#if DEBUG == 0
-		unlock(current_lp);
-	#else				
-		if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
-	#endif
 
-#if REPORT == 1
-		clock_timer_start(queue_op);
-#endif
-		nbc_prune();
-#if REPORT == 1
-		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
-		statistics_post_data(tid, PRUNE_COUNTER, 1);
-#endif
-		
 		///* ON_GVT *///
 		if((LPS[current_lp]->until_ongvt++) >= ONGVT_PERIOD){
 			LPS[current_lp]->until_ongvt = 0;
@@ -471,19 +460,41 @@ void thread_loop(unsigned int thread_id) {
 				// Ripristina stato sul commit_horizon
 				old_state = LPS[current_lp]->state;
 				LPS[current_lp]->state = LP_STATE_ONGVT;
-				rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
-				
+				//printlp("Rollback to realing commit horizon\n");
+				//printf("STATE BF [%p]\n", LPS[current_lp]->current_base_pointer);
+				//rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
+				//printf("STATE AF [%p]\n", LPS[current_lp]->current_base_pointer);
 				// If the LP has ended its life, check the state of the simulation to end it
 				if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+					printlp("Simulation has reached its objective\n");
 					end_sim(current_lp);
 				}
 				
 				// Ripristina stato sul bound
-				LPS[current_lp]->state = LP_STATE_ROLLBACK;
-				rollback(current_lp, INFTY, commit_horizon_tb);
+				//LPS[current_lp]->state = LP_STATE_ROLLBACK;
+				//printlp("Rollback to realing LP's bound\n");
+				//rollback(current_lp, INFTY, commit_horizon_tb);
 				LPS[current_lp]->state = old_state;
 			}
 		}
+
+	#if DEBUG == 0
+		unlock(current_lp);
+	#else				
+		if(!unlock(current_lp)) {
+			printlp("ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp]);
+		}
+	#endif
+
+#if REPORT == 1
+		clock_timer_start(queue_op);
+#endif
+		nbc_prune();
+
+#if REPORT == 1
+		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
+		statistics_post_data(tid, PRUNE_COUNTER, 1);
+#endif
 		
 		if(is_end_sim(current_lp)){
 			if(check_termination()){
@@ -494,7 +505,7 @@ void thread_loop(unsigned int thread_id) {
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
 			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
-				printf("[%u] TIME: %f", tid, current_lvt);
+				printlp("TIME: %f", current_lvt);
 				//printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
 		}

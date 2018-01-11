@@ -217,6 +217,9 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		rootsim_error(false, "I'm asked to roll back LP %d's execution, but rollback_bound is not set. Ignoring...\n", lid);
 		return;
 	}
+
+	//printf("ROLLBACK of LP%lu on time %.5f, %lu\n", lid, destination_time, tie_breaker);
+
 	if(destination_time == INFTY){
 		bound_next = list_next(LPS[lid]->bound);
 		if(bound_next != NULL){
