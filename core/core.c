@@ -14,6 +14,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <limits.h>
+#if DEBUG==1
+#include <signal.h>
+#endif
 
 #include <ROOT-Sim.h>
 #include <dymelor.h>
@@ -305,6 +308,7 @@ void init_simulation(unsigned int thread_id){
 			LogState(current_lp);
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
+			LPS[current_lp]->epoch = 1;
 		}
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -405,11 +409,11 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
-			//printf("LID:%d-  BUILD STATE FOR ROLLBACK START %f %f %d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			printlp("Straggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n", current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
+			printf("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			printlp("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n", current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			//printf("LID:%d- TID:%d BUILD STATE FOR ROLLBACK END\n", current_lp, tid);		
-
+			printf("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
@@ -420,7 +424,7 @@ void thread_loop(unsigned int thread_id) {
 		// If, in addition, the event is no more valid, we have to
 		// continue by fetching another event form the calendar queue.
 		if(current_msg->state == ANTI_EVENT) {
-			printlp("The event is invalid, I will continue to the next event fetched\n");
+			printlp("Anti-event received\n");
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
@@ -431,7 +435,40 @@ void thread_loop(unsigned int thread_id) {
 		// Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
 		// The current_msg should be allocated with list allocator
 		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
+#if DEBUG == 1 
+			msg_t *bound_t, *next_t;
+			bound_t = LPS[current_lp]->bound;
+			next_t = list_next(LPS[current_lp]->bound);
+#endif
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
+#if DEBUG == 1
+			if(list_next(current_msg) != next_t){
+				printf("list_next(current_msg) != next_t\n");
+				exit(1);
+			}
+			if(list_prev(current_msg) != bound_t){
+				printf("list_prev(current_msg) != bound_t\n");
+				exit(1);
+			}
+			if(list_next(bound_t) != current_msg){
+				printf("list_next(bound_t) != current_msg\n");
+				exit(1);
+			}
+			if(next_t!= NULL && list_prev(next_t) != current_msg){
+				printf("list_prev(next_t) != current_msg\n");
+				exit(1);
+			}
+			if(bound_t->timestamp > current_lvt){
+				printf("bound_t->timestamp > current_lvt\n");
+				exit(1);
+			}
+			if(next_t!=NULL && 
+					next_t->timestamp < current_lvt){
+				printf("next_t->timestamp < current_lvt\n");
+				printf("is_valid(next_t):%d\n", is_valid(next_t));
+				raise(SIGINT);
+			}
+#endif
 		}
 				
 		// Take a simulation state snapshot, in some way
@@ -455,35 +492,29 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 		///* ON_GVT *///
-		if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == ONGVT_PERIOD){
-			//LPS[current_lp]->until_ongvt = 0;
-			
-			if(!is_end_sim(current_lp)){
-				// Ripristina stato sul commit_horizon
-				old_state = LPS[current_lp]->state;
-				LPS[current_lp]->state = LP_STATE_ONGVT;
-
-				//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
-
-				//printlp("Rollback to align LP's to the commit horizon\n");
-				//rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
-				
-				//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
-				//printf("STATE AF [%p]\n", LPS[current_lp]->current_base_pointer);
-
-				// If the LP has ended its life, check the state of the simulation to end it
-				if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
-					printlp("Simulation has reached its objective\n");
-					end_sim(current_lp);
-				}
-				
-				// Ripristina stato sul bound
-				//LPS[current_lp]->state = LP_STATE_ROLLBACK;
-				//printlp("Rollback to realing LP's bound\n");
-				//rollback(current_lp, INFTY, commit_horizon_tb);
-				LPS[current_lp]->state = old_state;
-			}
-		}
+		//if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == (ONGVT_PERIOD-1)){
+		//	//LPS[current_lp]->until_ongvt = 0;
+		//	
+		//	if(!is_end_sim(current_lp)){
+		//		// Ripristina stato sul commit_horizon
+		//		old_state = LPS[current_lp]->state;
+		//		LPS[current_lp]->state = LP_STATE_ONGVT;
+		//		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
+		//		rollback(current_lp, commit_horizon_ts, commit_horizon_tb);
+		//		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
+		//		
+		//		if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+		//			end_sim(current_lp);
+		//		}
+		//		
+		//		// Ripristina stato sul bound
+		//		LPS[current_lp]->state = LP_STATE_ROLLBACK;
+		//		//printf("%d- BUILD STATE AFTER GVT START LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
+		//		rollback(current_lp, INFTY, commit_horizon_tb);
+		//		//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
+		//		LPS[current_lp]->state = old_state;
+		//	}
+		//}
 
 	#if DEBUG == 0
 		unlock(current_lp);
@@ -504,25 +535,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		
 
-
-
-
-	#if DEBUG == 0
-		unlock(current_lp);
-	#else				
-		if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
-	#endif
-
-#if REPORT == 1
-		clock_timer_start(queue_op);
-#endif
-		nbc_prune();
-#if REPORT == 1
-		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
-		statistics_post_data(tid, PRUNE_COUNTER, 1);
-#endif
-		
-	
 		if(is_end_sim(current_lp)){
 			if(check_termination()){
 				__sync_bool_compare_and_swap(&stop, false, true);

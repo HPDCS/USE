@@ -60,10 +60,12 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
-			for(i = 0; i < EVENTS_PER_LP; i++) {
-				timestamp = (simtime_t) LOOKAHEAD + (TAU * Random());
-				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-			}
+			//for(i = 0; i < EVENTS_PER_LP; i++) {
+			//	timestamp = (simtime_t) LOOKAHEAD + (TAU * Random());
+			//	ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+			//}
+			ScheduleNewEvent(me, 1.0, LOOP, NULL, 0);
+			
 
 			break;
 
@@ -86,13 +88,20 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				state_ptr->events++;
 				if(now < state_ptr->lvt){
 					printf("\x1b[31m""%d- APP: ERROR: event %f received out of order respect %f\n""\x1b[0m", me, now, state_ptr->lvt);
-					state_ptr =NULL;
-					state_ptr->lvt *10;
+					state_ptr =NULL;state_ptr->lvt *10;
+				}
+				//if(state_ptr->lvt == now){
+				//	printf("[%d] HO RICEVUTO UN EVENTO CON TS=MY_LVT: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
+				//	state_ptr =NULL;state_ptr->lvt *10;
+				//}
+				if(state_ptr->events > now){
+					printf("%d- APP: ERROR: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
+					state_ptr =NULL;state_ptr->lvt *10;
 				}
 				state_ptr->lvt = now;
 				if(state_ptr->events < COMPLETE_EVENTS)
-				//	ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-					ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);
+					ScheduleNewEvent((me+1)%n_prc_tot, now+1.0, LOOP, NULL, 0);
+				//	ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);
 			
 				//for(j=0;j<FAN_OUT;j++){
 				//		delta = LOOKAHEAD + Expent(TAU);

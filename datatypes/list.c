@@ -726,36 +726,33 @@ char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struc
 
 	//struct rootsim_list_node *n = previous;
 
-	// Is the list empty?
-	// In this case we insert the new node `new_n` at the beginning of the list
-	// and we must to update accordingly the list pointer to head and tail.
+	//Queue EMPTY
 	if(list->size == 0) {
 		new_n->prev = NULL;
 		new_n->next = NULL;
 		list->head = new_n;
 		list->tail = new_n;
 	}
+	//Queue NOT EMPTY
 	else {
-
-		// We want to insert the new node `new_n` at the beginning of the list
-		if(previous == NULL) {
-			new_n->prev = 0xBAD71570;
-			new_n->next = list->head->next;
+		new_n->prev = previous;
+		///Insert HEAD
+		if(previous == NULL) {  
+			//new_n->prev = NULL;
+			new_n->next = list->head;
 			list->head->prev = new_n;
-			
-			// We need to update the pointer `head` of the list
 			list->head = new_n;
-		}
-		else {
-			new_n->prev = previous;
+		///Insert TAIL
+		}else if(previous == list->tail){
 			new_n->next = NULL;
+			list->tail->next = new_n;//previous->next = new_n;
+			//new_n->prev = list->tail;
+			list->tail = new_n;
+		///Insert MIDDLE
+		}else{
+			new_n->next = previous->next;
+			previous->next->prev = new_n;
 			previous->next = new_n;
-
-			// If the node where insert the new node is the tail of the passed list
-			// we need to change also the pointer `tail` of that list
-			if(previous == list->tail) {
-				list->tail = new_n;
-			}
 		}
 	}
 
