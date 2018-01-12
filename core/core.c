@@ -41,6 +41,9 @@
 
 #define MAX_PATHLEN			512
 
+#define print_event(event)	printf("   [LP:%u->%u]: TS:%f TB:%u EP:%u IS_VAL:%u \t\tptr:%p\n",event->sender_id, event->receiver_id, event->timestamp, event->tie_breaker, event->epoch, is_valid(event),event);
+
+
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -218,7 +221,7 @@ void LPs_metada_init() {
 		//LPS[i]->queue_out 				= new_list(i, msg_hdr_t);
 		LPS[i]->queue_states 			= new_list(i, state_t);
 		LPS[i]->mark 					= 0;
-		LPS[i]->epoch 					= 0;
+		LPS[i]->epoch 					= 1;
 		LPS[i]->num_executed_frames		= 0;
 
 	}
@@ -281,7 +284,7 @@ void init_simulation(unsigned int thread_id){
 #endif
 
 	// Set the CPU affinity
-	set_affinity(tid);
+	//set_affinity(tid);//TODO: decommentare per test veri
 	
 	// Initialize the set ??
 	unsafe_set_init();
@@ -299,6 +302,7 @@ void init_simulation(unsigned int thread_id){
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), freed_local_evts);
+       		current_msg->epoch = LPS[current_lp]->epoch;//
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
@@ -384,6 +388,8 @@ void thread_loop(unsigned int thread_id) {
 		if(fetch_internal() == 0) {
 			continue;
 		}
+		
+		//print_event(current_msg);//DEBUG
 
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
@@ -396,6 +402,11 @@ void thread_loop(unsigned int thread_id) {
 		// Locally (within the thread) copy lp and ts to processing event
 		current_lp = current_msg->receiver_id;	// LP index
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
+		
+		
+		//if(current_msg->timestamp < LPS[current_msg->receiver_id]->bound->timestamp){//DEBUG
+		//	printf("\x1b[31m""Ho ricevuto un evento a ts:%f quando il bound è %f\n""\x1b[0m",current_msg->timestamp, LPS[current_msg->receiver_id]->bound->timestamp);
+		//}
 
 
 		// Check whether the event is in the past, if this is the case
@@ -409,11 +420,11 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
-			printf("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			printf("\x1b[33m""ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
 			printlp("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n", current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			printf("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			
+			printf("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n""\x1b[0m", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			fflush(stdout);//DEBUG
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
@@ -424,7 +435,7 @@ void thread_loop(unsigned int thread_id) {
 		// If, in addition, the event is no more valid, we have to
 		// continue by fetching another event form the calendar queue.
 		if(current_msg->state == ANTI_EVENT) {
-			printlp("Anti-event received\n");
+			//printlp("Anti-event received\n");
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
@@ -485,8 +496,6 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->bound = current_msg;
 		LPS[current_lp]->num_executed_frames++;
 		
-		printlp("Execute - Event [%.5f, %llu], LVT %.5f\n", current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
-				
 		if(safe) {
 			delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
 		}
