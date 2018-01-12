@@ -1304,6 +1304,8 @@ unsigned int fetch_internal(){
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, *tmp_node, * bound_ptr;
 	
+	current_msg = NULL; //DEBUG
+	
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
 		return 0;
@@ -1390,7 +1392,7 @@ unsigned int fetch_internal(){
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < node->counter)
 					)
 				  ) {
-				//	event = local_next_evt;
+					event = local_next_evt;
 				//	node = local_next_evt->node;
 					current_msg =  event;//(msg_t *) node->payload;
 					printf("Sto pescando un evento dalla coda locale\n");
