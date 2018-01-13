@@ -1390,7 +1390,7 @@ valid:
 					//tmp_node = list_next(local_next_evt);
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					list_place_after_given_node_by_content(TID, to_remove_local_evts, 
-														local_next_evt, ((rootsim_list *)to_remove_local_evts)->head);
+														local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
 					local_next_evt = list_next(lp_ptr->bound);
 					// TODO: valutare cancellazione da coda globale
 				}
