@@ -1,13 +1,25 @@
 #ifndef __UTIL_HPCDS__
 #define __UTIL_HPCDS__
 
-#define COLOR_RED     "\x1b[31m"
-#define COLOR_GREEN   "\x1b[32m"
-#define COLOR_YELLOW  "\x1b[33m"
-#define COLOR_BLUE    "\x1b[34m"
-#define COLOR_MAGENTA "\x1b[35m"
-#define COLOR_CYAN    "\x1b[36m"
-#define COLOR_RESET   "\x1b[0m"
+#if DEBUG==1
+#include <signal.h>
+
+#define gdb_abort raise(SIGINT)
+#endif
+
+#define COLOR_RED   	"\x1b[31m"
+#define RED(s)			"\x1b[31m"s"\x1b[0m"
+#define COLOR_GREEN   	"\x1b[32m"
+#define GREEN(s)  		"\x1b[32m"s"\x1b[0m"
+#define COLOR_YELLOW  	"\x1b[33m"
+#define YELLOW(s)  		"\x1b[33m"s"\x1b[0m"
+#define COLOR_BLUE    	"\x1b[34m"
+#define BLUE(s)  		"\x1b[34m"s"\x1b[0m"
+#define COLOR_MAGENTA 	"\x1b[35m"
+#define MAGENTA(s) 		"\x1b[35m"s"\x1b[0m"
+#define COLOR_CYAN    	"\x1b[36m"
+#define CYAN(s)  		"\x1b[36m"s"\x1b[0m"
+#define COLOR_RESET   	"\x1b[0m"
 
 #define NDEBUG 
 

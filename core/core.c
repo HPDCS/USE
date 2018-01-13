@@ -14,9 +14,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <limits.h>
-#if DEBUG==1
-#include <signal.h>
-#endif
 
 #include <ROOT-Sim.h>
 #include <dymelor.h>
@@ -212,7 +209,7 @@ void LPs_metada_init() {
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
-		LPS[i]->ckpt_period 			= 10;
+		LPS[i]->ckpt_period 			= 100000000;
 		LPS[i]->from_last_ckpt 			= 0;
 		LPS[i]->state_log_forced  		= false;
 		LPS[i]->current_base_pointer 	= NULL;
@@ -312,7 +309,7 @@ void init_simulation(unsigned int thread_id){
 			LogState(current_lp);
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
-			LPS[current_lp]->epoch = 1;
+			//LPS[current_lp]->epoch = 1;
 		}
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -420,10 +417,10 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
-			printf("\x1b[33m""ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			printlp("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n", current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
+			printf(YELLOW("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			printlp(YELLOW("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n"), current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			printf("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n""\x1b[0m", current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			printf(YELLOW("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
 			fflush(stdout);//DEBUG
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
@@ -477,7 +474,7 @@ void thread_loop(unsigned int thread_id) {
 					next_t->timestamp < current_lvt){
 				printf("next_t->timestamp < current_lvt\n");
 				printf("is_valid(next_t):%d\n", is_valid(next_t));
-				raise(SIGINT);
+				gdb_abort;//raise(SIGINT);
 			}
 #endif
 		}

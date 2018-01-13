@@ -104,7 +104,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				//	ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);
 				}
 				else{
-					printf("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n", me, state_ptr->lvt, state_ptr->events);
+					printf(BLUE("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n"), me, state_ptr->lvt, state_ptr->events);
 				}
 			
 				//for(j=0;j<FAN_OUT;j++){

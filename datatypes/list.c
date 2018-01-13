@@ -30,7 +30,6 @@
 #include <dymelor.h>
 
 
-
 void *umalloc(unsigned int lid, size_t s) {
 	if(rootsim_config.serial)
 		return rsalloc(s);
@@ -735,23 +734,23 @@ char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struc
 	}
 	//Queue NOT EMPTY
 	else {
-		new_n->prev = previous;
+		///Insert TAIL
+		if(previous == list->tail){
+			new_n->next = NULL;
+			new_n->prev = list->tail;
+			list->tail->next = new_n;//previous->next = new_n;
+			list->tail = new_n;
 		///Insert HEAD
-		if(previous == NULL) {  
-			//new_n->prev = NULL;
+		}else if(previous == NULL) {
+			new_n->prev = NULL;
 			new_n->next = list->head;
 			list->head->prev = new_n;
 			list->head = new_n;
-		///Insert TAIL
-		}else if(previous == list->tail){
-			new_n->next = NULL;
-			list->tail->next = new_n;//previous->next = new_n;
-			//new_n->prev = list->tail;
-			list->tail = new_n;
 		///Insert MIDDLE
 		}else{
+			new_n->prev = previous;
 			new_n->next = previous->next;
-			previous->next->prev = new_n;
+			new_n->next->prev = new_n;
 			previous->next = new_n;
 		}
 	}
