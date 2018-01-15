@@ -49,7 +49,7 @@
 #define BLOCKED_STATE			0x01000
 #define is_blocked_state(state)	(bool)(state & BLOCKED_STATE)
 
-#define ONGVT_PERIOD 100
+#define ONGVT_PERIOD 1000
 
 struct __bucket_node;
 
@@ -111,5 +111,6 @@ extern void _mkdir(const char *path);
 extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
+extern void check_OnGVT(unsigned int lp_idx);
 
 #endif

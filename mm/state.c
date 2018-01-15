@@ -175,9 +175,16 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		}
 
 		evt = local_next_evt;
-		if(evt == NULL || evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
-			break;
-
+		if(old_state != LP_STATE_ONGVT){
+			if(evt == NULL || evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
+				break;
+		}
+		else{
+			if(evt == NULL || evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
+				break;
+		}
+		
+		
 		events++;
 		//activate_LP(lid, evt->timestamp, evt, state_buffer);
 		//printf("%d- SILENT_EXECUTE: %f....\n", lid, evt->timestamp);

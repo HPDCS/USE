@@ -139,6 +139,7 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 //	if(snapshot->lvt < COMPLETE_TIME) {
         return false;
     }
+    printf(GREEN("ON GVT: [%d] LP to the end execution"));
 	return true;
 }
 

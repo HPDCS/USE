@@ -209,7 +209,7 @@ void LPs_metada_init() {
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
-		LPS[i]->ckpt_period 			= 100000000;
+		LPS[i]->ckpt_period 			= 10;
 		LPS[i]->from_last_ckpt 			= 0;
 		LPS[i]->state_log_forced  		= false;
 		LPS[i]->current_base_pointer 	= NULL;
@@ -223,6 +223,7 @@ void LPs_metada_init() {
 
 	}
 	
+	//sim_ended[0]=0;//DEBUG
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
 		end_sim(i);
 
@@ -275,6 +276,10 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+
+//#define print_event(event)	printf("   [LP:%u->%u]: TS:%f TB:%u EP:%u IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p\n",event->sender_id, event->receiver_id, event->timestamp, event->tie_breaker, event->epoch, is_valid(event),event, event->node);
+
+
 void check_OnGVT(unsigned int lp_idx){
 	unsigned int old_state;
 	current_lp = lp_idx;
@@ -289,6 +294,7 @@ void check_OnGVT(unsigned int lp_idx){
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
+			printf("Simulation endend on LP:%u\n", lp_idx);
 			end_sim(lp_idx);
 		}
 		// Ripristina stato sul bound
@@ -300,6 +306,24 @@ void check_OnGVT(unsigned int lp_idx){
 	}
 }
 
+void round_check_OnGVT(){
+	unsigned int start_from = (n_prc_tot / n_cores) * tid;
+	unsigned int curent_ck = start_from;
+	
+	//printf("OnGVT: la coda è vuota!\n");
+	
+	do{
+		if(!is_end_sim(curent_ck)){
+			if(tryLock(curent_ck)){
+			
+				check_OnGVT(curent_ck);
+				
+				unlock(curent_ck);
+				break;
+			}
+		}
+	}while((curent_ck = (curent_ck + 1) % n_prc_tot) == start_from);
+}
 
 void init_simulation(unsigned int thread_id){
 	tid = thread_id;
@@ -401,7 +425,7 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 
 
 void thread_loop(unsigned int thread_id) {
-	unsigned int old_state;
+	unsigned int old_state, empty_fetch = 0;
 	
 	init_simulation(thread_id);
 	
@@ -417,9 +441,13 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(queue_min_time);
 #endif
 		if(fetch_internal() == 0) {
+			if(++empty_fetch>5){
+				//round_check_OnGVT();
+			}
+			goto end_loop;
 			continue;
 		}
-		
+		empty_fetch = 0;
 		//print_event(current_msg);//DEBUG
 
 #if REPORT == 1
@@ -520,12 +548,26 @@ void thread_loop(unsigned int thread_id) {
 		// Take a simulation state snapshot, in some way
 		LogState(current_lp);
 		
+		if((unsigned int)current_msg->node & 0x1){
+			printf(RED("A - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
+			print_event(current_msg);
+			gdb_abort;				
+		}
+		
+		
 		///* PROCESS *///
 		// Execute the event in the proper modality
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
 		///* FLUSH */// 
 		queue_deliver_msgs();
+
+		
+		if((unsigned int)current_msg->node & 0x1){
+			printf(RED("B - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
+			print_event(current_msg);
+			gdb_abort;				
+		}
 
 		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
@@ -538,9 +580,11 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 		///* ON_GVT *///
-		if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == (ONGVT_PERIOD-1)){
-			//check_OnGVT(current_lp);	
-		}
+		//if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == (ONGVT_PERIOD-1)){
+		//	printf("[%u] Commit Horizon <%f,%u>\n", tid, commit_horizon_ts, commit_horizon_tb);
+		//	print_event(current_msg);
+		//	check_OnGVT(current_lp);	
+		//}
 
 	#if DEBUG == 0
 		unlock(current_lp);
@@ -560,7 +604,7 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_data(tid, PRUNE_COUNTER, 1);
 #endif
 		
-
+end_loop:
 		if(is_end_sim(current_lp)){
 			if(check_termination()){
 				__sync_bool_compare_and_swap(&stop, false, true);

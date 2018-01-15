@@ -1569,9 +1569,7 @@ unsigned int fetch_internal(){
 	
 	safe = false;
 	clear_lp_unsafe_set; //Set S ← NULL
-	commit_horizon_ts = min = node->timestamp; //time min ← evt.ts
-    commit_horizon_tb = node->counter;
-    
+	
 	//h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
@@ -1600,6 +1598,11 @@ unsigned int fetch_internal(){
 		// current and correct timeline. The correct timeline is the one will be
 		// observable at the end of a correct simulation process.
 		if(is_valid(event)) {
+			if(min == INFTY){
+				commit_horizon_ts = min = node->timestamp; //time min ← evt.ts
+				commit_horizon_tb = node->counter;	
+			}
+			
 			safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && 
 				!is_in_lp_unsafe_set(lp_idx);
 		
@@ -1618,61 +1621,55 @@ unsigned int fetch_internal(){
 			// The event under exploration is valid, not extracte yet and appears to be in the
 			// future of the LP, therefore we need to check whether to execute it or the one
 			// within the LP's local queue.
-			if(tryLock(lp_idx)) {
+			///* VALID AND NOT EXECUTED AND LOCK TAKEN *///
+			
 
+			if(tryLock(lp_idx)) {
+new_bound:
 				bound_ptr = lp_ptr->bound;
 				lvt_ts = bound_ptr->timestamp; 
 				lvt_tb = bound_ptr->tie_breaker; 
 
 				///* VALID AND EXECUTED *///
-				if((event->state == EXTRACTED) && (node == min_node) &&
+				if((event->state == EXTRACTED)&&
 						(event->timestamp < bound_ptr->timestamp ||
 						(
 							event->timestamp == bound_ptr->timestamp 
 							&& event->tie_breaker <= bound_ptr->tie_breaker
 						))
 					){
-							//printf("DELETE FROM QUEUE BY COMMIT: LID:%d CURR_LVT:%f-%d-%d EX_FR:%d\n",
-							//	 lp_idx, 
-							//	 event->timestamp, event->tie_breaker, is_valid(event), 
-							//	 LPS[lp_idx]->num_executed_frames);
+					if((node == min_node)){//DEBUG
+						//if(tryLock(lp_idx)){
+							check_OnGVT(lp_idx);
 							delete(nbcalqueue, node);
 							unlock(lp_idx);
 							return 0;
+						//}
+					}
 				}
-
-
-				
-				//if(bound_ptr != lp_ptr->bound){//TODO: DA MIGLIORARE
-				//	bound_ptr = lp_ptr->bound;
-				//	lvt_ts = bound_ptr->timestamp; 
-				//	lvt_tb = bound_ptr->tie_breaker; 
-				//	printf("OGNI TATNTO CAPITA\n\n\n");
-				//	bound_ptr = NULL;
-				//	bound_ptr->timestamp = 0;
-				//
-				//	if(	(ts < lvt_ts ||	(ts == lvt_ts && node->counter <= lvt_tb) ) && (event->state == EXTRACTED) ){
-				//		unlock(lp_idx);
-				//	}
-				//}
+			
+			//else{// if(tryLock(lp_idx)) {
+				if(bound_ptr != lp_ptr->bound){//TODO: DA MIGLIORARE
+					printf("OGNI TATNTO CAPITA\n\n\n");
+					gdb_abort;
+					//bound_ptr = NULL;
+					//bound_ptr->timestamp = 0;
+					unlock(lp_idx);
+					goto new_bound;
+					//if(	(ts < lvt_ts ||	(ts == lvt_ts && node->counter <= lvt_tb) ) && (event->state == EXTRACTED) ){
+					//	unlock(lp_idx);
+					//}
+				}
 				///("GET_NEXT_EXECUTED_AND_VALID\n");
 
-	//			if(bound_ptr->father!= NULL && !is_valid(bound_ptr))
-	//			{
-	//					//printf("BOUND INVALID  : LID:%d LP.LVT:%f-%d-%d CURR_LVT:%f-%d-%d EX_FR:%d\n",
-	//					// lp_idx, 
-	//					// bound_ptr->timestamp, bound_ptr->tie_breaker, is_valid(bound_ptr),
-	//					// event->timestamp, event->tie_breaker, is_valid(event), 
-	//					// LPS[lp_idx]->num_executed_frames);
-	//					
-	//					event = bound_ptr;
-	//
-	//					__sync_or_and_fetch(&event->state, ELIMINATED);
-	//					//delete(nbcalqueue, node);
-	//					break;
-	//			}
-	//
-	//			else
+				if(bound_ptr->father!= NULL && !is_valid(bound_ptr))
+				{
+						event = bound_ptr;
+						__sync_or_and_fetch(&event->state, ELIMINATED);
+						//delete(nbcalqueue, node);
+						break;
+				}
+				else
 				{
 					// TODO: perché non spostare questa operazione nel thread loop?
 					local_next_evt = list_next(lp_ptr->bound);
@@ -1691,13 +1688,6 @@ unsigned int fetch_internal(){
 							(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < node->counter)
 						)
 					  ) {
-						//printf("Sto pescando un evento dalla coda locale %u con BOUND.TS:%f BOUND.TB:%u. \nIn mano ho \n\t", lp_idx,lvt_ts,lvt_tb );
-						//print_event(event);
-						//printf("e lo sto sostituendo con \n\t");
-						//print_event(event);
-						//printf("Bound \n\t");
-						//print_event(lp_ptr->bound);
-						//printf("\n\t");
 						event = local_next_evt;
 						node  = local_next_evt->node;
 						
@@ -1719,33 +1709,11 @@ unsigned int fetch_internal(){
 						unlock(lp_idx);
 					}
 					else {
-						//if(event->timestamp == bound_ptr->timestamp && event->tie_breaker != bound_ptr->tie_breaker)
-						//{
-						//	printf("SAME TS AS BOUND  : LID:%d LP.LVT:%f-%d-%d CURR_LVT:%f-%d-%d EX_FR:%d\n",
-						//	 lp_idx, 
-						//	 bound_ptr->timestamp, bound_ptr->tie_breaker, is_valid(bound_ptr),
-						//	 event->timestamp, event->tie_breaker, is_valid(event), 
-						//	 LPS[lp_idx]->num_executed_frames);
-						//}
-						//if(event ==  min_node->payload)
-						//	printf("SAME TS AS MIN  : LID:%d CURR_LVT:%f-%d-%d EX_FR:%d\n",
-						//	 lp_idx, 
-						//	 event->timestamp, event->tie_breaker, is_valid(event), 
-						//	 LPS[lp_idx]->num_executed_frames);
-
 						break;
 					}
 				}
 				///* VALID AND NOT EXECUTED AND LOCK TAKEN AND EXTRACTED *///
 				else {
-					//if(event->timestamp == bound_ptr->timestamp && event->tie_breaker != bound_ptr->tie_breaker)
-					//{
-					//	printf("B - SAME TS AS BOUND  : LID:%d LP.LVT:%f-%d-%d CURR_LVT:%f-%d-%d EX_FR:%d\n",
-					//	 lp_idx, 
-					//	 bound_ptr->timestamp, bound_ptr->tie_breaker, is_valid(bound_ptr),
-					//	 event->timestamp, event->tie_breaker, is_valid(event), 
-					//	 LPS[lp_idx]->num_executed_frames);
-					//}
 					if(
 						event->timestamp < bound_ptr->timestamp ||
 						(
@@ -1753,9 +1721,6 @@ unsigned int fetch_internal(){
 							&& event->tie_breaker <= bound_ptr->tie_breaker
 						)
 					)
-					//if(event != bound_ptr)
-					//	break;
-					//else
 					{
 						unlock(lp_idx);
 						add_lp_unsafe_set(lp_idx);
@@ -1848,11 +1813,9 @@ unsigned int fetch_internal(){
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
     current_msg =  event;//(msg_t *) node->payload;
-    if(current_msg->node == 0xbadc0de){
-		current_msg->node = node;
-		current_msg->tie_breaker = node->counter;
-		//printf("Sto pescando un evento già pescato\n");
-	}
+	current_msg->node = node;
+	current_msg->tie_breaker = node->counter;
+
 #if DEBUG==1
 	if(0xbadc0de == node){
 		printf(RED("BADCODE REACHED state:%u\n"), event->state);
