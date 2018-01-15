@@ -95,9 +95,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				//	printf("[%d] HO RICEVUTO UN EVENTO CON TS=MY_LVT: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
 				//	state_ptr =NULL;state_ptr->lvt *10;
 				//}
+				
 				if(state_ptr->events > now){
 					printf("%d- APP: ERROR: event %f INCORRECT STATE %d\n""\x1b[0m", me, now, state_ptr->events);
-					state_ptr =NULL;state_ptr->lvt *10;
+					gdb_abort;//state_ptr =NULL;state_ptr->lvt *10;
 				}
 				state_ptr->lvt = now;
 				if(state_ptr->events < COMPLETE_EVENTS){
@@ -105,7 +106,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				//	ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);
 				}
 				else{
-					printf(BLUE("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n"), me, state_ptr->lvt, state_ptr->events);
+					printf(GREEN("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n"), me, state_ptr->lvt, state_ptr->events);
 				}
 			
 				//for(j=0;j<FAN_OUT;j++){

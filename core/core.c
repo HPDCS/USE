@@ -277,7 +277,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 
 void check_OnGVT(unsigned int lp_idx){
 	unsigned int old_state;
-	
+	current_lp = lp_idx;
 	LPS[lp_idx]->until_ongvt = 0;
 	
 	if(!is_end_sim(lp_idx)){
@@ -294,7 +294,7 @@ void check_OnGVT(unsigned int lp_idx){
 		// Ripristina stato sul bound
 		LPS[lp_idx]->state = LP_STATE_ROLLBACK;
 		//printf("%d- BUILD STATE AFTER GVT START LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
-		rollback(lp_idx, INFTY, commit_horizon_tb);
+		rollback(lp_idx, INFTY, INFTY);
 		//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
 		LPS[lp_idx]->state = old_state;
 	}
@@ -327,7 +327,13 @@ void init_simulation(unsigned int thread_id){
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), freed_local_evts);
-       		current_msg->epoch = LPS[current_lp]->epoch;//
+       		current_msg->sender_id 		= -1;//
+       		current_msg->receiver_id 	= current_lp;//
+       		current_msg->timestamp 		= 0.0;//
+       		current_msg->type 			= INIT;//
+       		current_msg->state 			= 0x0;//
+       		current_msg->father 		= NULL;//
+       		current_msg->epoch 		= LPS[current_lp]->epoch;//
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
@@ -437,8 +443,12 @@ void thread_loop(unsigned int thread_id) {
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
-			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker < LPS[current_lp]->bound->tie_breaker)
+			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
+			if(current_msg == LPS[current_lp]->bound && current_msg->state != ANTI_EVENT){
+				printf(RED("Ho ricevuto due volte di fila lo stesso messaggio e non è un antievento\n!!!!!"));
+				gdb_abort;
+			}
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
@@ -522,7 +532,9 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->num_executed_frames++;
 		
 		if(safe) {
-			delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
+			if(current_msg->node != 0xBADC0DE){
+				delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
+			}
 		}
 
 		///* ON_GVT *///
@@ -541,7 +553,7 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1
 		clock_timer_start(queue_op);
 #endif
-		nbc_prune();
+		//nbc_prune();
 
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));

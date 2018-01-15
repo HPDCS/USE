@@ -7,6 +7,7 @@
 #include "queue.h"
 #include "core.h"
 #include "lookahead.h"
+#include "hpdcs_utils.h"
 
 
 //used to take locks on LPs
@@ -78,6 +79,9 @@ void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
     simtime_t max = 0; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
+#if REPORT == 1
+		clock_timer queue_op;
+#endif
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
 
@@ -92,15 +96,19 @@ void queue_deliver_msgs(void) {
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
 
+#if DEBUG==1
+		if(new_hole->timestamp <= current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+		if(new_hole->timestamp != _thr_pool.messages[i].timestamp){ printf(RED("2Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+		if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+#endif
+
 		if(max < new_hole->timestamp)
 			max = new_hole->timestamp;
 
 #if REPORT == 1
-		clock_timer queue_op;
 		clock_timer_start(queue_op);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
-
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
 		statistics_post_data(tid, EVENTS_FLUSHED, 1);

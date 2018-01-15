@@ -78,7 +78,7 @@ typedef struct _LP_state {
 	bool		state_log_forced;
 
 	/// The current state base pointer (updated by SetState())
-	void 		*current_base_pointer;
+	void 		* current_base_pointer;
 
 	/// Input messages queue
 	list(msg_t)	queue_in;
