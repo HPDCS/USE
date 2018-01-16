@@ -820,8 +820,8 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 		n->prev->next = n->next;
 	}
 
-	n->next = 0xAAA;
-	n->prev = 0xBBB;
+	n->next = 0xCCC;
+	n->prev = 0xDDD;
 
 	l->size--;
 	assert(l->size == (size_before - 1));
