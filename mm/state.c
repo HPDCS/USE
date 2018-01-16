@@ -245,7 +245,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	restore_state = list_tail(LPS[lid]->queue_states);
 
 	// It's >= rather than > because we have NOT taken into account simultaneous events YET
-	while (restore_state != NULL && restore_state->lvt >= destination_time) { //TODO: aggiungere tie_breaker e mettere solo >
+	while (restore_state != NULL && ( restore_state->lvt >= destination_time || !is_valid(restore_state->last_event) ) ) { //TODO: aggiungere tie_breaker e mettere solo >
 		s = restore_state;
 		restore_state = list_prev(restore_state);
 		if(LPS[lid]->state == LP_STATE_ROLLBACK){

@@ -121,9 +121,17 @@ void queue_deliver_msgs(void) {
 
 
 bool is_valid(msg_t * event){
-	return    (    ( event->state          & ELIMINATED) != ELIMINATED ) && 
-		      (    ( event->father->state  & ELIMINATED) != ELIMINATED ) && 
-			         (event->fatherEpoch == event->father->epoch);
+	return  
+            (
+                (event->state & ELIMINATED) != ELIMINATED  
+                &&  (
+                        event->father == NULL 
+                        ||  (
+                                (event->father->state  & ELIMINATED) != ELIMINATED  
+                                &&   event->fatherEpoch == event->father->epoch 
+                            )
+                    )       
+            );
 }
 
 
