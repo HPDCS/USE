@@ -798,14 +798,18 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 
 	char *content = n + sizeof(struct rootsim_list_node);
 
-	if(l->head == n) {
+		if(l->head == n) {
 		l->head = n->next;
-		l->head->prev = NULL;
+		if(l->head != NULL) {
+			l->head->prev = NULL;
+		}
 	}
 
 	if(l->tail == n) {
 		l->tail = n->prev;
-		l->tail->next = NULL;
+		if(l->tail != NULL) {
+			l->tail->next = NULL;
+		}
 	}
 
 	if(n->next != NULL) {
@@ -815,6 +819,9 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 	if(n->prev != NULL) {
 		n->prev->next = n->next;
 	}
+
+	n->next = 0xAAA;
+	n->prev = 0xBBB;
 
 	l->size--;
 	assert(l->size == (size_before - 1));
@@ -827,9 +834,12 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct rootsim_list *free_list) {
 	char *ptr;
 
-	if(free_list->head != NULL){
-		return 	list_extract_given_node(lid, free_list, free_list->head);
-	}
+	// DEBUG: il seguente snippet serve per riusare i nodi della lista interna
+	// tuttavia questa ottimizzazione richiede la gestione complementare del
+	// buffer interno dentro la 'prune()'
+	//if(free_list->head != NULL){ //DEBUG: decommentare
+	//	return 	list_extract_given_node(lid, free_list, free_list->head);
+	//}
 	ptr = list_allocate_node(lid, size);
 
 	if(ptr == NULL)

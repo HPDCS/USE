@@ -166,16 +166,18 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	while(1){
 		local_next_evt = list_next(evt);
 
-		while(local_next_evt != NULL && !is_valid(local_next_evt)){
+		while(local_next_evt != NULL && local_next_evt != LPS[lid]->bound && !is_valid(local_next_evt)){
 			list_extract_given_node(lid, lp_ptr->queue_in, local_next_evt);
-			list_place_after_given_node_by_content(TID, to_remove_local_evts, 
-												local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
+			//list_place_after_given_node_by_content(TID, to_remove_local_evts, 
+			//									local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
+			local_next_evt->state = ANTI_EVENT; //DEBUG
 			local_next_evt = list_next(evt);
 			// TODO: valutare cancellazione da coda globale
 		}
 
 		evt = local_next_evt;
 		if(old_state != LP_STATE_ONGVT){
+			//if(evt == NULL | evt->node != 0x5A7E)
 			if(evt == NULL || evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
 				break;
 		}

@@ -34,6 +34,7 @@
 #include "core.h"
 #include "lookahead.h"
 #include "garbagecollector.h"
+#include "events.h"
 
 #define INFTY DBL_MAX
 
@@ -80,7 +81,8 @@ struct __bucket_node
 	//volatile unsigned int to_remove; 			// used to resolve the conflict with same timestamp using a FIFO policy
 	//char zpad[60];
 	//void *generator;	// pointer to the successor
-	void *payload;  				// general payload
+	//void *payload;  				// general payload
+	msg_t *payload;  				// general payload
 	double timestamp;  				// key
 	unsigned long long epoch;		//enqueue's epoch
 	unsigned int counter; 			// used to resolve the conflict with same timestamp using a FIFO policy
@@ -135,7 +137,7 @@ extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_b
 
 extern nbc_bucket_node* getMin(nb_calqueue *queue, table ** h);
 extern nbc_bucket_node* getNext(nbc_bucket_node* node, table *h);
-extern void delete(nb_calqueue *queue, nbc_bucket_node* node);
+extern bool delete(nb_calqueue *queue, nbc_bucket_node* node);
 
 extern void getMinLP_internal(unsigned int lp);
 extern unsigned int getMinFree_internal();

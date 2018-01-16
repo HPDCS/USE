@@ -294,7 +294,7 @@ void check_OnGVT(unsigned int lp_idx){
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
-			printf("Simulation endend on LP:%u\n", lp_idx);
+			//printf("Simulation endend on LP:%u\n", lp_idx);
 			end_sim(lp_idx);
 		}
 		// Ripristina stato sul bound
@@ -504,6 +504,7 @@ void thread_loop(unsigned int thread_id) {
 		// continue by fetching another event form the calendar queue.
 		if(current_msg->state == ANTI_EVENT) {
 			//printlp("Anti-event received\n");
+			//delete(nbcalqueue, current_msg->node);
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
@@ -558,11 +559,11 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->bound = current_msg;
 		LPS[current_lp]->num_executed_frames++;
 		
-		if(safe) {
-			if(current_msg->node != 0xBADC0DE){
-				delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
-			}
-		}
+		//if(safe) {
+		//	if(current_msg->node != 0xBADC0DE){
+		//		delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
+		//	}
+		//}
 
 		///* ON_GVT *///
 		//if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == (ONGVT_PERIOD-1)){
