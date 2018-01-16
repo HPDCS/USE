@@ -72,6 +72,11 @@ void statistics_post_data(int tid, int type, double value) {
             thread_stats[tid].events_stash++;
             break;
 
+		case EVENTS_SAFE_SILENT:
+            thread_stats[tid].events_safe_silent++;
+            break;
+
+
         case COMMITS_STM:
             thread_stats[tid].commits_stm++;
             break;
@@ -119,6 +124,10 @@ void statistics_post_data(int tid, int type, double value) {
         case CLOCK_SAFETY_CHECK:
             thread_stats[tid].clock_safety_check += (unsigned long long)value;
             break;
+        
+        case CLOCK_SAFE_SILENT:
+            thread_stats[tid].clock_safe_silent += (unsigned long long)value;
+            break;
 
         case EVENTS_FETCHED:
 			thread_stats[tid].events_fetched++;
@@ -159,6 +168,7 @@ void gather_statistics() {
         system_stats.events_stash += 	thread_stats[i].events_stash;
         system_stats.events_fetched += 	thread_stats[i].events_fetched;
         system_stats.events_flushed += 	thread_stats[i].events_flushed;
+        system_stats.events_safe_silent += 	thread_stats[i].events_safe_silent;
         
         system_stats.prune_counter += 			thread_stats[i].prune_counter;
         system_stats.safety_check_counter += 	thread_stats[i].safety_check_counter;
@@ -177,6 +187,8 @@ void gather_statistics() {
         system_stats.clock_stm_wait += 		thread_stats[i].clock_stm_wait;
         system_stats.clock_undo_event += 	thread_stats[i].clock_undo_event;
         system_stats.clock_prune += 		thread_stats[i].clock_prune;
+        
+        system_stats.clock_safe_silent += 		thread_stats[i].clock_safe_silent;
          
     }
 		
@@ -197,6 +209,7 @@ void print_statistics() {
 #if REVERSIBLE==1
     printf("STM events......................................: %12u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
 #endif
+	printf("Events in silent execution......................: %12u (%.2f%%)\n", system_stats.events_safe_silent);
     unsigned int commits_total = system_stats.events_safe + system_stats.commits_stm;
     printf("Number of Rolback...............................: %12u\n", (system_stats.events_roll));
     printf("TOT committed...................................: %12u\n", commits_total);
@@ -207,6 +220,7 @@ void print_statistics() {
 	printf("STM preemptive   rollbacked.....................: %12u (%.2f%%)\n\n", system_stats.events_stash, ((double)system_stats.events_stash / system_stats.events_stm)*100);
 #endif
     printf("Average time spent in safe execution............: %12llu clocks\n\n", system_stats.clock_safe/system_stats.events_safe);
+	printf("Average time spent in silent execution..........: %12llu clocks\n\n", system_stats.clock_safe_silent/system_stats.events_safe_silent);
 
 //NOTA: queste info derivano dai soli eventi arrivati a commit, non da quelli rollbackati
 #if REVERSIBLE==1

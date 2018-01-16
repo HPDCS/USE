@@ -399,8 +399,13 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 #endif
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);		
 #if REPORT == 1              
-		statistics_post_data(tid, EVENTS_SAFE, 1);
-		statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing_time));
+		if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
+			statistics_post_data(tid, EVENTS_SAFE, 1);
+			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing_time));
+		}else{
+			statistics_post_data(tid, EVENTS_SAFE_SILENT, 1);
+			statistics_post_data(tid, CLOCK_SAFE_SILENT, clock_timer_value(event_processing_time));
+		}
 #endif
 #if REVERSIBLE == 1
 	}
@@ -483,10 +488,10 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
-			printf(YELLOW("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			printlp(YELLOW("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n"), current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
+			//printf(YELLOW("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			//printlp(YELLOW("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n"), current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			printf(YELLOW("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
+			//printf(YELLOW("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
 			fflush(stdout);//DEBUG
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
@@ -516,32 +521,12 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 #if DEBUG == 1
-			if(list_next(current_msg) != next_t){
-				printf("list_next(current_msg) != next_t\n");
-				exit(1);
-			}
-			if(list_prev(current_msg) != bound_t){
-				printf("list_prev(current_msg) != bound_t\n");
-				exit(1);
-			}
-			if(list_next(bound_t) != current_msg){
-				printf("list_next(bound_t) != current_msg\n");
-				exit(1);
-			}
-			if(next_t!= NULL && list_prev(next_t) != current_msg){
-				printf("list_prev(next_t) != current_msg\n");
-				exit(1);
-			}
-			if(bound_t->timestamp > current_lvt){
-				printf("bound_t->timestamp > current_lvt\n");
-				exit(1);
-			}
-			if(next_t!=NULL && 
-					next_t->timestamp < current_lvt){
-				printf("next_t->timestamp < current_lvt\n");
-				printf("is_valid(next_t):%d\n", is_valid(next_t));
-				gdb_abort;//raise(SIGINT);
-			}
+			if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
+			if(list_prev(current_msg) != bound_t){					printf("list_prev(current_msg) != bound_t\n");	gdb_abort;}
+			if(list_next(bound_t) != current_msg){					printf("list_next(bound_t) != current_msg\n");	gdb_abort;}
+			if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
+			if(bound_t->timestamp > current_lvt){					printf("bound_t->timestamp > current_lvt\n");	gdb_abort;}			
+			if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
 #endif
 		}
 				

@@ -24,6 +24,7 @@
 #define EVENTS_STM 2
 #define EVENTS_ROLL 30
 #define EVENTS_STASH 34
+#define EVENTS_SAFE_SILENT 41//PADS2018
 
 #define COMMITS_HTM 3 //DEL
 #define COMMITS_STM 4
@@ -31,6 +32,7 @@
 #define CLOCK_SAFE 5
 #define CLOCK_HTM 6 //DEL
 #define CLOCK_STM 7
+#define CLOCK_SAFE_SILENT 40//PADS2018
 
 #define CLOCK_HTM_THROTTLE 8 //DEL
 #define CLOCK_STM_WAIT 9
@@ -83,6 +85,7 @@ struct stats_t {
     unsigned int events_stm;
     unsigned int events_roll;
     unsigned int events_stash;
+    unsigned int events_safe_silent;//PADS2018
     
     unsigned int commits_htm;//
     unsigned int commits_stm;
@@ -100,6 +103,8 @@ struct stats_t {
     unsigned long long clock_delete;
     unsigned long long clock_prune;
     unsigned long long clock_safety_check;
+	unsigned long long clock_safe_silent;//PADS2018
+
 
     unsigned int abort_total;//
     unsigned int abort_unsafe;//
