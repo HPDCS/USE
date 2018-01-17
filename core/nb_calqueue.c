@@ -169,7 +169,7 @@ static inline unsigned long long hash(double timestamp, double bucket_width)
 
 
 	tmp1 = res * bucket_width;
-	tmp2 = tmp1 + bucket_width;
+	tmp2 = (res + 1) * bucket_width;
     
 	if(LESS(timestamp, tmp1))
 		return --res;
@@ -1298,8 +1298,6 @@ nbc_bucket_node* unmarked(void *pointer){ //da cancellare
 
 
 
-#define print_event(event)	printf("   [LP:%u->%u]: TS:%f TB:%u EP:%u IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p\n",event->sender_id, event->receiver_id, event->timestamp, event->tie_breaker, event->epoch, is_valid(event),event, event->node);
-
 //
 //unsigned int fetch_internal(){
 //	table *h;
@@ -1585,9 +1583,9 @@ unsigned int fetch_internal(){
     // if the queue has no more event to explore.
     while(node != NULL){	
 		//TODO verificare
-		if(++c%1000==0){
-			printf("Eventi scorsi in fetch %u\n",c);
-		}
+		//if(++c%1000==0){
+		//	printf("Eventi scorsi in fetch %u\n",c);
+		//}
 		// Set the safety of the current event under exploration
 		
 		event = (msg_t *)node->payload;		// Event under exploration
@@ -1626,7 +1624,7 @@ new_bound:
 
 				///* VALID AND EXECUTED AND MIN *///
 				if((node == min_node)){//DEBUG
-					if((event->state == EXTRACTED)&&
+					if((event->state == EXTRACTED) &&
 						(event->timestamp < bound_ptr->timestamp ||
 						(
 							event->timestamp == bound_ptr->timestamp 
