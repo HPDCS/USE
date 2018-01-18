@@ -51,6 +51,8 @@ __thread unsigned long long evt_count = 0;
 __thread simtime_t 		commit_horizon_ts = 0;
 __thread unsigned int 	commit_horizon_tb = 0;
 
+
+
 //timer
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
@@ -471,6 +473,10 @@ void thread_loop(unsigned int thread_id) {
 		//if(current_msg->timestamp < LPS[current_msg->receiver_id]->bound->timestamp){//DEBUG
 		//	printf("\x1b[31m""Ho ricevuto un evento a ts:%f quando il bound è %f\n""\x1b[0m",current_msg->timestamp, LPS[current_msg->receiver_id]->bound->timestamp);
 		//}
+		if(current_msg->state == ANTI_EVENT && current_msg->node == 0xba4a4a) {
+			unlock(current_lp);
+			continue; //TODO: verificare
+		}
 
 
 		// Check whether the event is in the past, if this is the case
@@ -485,14 +491,17 @@ void thread_loop(unsigned int thread_id) {
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
+
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
+			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
+			current_msg->roll_epoch = LPS[current_lp]->epoch;
 			//printf(YELLOW("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
 			//printlp(YELLOW("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n"), current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 			//printf(YELLOW("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			fflush(stdout);//DEBUG
+			//fflush(stdout);//DEBUG
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
@@ -505,9 +514,16 @@ void thread_loop(unsigned int thread_id) {
 		if(current_msg->state == ANTI_EVENT) {
 			//printlp("Anti-event received\n");
 			//delete(nbcalqueue, current_msg->node);
+			current_msg->node = 0xba4a4a;
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
+
+#if DEBUG==1
+		if((unsigned long long)current_msg->node & (unsigned long long)0x1){
+			printf(RED("Si sta eseguendo un nodo eliminato"));
+		}
+#endif
 
 		// Update event and LP control variables
 		current_msg->epoch = LPS[current_lp]->epoch;
@@ -623,8 +639,8 @@ end_loop:
 	//statistics_fini();
 	
 	if(sim_error){
-		printf(COLOR_RED "[%u] Execution ended for an error\n" COLOR_RESET, tid);
-	} else if (stop){
-		printf(COLOR_GREEN "[%u] Execution ended correctly\n" COLOR_RESET, tid);
+		printf(RED("[%u] Execution ended for an error\n"), tid);
+	} else if (stop && tid == MAIN_PROCESS){
+		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 	}
 }

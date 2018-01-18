@@ -38,7 +38,8 @@ typedef struct __msg_t
 	struct __msg_t * local_previous;	//address of the previous event executed on the relative LP ////occhio, potrebbe non servire
 	
 	//struct state_t * previous_checkpoint; //the last checkpoint taken before the execution of the current event
-		
+	unsigned int roll_epoch;	//DEBUG
+	
 } msg_t;
 
 typedef struct _msg_hdr_t {

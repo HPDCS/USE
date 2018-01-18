@@ -41,6 +41,8 @@
 #include <dymelor.h>
 #include <statistics.h>
 #include <queue.h>
+#include <hpdcs_utils.h>
+#include <prints.h>
 
 
 
@@ -157,6 +159,8 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	// current state can be either idle READY, or ROLLBACK, so we save it and then put it back in place
 	old_state = LPS[lid]->state;
 	LPS[lid]->state = LP_STATE_SILENT_EXEC;
+	bool stop_silent = false;
+
 
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
@@ -166,34 +170,55 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	while(1){
 		local_next_evt = list_next(evt);
 
-		while(local_next_evt != NULL && local_next_evt != LPS[lid]->bound && !is_valid(local_next_evt)){
-			list_extract_given_node(lid, lp_ptr->queue_in, local_next_evt);
-			//list_place_after_given_node_by_content(TID, to_remove_local_evts, 
-			//									local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
-			local_next_evt->state = ANTI_EVENT; //DEBUG
-			local_next_evt = list_next(evt);
-			// TODO: valutare cancellazione da coda globale
-		}
+
+		//while(local_next_evt != NULL && !is_valid(local_next_evt) && local_next_evt != LPS[lid]->bound){
+		//	list_extract_given_node(lid, lp_ptr->queue_in, local_next_evt);
+		//	//list_place_after_given_node_by_content(TID, to_remove_local_evts, 
+		//	//									local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
+		//	__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_EVENT; //DEBUG									
+		//	local_next_evt = list_next(evt);
+		//	stop_silent = true;
+		//	// TODO: valutare cancellazione da coda globale
+		//}
+		//if(local_next_evt != NULL && !is_valid(local_next_evt)){
+		//	stop_silent = true;
+		//	break;
+		//}
 
 		evt = local_next_evt;
 		if(old_state != LP_STATE_ONGVT){
 			//if(evt == NULL | evt->node != 0x5A7E)
-			if(evt == NULL || evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
+			if(stop_silent || evt == NULL || 
+				evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
 				break;
 		}
 		else{
-			if(evt == NULL || evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
+			if(stop_silent || evt == NULL || 
+			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
 				break;
 		}
 		
 		
 		events++;
-		//activate_LP(lid, evt->timestamp, evt, state_buffer);
-		//printf("%d- SILENT_EXECUTE: %f....\n", lid, evt->timestamp);
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
-		//printf("%d- SILENT_EXECUTE: %f....DONE\n", lid, evt->timestamp);
 		last_executed_event = evt;
 	}
+
+#if DEBUG==1
+		if(old_state == LP_STATE_ONGVT){
+			if(stop_silent){
+				if(local_next_evt->timestamp < until_ts || 
+				(local_next_evt->timestamp == until_ts && local_next_evt->tie_breaker <= tie_breaker)){ 
+					printf(RED("Ho beccato un evento non valido durante On_GVT\n")); 
+					print_event(local_next_evt);
+					gdb_abort;
+				}
+			}
+		}
+#endif
+
+
+
 	if(old_state != LP_STATE_ONGVT){
 		LPS[lid]->bound = last_executed_event;
 	}
@@ -245,7 +270,8 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	restore_state = list_tail(LPS[lid]->queue_states);
 
 	// It's >= rather than > because we have NOT taken into account simultaneous events YET
-	while (restore_state != NULL && ( restore_state->lvt >= destination_time || !is_valid(restore_state->last_event) ) ) { //TODO: aggiungere tie_breaker e mettere solo >
+	while (restore_state != NULL && 
+		( restore_state->lvt >= destination_time || !is_valid(restore_state->last_event) ) ) { //TODO: aggiungere tie_breaker e mettere solo >
 		s = restore_state;
 		restore_state = list_prev(restore_state);
 		if(LPS[lid]->state == LP_STATE_ROLLBACK){

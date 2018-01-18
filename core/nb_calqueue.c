@@ -1554,7 +1554,7 @@ unsigned int fetch_internal(){
 	table *h;
 	nbc_bucket_node * node, *node_next, *min_node;
 	simtime_t ts, min = INFTY, lvt_ts;
-	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb;
+	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb, tb;
 	double bucket_width;
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, *tmp_node, * bound_ptr;
@@ -1569,7 +1569,6 @@ unsigned int fetch_internal(){
 	safe = false;
 	clear_lp_unsafe_set; //Set S ← NULL
 	
-	//h = read_table(nbcalqueue);						//
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
 	size = h->size;								//
@@ -1583,14 +1582,15 @@ unsigned int fetch_internal(){
     // if the queue has no more event to explore.
     while(node != NULL){	
 		//TODO verificare
-		//if(++c%1000==0){
-		//	printf("Eventi scorsi in fetch %u\n",c);
-		//}
+		if(++c%1000==0){
+			printf("Eventi scorsi in fetch %u\n",c);
+		}
 		// Set the safety of the current event under exploration
 		
 		event = (msg_t *)node->payload;		// Event under exploration
 		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
 		ts = node->timestamp;				// Timestamp of the event under exploration
+		tb = node->counter;				// Timestamp of the event under exploration
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 				
 
@@ -1600,6 +1600,11 @@ unsigned int fetch_internal(){
 		// observable at the end of a correct simulation process.
 
 	if(tryLock(lp_idx)) {
+#if DEBUG==1
+		if(lp_lock[lp_idx*CACHE_LINE_SIZE/4]!=tid+1){
+			printf(RED("Penso di aver preso il lock, ma non è così\n"));
+		}
+#endif
 		if(is_valid(event)) {
 			if(min == INFTY){
 				commit_horizon_ts = min = node->timestamp; //time min ← evt.ts
@@ -1623,7 +1628,7 @@ new_bound:
 				lvt_tb = bound_ptr->tie_breaker; 
 
 				///* VALID AND EXECUTED AND MIN *///
-				if((node == min_node)){//DEBUG
+				if((node == min_node)){//DEBUG//if(safe){//
 					if((event->state == EXTRACTED) &&
 						(event->timestamp < bound_ptr->timestamp ||
 						(
@@ -1631,9 +1636,19 @@ new_bound:
 							&& event->tie_breaker <= bound_ptr->tie_breaker
 						))
 					){
+						if(!is_valid(event)){//DEBUG
+							printf(RED("IS NOT VALID "));print_event(event);
+						}
 						delete(nbcalqueue, node);
+						
 						check_OnGVT(lp_idx);
-						//event->node = 0x5AFE;
+						
+						event->node = 0x5AFE;                //DEBUG
+						event->local_next = bound_ptr;       //DEBUG
+						event->local_previous = node;        //DEBUG
+						event->previous_seed = lp_ptr->epoch;//DEBUG
+						
+						
 						unlock(lp_idx);
 						return 0;
 					}
@@ -1645,7 +1660,7 @@ new_bound:
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					//list_place_after_given_node_by_content(TID, to_remove_local_evts, 
 					//									local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
-					local_next_evt->state = ANTI_EVENT; //DEBUG									
+					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_EVENT; //DEBUG									
 					local_next_evt = list_next(lp_ptr->bound);
 				}
 				
@@ -1655,15 +1670,25 @@ new_bound:
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < node->counter)
 					)
 				  ) {
-					event = local_next_evt;
-					node  = local_next_evt->node;
-					ts = event->timestamp;
-					//printf("GET_NEXT_AND_VALID: "); print_event(event);
-					if(0xbadc0de == node){ //DEBUG
+					if(local_next_evt->node == 0x5AFE){
+						printf("GET_NEXT_AND_VALID: \n"); 
+						printf("\tevent         : ");print_event(event);
+						printf("\tlocal_next_evt: ");print_event(local_next_evt);
+						gdb_abort;
+					}
+					if(local_next_evt->node == 0xbadc0de){ //DEBUG
 						printf(RED("1 - BADCODE REACHED state:%u\n"), event->state);
 						gdb_abort;
 					}
 				
+					event = local_next_evt;
+					node  = local_next_evt->node;
+					ts = event->timestamp;
+					
+					if(event->state == ANTI_EVENT){
+						printf(RED("GNEV: ANTI-EVENT IN VALIDO\n"));
+						print_event(event);
+					}
 				}
 			    //Marco l'evento come estratto se ancora non lo è
 			    ///* VALID AND NOT EXECUTED AND LOCK TAKEN AND NOT EXTRACTED YET *///
@@ -1698,10 +1723,16 @@ new_bound:
 				}
 				else if(event->state == ANTI_EVENT)
 				{
+					printf(RED("ANTI-EVENT IN VALIDO!?!?!?\n"));
+					print_event(event);
+					//delete(nbcalqueue, node);
+					gdb_abort;
 					break;
 				}
 				else if(event->state == ELIMINATED)
 				{
+					printf(RED("ELIMINATO IN VALIDO!?!?!?\n"));
+					print_event(event);
 					delete(nbcalqueue, node);
 					unlock(lp_idx);
 				}
@@ -1795,7 +1826,7 @@ new_bound:
 		//printf("Lo stesso evento è stato eseguito %u volte.\nEvent_pointer:%p Timestamp:%f\n\n",node->executed,node,node->timestamp);
 	}
 #endif
-    
+
     return 1;
 }
 

@@ -99,6 +99,8 @@ typedef struct _LP_state {
 	unsigned long long epoch;
 	
 	unsigned int until_ongvt;
+	
+	msg_t* 	last_rollback_event;
 
 } LP_state;
 

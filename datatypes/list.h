@@ -34,6 +34,8 @@
 
 //#include <core.h>
 #include <atomic.h>
+//#include <simtypes.h>
+//#include <events.h>
 
 
 
@@ -285,7 +287,9 @@ extern void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, 
 				__isheadbool;\
 				})
 
-
+extern void * list_prev_f(void * ptr);//DEBUG
+extern void * list_next_f(void * ptr);//DEBUG
+extern unsigned int print_list_fw(void * ptr);//DEBUG
 
 
 #endif /* __LIST_DATATYPE_H */

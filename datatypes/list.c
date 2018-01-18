@@ -28,6 +28,7 @@
 
 #include <list.h>
 #include <dymelor.h>
+#include <prints.h>
 
 
 void *umalloc(unsigned int lid, size_t s) {
@@ -798,7 +799,7 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 
 	char *content = n + sizeof(struct rootsim_list_node);
 
-		if(l->head == n) {
+	if(l->head == n) {
 		l->head = n->next;
 		if(l->head != NULL) {
 			l->head->prev = NULL;
@@ -846,4 +847,35 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 		return NULL;
 
 	return (void *)(ptr + sizeof(struct rootsim_list_node));
+}
+
+
+
+void * list_next_f(void * ptr) {//DEBUG
+	struct rootsim_list_node *__nextptr = list_container_of(ptr)->next;
+	__typeof__(ptr) __dataptr = (__typeof__(ptr))(__nextptr == NULL ? NULL : __nextptr->data);
+	return __dataptr;
+}
+
+void * list_prev_f(void * ptr) {//DEBUG
+	struct rootsim_list_node *__prevptr = list_container_of(ptr)->prev;
+	__typeof__(ptr)__dataptr = (__typeof__(ptr))(__prevptr == NULL ? NULL : __prevptr->data);
+	return __dataptr;
+}
+
+unsigned int print_list_fw(void * ptr){//DEBUG
+	struct rootsim_list_node *n =  list_container_of(ptr);
+	unsigned int c = 0;
+	
+	printf("[");
+	while(n!=NULL){
+		printf("%p, ",n->data);//print_event((msg_t*)n->data);
+		c++;
+		n=n->next;
+	}
+	
+	printf("]\n");
+	return c;
+	
+	
 }
