@@ -473,7 +473,7 @@ void thread_loop(unsigned int thread_id) {
 		//if(current_msg->timestamp < LPS[current_msg->receiver_id]->bound->timestamp){//DEBUG
 		//	printf("\x1b[31m""Ho ricevuto un evento a ts:%f quando il bound è %f\n""\x1b[0m",current_msg->timestamp, LPS[current_msg->receiver_id]->bound->timestamp);
 		//}
-		if(current_msg->state == ANTI_EVENT && current_msg->node == 0xba4a4a) {
+		if(current_msg->state == ANTI_EVENT && current_msg->monitor == 0xba4a4a) {
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
@@ -514,7 +514,7 @@ void thread_loop(unsigned int thread_id) {
 		if(current_msg->state == ANTI_EVENT) {
 			//printlp("Anti-event received\n");
 			//delete(nbcalqueue, current_msg->node);
-			current_msg->node = 0xba4a4a;
+			current_msg->monitor = 0xba4a4a;
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}

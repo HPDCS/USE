@@ -40,6 +40,8 @@ typedef struct __msg_t
 	//struct state_t * previous_checkpoint; //the last checkpoint taken before the execution of the current event
 	unsigned int roll_epoch;	//DEBUG
 	
+	void * monitor;
+	struct __bucket_node * del_node;
 } msg_t;
 
 typedef struct _msg_hdr_t {

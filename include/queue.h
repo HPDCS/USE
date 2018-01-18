@@ -7,9 +7,9 @@
 #define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
 
-#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1ULL << (lp%64)) )
-#define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1ULL << (lp%64)) )
-#define clear_lp_unsafe_set			unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
+#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1ULL << (lp%64)) )//lp_unsafe_set_debug[lp]=1ULL//
+#define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1ULL << (lp%64)) )//lp_unsafe_set_debug[lp]==1ULL//
+#define clear_lp_unsafe_set			unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}//unsigned int x; for(x = 0; x < (n_prc_tot) ; x++){lp_unsafe_set_debug[x] = 0;}
 #define queue_pool_size _thr_pool._thr_pool_count;
 
 
@@ -43,6 +43,7 @@ extern __thread bool  safe;
 
 extern unsigned int *lp_lock;
 extern __thread unsigned long long * lp_unsafe_set;
+//extern __thread unsigned long long * lp_unsafe_set_debug;
 extern __thread unsigned int unsafe_events;
 
 #endif

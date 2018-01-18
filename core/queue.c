@@ -24,6 +24,8 @@ __thread unsigned int unsafe_events;
 
 __thread unsigned long long * lp_unsafe_set;
 
+//__thread unsigned long long * lp_unsafe_set_debug;
+
 typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
 	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
@@ -39,10 +41,15 @@ void queue_init(void) {
 }
 
 void unsafe_set_init(){
+	
 	if( ( lp_unsafe_set=malloc(LP_ULL_MASK_SIZE)) == NULL ){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
+	//if( ( lp_unsafe_set_debug=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+	//	printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+	//	abort();	
+	//}
 	clear_lp_unsafe_set;
 }
 

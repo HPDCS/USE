@@ -1268,9 +1268,10 @@ bool delete(nb_calqueue *queue, nbc_bucket_node* node){
         node_next = FETCH_AND_OR(&tmp->next, DEL);
        
     }
-    if(is_marked(node_next, VAL))
+    if(is_marked(node_next, VAL)){
 		ATOMIC_DEC(&(h->counter));
-    //ATOMIC_DEC(&(h->counter));
+		node->payload->del_node = node;
+	}
     
 #if DEBUG == 1
 	tmp->deleted = tmp->deleted + 1;
@@ -1549,7 +1550,6 @@ nbc_bucket_node* unmarked(void *pointer){ //da cancellare
 //}
 //
 
-
 unsigned int fetch_internal(){
 	table *h;
 	nbc_bucket_node * node, *node_next, *min_node;
@@ -1572,6 +1572,11 @@ unsigned int fetch_internal(){
 	bucket_width = h->bucket_width;					//
 	bucket = hash(node->timestamp, bucket_width);	//
 	size = h->size;								//
+
+	if(min == INFTY){
+		commit_horizon_ts = min = node->timestamp; //time min ← evt.ts
+		commit_horizon_tb = node->counter;	
+	}
     
     // Explore the queue looking for the next event
     // which is 'processable', namely one of the following:
@@ -1600,16 +1605,8 @@ unsigned int fetch_internal(){
 		// observable at the end of a correct simulation process.
 
 	if(tryLock(lp_idx)) {
-#if DEBUG==1
-		if(lp_lock[lp_idx*CACHE_LINE_SIZE/4]!=tid+1){
-			printf(RED("Penso di aver preso il lock, ma non è così\n"));
-		}
-#endif
+		
 		if(is_valid(event)) {
-			if(min == INFTY){
-				commit_horizon_ts = min = node->timestamp; //time min ← evt.ts
-				commit_horizon_tb = node->counter;	
-			}
 			
 			safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && 
 				!is_in_lp_unsafe_set(lp_idx);
@@ -1628,7 +1625,7 @@ new_bound:
 				lvt_tb = bound_ptr->tie_breaker; 
 
 				///* VALID AND EXECUTED AND MIN *///
-				if((node == min_node)){//DEBUG//if(safe){//
+				if(safe){//if((node == min_node)){//DEBUG//
 					if((event->state == EXTRACTED) &&
 						(event->timestamp < bound_ptr->timestamp ||
 						(
@@ -1641,9 +1638,14 @@ new_bound:
 						}
 						delete(nbcalqueue, node);
 						
+							commit_horizon_ts = node->timestamp; //time min ← evt.ts
+							commit_horizon_tb = node->counter;	
+	
+						
 						check_OnGVT(lp_idx);
 						
 						event->node = 0x5AFE;                //DEBUG
+						event->monitor = 0x5AFE;
 						event->local_next = bound_ptr;       //DEBUG
 						event->local_previous = node;        //DEBUG
 						event->previous_seed = lp_ptr->epoch;//DEBUG
@@ -1685,10 +1687,6 @@ new_bound:
 					node  = local_next_evt->node;
 					ts = event->timestamp;
 					
-					if(event->state == ANTI_EVENT){
-						printf(RED("GNEV: ANTI-EVENT IN VALIDO\n"));
-						print_event(event);
-					}
 				}
 			    //Marco l'evento come estratto se ancora non lo è
 			    ///* VALID AND NOT EXECUTED AND LOCK TAKEN AND NOT EXTRACTED YET *///
@@ -1723,16 +1721,16 @@ new_bound:
 				}
 				else if(event->state == ANTI_EVENT)
 				{
-					printf(RED("ANTI-EVENT IN VALIDO!?!?!?\n"));
-					print_event(event);
 					//delete(nbcalqueue, node);
-					gdb_abort;
+					//event->monitor=0xba4a4a;
+					//continue;
 					break;
 				}
 				else if(event->state == ELIMINATED)
 				{
 					printf(RED("ELIMINATO IN VALIDO!?!?!?\n"));
 					print_event(event);
+					event->monitor = 0xde1;
 					delete(nbcalqueue, node);
 					unlock(lp_idx);
 				}
@@ -1744,17 +1742,21 @@ new_bound:
 			///* NOT VALID AND ELIMINATED*///
 			if((event->state & EXTRACTED) == 0){
 				delete(nbcalqueue, node);
+				event->monitor = 0xde1;
+				__sync_or_and_fetch(&event->state, ELIMINATED);//DEBUG
 				unlock(lp_idx);
 			}
-			else{
-				if((event->state & ELIMINATED) == 0){
+			else{ //stato = x1
+				
+				if((event->state & ELIMINATED) == 0){//stato = 01
 					__sync_or_and_fetch(&event->state, ELIMINATED);
-					unlock(lp_idx);
 				}
-				else{
+				//stato = 11
+				if(event->monitor==0xba4a4a){
 					delete(nbcalqueue, node);
-					break;
+					//return 0; //get_next
 				}
+				break;
 			}
 		}
 	}
@@ -1782,7 +1784,7 @@ new_bound:
 				
 			if( (bucket)*bucket_width <= node->timestamp && node->timestamp < (bucket+1)*bucket_width){
 				if(is_marked(node_next, MOV) || node->replica != NULL){
-    					printf("FETCH DONE 3\n");
+    					//printf("FETCH DONE 3\n");
 						return 0;
 					}
 				break;
