@@ -48,8 +48,8 @@ __thread unsigned int tid = 0;
 
 __thread unsigned long long evt_count = 0;
 
-__thread simtime_t 		commit_horizon_ts = 0;
-__thread unsigned int 	commit_horizon_tb = 0;
+//__thread simtime_t 		commit_horizon_ts = 0;
+//__thread unsigned int 	commit_horizon_tb = 0;
 
 
 
@@ -292,9 +292,10 @@ void check_OnGVT(unsigned int lp_idx){
 		old_state = LPS[lp_idx]->state;
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
 		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
-		rollback(lp_idx, commit_horizon_ts, commit_horizon_tb);
+		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		
+		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
 			//printf("Simulation endend on LP:%u\n", lp_idx);
 			end_sim(lp_idx);
@@ -312,19 +313,25 @@ void round_check_OnGVT(){
 	unsigned int start_from = (n_prc_tot / n_cores) * tid;
 	unsigned int curent_ck = start_from;
 	
+	
 	//printf("OnGVT: la coda è vuota!\n");
 	
 	do{
 		if(!is_end_sim(curent_ck)){
 			if(tryLock(curent_ck)){
-			
-				check_OnGVT(curent_ck);
-				
+				//commit_horizon_ts = 5000;
+				//commit_horizon_tb = 100;
+				if(LPS[curent_ck]->commit_horizon_ts>0){
+//					printf("[%u]ROUND ONGVT LP:%u TS:%f TB:%llu\n", tid, curent_ck,LPS[curent_ck]->commit_horizon_ts, LPS[curent_ck]->commit_horizon_tb);
+	
+					check_OnGVT(curent_ck);
+				}
 				unlock(curent_ck);
 				break;
 			}
 		}
-	}while((curent_ck = (curent_ck + 1) % n_prc_tot) == start_from);
+		curent_ck = (curent_ck + 1) % n_prc_tot;
+	}while(curent_ck != start_from);
 }
 
 void init_simulation(unsigned int thread_id){
@@ -448,8 +455,8 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(queue_min_time);
 #endif
 		if(fetch_internal() == 0) {
-			if(++empty_fetch>5){
-				//round_check_OnGVT();
+			if(++empty_fetch>1500){
+				round_check_OnGVT();
 			}
 			goto end_loop;
 			continue;
@@ -473,7 +480,7 @@ void thread_loop(unsigned int thread_id) {
 		//if(current_msg->timestamp < LPS[current_msg->receiver_id]->bound->timestamp){//DEBUG
 		//	printf("\x1b[31m""Ho ricevuto un evento a ts:%f quando il bound è %f\n""\x1b[0m",current_msg->timestamp, LPS[current_msg->receiver_id]->bound->timestamp);
 		//}
-		if(current_msg->state == ANTI_EVENT && current_msg->monitor == 0xba4a4a) {
+		if(current_msg->state == ANTI_MSG && current_msg->monitor == 0xba4a4a) {
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
@@ -484,7 +491,7 @@ void thread_loop(unsigned int thread_id) {
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
-			if(current_msg == LPS[current_lp]->bound && current_msg->state != ANTI_EVENT){
+			if(current_msg == LPS[current_lp]->bound && current_msg->state != ANTI_MSG){
 				printf(RED("Ho ricevuto due volte di fila lo stesso messaggio e non è un antievento\n!!!!!"));
 				gdb_abort;
 			}
@@ -497,6 +504,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
+			current_msg->rollback_time = CLOCK_READ();
 			//printf(YELLOW("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
 			//printlp(YELLOW("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n"), current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
@@ -511,9 +519,9 @@ void thread_loop(unsigned int thread_id) {
 
 		// If, in addition, the event is no more valid, we have to
 		// continue by fetching another event form the calendar queue.
-		if(current_msg->state == ANTI_EVENT) {
+		if(current_msg->state == ANTI_MSG) {
 			//printlp("Anti-event received\n");
-			//delete(nbcalqueue, current_msg->node);
+			delete(nbcalqueue, current_msg->node);
 			current_msg->monitor = 0xba4a4a;
 			unlock(current_lp);
 			continue; //TODO: verificare
@@ -527,6 +535,8 @@ void thread_loop(unsigned int thread_id) {
 
 		// Update event and LP control variables
 		current_msg->epoch = LPS[current_lp]->epoch;
+		current_msg->execution_time = CLOCK_READ();
+				
 		
 		// Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
 		// The current_msg should be allocated with list allocator
@@ -573,13 +583,10 @@ void thread_loop(unsigned int thread_id) {
 
 		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
+		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
 		
-		//if(safe) {
-		//	if(current_msg->node != 0xBADC0DE){
-		//		delete(nbcalqueue, current_msg->node);/* DELETE_FROM_QUEUE */
-		//	}
-		//}
+
 
 		///* ON_GVT *///
 		//if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == (ONGVT_PERIOD-1)){
@@ -599,6 +606,10 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1
 		clock_timer_start(queue_op);
 #endif
+
+		if(safe) {
+			commit_event(current_msg, NULL, current_lp);
+		}
 		//nbc_prune();
 
 #if REPORT == 1

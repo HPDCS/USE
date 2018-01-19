@@ -6,7 +6,8 @@
 
 #define EXTRACTED 	0x1
 #define ELIMINATED	0x2
-#define ANTI_EVENT	0x3
+//#define ANTI_EVENT	0x3
+#define ANTI_MSG	0x3
 
 typedef struct __msg_t
 {
@@ -27,7 +28,7 @@ typedef struct __msg_t
 	/* validity attributes */
 	unsigned int state;	//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
 	unsigned long long epoch;	//LP's epoch at executing time		
-	//unsigned long long executed_frame; //order of execution of the event in the tymeling
+	unsigned long long frame; //debug//order of execution of the event in the tymeling
 	struct __msg_t * father;	//address of the father event
 	unsigned long long fatherFrame; //order of execution of the father in the tymeling	
 	unsigned long long fatherEpoch; //father LP's epoch at executing time
@@ -42,6 +43,11 @@ typedef struct __msg_t
 	
 	void * monitor;
 	struct __bucket_node * del_node;
+	
+	unsigned long long creation_time;
+	unsigned long long execution_time;
+	unsigned long long rollback_time;
+	unsigned long long deletion_time;
 } msg_t;
 
 typedef struct _msg_hdr_t {

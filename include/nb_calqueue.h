@@ -142,5 +142,6 @@ extern bool delete(nb_calqueue *queue, nbc_bucket_node* node);
 extern void getMinLP_internal(unsigned int lp);
 extern unsigned int getMinFree_internal();
 extern unsigned int fetch_internal();
+extern bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx);
 
 #endif /* DATATYPES_NONBLOCKING_QUEUE_H_ */

@@ -99,8 +99,12 @@ typedef struct _LP_state {
 	unsigned long long epoch;
 	
 	unsigned int until_ongvt;
-	
+		
+	///DEBUG: last event that has triggered a rollback on the LP
 	msg_t* 	last_rollback_event;
+	
+	simtime_t commit_horizon_ts;
+	unsigned long long commit_horizon_tb;
 
 } LP_state;
 

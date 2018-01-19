@@ -89,7 +89,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				state_ptr->events++;
 				if(now < state_ptr->lvt){
 					printf("\x1b[31m""%d- APP: ERROR: event %f received out of order respect %f\n""\x1b[0m", me, now, state_ptr->lvt);
-					state_ptr =NULL;state_ptr->lvt *10;
+					gdb_abort;
 				}
 				//if(state_ptr->lvt == now){
 				//	printf("[%d] HO RICEVUTO UN EVENTO CON TS=MY_LVT: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
