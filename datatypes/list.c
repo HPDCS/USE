@@ -29,6 +29,8 @@
 #include <list.h>
 #include <dymelor.h>
 #include <prints.h>
+#include <events.h>
+#include <hpdcs_utils.h>
 
 
 void *umalloc(unsigned int lid, size_t s) {
@@ -861,6 +863,38 @@ void * list_prev_f(void * ptr) {//DEBUG
 	struct rootsim_list_node *__prevptr = list_container_of(ptr)->prev;
 	__typeof__(ptr)__dataptr = (__typeof__(ptr))(__prevptr == NULL ? NULL : __prevptr->data);
 	return __dataptr;
+}
+
+struct rootsim_list_node * list_search_error(rootsim_list * queue){
+	struct rootsim_list_node * node = queue->head;
+	msg_t* event;
+	
+	
+	while(node != NULL){
+		event = (msg_t*)node->data;
+		if((unsigned int)event->timestamp != event->frame)
+			return node;
+		
+		if(node == NULL && queue->tail != node) printf(("l'ultimo non non è la coda\n"));	
+		node = node->next;
+	}
+}
+
+
+struct rootsim_list_node * list_print_error(rootsim_list * queue){
+	struct rootsim_list_node * node = queue->head;
+	msg_t* event;
+	
+	
+	while(node != NULL){
+		event = (msg_t*)node->data;
+		if((unsigned int)event->state != EXTRACTED){
+			print_event(event);
+		}
+		
+		if(node == NULL && queue->tail != node) printf(RED("l'ultimo non non è la coda\n"));	
+		node = node->next;
+	}
 }
 
 unsigned int print_list_fw(void * ptr){//DEBUG
