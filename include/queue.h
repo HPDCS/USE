@@ -6,7 +6,9 @@
 
 #define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
-#define haveLock(lp)				(&lp_lock[(lp)*CACHE_LINE_SIZE/4] == tid+1)
+#define haveLock(lp)				((lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1))
+#define checkLock(lp)				(lp_lock[lp*CACHE_LINE_SIZE/4])
+
 
 //#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1ULL << (lp%64)) )
 #define add_lp_unsafe_set(lp) 		(lp_unsafe_set_debug[lp]=1ULL)
@@ -45,7 +47,7 @@ extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
 extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
 extern __thread bool  safe;
 
-extern unsigned int *lp_lock;
+extern volatile unsigned int *lp_lock;
 extern __thread unsigned long long * lp_unsafe_set;
 extern __thread unsigned long long * lp_unsafe_set_debug;
 extern __thread unsigned int unsafe_events;

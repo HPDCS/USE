@@ -4,9 +4,9 @@
 
 #define MAX_DATA_SIZE		128
 
+#define NEW_EVT 	0x0
 #define EXTRACTED 	0x1
 #define ELIMINATED	0x2
-//#define ANTI_EVENT	0x3
 #define ANTI_MSG	0x3
 
 typedef struct __msg_t
@@ -26,12 +26,12 @@ typedef struct __msg_t
 	unsigned int previous_seed;	//seed to generate random number taken before the execution
 	
 	/* validity attributes */
-	unsigned int state;	//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
-	unsigned long long epoch;	//LP's epoch at executing time		
+	volatile unsigned int state;	//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
+	volatile unsigned long long epoch;	//LP's epoch at executing time		
 	unsigned long long frame; //debug//order of execution of the event in the tymeling
 	struct __msg_t * father;	//address of the father event
 	unsigned long long fatherFrame; //order of execution of the father in the tymeling	
-	unsigned long long fatherEpoch; //father LP's epoch at executing time
+	volatile unsigned long long fatherEpoch; //father LP's epoch at executing time
 	simtime_t max_outgoing_ts; //maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
 	unsigned long long tie_breaker; //maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
 	

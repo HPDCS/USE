@@ -11,7 +11,7 @@
 
 
 //used to take locks on LPs
-unsigned int *lp_lock;
+volatile unsigned int *lp_lock;
 
 //event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;

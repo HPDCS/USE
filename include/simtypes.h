@@ -84,7 +84,7 @@ typedef struct _LP_state {
 	list(msg_t)	queue_in;
 
 	/// Pointer to the last correctly elaborated event
-	msg_t		*bound;
+	volatile msg_t		*bound;
 
 
 	/// Saved states queue
@@ -96,7 +96,7 @@ typedef struct _LP_state {
 	/* ADDED FOR PADS 2018 */
 
 	unsigned long long num_executed_frames;
-	unsigned long long epoch;
+	volatile unsigned long long epoch;
 	
 	unsigned int until_ongvt;
 		
