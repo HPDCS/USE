@@ -12,7 +12,8 @@ make pholdcount DEBUG=1
 
 while :
 do
-	C=$(( $C + 1 ))
+	C=$(($C+1))
+	CURRT="TEST ${C} STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 	tput setab 7; tput setaf 0;
 	echo
 	echo $BEGIN
