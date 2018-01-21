@@ -101,11 +101,11 @@
 
 
 //DEBUG CONTROL VARIABLE
-bool ctrl_commit = false; //FALSE
-bool ctrl_unsafe = false; //TRUE
-bool ctrl_mark_elim = false; //TRUE
-bool ctrl_del_elim = false;
-bool ctrl_del_banana = false;
+bool ctrl_commit 		= false; //FALSE
+bool ctrl_unsafe 		= false; //TRUE
+bool ctrl_mark_elim 	= false; //TRUE
+bool ctrl_del_elim 		= false;
+bool ctrl_del_banana 	= false;
 
 
 
@@ -164,6 +164,11 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define return_evt_to_main_loop()								{	break; 	}
 
 
+#define do_commit_outside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);					goto get_next;	}
+#define do_remove_outside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);							goto get_next;	}
+#define do_skip_outside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx); 							goto get_next; 	}
+
+
 
 
 unsigned int fetch_internal(){
@@ -218,17 +223,15 @@ unsigned int fetch_internal(){
 					///* COMMIT *///
 					if(safe && event->frame != 0){ 
 						if(ctrl_commit){
-							commit_event(event,node,lp_idx);
-							goto get_next;
+							do_commit_outside_lock_and_goto_next(event, node, lp_idx);
 						}
 					}
 					///* EXECUTED AND UNSAFE *///
-					if(!safe && event->frame != 0
-					 //|| event->frame == 0
+					if(!safe //&& event->frame != 0
+					 || event->frame == 0
 					 ){ 
 						if(ctrl_unsafe){
-							add_lp_unsafe_set(lp_idx);
-							goto get_next;
+							do_skip_outside_lock_and_goto_next(lp_idx);
 						}
 					}
 				}
@@ -246,19 +249,17 @@ unsigned int fetch_internal(){
 			///* DELETE ELIMINATED *///
 			if(ctrl_del_elim){
 				if(curr_evt_state == ELIMINATED){//if(curr_evt_state == ELIMINATED){
-					delete(nbcalqueue, node);
-					goto get_next;
+					do_remove_outside_lock_and_goto_next(event,node,lp_idx);
 				}
 			}
 			///* DELETE BANANA NODE *///
 			if(ctrl_del_banana){
 				if(curr_evt_state == ANTI_MSG && event->monitor == 0xba4a4a){
-					delete(nbcalqueue, node);
-					goto get_next;
+					do_remove_outside_lock_and_goto_next(event,node,lp_idx);
 				}
 			}
 		}
-		
+
 		
 		if(tryLock(lp_idx)) {
 			
@@ -318,7 +319,7 @@ unsigned int fetch_internal(){
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < node->counter)
 					)
 				){
-#if DEBUG==1
+					#if DEBUG==1
 					if(local_next_evt->monitor == 0x5AFE){ //DEBUG
 						printf("[%u]GET_NEXT_AND_VALID: \n",tid); 
 						printf("\tevent         : ");print_event(event);
@@ -329,19 +330,16 @@ unsigned int fetch_internal(){
 						printf(RED("1 - BADCODE REACHED state:%u\n"), event->state);
 						gdb_abort;
 					}
-#endif	
+					#endif	
 					event = local_next_evt;
 					node  = local_next_evt->node;
 					ts = event->timestamp;
-					
 				}
-
 
 				curr_evt_state = event->state;
 				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));	
 				safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 
- 
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
@@ -378,13 +376,10 @@ unsigned int fetch_internal(){
 			}
 			///* NOT VALID *///		
 			else {
-				///* PARTE ORIGINARIAMNETE FUORI DAL LOCK
-		
+								
 				///* MARK NON VALID NODE *///
-				if(!ctrl_mark_elim){
-					if((curr_evt_state & ELIMINATED) == 0){
-						curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
-					}
+				if( (curr_evt_state & ELIMINATED) == 0 ){ 
+					curr_evt_state = __sync_or_and_fetch(&(event->state),ELIMINATED);
 				}
 
 				///* DELETE ELIMINATED *///
@@ -394,32 +389,23 @@ unsigned int fetch_internal(){
 					}
 				}
 
-				///* DELETE BANANA NODE *///
-				if(!ctrl_del_banana){
-					if(curr_evt_state == ANTI_MSG && event->monitor == 0xba4a4a){
-						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
-					}
-				}
-				
-				///* PARTE ORIGINARIAMENTE SOTTO LOCK
-				if(curr_evt_state & ELIMINATED != ELIMINATED) 
-					curr_evt_state = __sync_or_and_fetch(&(event->state),ELIMINATED);
-
-				if(curr_evt_state & EXTRACTED != EXTRACTED){
+				///* SHOULD BE DEAD CODE IF !ctrl_del_elim
+				if( (curr_evt_state & EXTRACTED) == 0 ){
 					curr_evt_state = __sync_or_and_fetch(&(event->state),EXTRACTED);
 					event->monitor = 0xba4a4a;
 				}
 				
-				if(curr_evt_state != ANTI_MSG){
-					//printf(RED("HO QUALCOSA DI NON VALIDO CHE NON E' UN ANTI MSG\n"));print_event(event);
-				}
+				assert(curr_evt_state == ANTI_MSG);
+
 				///* ANTI-MESSAGE IN THE FUTURE*///
 				if(!in_past){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima
 					event->monitor = 0xba4a4a;
 				}
 
+				///* DELETE BANANA NODE *///
 				if(event->monitor == 0xba4a4a){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima
-					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+					if(!ctrl_del_banana)
+						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 				}
 				///* ANTI-MESSAGE IN THE PAST*///
 				else{
