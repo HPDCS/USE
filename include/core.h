@@ -113,4 +113,13 @@ extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, voi
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void check_OnGVT(unsigned int lp_idx);
 
+//DEBUG
+extern bool ctrl_commit;	
+extern bool ctrl_unsafe;
+extern bool ctrl_mark_elim;
+extern bool ctrl_del_elim;
+extern bool ctrl_del_banana;
+		
+
+
 #endif

@@ -51,6 +51,12 @@ __thread unsigned long long evt_count = 0;
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
+//DEBUG CONTROL VARIABLE
+bool ctrl_commit = false; //FALSE
+bool ctrl_unsafe = false; //TRUE
+bool ctrl_mark_elim = false; //TRUE
+bool ctrl_del_elim = false;
+bool ctrl_del_banana = false;
 
 
 //timer
