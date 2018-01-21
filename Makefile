@@ -134,6 +134,7 @@ CORE_SOURCES =  core/core.c\
 		core/x86.c\
 		core/topology.c\
 		core/queue.c\
+		core/fetch.c\
 		core/main.c\
 		core/numerical.c\
 		core/hpdcs_math.c\

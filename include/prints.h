@@ -2,6 +2,8 @@
 #define _PRINTS_H_
 
 
+#include <hpdcs_utils.h>
+
 #if DEBUG == 1
 
 #define printlp(format, ...) printf("T%lu LP%lu :: " format, tid, current_lp, ##__VA_ARGS__);

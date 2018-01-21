@@ -62,11 +62,6 @@
 
 #define TID tid
 
-extern __thread unsigned int TID;
-extern __thread struct drand48_data seedT;
-extern __thread list(msg_t) to_remove_local_evts;
-extern __thread list(msg_t) freed_local_evts;
-
 /**
  *  Struct that define a node in a bucket
  */
@@ -131,6 +126,14 @@ struct nb_calqueue
 	table * volatile hashtable;
 };
 
+
+extern __thread unsigned int TID;
+extern __thread struct drand48_data seedT;
+extern __thread list(msg_t) to_remove_local_evts;
+extern __thread list(msg_t) freed_local_evts;
+extern __thread list(msg_t) freed_local_evts;
+extern nbc_bucket_node *g_tail;
+
 extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, unsigned int tag);
 extern void nbc_prune(void);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_bucket, unsigned int elem_per_bucket);
@@ -143,5 +146,8 @@ extern void getMinLP_internal(unsigned int lp);
 extern unsigned int getMinFree_internal();
 extern unsigned int fetch_internal();
 extern bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx);
+
+
+extern inline unsigned long long hash(double timestamp, double bucket_width);
 
 #endif /* DATATYPES_NONBLOCKING_QUEUE_H_ */
