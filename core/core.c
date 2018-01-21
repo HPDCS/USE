@@ -462,7 +462,6 @@ void thread_loop(unsigned int thread_id) {
 			continue;
 		}
 		empty_fetch = 0;
-		//print_event(current_msg);//DEBUG
 
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
@@ -475,12 +474,15 @@ void thread_loop(unsigned int thread_id) {
 		// Locally (within the thread) copy lp and ts to processing event
 		current_lp = current_msg->receiver_id;	// LP index
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
+
+		if(!haveLock(current_lp)){//DEBUG
+			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+		}
+
+
 		
-		
-		//if(current_msg->timestamp < LPS[current_msg->receiver_id]->bound->timestamp){//DEBUG
-		//	printf("\x1b[31m""Ho ricevuto un evento a ts:%f quando il bound è %f\n""\x1b[0m",current_msg->timestamp, LPS[current_msg->receiver_id]->bound->timestamp);
-		//}
 		if(current_msg->state == ANTI_MSG && current_msg->monitor == 0xba4a4a) {
+			printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
@@ -492,8 +494,12 @@ void thread_loop(unsigned int thread_id) {
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
 			if(current_msg == LPS[current_lp]->bound && current_msg->state != ANTI_MSG){
+				if(current_msg->monitor == 0xba4a4a){
+					printf(RED("Ho una banana che non è ANTI-MSG\n"));
+				}
 				printf(RED("Ho ricevuto due volte di fila lo stesso messaggio e non è un antievento\n!!!!!"));
-				gdb_abort;
+				print_event(current_msg);
+				//gdb_abort;
 			}
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
@@ -521,8 +527,8 @@ void thread_loop(unsigned int thread_id) {
 		// continue by fetching another event form the calendar queue.
 		if(current_msg->state == ANTI_MSG) {
 			//printlp("Anti-event received\n");
-			delete(nbcalqueue, current_msg->node);
 			current_msg->monitor = 0xba4a4a;
+			delete(nbcalqueue, current_msg->node);
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
