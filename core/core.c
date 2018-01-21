@@ -482,6 +482,7 @@ void thread_loop(unsigned int thread_id) {
 		
 		if(current_msg->state == ANTI_MSG && current_msg->monitor == 0xba4a4a) {
 			printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
+			gdb_abort;
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}

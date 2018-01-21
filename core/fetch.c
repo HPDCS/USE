@@ -101,11 +101,11 @@
 
 
 //DEBUG CONTROL VARIABLE
-bool ctrl_commit 		= false; //FALSE
-bool ctrl_unsafe 		= false; //TRUE
-bool ctrl_mark_elim 	= false; //TRUE
-bool ctrl_del_elim 		= false;
-bool ctrl_del_banana 	= false;
+bool ctrl_commit 		= true; //FALSE
+bool ctrl_unsafe 		= true; //TRUE
+bool ctrl_mark_elim 	= true; //TRUE
+bool ctrl_del_elim 		= true;
+bool ctrl_del_banana 	= true;
 
 
 
@@ -161,7 +161,8 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define do_commit_inside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);	unlock(lp_idx);	goto get_next;	}
 #define do_remove_inside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);			unlock(lp_idx);	goto get_next;	}
 #define do_skip_inside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx); 			unlock(lp_idx); goto get_next; 	}
-#define return_evt_to_main_loop()								{	break; 	}
+
+#define return_evt_to_main_loop()								{	assert(event->monitor != 0xBA4A4A);	break; 	}
 
 
 #define do_commit_outside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);					goto get_next;	}
@@ -272,7 +273,7 @@ unsigned int fetch_internal(){
 				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
 			//}
 		
-			safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
+			//safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 			curr_evt_state = event->state;
 		
 			
@@ -281,18 +282,17 @@ unsigned int fetch_internal(){
 		
 				///* PARTE ORIGINARIAMNETE FUORI DAL LOCK
 				if(curr_evt_state == EXTRACTED){
+					assert(event->frame != 0);
 					if(in_past){
 						///* COMMIT *///
 						if(!ctrl_commit){
-							if(safe && event->frame != 0){ 
+							if(safe){ 
 								do_commit_inside_lock_and_goto_next(event,node,lp_idx);
 							}
 						}
 						///* EXECUTED AND UNSAFE *///
 						if(!ctrl_unsafe){
-							if(!safe && event->frame != 0 
-								//|| event->frame == 0 
-								){ 
+							if(!safe){ 
 								do_skip_inside_lock_and_goto_next(lp_idx);
 							}
 						}
@@ -334,12 +334,12 @@ unsigned int fetch_internal(){
 					event = local_next_evt;
 					node  = local_next_evt->node;
 					ts = event->timestamp;
+					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
-
 				curr_evt_state = event->state;
-				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));	
-				safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 
+				//in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));	
+				
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
@@ -362,6 +362,8 @@ unsigned int fetch_internal(){
 					}
 				}
 				else if(curr_evt_state == ANTI_MSG){
+					if(!in_past)
+						event->monitor = 0xba4a4a;
 					if(event->monitor == 0xba4a4a){//DEBUG
 						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
@@ -391,8 +393,7 @@ unsigned int fetch_internal(){
 
 				///* SHOULD BE DEAD CODE IF !ctrl_del_elim
 				if( (curr_evt_state & EXTRACTED) == 0 ){
-					curr_evt_state = __sync_or_and_fetch(&(event->state),EXTRACTED);
-					event->monitor = 0xba4a4a;
+					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 				}
 				
 				assert(curr_evt_state == ANTI_MSG);
@@ -404,7 +405,6 @@ unsigned int fetch_internal(){
 
 				///* DELETE BANANA NODE *///
 				if(event->monitor == 0xba4a4a){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima
-					if(!ctrl_del_banana)
 						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 				}
 				///* ANTI-MESSAGE IN THE PAST*///
