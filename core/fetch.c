@@ -158,11 +158,19 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 
 
+#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);	unlock(lp_idx);	goto get_next;	}
+#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);			unlock(lp_idx);	goto get_next;	}
+#define do_skip_inside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx); 			unlock(lp_idx); goto get_next; 	}
+#define return_evt_to_main_loop()								{	break; 	}
+
+
+
+
 unsigned int fetch_internal(){
 	table *h;
 	nbc_bucket_node * node, *node_next, *min_node;
 	simtime_t ts, min = INFTY, lvt_ts;
-	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb, tb, c = 0, curr_state;
+	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb, tb, c = 0, curr_evt_state;
 	double bucket_width;
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, *tmp_node, * bound_ptr;
@@ -189,9 +197,9 @@ unsigned int fetch_internal(){
 		
 		event = (msg_t *)node->payload;		// Event under exploration
 		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
+		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 		ts = node->timestamp;				// Timestamp of the event under exploration
 		tb = node->counter;					// Timestamp of the event under exploration
-		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 		
 		//fin qui fuori dal lock ha funzionato per 10 minuti <8,3>, anche se la coda ha superato 500 elementi, diminuendo così la contesa	
 		
@@ -199,24 +207,26 @@ unsigned int fetch_internal(){
 		bound_ptr = lp_ptr->bound;
 		lvt_ts = bound_ptr->timestamp; 
 		lvt_tb = bound_ptr->tie_breaker; 
-		curr_state = event->state;
+		curr_evt_state = event->state;
 		in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));
 		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 			
 		///* VALID *///
 		if(validity){
-			if(curr_state == EXTRACTED){
+			if(curr_evt_state == EXTRACTED){
 				if(in_past){
 					///* COMMIT *///
-					if(ctrl_commit){
-						if(safe && event->frame != 0){ 
+					if(safe && event->frame != 0){ 
+						if(ctrl_commit){
 							commit_event(event,node,lp_idx);
 							goto get_next;
 						}
 					}
 					///* EXECUTED AND UNSAFE *///
-					if(ctrl_unsafe){
-						if(!safe || event->frame == 0){ 
+					if(!safe && event->frame != 0
+					 //|| event->frame == 0
+					 ){ 
+						if(ctrl_unsafe){
 							add_lp_unsafe_set(lp_idx);
 							goto get_next;
 						}
@@ -229,20 +239,20 @@ unsigned int fetch_internal(){
 		else{
 			///* MARK NON VALID NODE *///
 			if(ctrl_mark_elim){
-				if((curr_state & ELIMINATED) == 0){
-					curr_state = __sync_or_and_fetch(&event->state, ELIMINATED);
+				if((curr_evt_state & ELIMINATED) == 0){
+					curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
 				}
 			}
 			///* DELETE ELIMINATED *///
 			if(ctrl_del_elim){
-				if(event->state == ELIMINATED){//if(curr_state == ELIMINATED){
+				if(curr_evt_state == ELIMINATED){//if(curr_evt_state == ELIMINATED){
 					delete(nbcalqueue, node);
 					goto get_next;
 				}
 			}
 			///* DELETE BANANA NODE *///
 			if(ctrl_del_banana){
-				if(curr_state == ANTI_MSG && event->monitor == 0xba4a4a){
+				if(curr_evt_state == ANTI_MSG && event->monitor == 0xba4a4a){
 					delete(nbcalqueue, node);
 					goto get_next;
 				}
@@ -257,85 +267,45 @@ unsigned int fetch_internal(){
 			//if(bound_ptr != lp_ptr->bound){
 				bound_ptr = lp_ptr->bound;
 				lvt_ts = bound_ptr->timestamp; 
-				lvt_tb = bound_ptr->tie_breaker; 
-				curr_state = event->state;
+				lvt_tb = bound_ptr->tie_breaker;
+				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
 			//}
 		
-			in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));
-		
 			safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
-		///* PARTE ORIGINARIAMNETE FUORI DAL LOCK
+			curr_evt_state = event->state;
+		
 			
-			///* VALID *///
-			if(validity){
-				if(curr_state == EXTRACTED){
+	
+			if(validity) {
+		
+				///* PARTE ORIGINARIAMNETE FUORI DAL LOCK
+				if(curr_evt_state == EXTRACTED){
 					if(in_past){
 						///* COMMIT *///
 						if(!ctrl_commit){
 							if(safe && event->frame != 0){ 
-								commit_event(event,node,lp_idx);
-								unlock(lp_idx);
-								goto get_next;
+								do_commit_inside_lock_and_goto_next(event,node,lp_idx);
 							}
 						}
 						///* EXECUTED AND UNSAFE *///
 						if(!ctrl_unsafe){
-							if(!safe || event->frame == 0){ 
-								add_lp_unsafe_set(lp_idx);
-								unlock(lp_idx);
-								goto get_next;
+							if(!safe && event->frame != 0 
+								//|| event->frame == 0 
+								){ 
+								do_skip_inside_lock_and_goto_next(lp_idx);
 							}
 						}
 					}
 				}
-			}
-				
-			///* NOT VALID *///
-			else{
-				///* MARK NON VALID NODE *///
-				if(!ctrl_mark_elim){
-					if((curr_state & ELIMINATED) == 0){
-						curr_state = __sync_or_and_fetch(&event->state, ELIMINATED);
-					}
-				}
-				///* DELETE ELIMINATED *///
-				if(!ctrl_del_elim){
-					if(curr_state == ELIMINATED){
-						delete(nbcalqueue, node);
-						unlock(lp_idx);
-						goto get_next;
-					}
-				}
-				///* DELETE BANANA NODE *///
-				if(!ctrl_del_banana){
-					if(curr_state == ANTI_MSG && event->monitor == 0xba4a4a){
-						delete(nbcalqueue, node);
-						unlock(lp_idx);
-						goto get_next;
-					}
-				}
-			}
-	
-		///* PARTE ORIGINARIAMENTE SOTTO LOCK
-			if(validity) {
-				
-				//The bound is changed, reload it
-				if(bound_ptr != lp_ptr->bound){
-					bound_ptr = lp_ptr->bound;
-					lvt_ts = bound_ptr->timestamp; 
-					lvt_tb = bound_ptr->tie_breaker;
-					
-					//vedere come cambiano le performance facendolo dopo
-					in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));
-				}
-				
+				///* PARTE ORIGINARIAMENTE SOTTO LOCK
+								
 				//da qui in poi il bound è congelato ed è nel passato rispetto al mio evento
 				/// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///
 				local_next_evt = list_next(lp_ptr->bound);
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
-					list_place_after_given_node_by_content(TID, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
+					//list_place_after_given_node_by_content(TID, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
 					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_MSG; //
 					local_next_evt->monitor = 0xba4a4a;			//non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
 					delete(nbcalqueue, local_next_evt->node);	//non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
@@ -365,73 +335,95 @@ unsigned int fetch_internal(){
 					ts = event->timestamp;
 					
 				}
+
+
+				curr_evt_state = event->state;
+				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));	
+				safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
+
+ 
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
-				if(event->state == 0x0) {
+				if(curr_evt_state == 0x0) {
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
 						/* aggiunta 15:41 del 21/01/2018: INIZIO */
-						sevent->monitor = 0xba4a4a;
-						sdelete(nbcalqueue, node);
-						/* aggiunta 15:41 del 21/01/2018: FINE */
-						
-						unlock(lp_idx);
-						goto get_next;
+						event->monitor = 0xba4a4a;
+						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
 					else {
-						break;
+						return_evt_to_main_loop();
 					}
 				}
 				///* VALID AND NOT EXECUTED AND LOCK TAKEN AND EXTRACTED *///
-				else if(event->state == EXTRACTED){
-					if(
-						event->timestamp < bound_ptr->timestamp ||
-						(
-							event->timestamp == bound_ptr->timestamp 
-							&& event->tie_breaker <= bound_ptr->tie_breaker
-						)
-					){
-						unlock(lp_idx);
-						add_lp_unsafe_set(lp_idx);
+				else if(curr_evt_state == EXTRACTED){
+					if(in_past){
+						do_skip_inside_lock_and_goto_next(lp_idx);
 					}
 					else{
-						break;
+						return_evt_to_main_loop();
 					}
 				}
-				else if(event->state == ANTI_MSG){
+				else if(curr_evt_state == ANTI_MSG){
 					if(event->monitor == 0xba4a4a){//DEBUG
-						delete(nbcalqueue, node);
-						unlock(lp_idx);
-						goto get_next;
+						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
-					break;
+					return_evt_to_main_loop();
 				}
 				
-				else if(event->state == ELIMINATED){
+				else if(curr_evt_state == ELIMINATED){
 					event->monitor = 0xde1;
-					delete(nbcalqueue, node);
-					unlock(lp_idx);
+					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 				}
 				
 			}
 			///* NOT VALID *///		
 			else {
-				if(event->state != ANTI_MSG){
+				///* PARTE ORIGINARIAMNETE FUORI DAL LOCK
+		
+				///* MARK NON VALID NODE *///
+				if(!ctrl_mark_elim){
+					if((curr_evt_state & ELIMINATED) == 0){
+						curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
+					}
+				}
+
+				///* DELETE ELIMINATED *///
+				if(!ctrl_del_elim){
+					if(curr_evt_state == ELIMINATED){
+						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+					}
+				}
+
+				///* DELETE BANANA NODE *///
+				if(!ctrl_del_banana){
+					if(curr_evt_state == ANTI_MSG && event->monitor == 0xba4a4a){
+						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+					}
+				}
+				
+				///* PARTE ORIGINARIAMENTE SOTTO LOCK
+				if(curr_evt_state & ELIMINATED != ELIMINATED) 
+					curr_evt_state = __sync_or_and_fetch(&(event->state),ELIMINATED);
+
+				if(curr_evt_state & EXTRACTED != EXTRACTED){
+					curr_evt_state = __sync_or_and_fetch(&(event->state),EXTRACTED);
+					event->monitor = 0xba4a4a;
+				}
+				
+				if(curr_evt_state != ANTI_MSG){
 					//printf(RED("HO QUALCOSA DI NON VALIDO CHE NON E' UN ANTI MSG\n"));print_event(event);
 				}
-				///* ANTI-MESSAGE *///
-				in_past = (event->timestamp < bound_ptr->timestamp 
-						||	(event->timestamp == bound_ptr->timestamp 
-							&& event->tie_breaker <= bound_ptr->tie_breaker));
 				///* ANTI-MESSAGE IN THE FUTURE*///
-				if(!in_past || event->monitor == 0xba4a4a){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima
+				if(!in_past){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima
 					event->monitor = 0xba4a4a;
-					delete(nbcalqueue, node);
-					unlock(lp_idx);
-					goto get_next;
+				}
+
+				if(event->monitor == 0xba4a4a){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima
+					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 				}
 				///* ANTI-MESSAGE IN THE PAST*///
 				else{
-					break;
+					return_evt_to_main_loop();
 				}
 			}
 		}

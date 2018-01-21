@@ -123,7 +123,7 @@ __thread list(msg_t) freed_local_evts = NULL;
 static unsigned int * volatile prune_array;
 static unsigned int threads;
 
-static nbc_bucket_node *g_tail;
+nbc_bucket_node *g_tail;
 
 
 /**
@@ -152,7 +152,7 @@ static void error(const char *msg, ...) {
  *
  * @return the linear index of a given timestamp
  */
-static inline unsigned long long hash(double timestamp, double bucket_width)
+inline unsigned long long hash(double timestamp, double bucket_width)
 {
 	double tmp1;
 	double tmp2;
