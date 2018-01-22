@@ -29,6 +29,8 @@ void queue_insert(unsigned int receiver, double timestamp, unsigned int event_ty
 
 void queue_deliver_msgs(void);
 
+extern void events_garbage_collection(simtime_t commit_time);
+
 //void queue_destroy(void);
 
 void queue_clean(void);

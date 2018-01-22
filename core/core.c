@@ -638,6 +638,7 @@ void thread_loop(unsigned int thread_id) {
 			commit_event(current_msg, NULL, current_lp);
 		}
 		nbc_prune();
+		//events_garbage_collection(commit_time);
 
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
