@@ -146,13 +146,20 @@ bool is_valid(msg_t * event){
 }
 
 
-void events_garbage_collection(simtime_t commit)
+void events_garbage_collection(simtime_t commit_time)
 {
-__thread list(msg_t) to_remove_local_evts = NULL;
-__thread list(msg_t) freed_local_evts = NULL;
-    msg_t* head = ((struct rootsim_list*)to_remove_local_evts)->head;
-    while(head != NULL)
+
+    msg_t* tmp;
+    msg_t* cur = ((struct rootsim_list*)to_remove_local_evts)->head;
+    while(cur != NULL)
     {
-        
+        if(cur->timestamp < commit_time){
+            tmp = list_next(cur);
+            list_extract_given_node(tid, to_remove_local_evts, cur);
+            list_place_after_given_node_by_content(tid, freed_local_evts, cur, ((rootsim_list *)freed_local_evts)->head->data);
+            cur = tmp;
+        }
+        else
+            cur = list_next(cur);
     }
 }
