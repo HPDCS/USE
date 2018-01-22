@@ -60,12 +60,6 @@ void start_simulation() {
     printf("\t- CONSERVATIVE SIMULATION\n");
 #endif
     printf("\n" COLOR_RESET);
-    
-    printf(YELLOW("DELET ON COMMIT:       %u\n"), ctrl_commit);
-    printf(YELLOW("JUMP EXECUTED UNSAFE:  %u\n"), ctrl_unsafe);
-    printf(YELLOW("MARK UNSAFE:           %u\n"), ctrl_mark_elim);
-    printf(YELLOW("DELETE ELIMINATED:     %u\n"), ctrl_del_elim);
-    printf(YELLOW("DELETE BANANA:         %u\n"), ctrl_del_banana);
 
     //Child thread
     for(i = 0; i < n_cores - 1; i++) {
