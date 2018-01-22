@@ -36,7 +36,8 @@ void *start_thread(){
 void start_simulation() {
 
     pthread_t p_tid[n_cores-1];//pthread_t p_tid[number_of_threads];//
-    int ret, i;
+    int ret;
+    unsigned int i;
 
 
     printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
@@ -78,7 +79,6 @@ void start_simulation() {
 }
 
 int main(int argn, char *argv[]) {
-    unsigned int n;
     timer exec_time;
 
     if(argn < 3) {

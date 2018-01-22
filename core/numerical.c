@@ -40,7 +40,7 @@
 
 
 static seed_type master_seed;
-static __thread seed_type thread_seed = 0;
+//static __thread seed_type thread_seed = 0;
 
 
 /**

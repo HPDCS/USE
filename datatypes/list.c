@@ -794,12 +794,13 @@ char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struc
 */
 char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list_node *n) {
 
+	(void)lid;
 	rootsim_list *l = (rootsim_list *)li;
 
 	assert(l);
 	size_t size_before = l->size;
 
-	char *content = n + sizeof(struct rootsim_list_node);
+	char *content = (char*)n + sizeof(struct rootsim_list_node);
 
 	if(l->head == n) {
 		l->head = n->next;
@@ -823,8 +824,8 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 		n->prev->next = n->next;
 	}
 
-	n->next = 0xCCC;
-	n->prev = 0xDDD;
+	n->next = (void*) 0xCCC;
+	n->prev = (void*) 0xDDD;
 
 	l->size--;
 	assert(l->size == (size_before - 1));
@@ -840,9 +841,9 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 	// DEBUG: il seguente snippet serve per riusare i nodi della lista interna
 	// tuttavia questa ottimizzazione richiede la gestione complementare del
 	// buffer interno dentro la 'prune()'
-	//if(free_list->head != NULL){ //DEBUG: decommentare
-	//	return 	list_extract_given_node(lid, free_list, free_list->head);
-	//}
+	if(free_list->head != NULL){ 
+		return 	list_extract_given_node(lid, free_list, free_list->head);
+	}
 	ptr = list_allocate_node(lid, size);
 
 	if(ptr == NULL)
@@ -878,10 +879,11 @@ struct rootsim_list_node * list_search_error(struct rootsim_list * queue){
 		if(node == NULL && queue->tail != node) printf(("l'ultimo non non è la coda\n"));	
 		node = node->next;
 	}
+	return node;
 }
 
 
-struct rootsim_list_node * list_print_error(struct rootsim_list * queue){
+void list_print_error(struct rootsim_list * queue){
 	struct rootsim_list_node * node = queue->head;
 	msg_t* event;
 	

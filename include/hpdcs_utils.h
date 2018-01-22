@@ -5,6 +5,8 @@
 #include <signal.h>
 
 #define gdb_abort __asm__("int $3")//raise(SIGINT)
+#else
+#define		gdb_abort {}
 #endif
 
 #define COLOR_RED   	"\x1b[31m"

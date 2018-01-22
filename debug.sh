@@ -8,7 +8,7 @@ C=0
 BEGIN="BEGIN TEST:........$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="TEST ${C} STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-make pholdcount DEBUG=1
+make pholdcount 
 
 while :
 do

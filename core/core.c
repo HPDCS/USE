@@ -38,8 +38,6 @@
 
 #define MAX_PATHLEN			512
 
-#define print_event(event)	printf("   [LP:%u->%u]: TS:%f TB:%u EP:%u IS_VAL:%u \t\tptr:%p\n",event->sender_id, event->receiver_id, event->timestamp, event->tie_breaker, event->epoch, is_valid(event),event);
-
 
 
 __thread simtime_t current_lvt = 0;
@@ -304,7 +302,7 @@ void check_OnGVT(unsigned int lp_idx){
 		// Ripristina stato sul bound
 		LPS[lp_idx]->state = LP_STATE_ROLLBACK;
 		//printf("%d- BUILD STATE AFTER GVT START LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
-		rollback(lp_idx, INFTY, INFTY);
+		rollback(lp_idx, INFTY, UINT_MAX);
 		//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
 		LPS[lp_idx]->state = old_state;
 	}
@@ -360,7 +358,7 @@ void init_simulation(unsigned int thread_id){
 		numerical_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
-       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), freed_local_evts);
+       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
        		current_msg->sender_id 		= -1;//
        		current_msg->receiver_id 	= current_lp;//
        		current_msg->timestamp 		= 0.0;//
@@ -396,8 +394,11 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 #if REVERSIBLE == 1
 	unsigned int mode;
 #endif	
-	queue_clean;//che succede se lascio le parentesi ad una macro?
+	queue_clean();//che succede se lascio le parentesi ad una macro?
 	
+	(void)safety;
+	(void)event;
+
 	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
 	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
 
@@ -479,18 +480,22 @@ void thread_loop(unsigned int thread_id) {
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
 
+		#if DEBUG == 1
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
+		#endif
 
 
-		
-		if(current_evt_state == ANTI_MSG && current_evt_monitor == 0xba4a4a) {
+		#if DEBUG == 1	
+		if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
 			printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
 			gdb_abort;
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
+		#endif
+
 
 
 		// Check whether the event is in the past, if this is the case
@@ -499,7 +504,7 @@ void thread_loop(unsigned int thread_id) {
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
 			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG){
-				if(current_evt_monitor == 0xba4a4a){
+				if(current_evt_monitor == (void*) 0xba4a4a){
 					printf(RED("Ho una banana che non è ANTI-MSG\n"));
 				}
 				printf(RED("Ho ricevuto due volte di fila lo stesso messaggio e non è un antievento\n!!!!!"));
@@ -533,10 +538,8 @@ void thread_loop(unsigned int thread_id) {
 		// INCRIMINATO!!!!!!!!!!!!!!!!
 		if(current_evt_state == ANTI_MSG) {
 			//printlp("Anti-event received\n");
-			unsigned long long old = __sync_val_compare_and_swap(&current_msg->monitor, 0x0, 0xba4a4a);
-			assert(old == 0x0);
-			current_msg->line=1000000;
-			current_msg->commit_bound = LPS[current_lp]->bound;
+
+			current_msg->monitor = (void*) 0xba4a4a;
 			if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			)
@@ -581,11 +584,13 @@ void thread_loop(unsigned int thread_id) {
 		// Take a simulation state snapshot, in some way
 		LogState(current_lp);
 		
+#if DEBUG == 1
 		if((unsigned int)current_msg->node & 0x1){
 			printf(RED("A - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
 			print_event(current_msg);
 			gdb_abort;				
 		}
+#endif
 		
 		
 		///* PROCESS *///
@@ -595,12 +600,13 @@ void thread_loop(unsigned int thread_id) {
 		///* FLUSH */// 
 		queue_deliver_msgs();
 
-		
+#if DEBUG == 1
 		if((unsigned int)current_msg->node & 0x1){
 			printf(RED("B - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
 			print_event(current_msg);
 			gdb_abort;				
 		}
+#endif
 
 		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
@@ -631,7 +637,7 @@ void thread_loop(unsigned int thread_id) {
 		if(safe) {
 			commit_event(current_msg, NULL, current_lp);
 		}
-		//nbc_prune();
+		nbc_prune();
 
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));

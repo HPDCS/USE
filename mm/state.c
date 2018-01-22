@@ -154,7 +154,7 @@ unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, simtime_t until_ts, unsigned int tie_breaker) {
 	unsigned int events = 0;
 	unsigned short int old_state;
-	LP_state *lp_ptr = LPS[lid];
+	//LP_state *lp_ptr = LPS[lid];
 	msg_t * local_next_evt, * last_executed_event;
 	// current state can be either idle READY, or ROLLBACK, so we save it and then put it back in place
 	old_state = LPS[lid]->state;
@@ -246,7 +246,6 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	msg_t *last_restored_event;
 	msg_t * bound_next;
 	unsigned int reprocessed_events;
-	unsigned long long starting_frame;
 
 	// Sanity check
 	if(LPS[lid]->state != LP_STATE_ROLLBACK && LPS[lid]->state != LP_STATE_ONGVT) {

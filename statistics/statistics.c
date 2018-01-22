@@ -47,8 +47,10 @@ void statistics_fini() {
 }
 
 
-void statistics_post_lp_data(int tid, int type, double value) {
-
+void statistics_post_lp_data(int lid, int type, double value) {
+    (void)lid;
+    (void)type;
+    (void)value;
 }
 
 void statistics_post_data(int tid, int type, double value) {
@@ -209,7 +211,7 @@ void print_statistics() {
 #if REVERSIBLE==1
     printf("STM events......................................: %12u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
 #endif
-	printf("Events in silent execution......................: %12u (%.2f%%)\n", system_stats.events_safe_silent);
+	printf("Events in silent execution......................: %12u (%.2f%%)\n", system_stats.events_safe_silent, ((double)system_stats.events_safe_silent / system_stats.events_total)*100);
     unsigned int commits_total = system_stats.events_safe + system_stats.commits_stm;
     printf("Number of Rolback...............................: %12u\n", (system_stats.events_roll));
     printf("TOT committed...................................: %12u\n", commits_total);

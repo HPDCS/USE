@@ -116,9 +116,6 @@ __thread nbc_bucket_node *to_free_tables_new = NULL;
 __thread unsigned long long mark;
 __thread unsigned int to_remove_nodes_count = 0;
 
-__thread list(msg_t) to_remove_local_evts = NULL;
-__thread list(msg_t) freed_local_evts = NULL;
-
 
 static unsigned int * volatile prune_array;
 static unsigned int threads;
@@ -152,7 +149,7 @@ static void error(const char *msg, ...) {
  *
  * @return the linear index of a given timestamp
  */
-inline unsigned long long hash(double timestamp, double bucket_width)
+unsigned long long hash(double timestamp, double bucket_width)
 {
 	double tmp1;
 	double tmp2;
@@ -1076,7 +1073,7 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned i
 	table *h, *old_h = NULL;	
 	
 	if(new_node->payload != NULL)//DEBUG/TODO
-		((msg_t*)new_node->payload)->node=0xBADC0DE;
+		((msg_t*)new_node->payload)->node= (void*) 0xBADC0DE;
 	
 	new_node->tag = tag;
 
