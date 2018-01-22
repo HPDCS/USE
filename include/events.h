@@ -24,6 +24,7 @@ typedef struct __msg_t
 	/* Support to undo event mechanism */ 
 	revwin_t *revwin;			//reverse window to rollback
 	unsigned int previous_seed;	//seed to generate random number taken before the execution
+	unsigned int line;	//seed to generate random number taken before the execution
 	
 	/* validity attributes */
 	volatile unsigned int state;	//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
@@ -37,6 +38,7 @@ typedef struct __msg_t
 	
 	struct __msg_t * local_next;	//address of the next event executed on the relative LP //occhio, potrebbe non servire
 	struct __msg_t * local_previous;	//address of the previous event executed on the relative LP ////occhio, potrebbe non servire
+	struct __msg_t * commit_bound;	//address of the previous event executed on the relative LP ////occhio, potrebbe non servire
 	
 	//struct state_t * previous_checkpoint; //the last checkpoint taken before the execution of the current event
 	unsigned int roll_epoch;	//DEBUG

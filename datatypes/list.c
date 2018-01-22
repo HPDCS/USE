@@ -865,7 +865,7 @@ void * list_prev_f(void * ptr) {//DEBUG
 	return __dataptr;
 }
 
-struct rootsim_list_node * list_search_error(rootsim_list * queue){
+struct rootsim_list_node * list_search_error(struct rootsim_list * queue){
 	struct rootsim_list_node * node = queue->head;
 	msg_t* event;
 	
@@ -881,7 +881,7 @@ struct rootsim_list_node * list_search_error(rootsim_list * queue){
 }
 
 
-struct rootsim_list_node * list_print_error(rootsim_list * queue){
+struct rootsim_list_node * list_print_error(struct rootsim_list * queue){
 	struct rootsim_list_node * node = queue->head;
 	msg_t* event;
 	

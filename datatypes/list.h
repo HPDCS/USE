@@ -280,7 +280,7 @@ extern void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, 
  * @param list a pointer to a list created using the <new_list>() macro.
  */
 #define list_is_connected(list, ptr) ({\
-				bool __isheadbool = list_prev(ptr) != NULL || list_is_head(list, ptr);\
+				bool __isheadbool =  list_prev(ptr) != 0xDED && (list_prev(ptr) != NULL  || list_is_head(list, ptr));\
 				if(ptr == NULL) {\
 					__isheadbool = false;\
 				}\
