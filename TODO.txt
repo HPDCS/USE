@@ -1,4 +1,4 @@
-- Aggiornamento min
+* Aggiornamento min (DA RICONTROLLARE; ho anche notato in un paio di run tempi anomali, ma non so se sono dovuti ad altre appl)
 - Uso lista free_events + ottimizzazione in batch
 * (per ora bloccante) ongvt 
 - deliver event 1 sola memcopy

@@ -154,14 +154,18 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 #define do_commit_inside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);	unlock(lp_idx);	/* goto get_next; */	}
 #define do_remove_inside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);			unlock(lp_idx);	/* goto get_next; */	}
-#define do_skip_inside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx); 			unlock(lp_idx); /* goto get_next; */	}
+#define do_skip_inside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx);\
+																	read_new_min = false;\
+																	unlock(lp_idx); /* goto get_next; */	}
 
 #define return_evt_to_main_loop()								{	assert(event->monitor != (void*) 0xBA4A4A);	break; 	}
 
 
 #define do_commit_outside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);					goto get_next;	}
 #define do_remove_outside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);							goto get_next;	}
-#define do_skip_outside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx); 							goto get_next; 	}
+#define do_skip_outside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx);\
+																	read_new_min = false;\
+																	goto get_next; 	}
 
 
 
@@ -183,7 +187,7 @@ unsigned int fetch_internal(){
 	double bucket_width;
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
-	bool validity, in_past;
+	bool validity, in_past, read_new_min = true;
 #if DEBUG == 1
 	unsigned int c = 0;
 #endif
@@ -206,7 +210,8 @@ unsigned int fetch_internal(){
 	
 	min = min_node->timestamp;
 		
-    while(node != NULL){	
+    while(node != NULL){
+			
 #if DEBUG == 1
 		if(++c%50000==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
 #endif
@@ -215,6 +220,11 @@ unsigned int fetch_internal(){
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 		ts = node->timestamp;				// Timestamp of the event under exploration
 		tb = node->counter;					// Timestamp of the event under exploration
+		
+		if(read_new_min){
+			min_node = node;
+			min = min_node->timestamp;
+		}
 		
 		//fin qui fuori dal lock ha funzionato per 10 minuti <8,3>, anche se la coda ha superato 500 elementi, diminuendo così la contesa	
 		
@@ -235,6 +245,7 @@ unsigned int fetch_internal(){
 				}
 				///* EXECUTED AND UNSAFE *///
 				else{ 
+					read_new_min = false;
 					do_skip_outside_lock_and_goto_next(lp_idx);
 				}
 			}
@@ -256,6 +267,8 @@ unsigned int fetch_internal(){
 			}
 			
 		}
+		
+		//read_new_min = false;
 
 		if(tryLock(lp_idx)) {
 			
@@ -377,6 +390,7 @@ unsigned int fetch_internal(){
 			}
 		}
 		else {
+			read_new_min = false;
 			add_lp_unsafe_set(lp_idx);
 		} 
 	
