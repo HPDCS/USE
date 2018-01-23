@@ -105,7 +105,10 @@ void queue_deliver_msgs(void) {
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
-        new_hole->monitor = 0x0;
+
+        new_hole->monitor = (void *)0x0;
+        new_hole->state = 0;
+        new_hole->epoch = 0;
 
 #if DEBUG==1
 		if(new_hole->timestamp <= current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}

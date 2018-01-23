@@ -21,7 +21,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
 	//event_content_type new_event;
-	int err;
 	unsigned int loops; 
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
@@ -47,10 +46,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			//	state_ptr = states[me];
 
 			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
-			err = posix_memalign((void **)(&state_ptr), 64, 64);
-			//state_ptr = malloc(sizeof(lp_state_type));
-			if(err < 0) {
-				printf("memalign failed: (%s)\n", strerror(errno));
+			state_ptr = malloc(sizeof(lp_state_type));
+			if(state_ptr == NULL) {
+				printf("malloc failed\n");
 				exit(-1);
 			}
 
