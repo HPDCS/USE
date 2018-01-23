@@ -95,7 +95,6 @@ void queue_deliver_msgs(void) {
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
 
-        //new_hole = malloc(sizeof(msg_t)); //<-Si può eliminare questa malloc? Vedi queue insert
         new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
         if(new_hole == NULL){
 			printf("Out of memory in %s:%d", __FILE__, __LINE__);
@@ -153,7 +152,7 @@ void events_garbage_collection(simtime_t commit_time)
 {
 
     msg_t* tmp;
-    msg_t* cur = ((struct rootsim_list*)to_remove_local_evts)->head;
+    msg_t* cur = (msg_t*)((struct rootsim_list*)to_remove_local_evts)->head->data;
     while(cur != NULL)
     {
         tmp = list_next(cur);

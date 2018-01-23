@@ -16,9 +16,12 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
 	//event_content_type new_event;
-	int err;
 	unsigned int loops; 
 	lp_state_type *state_ptr = (lp_state_type*)state;
+	
+	(void) me;
+	(void) event_content;
+	(void) size;
 	
 	//timer tm_ex;
 
@@ -127,7 +130,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
-	
+	(void) me;
 	//printf("TOTALE: %u\n", snapshot->events);//da_cancellare
 
 	if(snapshot->events < COMPLETE_EVENTS) {

@@ -84,7 +84,7 @@ typedef struct _LP_state {
 	list(msg_t)	queue_in;
 
 	/// Pointer to the last correctly elaborated event
-	volatile msg_t		*bound;
+	/*volatile*/ msg_t		*bound;
 
 
 	/// Saved states queue
@@ -95,14 +95,14 @@ typedef struct _LP_state {
 
 	/* ADDED FOR PADS 2018 */
 
-	unsigned long long num_executed_frames;
-	volatile unsigned long long epoch;
+	unsigned int num_executed_frames;
+	/*volatile*/ unsigned int epoch;
 	
 	unsigned int until_ongvt;
 		
-	///DEBUG: last event that has triggered a rollback on the LP
+#if DEBUG == 1
 	msg_t* 	last_rollback_event;
-	
+#endif
 	simtime_t commit_horizon_ts;
 	unsigned long long commit_horizon_tb;
 

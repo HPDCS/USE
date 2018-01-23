@@ -113,18 +113,20 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
+#if DEBUG == 1
 	LP_state *lp_ptr = LPS[lp_idx];
 	msg_t  * bound_ptr = lp_ptr->bound;
 
-#if DEBUG == 1
 	if(!is_valid(event)){//DEBUG
 		printf(RED("IS NOT VALID "));
 		print_event(event);
 	}
 #endif
+
+	(void)event;
 	
 	if(node == NULL){
-		return false;//node = event->node;
+		return false;
 	}
 	
 	if(node != (void*) 0xbadc0de && delete(nbcalqueue, node)){
@@ -177,11 +179,15 @@ unsigned int fetch_internal(){
 	table *h;
 	nbc_bucket_node * node, *node_next, *min_node;
 	simtime_t ts, min = INFTY, lvt_ts;
-	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb, tb, c = 0, curr_evt_state;
+	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb, tb, curr_evt_state;
 	double bucket_width;
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
 	bool validity, in_past;
+#if DEBUG == 1
+	unsigned int c = 0;
+#endif
+
 	
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
@@ -293,7 +299,7 @@ unsigned int fetch_internal(){
 					}
 				#endif	
 					event = local_next_evt;
-					node = 0x1;//local_next_evt->node;
+					node = (void*)0x1;//local_next_evt->node;
 					ts = event->timestamp;
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
@@ -419,7 +425,7 @@ get_next:
         return 0;
         
        
- 	if(node == 0x1)
+ 	if(node == (void*)0x1)
         node = NULL;
  
 #if DEBUG == 1
