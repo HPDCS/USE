@@ -457,7 +457,9 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 				#if LOG_ENQUEUE == 1
 				LOG("ENQUEUE: %f %u - %u %u\n", new_node_pointer->timestamp, new_node_pointer->counter,	hash(new_node_timestamp, hashtable->bucket_width), index );
 				#endif
+			#if DEBUG==1
 				((*new_node)->payload)->creation_time = CLOCK_READ();
+			#endif
 				return true;
 			}
 
@@ -501,7 +503,9 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 						new_node_pointer
 					)){
 				//printf("insert_std: evt type %u\n", ((msg_t*)(new_node[0]->payload))->type);//da_cancellare
+			#if DEBUG==1
 				((*new_node)->payload)->creation_time = CLOCK_READ();
+			#endif
 				return true;
 			}
 			break;
@@ -1072,9 +1076,10 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned i
 	nbc_bucket_node *new_node = node_malloc(payload, timestamp, 0);
 	table *h, *old_h = NULL;	
 	
-	if(new_node->payload != NULL)//DEBUG/TODO
+#if DEBUG==1
+	if(new_node->payload != NULL)
 		((msg_t*)new_node->payload)->node= (void*) 0xBADC0DE;
-	
+#endif
 	new_node->tag = tag;
 
 	do
@@ -1086,8 +1091,6 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned i
 		}
 	} while(!insert_std(h, &new_node, REMOVE_DEL_INV));
 
-	//nbc_flush_current(h, new_node);
-	//new_node->payload->tie_breaker = new_node->counter; //TODO//CONTROLLARE//PADS
 	
 	ATOMIC_INC(&(h->counter));
 }
@@ -1276,7 +1279,9 @@ bool delete(nb_calqueue *queue, nbc_bucket_node* node){
     }
     if(is_marked(node_next, VAL)){
 		ATOMIC_DEC(&(h->counter));
+	#if DEBUG==1
 		node->payload->del_node = node;
+	#endif
 	}
     
 #if DEBUG == 1
