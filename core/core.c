@@ -51,6 +51,10 @@ __thread void* current_evt_monitor = 0x0;
 
 __thread struct __bucket_node *current_node = 0x0;
 
+__thread unsigned int last_checked_lp = 0;
+unsigned int start_periodic_check_ongvt = 0;
+unsigned int check_ongvt_period = 0;
+
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
@@ -288,6 +292,7 @@ void check_OnGVT(unsigned int lp_idx){
 		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
 			//printf("Simulation endend on LP:%u\n", lp_idx);
+			start_periodic_check_ongvt = 1;
 			end_sim(lp_idx);
 		}
 		// Ripristina stato sul bound
@@ -604,6 +609,7 @@ void thread_loop(unsigned int thread_id) {
 		///* ON_GVT *///
 		if(safe) {
 			if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+				start_periodic_check_ongvt = 1;
 				end_sim(current_lp);
 			}
 			LPS[current_lp]->until_ongvt = 0;
@@ -635,6 +641,15 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		
 end_loop:
+
+		if(start_periodic_check_ongvt)
+			if(check_ongvt_period++ % 100 == 0){
+				while(!tryLock(last_checked_lp));
+				check_OnGVT(last_checked_lp);
+				unlock(last_checked_lp);
+				last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+			}
+
 		if(is_end_sim(current_lp)){
 			if(check_termination()){
 				__sync_bool_compare_and_swap(&stop, false, true);
