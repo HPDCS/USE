@@ -1,0 +1,5 @@
+- Aggiornamento min
+- Uso lista free_events + ottimizzazione in batch
+* (per ora bloccante) ongvt 
+- deliver event 1 sola memcopy
+- rollback intelligente
