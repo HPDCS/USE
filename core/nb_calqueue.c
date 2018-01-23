@@ -445,7 +445,7 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 			new_node_pointer->next = right_node;
 			// set tie_breaker
 			new_node_pointer->counter = 1 + ( -D_EQUAL(new_node_timestamp, left_node->timestamp ) & left_node->counter );
-
+			new_node_pointer->payload->tie_breaker = new_node_pointer->counter; //PADS 2018
 			if (BOOL_CAS
 					(
 						&(left_node->next),
@@ -605,8 +605,8 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 			//free(new_h);
 		}
 #if DEBUG == 1
-		//else //DEBUG; decommentare
-		//	printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
+		else //DEBUG; decommentare
+			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
 #endif
 	}
 }
@@ -1087,7 +1087,7 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned i
 	} while(!insert_std(h, &new_node, REMOVE_DEL_INV));
 
 	//nbc_flush_current(h, new_node);
-	((msg_t*)new_node->payload)->tie_breaker = new_node->counter; //TODO//CONTROLLARE//PADS
+	//new_node->payload->tie_breaker = new_node->counter; //TODO//CONTROLLARE//PADS
 	
 	ATOMIC_INC(&(h->counter));
 }
@@ -1259,6 +1259,11 @@ nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 
 bool delete(nb_calqueue *queue, nbc_bucket_node* node){
 	nbc_bucket_node *node_next, *tmp;
+	
+	if(node == NULL){
+		return false;
+	}
+	
 	table *h = read_table(queue);
     node_next = FETCH_AND_OR(&node->next, DEL);
     tmp = node;

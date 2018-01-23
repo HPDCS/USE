@@ -48,6 +48,9 @@ __thread unsigned long long evt_count = 0;
 __thread unsigned long long current_evt_state = 0;
 __thread void* current_evt_monitor = 0x0;
 
+
+__thread struct __bucket_node *current_node = 0x0;
+
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
@@ -208,7 +211,7 @@ void LPs_metada_init() {
 		sim_ended[i/64] = 0;
 		LPS[i] = malloc(sizeof(LP_state));
 		LPS[i]->lid 					= i;
-		LPS[i]->seed 					= i; //TODO;
+		LPS[i]->seed 					= i+1; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
 		LPS[i]->ckpt_period 			= 10;
 		LPS[i]->from_last_ckpt 			= 0;
@@ -216,7 +219,6 @@ void LPs_metada_init() {
 		LPS[i]->current_base_pointer 	= NULL;
 		LPS[i]->queue_in 				= new_list(i, msg_t);
 		LPS[i]->bound 					= NULL;
-		//LPS[i]->queue_out 				= new_list(i, msg_hdr_t);
 		LPS[i]->queue_states 			= new_list(i, state_t);
 		LPS[i]->mark 					= 0;
 		LPS[i]->epoch 					= 1;
@@ -224,7 +226,6 @@ void LPs_metada_init() {
 
 	}
 	
-	//sim_ended[0]=0;//DEBUG
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
 		end_sim(i);
 
@@ -236,16 +237,6 @@ void LPs_metada_init() {
 bool check_termination(void) {
 	unsigned int i;
 	
-	
-	//for (i = 0; i < n_prc_tot; i++) {
-	//	if(!is_end_sim(i)) //[i] != ~(0ULL))
-	//		return false; 
-	//}
-	
-	//for (i = 0; i < n_prc_tot/64; i++) {
-	//	if(sim_ended[i] != ~(0ULL))
-	//		return false; 
-	//}
 	
 	for (i = 0; i < LP_MASK_SIZE; i++) {
 		if(sim_ended[i] != ~(0ULL))
@@ -458,7 +449,7 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(queue_min_time);
 #endif
 		if(fetch_internal() == 0) {
-			if(++empty_fetch>1500){
+			if(++empty_fetch>500){
 				round_check_OnGVT();
 			}
 			goto end_loop;
@@ -480,21 +471,21 @@ void thread_loop(unsigned int thread_id) {
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
 
-		#if DEBUG == 1
+	#if DEBUG == 1
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
-		#endif
+	#endif
 
 
-		#if DEBUG == 1	
+	#if DEBUG == 1	
 		if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
 			printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
 			gdb_abort;
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
-		#endif
+	#endif
 
 
 
@@ -503,6 +494,7 @@ void thread_loop(unsigned int thread_id) {
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
+	#if DEBUG == 1
 			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG){
 				if(current_evt_monitor == (void*) 0xba4a4a){
 					printf(RED("Ho una banana che non è ANTI-MSG\n"));
@@ -511,6 +503,7 @@ void thread_loop(unsigned int thread_id) {
 				print_event(current_msg);
 				//gdb_abort;
 			}
+	#endif
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
@@ -518,14 +511,17 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
 #endif
+
+		#if DEBUG == 1
 			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
 			current_msg->rollback_time = CLOCK_READ();
+		#endif
 			//printf(YELLOW("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
 			//printlp(YELLOW("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n"), current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 			//printf(YELLOW("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			//fflush(stdout);//DEBUG
+			
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
@@ -533,52 +529,44 @@ void thread_loop(unsigned int thread_id) {
 			LPS[current_lp]->state = old_state;
 		}
 
-		// If, in addition, the event is no more valid, we have to
-		// continue by fetching another event form the calendar queue.
-		// INCRIMINATO!!!!!!!!!!!!!!!!
 		if(current_evt_state == ANTI_MSG) {
-			//printlp("Anti-event received\n");
-
 			current_msg->monitor = (void*) 0xba4a4a;
-			if(current_lvt < LPS[current_lp]->current_LP_lvt || 
-			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
-			)
-			{
-				assert(!list_is_connected(LPS[current_lp]->queue_in, current_msg));
-			}
-			delete(nbcalqueue, current_msg->node);
+		#if DEBUG == 1
+			assert(!list_is_connected(LPS[current_lp]->queue_in, current_msg));
+		#endif
+			delete(nbcalqueue, current_node);
 			unlock(current_lp);
-			continue; //TODO: verificare
+			continue;
 		}
 
-#if DEBUG==1
+	#if DEBUG==1
 		if((unsigned long long)current_msg->node & (unsigned long long)0x1){
 			printf(RED("Si sta eseguendo un nodo eliminato"));
 		}
-#endif
+	#endif
 
 		// Update event and LP control variables
 		current_msg->epoch = LPS[current_lp]->epoch;
+	#if DEBUG == 1
 		current_msg->execution_time = CLOCK_READ();
-				
+	#endif
 		
-		// Inserisco l'evento nella coda locale, se non c'è già. Si può spostare dopo l'esecuzione per correttezza strutturale
 		// The current_msg should be allocated with list allocator
 		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
-#if DEBUG == 1 
+	#if DEBUG == 1 
 			msg_t *bound_t, *next_t;
 			bound_t = LPS[current_lp]->bound;
 			next_t = list_next(LPS[current_lp]->bound);
-#endif
+	#endif
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
-#if DEBUG == 1
+	#if DEBUG == 1
 			if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
 			if(list_prev(current_msg) != bound_t){					printf("list_prev(current_msg) != bound_t\n");	gdb_abort;}
 			if(list_next(bound_t) != current_msg){					printf("list_next(bound_t) != current_msg\n");	gdb_abort;}
 			if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
 			if(bound_t->timestamp > current_lvt){					printf("bound_t->timestamp > current_lvt\n");	gdb_abort;}			
 			if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
-#endif
+	#endif
 		}
 				
 		// Take a simulation state snapshot, in some way
@@ -613,14 +601,15 @@ void thread_loop(unsigned int thread_id) {
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
 		
-
-
 		///* ON_GVT *///
-		//if((LPS[current_lp]->until_ongvt++ % ONGVT_PERIOD) == (ONGVT_PERIOD-1)){
-		//	printf("[%u] Commit Horizon <%f,%u>\n", tid, commit_horizon_ts, commit_horizon_tb);
-		//	print_event(current_msg);
-		//	check_OnGVT(current_lp);	
-		//}
+		if(safe) {
+			if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+				end_sim(current_lp);
+			}
+			LPS[current_lp]->until_ongvt = 0;
+		}else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
+			check_OnGVT(current_lp);	
+		}
 
 	#if DEBUG == 0
 		unlock(current_lp);
@@ -635,7 +624,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 		if(safe) {
-			commit_event(current_msg, NULL, current_lp);
+			commit_event(current_msg, current_node, current_lp);
 		}
 		nbc_prune();
 		//events_garbage_collection(commit_time);
@@ -664,14 +653,6 @@ end_loop:
 	statistics_post_data(tid, CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
 
-	
-	// FIXME: Produces a segmentation fault, probably due to bad memory
-	// alignement return by the posix_memalign (!!?)
-	//revwin_free(current_lp, current_msg->revwin);
-
-	// Destroy SLAB's structures
-	// FIXME
-	//reverse_fini();
 
 	// Unmount statistical data
 	// FIXME
@@ -679,7 +660,8 @@ end_loop:
 	
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
-	} else if (stop && tid == MAIN_PROCESS){
+	} else if (stop){
+		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 	}
 }

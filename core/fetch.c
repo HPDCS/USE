@@ -115,30 +115,16 @@
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 	LP_state *lp_ptr = LPS[lp_idx];
 	msg_t  * bound_ptr = lp_ptr->bound;
-	
-	//msg_t  * tmp;
-	//if(((unsigned int)event->timestamp) < (event->frame)){
-	//	printf(RED("COMMIT FALLITO ts:%f fr:%u:\n "),event->timestamp,event->frame, );
-	//	//print_event(event);
-	//	//list_search_error(list_search_error(LPS[lp_idx]->queue_in));
-	//	tmp = event;
-	//	while(list_prev(tmp) != NULL && list_prev(tmp)->monitor!=0xba4a4a && list_prev(tmp)->state!=ANTI_MSG)
-	//		tmp = list_prev(tmp);
-	//	
-	//	printf("PROVA PROVA %p\n", tmp);
-	//	
-	//	event->local_previous = 0x0;
-	//	event->local_previous->local_previous = 0x01;;
-	//	//gdb_abort;
-	//}
-	
+
+#if DEBUG == 1
 	if(!is_valid(event)){//DEBUG
 		printf(RED("IS NOT VALID "));
 		print_event(event);
 	}
+#endif
 	
 	if(node == NULL){
-		node = event->node;
+		return false;//node = event->node;
 	}
 	
 	if(node != (void*) 0xbadc0de && delete(nbcalqueue, node)){
@@ -148,6 +134,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 				LPS[lp_idx]->commit_horizon_ts = node->timestamp; //time min ← evt.ts
 				LPS[lp_idx]->commit_horizon_tb = node->counter;	
 		}
+	#if DEBUG == 1
 		//event->node = 0x5AFE;                //DEBUG
 		assert(__sync_val_compare_and_swap(&event->monitor, 0x0, 0x5AFE) == 0x0);
 		//event->monitor = 0x5AFE;
@@ -155,6 +142,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		event->local_previous 	= (void*) node;        //DEBUG
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
 		event->deletion_time 	= CLOCK_READ();
+#endif
 		return true;
 	}
 	return false;
@@ -206,14 +194,16 @@ unsigned int fetch_internal(){
 	
 	//reset variables
 	safe = false;
+	current_node = NULL;
 	clear_lp_unsafe_set;
 	current_msg = NULL; //DEBUG
 	
 	min = min_node->timestamp;
 		
     while(node != NULL){	
-		if(++c%500==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
-		
+#if DEBUG == 1
+		if(++c%50000==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
+#endif
 		event = (msg_t *)node->payload;		// Event under exploration
 		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
@@ -231,17 +221,15 @@ unsigned int fetch_internal(){
 		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 			
 		///* VALID *///
-		if(validity){
-			if(curr_evt_state == EXTRACTED){
-				if(in_past){
-					///* COMMIT *///
-					if(safe && event->frame != 0){ 
-						do_commit_outside_lock_and_goto_next(event, node, lp_idx);
-					}
-					///* EXECUTED AND UNSAFE *///
-					if(!safe || event->frame == 0){ 
-						do_skip_outside_lock_and_goto_next(lp_idx);
-					}
+		if(validity){ 
+			if(curr_evt_state == EXTRACTED && in_past){
+				///* COMMIT *///
+				if(safe && event->frame != 0){ 
+					do_commit_outside_lock_and_goto_next(event, node, lp_idx);
+				}
+				///* EXECUTED AND UNSAFE *///
+				else{ 
+					do_skip_outside_lock_and_goto_next(lp_idx);
 				}
 			}
 		}
@@ -252,7 +240,6 @@ unsigned int fetch_internal(){
 			if((curr_evt_state & ELIMINATED) == 0){
 				curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
 			}
-			
 			///* DELETE ELIMINATED *///
 			if(curr_evt_state == ELIMINATED){//if(curr_evt_state == ELIMINATED){
 				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
@@ -264,37 +251,30 @@ unsigned int fetch_internal(){
 			
 		}
 
-		
 		if(tryLock(lp_idx)) {
 			
 			validity = is_valid(event);
 			
-			//if(bound_ptr != lp_ptr->bound){
+			if(bound_ptr != lp_ptr->bound){
 				bound_ptr = lp_ptr->bound;
 				lvt_ts = bound_ptr->timestamp; 
 				lvt_tb = bound_ptr->tie_breaker;
 				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
-			//}
+			}
 		
-			//safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 			curr_evt_state = event->state;
 		
-			
-	
 			if(validity) {
 		
-				///* PARTE ORIGINARIAMENTE SOTTO LOCK
-								
 				//da qui in poi il bound è congelato ed è nel passato rispetto al mio evento
 				/// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///
 				local_next_evt = list_next(lp_ptr->bound);
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
-					//list_place_after_given_node_by_content(TID, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
+					list_place_after_given_node_by_content(TID, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
 					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_MSG; //
 					set_commit_state_as_banana(local_next_evt); //non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
-					delete(nbcalqueue, local_next_evt->node);	
 					local_next_evt = list_next(lp_ptr->bound);
 				}
 				
@@ -304,32 +284,25 @@ unsigned int fetch_internal(){
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < node->counter)
 					)
 				){
-					#if DEBUG==1
+				#if DEBUG==1
 					if(local_next_evt->monitor == (void*) 0x5AFE){ //DEBUG
 						printf("[%u]GET_NEXT_AND_VALID: \n",tid); 
 						printf("\tevent         : ");print_event(event);
 						printf("\tlocal_next_evt: ");print_event(local_next_evt);
 						gdb_abort;
 					}
-					if(local_next_evt->node == (void*) 0xbadc0de){ //DEBUG
-						printf(RED("1 - BADCODE REACHED state:%u\n"), event->state);
-						gdb_abort;
-					}
-					#endif	
+				#endif	
 					event = local_next_evt;
-					node  = local_next_evt->node;
+					node = 0x1;//local_next_evt->node;
 					ts = event->timestamp;
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
 				curr_evt_state = event->state;
 
-				//in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));	
-				
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
-						/* aggiunta 15:41 del 21/01/2018: INIZIO */
 						set_commit_state_as_banana(event);
 						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
@@ -351,13 +324,12 @@ unsigned int fetch_internal(){
 						set_commit_state_as_banana(event);
 					}
 
-					if(event->monitor == (void*) 0xba4a4a){//DEBUG
+					if(event->monitor == (void*) 0xba4a4a){
 						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
 					else
 						return_evt_to_main_loop();
 				}
-				
 				else if(curr_evt_state == ELIMINATED){
 					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 				}
@@ -372,27 +344,23 @@ unsigned int fetch_internal(){
 				}
 
 				///* DELETE ELIMINATED *///
-				//if(curr_evt_state == ELIMINATED){
-				//	assert(!list_is_connected(LPS[current_lp]->queue_in, event));
-				//	do_remove_inside_lock_and_goto_next(event,node,lp_idx);
-				//}
-				
-				///* SHOULD BE DEAD CODE IF !ctrl_del_elim
 				if( (curr_evt_state & EXTRACTED) == 0 ){
+			#if DEBUG==1	
 					assert(!list_is_connected(LPS[current_lp]->queue_in, event));
+			#endif
 					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 				}
 				else{
-
+			#if DEBUG==1
 					assert(curr_evt_state == ANTI_MSG);
-
+			#endif
 					///* ANTI-MESSAGE IN THE FUTURE*///
-					if(!in_past){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima
+					if(!in_past){
 							set_commit_state_as_banana(event);
 					}	
 
 					///* DELETE BANANA NODE *///
-					if(event->monitor == (void*) 0xba4a4a){// || event->monitor == 0xba4a4a lo abbiamo già fatto prima	
+					if(event->monitor == (void*) 0xba4a4a){
 						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
 					///* ANTI-MESSAGE IN THE PAST*///
@@ -449,31 +417,21 @@ get_next:
  
  	if(node == NULL)
         return 0;
+        
+       
+ 	if(node == 0x1)
+        node = NULL;
  
- 	#if DEBUG == 1
+#if DEBUG == 1
 	if(node == (void*)0x5afe){
 		printf(RED("NON VA"));
 		print_event(event);
 	}
-	#endif
+#endif
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
     current_msg =  event;//(msg_t *) node->payload;
-	current_msg->node = node;
-	current_msg->tie_breaker = node->counter;
-
-	#if DEBUG==1
-	if(node == (void*) 0xbadc0de){
-		printf(RED("BADCODE REACHED state:%u\n"), event->state);
-	}
-    if(event->state == EXTRACTED) node->executed++;
-    if(node->executed>2){
-		//printf("Lo stesso evento è stato eseguito %u volte.\nEvent_pointer:%p Timestamp:%f\n\n",node->executed,node,node->timestamp);
-	}
-	#endif
-
-	//if(is_marked(node->next, DEL))
-	//	return 0;
+	current_node = node;
 
     return 1;
 }

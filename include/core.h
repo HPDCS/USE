@@ -9,7 +9,7 @@
 #include <simtypes.h>
 #include <statistics.h>
 #include <limits.h>
-#include "nb_calqueue.h"
+#include <nb_calqueue.h>
 
 #define MAX_LPs	2048
 
@@ -49,7 +49,7 @@
 #define BLOCKED_STATE			0x01000
 #define is_blocked_state(state)	(bool)(state & BLOCKED_STATE)
 
-#define ONGVT_PERIOD 1000
+#define ONGVT_PERIOD 200
 
 struct __bucket_node;
 
@@ -89,6 +89,7 @@ extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
 extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
+extern __thread struct __bucket_node *current_node;
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
