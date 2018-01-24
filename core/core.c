@@ -187,7 +187,7 @@ void LPs_metada_init() {
 	//rootsim_config.gvt_time_period = 1000;
 	//rootsim_config.scheduler = SMALLEST_TIMESTAMP_FIRST;
 	rootsim_config.checkpointing = PERIODIC_STATE_SAVING;
-	rootsim_config.ckpt_period = 10;
+	rootsim_config.ckpt_period = 100;
 	rootsim_config.gvt_snapshot_cycles = 2;
 	rootsim_config.simulation_time = 0;
 	//rootsim_config.lps_distribution = LP_DISTRIBUTION_BLOCK;
@@ -645,10 +645,11 @@ end_loop:
 
 		if(start_periodic_check_ongvt)
 			if(check_ongvt_period++ % 100 == 0){
-				while(!tryLock(last_checked_lp));
-				check_OnGVT(last_checked_lp);
-				unlock(last_checked_lp);
-				last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+				if(tryLock(last_checked_lp)){
+					check_OnGVT(last_checked_lp);
+					unlock(last_checked_lp);
+					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+				}
 			}
 
 		if(is_end_sim(current_lp)){

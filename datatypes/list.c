@@ -833,24 +833,48 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 
 }
 
-
+#define LIST_NODE_PER_ALLOC 2000
 
 void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct rootsim_list *free_list) {
-	char *ptr;
+	char *ptr,*memory_nodes;
+	struct rootsim_list_node *tmp_node;
+	unsigned int i = 0;
 
-	// DEBUG: il seguente snippet serve per riusare i nodi della lista interna
-	// tuttavia questa ottimizzazione richiede la gestione complementare del
-	// buffer interno dentro la 'prune()'
+	//Se la coda locale è vuota, la fillo!
+	if(free_list->size == 0){
+		size_t node_size = sizeof(struct rootsim_list_node) + size;//multiplo di 64
+		
+		while((++i)*CACHE_LINE_SIZE < node_size);
+		node_size = (i)*CACHE_LINE_SIZE;
+		
+		if(posix_memalign(&memory_nodes, CACHE_LINE_SIZE, node_size*LIST_NODE_PER_ALLOC) != 0){
+			printf("List nodes allocation failed\n");
+			abort;
+		}
+		
+		for(i = 0; i < LIST_NODE_PER_ALLOC; i++){
+			tmp_node = (struct rootsim_list_node *) memory_nodes;
+			tmp_node->next = tmp_node->prev = NULL;
+			
+			__list_insert_tail_by_node(free_list, tmp_node);//da fare in loco
+			memory_nodes += node_size;
+		}
+	}
+
 	if(free_list->head != NULL){ 
+		//printf("Sto prendendo un nodo in loco\n");
 		assert(free_list->size!=0);
 		return 	list_extract_given_node(lid, free_list, free_list->head->data);
 	}
-	ptr = list_allocate_node(lid, size);
-
-	if(ptr == NULL)
-		return NULL;
-
-	return (void *)(ptr + sizeof(struct rootsim_list_node));
+	
+	//printf("DEAD CODE!");
+	
+	//ptr = list_allocate_node(lid, size);
+	//
+	//if(ptr == NULL)
+	//	return NULL;
+	//
+	//return (void *)(ptr + sizeof(struct rootsim_list_node));
 }
 
 
