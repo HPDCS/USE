@@ -11,249 +11,361 @@ extern double delta_count;
 extern unsigned int reverse_execution_threshold;
 
 struct stats_t *thread_stats;
-struct stats_lp_t *lp_stats;
-struct stats_t system_stats;
-
-//unsigned long long events_fetched;
-//unsigned long long events_flushed;
-simtime_t tot_time_between_events;
-simtime_t t_btw_evts;
+struct stats_t *lp_stats;
+struct stats_t *system_stats;
 
 void statistics_init() {
-    //thread_stats = malloc(n_cores * sizeof(struct stats_t));
-    if(posix_memalign((void**)&thread_stats, 64, n_cores * sizeof(struct stats_t)) < 0) {
-	    printf("memalign failed\n");
-    }
+	if(posix_memalign((void**)&thread_stats, 64, n_cores * sizeof(struct stats_t)) < 0) {
+		printf("memalign failed\n");
+	}
+	if(thread_stats == NULL) {
+		printf("Unable to allocate thread statistics vector\n");
+		abort();
+	}
 
-    if(thread_stats == NULL) {
-        printf("Unable to allocate statistics vector\n");
-        abort();
-    }
+	if(posix_memalign((void**)&lp_stats, 64, n_prc_tot * sizeof(struct stats_t)) < 0) {
+		printf("memalign failed\n");
+	}
+	if(lp_stats == NULL) {
+		printf("Unable to allocate LP statistics vector\n");
+		abort();
+	}
 
-    if(posix_memalign((void**)&lp_stats, 64, n_prc_tot * sizeof(struct stats_lp_t)) < 0) {
-        printf("memalign failed\n");
-    }
+	if(posix_memalign((void**)&system_stats, 64, sizeof(struct stats_t)) < 0) {
+		printf("memalign failed\n");
+	}
+	if(lp_stats == NULL) {
+		printf("Unable to allocate LP statistics vector\n");
+		abort();
+	}
 
-    memset(thread_stats, 0, n_cores * sizeof(struct stats_t));
-    memset(lp_stats, 0, n_prc_tot * sizeof(struct stats_t));
-    
-    memset(&system_stats, 0, sizeof(struct stats_t));
-    //events_fetched = 0;
-    tot_time_between_events = 0;
+	memset(thread_stats, 0, n_cores * sizeof(struct stats_t));
+	memset(lp_stats, 0, n_prc_tot * sizeof(struct stats_t));
+	memset(system_stats, 0, sizeof(struct stats_t));
 }
 
 void statistics_fini() {
-    free(thread_stats);
+	free(thread_stats);
+	free(lp_stats);
+	free(system_stats);
 }
 
+static void statistics_post_data(struct stats_t *stats, int idx, int type, stat64_t value) {
 
-void statistics_post_lp_data(int lid, int type, double value) {
-    (void)lid;
-    (void)type;
-    (void)value;
-}
-
-void statistics_post_data(int tid, int type, double value) {
-
-    switch(type) {
-        case EVENTS_SAFE:
-            thread_stats[tid].events_total++;
-            thread_stats[tid].events_safe++;
-            break;
-
-        case EVENTS_STM:
-            thread_stats[tid].events_total++;
-            thread_stats[tid].events_stm++;
-            break;
-            
-        case EVENTS_ROLL:
-            thread_stats[tid].events_roll++;
-            break;
-
-		case EVENTS_STASH:
-            thread_stats[tid].events_stash++;
-            break;
-
-		case EVENTS_SAFE_SILENT:
-            thread_stats[tid].events_safe_silent++;
-            break;
-
-
-        case COMMITS_STM:
-            thread_stats[tid].commits_stm++;
-            break;
-
-        case CLOCK_DEQUEUE:
-            thread_stats[tid].clock_dequeue += (unsigned long long)value;
-            break;
-
-        case CLOCK_DEQ_LP:
-            thread_stats[tid].clock_deq_lp += (unsigned long long)value;
-            break;
-
-        case CLOCK_ENQUEUE:
-            thread_stats[tid].clock_enqueue += (unsigned long long)value;
-            break;
-
-        case CLOCK_DELETE:
-            thread_stats[tid].clock_delete += (unsigned long long)value;
-            break;
-
-        case CLOCK_LOOP:
-            thread_stats[tid].clock_loop += (unsigned long long)value;
-            break;
-
-        case CLOCK_SAFE:
-            thread_stats[tid].clock_safe += (unsigned long long)value;
-            break;
-            
-        case CLOCK_STM:
-            thread_stats[tid].clock_stm += (unsigned long long)value;
-            break;
-
-        case CLOCK_STM_WAIT:
-            thread_stats[tid].clock_stm_wait += (unsigned long long)value;
-            break;
-
-        case CLOCK_UNDO_EVENT:
-            thread_stats[tid].clock_undo_event += (unsigned long long)value;
-            break;
-
-        case CLOCK_PRUNE:
-            thread_stats[tid].clock_prune += (unsigned long long)value;
-            break;
-
-        case CLOCK_SAFETY_CHECK:
-            thread_stats[tid].clock_safety_check += (unsigned long long)value;
-            break;
-        
-        case CLOCK_SAFE_SILENT:
-            thread_stats[tid].clock_safe_silent += (unsigned long long)value;
-            break;
-
-        case EVENTS_FETCHED:
-			thread_stats[tid].events_fetched++;
+	switch(type) {
+		// ========= EVENTS STATS ========= //
+		case STAT_EVENT:
+			stats[idx].events_total += value;
 			break;
 
-        case EVENTS_FLUSHED:
-			thread_stats[tid].events_flushed++;
-			break;
-
-        case PRUNE_COUNTER:
-			thread_stats[tid].prune_counter++;
-			break;
-
-        case SAFETY_CHECK:
-			thread_stats[tid].safety_check_counter++;
+		case STAT_EVENT_COMMIT:
+			stats[idx].events_committed += value;
 			break;
 			
-		case T_BTW_EVT:
+		case STAT_EVENT_STRAGGLER:
+			stats[idx].events_straggler += value;
+			break;
+
+		case STAT_EVENT_STASH:
+			stats[idx].events_stash += value;
+			break;
+
+		case STAT_EVENT_SILENT:
+			stats[idx].events_silent += value;
+			break;
+
+		case STAT_EVENT_UNDO:
+			stats[idx].events_undo += value;
+			break;
+
+		case STAT_EVENT_FETCHED:
+			stats[idx].events_fetched += value;
+			break;
+
+		case STAT_EVENT_FLUSHED:
+			stats[idx].events_flushed += value;
+			break;
+
+		case STAT_EVENT_ANTI:
+			stats[idx].events_anti += value;
+			break;
+
+
+		// ========= COUNTER STATS ========= //
+		case STAT_PRUNE_COUNTER:
+			stats[idx].counter_prune++;
+			break;
+
+		case STAT_SAFETY_CHECK:
+			stats[idx].counter_safety_check++;
+			break;
+
+		case STAT_ROLLBACK:
+			stats[idx].counter_rollbacks += value;
+			break;
+
+		case STAT_CKPT:
+			stats[idx].counter_checkpoints += value;
+			break;
+
+		case STAT_CKPT_MEM:
+			stats[idx].mem_checkpoint += value;
+			//stats[idx].mem_checkpoint /= stats[idx].counter_checkpoints;
+			break;
+
+		case STAT_RECOVERY:
+			stats[idx].counter_recoveries += value;
+			break;
+
+		case STAT_CKPT_RECALC:
+			stats[idx].counter_checkpoint_recalc += value;
+			break;
+
+		case STAT_CKPT_PERIOD:
+			stats[idx].checkpoint_period += (value - stats[idx].checkpoint_period) / stats[idx].counter_checkpoint_recalc;
+			//stats[idx].checkpoint_period /= stats[idx].counter_checkpoint_recalc;
+			break;
+
+
+		// ========= TIME STATS ========= //
+		case STAT_CLOCK_EVENT:
+			stats[idx].clock_event += value;
+			//stats[idx].clock_event /= stats[idx].events_total;
+			break;
+
+		case STAT_CLOCK_DEQUEUE:
+			stats[idx].clock_dequeue += value;
+			break;
+
+		case STAT_CLOCK_FETCH:
+			stats[idx].clock_fetch += value;
+			break;
+
+		case STAT_CLOCK_DEQ_LP:
+			stats[idx].clock_deq_lp += value;
+			break;
+
+		case STAT_CLOCK_ENQUEUE:
+			stats[idx].clock_enqueue += value;
+			break;
+
+		case STAT_CLOCK_DELETE:
+			stats[idx].clock_delete += value;
+			break;
+
+		case STAT_CLOCK_LOOP:
+			stats[idx].clock_loop += value;
+			break;
+
+		case STAT_CLOCK_UNDO_EVENT:
+			stats[idx].clock_undo_event += value;
+			break;
+
+		case STAT_CLOCK_PRUNE:
+			stats[idx].clock_prune += value;
+			break;
+
+		case STAT_CLOCK_SAFETY_CHECK:
+			stats[idx].clock_safety_check += value;
+			break;
+		
+		case STAT_CLOCK_SILENT:
+			stats[idx].clock_silent += value;
+			break;
+
+		case STAT_CLOCK_ROLLBACK:
+			stats[idx].clock_rollback += value;
+			break;
+
+		case STAT_CLOCK_BTW_EVT:
 //			tot_time_between_events += value;
 //			t_btw_evts = tot_time_between_events/events_fetched;
 			break;
 
-        default:
-            printf("Unrecognized stat type (%d)\n", type);
-    }
+		case STAT_CKPT_TIME:
+			stats[idx].clock_checkpoint += value;
+			//stats[idx].clock_checkpoint /= stats[idx].counter_checkpoints;
+			break;
+
+		case STAT_RECOVERY_TIME:
+			stats[idx].clock_recovery += value;
+			//stats[idx].clock_recovery /= stats[idx].counter_recoveries;
+			break;
+		
+
+		default:
+			printf("Unrecognized stat type (%d)\n", type);
+	}
+}
+
+inline void statistics_post_lp_data(int tid, int type, stat64_t value) {
+	statistics_post_data(lp_stats, tid, type, value);
+}
+
+inline void statistics_post_th_data(int idx, int type, stat64_t value) {
+	statistics_post_data(thread_stats, idx, type, value);
 }
 
 
 void gather_statistics() {
-    unsigned int i;
+	unsigned int i;
 
-    for(i = 0; i < n_cores; i++) {
-        system_stats.events_total += 	thread_stats[i].events_total;
-        system_stats.events_safe += 	thread_stats[i].events_safe;
-        system_stats.events_stm += 		thread_stats[i].events_stm;
-        system_stats.commits_stm += 	thread_stats[i].commits_stm;
-        system_stats.events_roll += 	thread_stats[i].events_roll;
-        system_stats.events_stash += 	thread_stats[i].events_stash;
-        system_stats.events_fetched += 	thread_stats[i].events_fetched;
-        system_stats.events_flushed += 	thread_stats[i].events_flushed;
-        system_stats.events_safe_silent += 	thread_stats[i].events_safe_silent;
-        
-        system_stats.prune_counter += 			thread_stats[i].prune_counter;
-        system_stats.safety_check_counter += 	thread_stats[i].safety_check_counter;
-
-        system_stats.clock_loop += 		thread_stats[i].clock_loop;
-
-        system_stats.clock_safe += 		thread_stats[i].clock_safe;
-        system_stats.clock_stm += 		thread_stats[i].clock_stm;
-        
-        system_stats.clock_enqueue += 	thread_stats[i].clock_enqueue;
-        system_stats.clock_dequeue += 	thread_stats[i].clock_dequeue;
-        
-        system_stats.clock_deq_lp += 		thread_stats[i].clock_deq_lp;
-        system_stats.clock_safety_check += 	thread_stats[i].clock_safety_check;
-        system_stats.clock_delete += 		thread_stats[i].clock_delete;
-        system_stats.clock_stm_wait += 		thread_stats[i].clock_stm_wait;
-        system_stats.clock_undo_event += 	thread_stats[i].clock_undo_event;
-        system_stats.clock_prune += 		thread_stats[i].clock_prune;
-        
-        system_stats.clock_safe_silent += 		thread_stats[i].clock_safe_silent;
-         
-    }
+	// Aggregate per thread
+	/*for(i = 0; i < n_cores; i++) {
+		system_stats->events_total         += thread_stats[i].events_total;
+		system_stats->events_straggler     += thread_stats[i].events_straggler;
+		system_stats->events_committed     += thread_stats[i].events_committed;
+		system_stats->events_reverse       += thread_stats[i].events_reverse;
+		system_stats->events_stash         += thread_stats[i].events_stash;
+		system_stats->events_silent        += thread_stats[i].events_silent;
+		system_stats->events_fetched       += thread_stats[i].events_fetched;
+		system_stats->events_flushed       += thread_stats[i].events_flushed;
 		
+		system_stats->clock_event          += thread_stats[i].clock_event;
+		system_stats->clock_fetch          += thread_stats[i].clock_fetch;
+		system_stats->clock_undo_event     += thread_stats[i].clock_undo_event;
+		system_stats->clock_enqueue        += thread_stats[i].clock_enqueue;
+		system_stats->clock_dequeue        += thread_stats[i].clock_dequeue;
+		system_stats->clock_deq_lp         += thread_stats[i].clock_deq_lp;
+		system_stats->clock_loop           += thread_stats[i].clock_loop;
+		system_stats->clock_delete         += thread_stats[i].clock_delete;
+		system_stats->clock_prune          += thread_stats[i].clock_prune;
+		system_stats->clock_safety_check   += thread_stats[i].clock_safety_check;
+		system_stats->clock_silent         += thread_stats[i].clock_silent;
+		system_stats->clock_recovery       += thread_stats[i].clock_recovery;
+		system_stats->clock_checkpoint     += thread_stats[i].clock_checkpoint;
+		system_stats->clock_rollback       += thread_stats[i].clock_rollback;
+
+		system_stats->mem_checkpoint       += thread_stats[i].mem_checkpoint;
+		system_stats->checkpoint_period    += thread_stats[i].checkpoint_period;
+	}*/
+	
+	// Aggregate per LP
+	for(i = 0; i < n_prc_tot; i++) {
+		system_stats->events_total         += lp_stats[i].events_total;
+		//system_stats->events_straggler     += lp_stats[i].events_straggler;
+		system_stats->events_committed     += lp_stats[i].events_committed;
+		system_stats->events_reverse       += lp_stats[i].events_reverse;
+		system_stats->events_undo          += lp_stats[i].events_undo;
+		system_stats->events_stash         += lp_stats[i].events_stash;
+		system_stats->events_silent        += lp_stats[i].events_silent;
+		system_stats->events_fetched       += lp_stats[i].events_fetched;
+		system_stats->events_flushed       += lp_stats[i].events_flushed;
+		system_stats->events_anti          += lp_stats[i].events_anti;
+		system_stats->events_straggler     += lp_stats[i].events_straggler;
+		
+		system_stats->counter_checkpoints  += lp_stats[i].counter_checkpoints;
+		system_stats->counter_recoveries   += lp_stats[i].counter_recoveries;
+		system_stats->counter_rollbacks    += lp_stats[i].counter_rollbacks;
+		system_stats->counter_prune        += lp_stats[i].counter_prune;
+		system_stats->counter_checkpoint_recalc += lp_stats[i].counter_checkpoint_recalc;
+		system_stats->counter_safety_check += lp_stats[i].counter_safety_check;
+
+		system_stats->clock_event          += lp_stats[i].clock_event;
+		system_stats->clock_fetch          += lp_stats[i].clock_fetch;
+		system_stats->clock_undo_event     += lp_stats[i].clock_undo_event;
+		system_stats->clock_enqueue        += lp_stats[i].clock_enqueue;
+		system_stats->clock_dequeue        += lp_stats[i].clock_dequeue;
+		system_stats->clock_deq_lp         += lp_stats[i].clock_deq_lp;
+		system_stats->clock_loop           += lp_stats[i].clock_loop;
+		system_stats->clock_delete         += lp_stats[i].clock_delete;
+		system_stats->clock_prune          += lp_stats[i].clock_prune;
+		system_stats->clock_safety_check   += lp_stats[i].clock_safety_check;
+		system_stats->clock_silent         += lp_stats[i].clock_silent;
+		system_stats->clock_recovery       += lp_stats[i].clock_recovery;
+		system_stats->clock_checkpoint     += lp_stats[i].clock_checkpoint;
+		system_stats->clock_rollback       += lp_stats[i].clock_rollback;
+
+		system_stats->mem_checkpoint       += lp_stats[i].mem_checkpoint;
+		system_stats->checkpoint_period    += lp_stats[i].checkpoint_period;
+	}
+
+	system_stats->clock_event        /= system_stats->events_total;
+	system_stats->clock_fetch        /= system_stats->events_fetched;
+	system_stats->clock_undo_event   /= system_stats->events_undo;
+	system_stats->clock_silent       /= system_stats->events_silent;
+	system_stats->clock_safety_check /= system_stats->counter_safety_check;
+	system_stats->clock_rollback     /= system_stats->counter_rollbacks;
+	system_stats->clock_checkpoint   /= system_stats->counter_checkpoints;
+	system_stats->clock_recovery     /= system_stats->counter_recoveries;
+
+	system_stats->counter_checkpoint_recalc /= n_prc_tot;
+
+	system_stats->mem_checkpoint /= system_stats->counter_checkpoints;
+	system_stats->checkpoint_period /= n_prc_tot;
+}
+
+static void _print_statistics(struct stats_t *stats) {
+
+	printf(COLOR_CYAN);
+
+	printf("Total events....................................: %.3f\n", stats->events_total);
+	printf("Committed events................................: %.3f (%.2f%%)\n",
+		stats->events_committed, percentage(stats->events_committed, stats->events_total));
+	printf("Straggler events................................: %.3f (%.2f%%)\n",
+		stats->events_straggler, percentage(stats->events_straggler, stats->events_total));
+	printf("Anti events.....................................: %.3f (%.2f%%)\n",
+		stats->events_anti, percentage(stats->events_anti, stats->events_total));
+#if REVERSIBLE==1
+	printf("Reversible events...............................: %.3f (%.2f%%)\n",
+		stats->events_reverse, percentage(stats->events_reverse, stats->events_total));
+#endif
+	printf("Reprocessed events..............................: %.3f (%.2f%%)\n",
+		stats->events_silent, percentage(stats->events_silent, stats->events_total));
+	printf("Stashed events..................................: %.3f (%.2f%%)\n",
+		stats->events_stash, percentage(stats->events_stash, stats->events_total));
+	printf("Flushed events..................................: %.3f (%.2f%%)\n",
+		stats->events_flushed, percentage(stats->events_flushed, stats->events_total));
+	printf("Fetched events..................................: %.3f (%.2f%%)\n",
+		stats->events_fetched, percentage(stats->events_fetched, stats->events_total));
+
+	printf("\n");
+
+	printf("Average time to process an event................: %.3f clocks\n", stats->clock_event);
+	printf("Average time spent to fetch.....................: %.3f clocks (%.2f%%)\n", stats->clock_fetch, 0.0);
+	printf("Average time spent in silent execution..........: %.3f clocks (%.2f%%)\n", stats->clock_silent, 0.0);
+	
+	printf("\n");
+
+	printf("Checkpoint operations...........................: %.3f\n", stats->counter_checkpoints);
+	printf("Restore operations..............................: %.3f\n", stats->counter_recoveries);
+	printf("Rollback operations.............................: %.3f\n", stats->counter_rollbacks);
+
+	printf("\n");
+
+	printf("Rollback time...................................: %.3f clocks\n", stats->clock_rollback);
+	printf("Restore time....................................: %.3f clocks (%.2f%%)\n",
+		stats->clock_recovery, percentage(stats->clock_recovery, stats->clock_rollback));
+	printf("Checkpoint time.................................: %.3f clocks (%.2f%%)\n",
+		stats->clock_checkpoint, percentage(stats->clock_checkpoint, stats->clock_rollback));
+	printf("Checkpoint mem..................................: %.3f Bytes\n", stats->mem_checkpoint);
+	printf("Checkpoint recalculations.......................: %.3f\n", stats->counter_checkpoint_recalc);
+	printf("Checkpoint period...............................: %.3f\n", stats->checkpoint_period);
+
+	printf(COLOR_RESET);
 }
 
 void print_statistics() {
+	unsigned int i;
+	FILE *stat_file;
 
-#if REPORT == 1
-    gather_statistics();
+	gather_statistics();
 
-    printf(COLOR_CYAN "Simulation final report:\n");
-    printf("Thread: %d\tLP: %d\t\n", n_cores, n_prc_tot);
-    //printf("Lookahead: %d", 0);
-    printf("\n");
+	printf("Simulation final report:\n");
+	printf("Thread: %u\tLP: %u\n", n_cores, n_prc_tot);
+	//printf("Lookahead: %d", 0);
+	printf("\n");
 
-    printf("Total events....................................: %12u\n", system_stats.events_total);
-    printf("Safe events.....................................: %12u (%.2f%%)\n", system_stats.events_safe, ((double)system_stats.events_safe / system_stats.events_total)*100);
-#if REVERSIBLE==1
-    printf("STM events......................................: %12u (%.2f%%)\n\n", system_stats.events_stm, ((double)system_stats.events_stm / system_stats.events_total)*100);
-#endif
-	printf("Events in silent execution......................: %12u (%.2f%%)\n", system_stats.events_safe_silent, ((double)system_stats.events_safe_silent / system_stats.events_total)*100);
-    unsigned int commits_total = system_stats.events_safe + system_stats.commits_stm;
-    printf("Number of Rolback...............................: %12u\n", (system_stats.events_roll));
-    printf("TOT committed...................................: %12u\n", commits_total);
-#if REVERSIBLE==1
-    printf("STM committed...................................: %12u (%.2f%%)\n\n", system_stats.commits_stm, ((double)system_stats.commits_stm / system_stats.events_stm)*100);
-	
-	printf("STM out of order rollbacked.....................: %12u (%.2f%%)\n", (system_stats.events_roll-system_stats.events_stash), ((double)(system_stats.events_roll-system_stats.events_stash) / system_stats.events_stm)*100);
-	printf("STM preemptive   rollbacked.....................: %12u (%.2f%%)\n\n", system_stats.events_stash, ((double)system_stats.events_stash / system_stats.events_stm)*100);
-#endif
-    printf("Average time spent in safe execution............: %12llu clocks\n\n", system_stats.clock_safe/system_stats.events_safe);
-	printf("Average time spent in silent execution..........: %12llu clocks\n\n", system_stats.clock_safe_silent/system_stats.events_safe_silent);
+/*
+	printf("\n");
+	printf("===== LPs' STATISTICS =====\n");
+	for (int i = 0; i < n_prc_tot; i++)	{
+		printf("\n---------- LP%u ----------\n", i);
+		_print_statistics(lp_stats+i);
+		printf("\n", i);
+	}
+*/
 
-//NOTA: queste info derivano dai soli eventi arrivati a commit, non da quelli rollbackati
-#if REVERSIBLE==1
-if(system_stats.events_stm > 0){	//Nota: è una stima e non rispecchia esattamente il comportamento del sistema
-	unsigned long long tot_avg_stm_cloks = (system_stats.clock_stm/system_stats.events_stm) + (system_stats.clock_stm_wait/system_stats.commits_stm);
-    printf("Average time spent in STM execution.............: %12llu clocks\n", tot_avg_stm_cloks);
-    printf("    Avg time spent to EXE  STM event............: %12llu clocks (%.2f%%)\n", system_stats.clock_stm/system_stats.events_stm, ((double)(system_stats.clock_stm/system_stats.events_stm) / tot_avg_stm_cloks)*100);
-    printf("    Avg time spent to WAIT STM safety...........: %12llu clocks (%.2f%%)\n", system_stats.clock_stm_wait/system_stats.commits_stm, ((double)(system_stats.clock_stm_wait/system_stats.commits_stm) / tot_avg_stm_cloks)*100);
-    if(system_stats.events_roll == 0)
-		printf("Avg time spent to ROLLBACK STM event............: 0 clocks\n");
-    else
-		printf("Avg time spent to ROLLBACK STM event............: %12llu clocks\n", system_stats.clock_undo_event/system_stats.events_roll);
-    printf("Average useful time spent in STM execution......: %12llu clocks\n\n", (unsigned long long)(tot_avg_stm_cloks/((double)system_stats.commits_stm / system_stats.events_stm)));
+	printf("===== SYSTEM-WIDE STATISTICS =====\n");
+	_print_statistics(system_stats);
 }
-else if(system_stats.commits_stm > 0){
-	printf("ALLERT: there are %ull stm events executeb but 0 stm event committed\n\n", system_stats.commits_stm);
-}
-#endif
-    
-	printf("Time spent in dequeue...........................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_dequeue, ((unsigned long long)system_stats.clock_dequeue/system_stats.events_fetched));
-	printf("Time spent in enqueue...........................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_enqueue, ((unsigned long long)system_stats.clock_enqueue/system_stats.events_flushed));
-	printf("Time spent in deletion..........................: %12llu clocks \tavg %12llu clocks\n\n", system_stats.clock_delete, ((unsigned long long)system_stats.clock_delete/(system_stats.events_safe+system_stats.commits_stm)));
-#if REVERSIBLE==1	
-	printf("Time spent in dequeue(lp).......................: %12llu clocks \tavg %12llu clocks\n", system_stats.clock_safety_check, ((unsigned long long)system_stats.clock_safety_check/system_stats.safety_check_counter));
-#endif
-	printf("Time spent in pruning...........................: %12llu clocks \tavg %12llu clocks\n\n", system_stats.clock_prune, ((unsigned long long)system_stats.clock_prune/system_stats.prune_counter));
-	
-	printf("Time spent in main loop.........................: %12llu clocks\n", system_stats.clock_loop);
-
- //   printf("STM abort for UNSAFETY..........................: %11u\n\n", system_stats.abort_reverse);
-	printf("\n" COLOR_RESET);
-#endif
-}
-

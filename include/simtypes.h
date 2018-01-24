@@ -99,10 +99,12 @@ typedef struct _LP_state {
 	/*volatile*/ unsigned int epoch;
 	
 	unsigned int until_ongvt;
+	unsigned int until_ckpt_recalc;
 		
 #if DEBUG == 1
 	msg_t* 	last_rollback_event;
 #endif
+	
 	simtime_t commit_horizon_ts;
 	unsigned long long commit_horizon_tb;
 

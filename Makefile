@@ -3,7 +3,7 @@
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 
-FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0 
+FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0 --static
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
@@ -80,6 +80,12 @@ ifdef DEBUG
 CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
 else
 CFLAGS:= $(CFLAGS) -DDEBUG=0
+endif
+
+ifdef CKPT_RECALC
+CFLAGS:= $(CFLAGS) -DCKPT_RECALC=$(CKPT_RECALC)
+else
+CFLAGS:= $(CFLAGS) -DCKPT_RECALC=0
 endif
 
 ifdef REPORT

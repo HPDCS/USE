@@ -32,6 +32,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <math.h>
+#include <statistics.h>
+#include <timer.h>
 
 //#include "atomic.h"
 #include "nb_calqueue.h"
@@ -1294,4 +1296,3 @@ bool delete(nb_calqueue *queue, nbc_bucket_node* node){
 nbc_bucket_node* unmarked(void *pointer){ //da cancellare
 	return (nbc_bucket_node *)((unsigned long long) pointer & MASK_PTR) ;
 }
-

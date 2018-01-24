@@ -57,6 +57,56 @@
 //	executeEvent(lp, lvt, evt->type, evt->data, evt->data_size, state, true, evt);	
 //}
 
+
+/**
+ * Computes the checkpoint interval for the sparse state saving.
+ * 
+ * @author Davide Cingolani
+ *
+ * @param
+ */
+inline void checkpoint_interval_recalculate(unsigned int lid) {
+	double checkpoint_time;
+	double event_time;
+	double avg_rollback_length;
+
+	// // Check whether to recalculate the checkpoint interval
+	// if (LPS[lid]->until_ckpt_recalc++ < CKPT_RECALC_PERIOD) {
+	// 	return;
+	// }
+	// LPS[lid]->until_ckpt_recalc = 0;
+
+	// // Computes the cost of a checkpoint operation overall
+	// // as the sum of the time average time spent to take
+	// // the snapshot and the time to coast forward.
+	// // Cr = Cckp + Ccf
+	// rollback_time_last = 0;
+	// rollback_time = avg_time_checkpoint() + avg_time_restore();
+
+	// // If the cost, compared to the last one, is grater than the
+	// // threshold given, then increment the checkpoint interval
+	// if (rollback_time > (rollback_time_last + CKPT_RECALC_THRESHOLD)) {
+	// 	LPS[lid]->ckpt_period++;
+	// }
+	// // otherwise, decrement the checkpoint interval
+	// else if (rollback_time < (rollback_time_last - CKPT_RECALC_THRESHOLD)) {
+	// 	LPS[lid]->ckpt_period--;
+	// }
+
+	avg_rollback_length = (double)lp_stats[lid].events_total / (double)lp_stats[lid].counter_checkpoints;
+	checkpoint_time = (double)avg_time_checkpoint(lp_stats[lid]);
+	event_time = (double)avg_time_event(lp_stats[lid]);
+
+	// Recalculate the checkpoint interval
+	LPS[lid]->ckpt_period = (unsigned int)sqrt((checkpoint_time / event_time) * 2 * (avg_rollback_length + 1));
+
+	//printlp("Checkpoint period updated: %lu\n", LPS[lid]->ckpt_period);
+
+	// Update statistics of checkpoint recalculations
+	statistics_post_lp_data(lid, STAT_CKPT_RECALC, 1);
+	statistics_post_lp_data(lid, STAT_CKPT_PERIOD, (double)LPS[lid]->ckpt_period);
+}
+
 /**
 * This function is used to create a state log to be added to the LP's log chain
 *
@@ -246,6 +296,10 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	msg_t *last_restored_event;
 	msg_t * bound_next;
 	unsigned int reprocessed_events;
+	unsigned long long starting_frame;
+	unsigned int avg_events_btw_rollback;
+
+	clock_timer rollback_timer;
 
 	// Sanity check
 	if(LPS[lid]->state != LP_STATE_ROLLBACK && LPS[lid]->state != LP_STATE_ONGVT) {
@@ -264,6 +318,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	}
 
 	statistics_post_lp_data(lid, STAT_ROLLBACK, 1.0);
+	clock_timer_start(rollback_timer);
 
 	// Find the state to be restored, and prune the wrongly computed states
 	restore_state = list_tail(LPS[lid]->queue_states);
@@ -285,7 +340,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	
 	last_restored_event = restore_state->last_event;
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
-	statistics_post_lp_data(lid, STAT_SILENT, (double)reprocessed_events);
+	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);
 
 	//The bound variable is set in silent_execution.
 	if(LPS[lid]->state == LP_STATE_ROLLBACK){
@@ -293,7 +348,9 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		LPS[lid]->epoch++;
 	}
 
-	LPS[lid]->state 				= restore_state->state 					;
+	LPS[lid]->state = restore_state->state;
+
+	statistics_post_lp_data(lid, STAT_CLOCK_ROLLBACK, (double)clock_timer_value(rollback_timer));
 }
 
 

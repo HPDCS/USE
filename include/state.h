@@ -43,6 +43,9 @@
 #define  PERIODIC_STATE_SAVING		2
 
 
+#define CKPT_RECALC_PERIOD		200
+#define CKPT_RECALC_THRESHOLD	10
+
 extern bool processing_silent_execution;
 
 
@@ -79,5 +82,6 @@ extern void rebuild_state(unsigned int lid, state_t *state_pointer, simtime_t ti
 extern void set_checkpoint_period(unsigned int lid, int period);
 extern void force_LP_checkpoint(unsigned int lid);
 extern unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, simtime_t until_ts, unsigned int tie_breaker);
+extern void checkpoint_interval_recalculate(unsigned int lid);
 #endif /* _STATE_MGNT_H_ */
 

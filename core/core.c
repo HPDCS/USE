@@ -19,6 +19,7 @@
 #include <dymelor.h>
 #include <numerical.h>
 #include <timer.h>
+#include <state.h>
 
 #include <reverse.h>
 #include <statistics.h>
@@ -62,10 +63,10 @@ unsigned int check_ongvt_period = 0;
 //timer
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
-				queue_min_time,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
+				fetch_timer,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
 				event_processing_time,		//OK: cattura il tempo per processare un evento safe 
 				queue_op,
-				rollback_time
+				rollback_timer
 #if REVERSIBLE == 1
 				,stm_event_processing_time
 				,stm_safety_wait
@@ -372,6 +373,8 @@ void init_simulation(unsigned int thread_id){
 			LogState(current_lp);
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
+			LPS[current_lp]->until_ckpt_recalc = 0;
+			LPS[current_lp]->ckpt_period = 20;
 			//LPS[current_lp]->epoch = 1;
 		}
 		printf("EXECUTED ALL INIT EVENTS\n");
@@ -408,11 +411,11 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);		
 #if REPORT == 1              
 		if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
-			statistics_post_data(tid, EVENTS_SAFE, 1);
-			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing_time));
+			statistics_post_lp_data(LP, STAT_EVENT, 1);
+			statistics_post_lp_data(LP, STAT_CLOCK_EVENT, clock_timer_value(event_processing_time));
 		}else{
-			statistics_post_data(tid, EVENTS_SAFE_SILENT, 1);
-			statistics_post_data(tid, CLOCK_SAFE_SILENT, clock_timer_value(event_processing_time));
+			statistics_post_lp_data(LP, STAT_EVENT_SILENT, 1);
+			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, clock_timer_value(event_processing_time));
 		}
 #endif
 #if REVERSIBLE == 1
@@ -420,14 +423,14 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 	else{
 #if REPORT == 1 
 		clock_timer_start(stm_event_processing_time);			
-		statistics_post_data(tid, EVENTS_STM, 1);
+		statistics_post_lp_data(LP, STAT_EVENT_REV, 1);
 #endif
 		event->previous_seed = LPS[current_lp]->seed; //forse lo farei a prescindere mettendolo a fattor comune...son dati in cache
 		event->revwin = revwin_create();
 		revwin_reset(event->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 		ProcessEvent_reverse(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 #if REPORT == 1 
-		statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing_time));
+		statistics_post_lp_data(LP, STAT_CLOCK_REV, clock_timer_value(stm_event_processing_time));
 		clock_timer_start(stm_safety_wait);
 #endif
 	}
@@ -451,20 +454,19 @@ void thread_loop(unsigned int thread_id) {
 		
 		///* FETCH *///
 #if REPORT == 1
-		clock_timer_start(queue_min_time);
+		clock_timer_start(fetch_timer);
 #endif
 		if(fetch_internal() == 0) {
-			if(++empty_fetch>500){
+			if(++empty_fetch > 500){
 				round_check_OnGVT();
 			}
 			goto end_loop;
-			continue;
 		}
 		empty_fetch = 0;
 
 #if REPORT == 1
-		statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min_time));
-		statistics_post_data(tid, EVENTS_FETCHED, 1);
+		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED, 1);
+		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH, (double)clock_timer_value(fetch_timer));
 #endif
 
 		///* HOUSEKEEPING *///
@@ -487,20 +489,20 @@ void thread_loop(unsigned int thread_id) {
 		if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
 			printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
 			gdb_abort;
+			// FIXME: deriva dal merge tra stats e core
 			unlock(current_lp);
 			continue; //TODO: verificare
 		}
 	#endif
-
-
 
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
+
 	#if DEBUG == 1
-			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG){
+			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG) {
 				if(current_evt_monitor == (void*) 0xba4a4a){
 					printf(RED("Ho una banana che non è ANTI-MSG\n"));
 				}
@@ -512,33 +514,28 @@ void thread_loop(unsigned int thread_id) {
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
-
-#if REPORT == 1 
-			clock_timer_start(rollback_time);
-#endif
-
 		#if DEBUG == 1
 			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
-			//printf(YELLOW("ROLLBACK \n\tSTART: LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			//printlp(YELLOW("\tStraggler received, I will do the LP rollback - Event [%.5f, %llu], LVT %.5f\n"), current_msg->timestamp, current_msg->tie_breaker, LPS[current_lp]->current_LP_lvt);
+
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			//printf(YELLOW("\tEND  : LID:%d LP.LVT:%f CURR_LVT:%f EX_FR:%d\n"), current_lp, LPS[current_lp]->current_LP_lvt, current_lvt, LPS[current_lp]->num_executed_frames);
-			
-#if REPORT == 1              
-			statistics_post_data(tid, EVENTS_ROLL, 1);
-			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
-#endif
+
 			LPS[current_lp]->state = old_state;
+
+			statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 		}
 
 		if(current_evt_state == ANTI_MSG) {
 			current_msg->monitor = (void*) 0xba4a4a;
+
 		#if DEBUG == 1
 			assert(!list_is_connected(LPS[current_lp]->queue_in, current_msg));
 		#endif
+
+			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
+
 			delete(nbcalqueue, current_node);
 			unlock(current_lp);
 			continue;
@@ -573,7 +570,14 @@ void thread_loop(unsigned int thread_id) {
 			if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
 	#endif
 		}
-				
+		
+#if CKPT_RECALC == 1
+		// Check whether to recalculate the checkpoint interval
+		if (LPS[current_lp]->until_ckpt_recalc++ % CKPT_RECALC_PERIOD == 0) {
+			checkpoint_interval_recalculate(current_lp);
+		}
+#endif
+
 		// Take a simulation state snapshot, in some way
 		LogState(current_lp);
 		
@@ -636,8 +640,8 @@ void thread_loop(unsigned int thread_id) {
 		//events_garbage_collection(commit_time);
 
 #if REPORT == 1
-		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
-		statistics_post_data(tid, PRUNE_COUNTER, 1);
+		statistics_post_lp_data(current_lp, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
+		statistics_post_lp_data(current_lp, STAT_PRUNE_COUNTER, 1);
 #endif
 		
 end_loop:
@@ -665,7 +669,7 @@ end_loop:
 		}
 	}
 #if REPORT == 1
-	statistics_post_data(tid, CLOCK_LOOP, clock_timer_value(main_loop_time));
+	statistics_post_lp_data(current_lp, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
 
 

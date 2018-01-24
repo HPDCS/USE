@@ -79,8 +79,8 @@ void *log_full(int lid) {
 	malloc_area *m_area;
 
 	// Timers for self-tuning of the simulation platform
-	timer checkpoint_timer;
-	timer_start(checkpoint_timer);
+	clock_timer checkpoint_timer;
+	clock_timer_start(checkpoint_timer);
 
 	recoverable_state[lid]->is_incremental = false;
 	size = get_log_size(recoverable_state[lid]);
@@ -185,7 +185,7 @@ void *log_full(int lid) {
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
 
-	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)timer_value_micro(checkpoint_timer));
+	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
 	statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
 
 	return ckpt;
@@ -250,8 +250,10 @@ void restore_full(int lid, void *ckpt) {
 	malloc_area *m_area, *new_area;
 
 	// Timers for simulation platform self-tuning
-	timer recovery_timer;
-	timer_start(recovery_timer);
+	clock_timer recovery_timer;
+	clock_timer_start(recovery_timer);
+	
+
 	restored_areas = 0;
 	ptr = ckpt;
 	original_num_areas = recoverable_state[lid]->num_areas;
@@ -395,8 +397,7 @@ void restore_full(int lid, void *ckpt) {
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
 
-	int recovery_time = timer_value_micro(recovery_timer);
-	statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)recovery_time);
+	statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)clock_timer_value(recovery_timer));
 }
 
 

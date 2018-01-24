@@ -89,11 +89,12 @@ void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
     simtime_t max = 0; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
+
 #if REPORT == 1
 		clock_timer queue_op;
 #endif
 
-    for(i = 0; i < _thr_pool._thr_pool_count; i++){
+    for(i = 0; i < _thr_pool._thr_pool_count; i++) {
 
         new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
         if(new_hole == NULL){
@@ -122,9 +123,10 @@ void queue_deliver_msgs(void) {
 		clock_timer_start(queue_op);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+
 #if REPORT == 1
-		statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
-		statistics_post_data(tid, EVENTS_FLUSHED, 1);
+		statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
+		statistics_post_lp_data(current_lp, STAT_EVENT_FLUSHED, 1);
 #endif
     }
 
