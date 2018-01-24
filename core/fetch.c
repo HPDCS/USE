@@ -291,7 +291,9 @@ unsigned int fetch_internal(){
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
-					list_place_after_given_node_by_content(TID, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
+					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
+					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
+					//list_place_after_given_node_by_content(lp_ptr->lid, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
 					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_MSG; //
 					set_commit_state_as_banana(local_next_evt); //non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
 					local_next_evt = list_next(lp_ptr->bound);
@@ -459,12 +461,18 @@ get_next:
 
 void prune_local_queue_with_ts(simtime_t ts){
 	msg_t *tmp_node;
-	msg_t *current = (msg_t*) ((rootsim_list*)to_remove_local_evts)->head->data;
+	msg_t *current = NULL;
+	if(((rootsim_list*)to_remove_local_evts)->size != 0){
+		current = (msg_t*) ((rootsim_list*)to_remove_local_evts)->head->data;
+	}
 	while(current!=NULL){
 		tmp_node = list_next(current);
 		if(current->max_outgoing_ts < ts){
 			list_extract_given_node(tid, to_remove_local_evts, current);
-			list_place_after_given_node_by_content(tid, freed_local_evts, current, ((rootsim_list*)freed_local_evts)->head);
+			list_node_clean_by_content(current); //NON DOVREBBE SERVIRE
+			//free(list_container_of(current));
+			list_insert_tail_by_content(freed_local_evts, current);
+			//list_place_after_given_node_by_content(tid, freed_local_evts, current, ((rootsim_list*)freed_local_evts)->head);
 		}
 		current = tmp_node;
 	}

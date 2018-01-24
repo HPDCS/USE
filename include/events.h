@@ -12,27 +12,35 @@
 typedef struct __msg_t
 {
 	/* event's attributes */
-	unsigned int sender_id;						//MAI				//Sednder LP
-	unsigned int receiver_id;					//P-F				//Receiver LP
+	unsigned short sender_id;//unsigned int sender_id;						//MAI				//Sednder LP
+	unsigned short receiver_id;//unsigned int receiver_id;					//P-F				//Receiver LP
+	
 	simtime_t timestamp;						//P-F				//Timestamp execution of the event
-	unsigned long long tie_breaker; 			//F					//maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
-	int type;									//P					//Type of event (e.g. INIT_STATE)
-	/*volatile*/ unsigned int epoch;				//F					//LP's epoch at executing time		
-//32+16=48					
-	void * monitor;								//F			
+	
+	unsigned short tie_breaker;//unsigned long long tie_breaker; 			//F					//maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
+	
+	char type;//int type;									//P					//Type of event (e.g. INIT_STATE)
+	char data_size;//unsigned int data_size;									//size of the payload of the vent
+	
+	/*volatile*/ unsigned int epoch;			//F					//LP's epoch at executing time		
+	unsigned int frame; 						//F					//debug//order of execution of the event in the tymeling
+	
+	void * monitor;//unsigned int monitor;//								//F			
 					
 					
 	/* validity attributes */				
-	unsigned int frame; 						//F					//debug//order of execution of the event in the tymeling
+	
 	struct __msg_t * father;					//F					//address of the father event
-	unsigned int fatherFrame;	 				//F					//order of execution of the father in the tymeling	
-	/*volatile*/ unsigned int fatherEpoch;			//ALTRO			//father LP's epoch at executing time
+	
 	simtime_t max_outgoing_ts; 					//ALTRO				//maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
+		
+	unsigned int fatherFrame;	 				//F					//order of execution of the father in the tymeling	
+	/*volatile*/ unsigned int fatherEpoch;		//ALTRO			//father LP's epoch at executing time
+	
 		
 			
 	/*volatile*/ unsigned int state;				//F			//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
 		
-	unsigned int data_size;									//size of the payload of the vent
 	unsigned char data[MAX_DATA_SIZE];						//payload of the event
 
 	

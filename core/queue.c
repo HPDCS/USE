@@ -96,6 +96,8 @@ void queue_deliver_msgs(void) {
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
 
         new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+        list_node_clean_by_content(new_hole); //NON DOVREBBE SERVIRE
+			
         if(new_hole == NULL){
 			printf("Out of memory in %s:%d", __FILE__, __LINE__);
 			abort();		
@@ -108,6 +110,7 @@ void queue_deliver_msgs(void) {
         new_hole->monitor = (void *)0x0;
         new_hole->state = 0;
         new_hole->epoch = 0;
+        new_hole->frame = 0;
 
 #if DEBUG==1
 		if(new_hole->timestamp <= current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}

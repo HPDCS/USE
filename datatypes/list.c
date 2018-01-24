@@ -842,7 +842,8 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 	// tuttavia questa ottimizzazione richiede la gestione complementare del
 	// buffer interno dentro la 'prune()'
 	if(free_list->head != NULL){ 
-		return 	list_extract_given_node(lid, free_list, free_list->head);
+		assert(free_list->size!=0);
+		return 	list_extract_given_node(lid, free_list, free_list->head->data);
 	}
 	ptr = list_allocate_node(lid, size);
 

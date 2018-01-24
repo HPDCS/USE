@@ -283,6 +283,8 @@ extern void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, 
 				bool __isheadbool =  list_prev(ptr) != (void*) 0xDED && (list_prev(ptr) != NULL  || list_is_head(list, ptr));\
 				__isheadbool;\
 				})
+				
+#define list_node_clean_by_content(ptr) {list_container_of(ptr)->prev=NULL;list_container_of(ptr)->next=NULL;}
 
 extern void * list_prev_f(void * ptr);//DEBUG
 extern void * list_next_f(void * ptr);//DEBUG
