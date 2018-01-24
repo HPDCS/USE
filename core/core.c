@@ -631,7 +631,9 @@ void thread_loop(unsigned int thread_id) {
 
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
-			prune_local_queue_with_ts(current_msg->timestamp);
+			
+			//clean_checkpoint(current_lp, current_lvt);
+			prune_local_queue_with_ts(current_lvt);
 		}
 		nbc_prune();
 		//events_garbage_collection(commit_time);

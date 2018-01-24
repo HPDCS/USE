@@ -836,20 +836,20 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 #define LIST_NODE_PER_ALLOC 2000
 
 void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct rootsim_list *free_list) {
-	char *ptr,*memory_nodes;
+	char *memory_nodes;
 	struct rootsim_list_node *tmp_node;
 	unsigned int i = 0;
 
 	//Se la coda locale è vuota, la fillo!
-	if(free_list->size == 0){
+	if(free_list->head == NULL){
 		size_t node_size = sizeof(struct rootsim_list_node) + size;//multiplo di 64
 		
 		while((++i)*CACHE_LINE_SIZE < node_size);
 		node_size = (i)*CACHE_LINE_SIZE;
 		
-		if(posix_memalign(&memory_nodes, CACHE_LINE_SIZE, node_size*LIST_NODE_PER_ALLOC) != 0){
+		if(posix_memalign((void**)&memory_nodes, CACHE_LINE_SIZE, node_size*LIST_NODE_PER_ALLOC) != 0){
 			printf("List nodes allocation failed\n");
-			abort;
+			abort();
 		}
 		
 		for(i = 0; i < LIST_NODE_PER_ALLOC; i++){
@@ -861,11 +861,9 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 		}
 	}
 
-	if(free_list->head != NULL){ 
-		//printf("Sto prendendo un nodo in loco\n");
-		assert(free_list->size!=0);
+//	if(free_list->head != NULL){ 
 		return 	list_extract_given_node(lid, free_list, free_list->head->data);
-	}
+//	}
 	
 	//printf("DEAD CODE!");
 	
