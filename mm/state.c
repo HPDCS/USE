@@ -413,11 +413,10 @@ void force_LP_checkpoint(unsigned int lid) {
 
 
 void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
-	state_t *to_state, *tmp_state, *next_to_state;
-	msg_t *from_msg, *to_msg;
+	state_t *to_state, *tmp_state=NULL;
+	msg_t *from_msg, *to_msg=NULL, *tmp_msg=NULL;
 	
 	from_msg = list_head(LPS[lid]->queue_in);
-
 	to_state = list_tail(LPS[lid]->queue_states);
 
 	while (to_state != NULL && (to_state->last_event->timestamp) >= commit_horizon){
@@ -428,51 +427,51 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 		to_state = list_prev(to_state);
 	}
 	
-	
 	if(to_state != NULL){
-		to_msg = list_prev(to_state->last_event);
-		
-		//Rimozione msg dalla vecchia lista
+		to_msg = list_prev(to_state->last_event); //ultimo evento da buttare
+	
+		///Rimozione msg dalla vecchia lista
 		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
 		list_container_of(to_state->last_event)->prev = NULL; 
 		
-		next_to_state = to_state;
-		to_state = list_prev(to_state);
-		
-		//printf(BOLDWHITE("LP:%u CH:%f DEL:%f\n"), lid, commit_horizon,to_state->last_event->timestamp);
+	
+		to_state = list_prev(to_state); //ultimo checkpoint da buttare
+		//if(to_state != NULL)
+		//	to_msg = to_state->last_event;
 	}
 
 	//Rimozione Stati
 	while (to_state != NULL){ //TODO: aggiungere tie_breaker e mettere solo >
-		//printf(BOLDWHITE("[%u] Sto rimuovendo lo stato %f  minore di %f con indirizzo %p\n"), lid,to_state->last_event->timestamp, commit_horizon, to_state);
 		tmp_state = list_prev(to_state);
 		log_delete(to_state->log);
 		to_state->last_event = (void *)0xBABEBEEF;
 		list_delete_by_content(lid, LPS[lid]->queue_states, to_state); //<-migliorabile
-		
 		to_state = tmp_state;
 	}
 	
-	if( ((struct rootsim_list*)(LPS[lid]->queue_states))->size == 0  ){
-		printf("Dopo la clean la coda è vuota\n");
-		gdb_abort;
-	}
-
-
+	//while(to_msg != NULL){
+	//	tmp_msg = list_prev(to_msg);
+	//	list_extract_given_node(tid, ((struct rootsim_list*)LPS[lid]->queue_in), to_msg);
+	//	list_node_clean_by_content(to_msg); //NON DOVREBBE SERVIRE
+	//	list_insert_tail_by_content(to_remove_local_evts, to_msg);
+	//	to_msg = tmp_msg;
+	//}
 	
-//	//Aggancio alla nuova lista
-//	if(to_msg != NULL){
-//		//LA SIZE VA A QUEL PAESE
-//		list_container_of(to_msg)->next = NULL;
-//		if(((struct rootsim_list*)to_remove_local_evts)->tail != NULL){//ovvero la coda è vuota
-//			((struct rootsim_list*)to_remove_local_evts)->tail->next = list_container_of(from_msg);			
-//		}
-//		else{
-//			((struct rootsim_list*)to_remove_local_evts)->head = list_container_of(from_msg);
-//		}
-//		
-//		list_container_of(from_msg)->prev = ((struct rootsim_list*)to_remove_local_evts)->tail;
-//		((struct rootsim_list*)to_remove_local_evts)->tail = list_container_of(to_msg);
-//	}
+	
+	
+	//Aggancio alla nuova lista
+	if(to_msg != NULL){
+		//LA SIZE VA A QUEL PAESE
+		list_container_of(to_msg)->next = NULL;
+		if(((struct rootsim_list*)to_remove_local_evts)->tail != NULL){//ovvero la coda è vuota
+			((struct rootsim_list*)to_remove_local_evts)->tail->next = list_container_of(from_msg);			
+		}
+		else{
+			((struct rootsim_list*)to_remove_local_evts)->head = list_container_of(from_msg);
+		}
+		
+		list_container_of(from_msg)->prev = ((struct rootsim_list*)to_remove_local_evts)->tail;
+		((struct rootsim_list*)to_remove_local_evts)->tail = list_container_of(to_msg);
+	}
 	
 }

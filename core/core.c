@@ -228,6 +228,7 @@ void LPs_metada_init() {
 		LPS[i]->mark 					= 0;
 		LPS[i]->epoch 					= 1;
 		LPS[i]->num_executed_frames		= 0;
+		LPS[i]->until_clean_ckp			= 0;
 
 	}
 	
@@ -619,8 +620,8 @@ void thread_loop(unsigned int thread_id) {
 		}
 		
 		
-		if(safe) {
-			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
+		if(safe && (++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0) ){
+				clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
 
