@@ -6,7 +6,7 @@
 
 #define gdb_abort __asm__("int $3")//raise(SIGINT)
 #else
-#define		gdb_abort {}
+#define		gdb_abort printf("gdb_abort\n")
 #endif
 
 #define COLOR_RED   	"\x1b[31m"
@@ -22,6 +22,15 @@
 #define COLOR_CYAN    	"\x1b[36m"
 #define CYAN(s)  		"\x1b[36m"s"\x1b[0m"
 #define COLOR_RESET   	"\x1b[0m"
+
+#define BOLDBLACK(s)   "\033[1m\033[30m"s"\x1b[0m"      /* Bold Black */
+#define BOLDRED(s)     "\033[1m\033[31m"s"\x1b[0m"      /* Bold Red */
+#define BOLDGREEN(s)   "\033[1m\033[32m"s"\x1b[0m"      /* Bold Green */
+#define BOLDYELLOW(s)  "\033[1m\033[33m"s"\x1b[0m"      /* Bold Yellow */
+#define BOLDBLUE(s)    "\033[1m\033[34m"s"\x1b[0m"      /* Bold Blue */
+#define BOLDMAGENTA(s) "\033[1m\033[35m"s"\x1b[0m"      /* Bold Magenta */
+#define BOLDCYAN(s)    "\033[1m\033[36m"s"\x1b[0m"      /* Bold Cyan */
+#define BOLDWHITE(s)   "\033[1m\033[37m"s"\x1b[0m"      /* Bold White */
 
 #define NDEBUG 
 

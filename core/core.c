@@ -616,6 +616,12 @@ void thread_loop(unsigned int thread_id) {
 		}else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
 			check_OnGVT(current_lp);	
 		}
+		
+		
+		if(safe) {
+			//clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
+		}
+		
 
 	#if DEBUG == 0
 		unlock(current_lp);
@@ -629,11 +635,12 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(queue_op);
 #endif
 
+
+		
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 			
-			//clean_checkpoint(current_lp, current_lvt);
-			prune_local_queue_with_ts(current_lvt);
+			prune_local_queue_with_ts(LPS[current_lp]->commit_horizon_ts);
 		}
 		nbc_prune();
 		//events_garbage_collection(commit_time);
