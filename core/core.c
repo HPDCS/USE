@@ -39,6 +39,7 @@
 #define MAX_PATHLEN			512
 
 
+__thread simtime_t local_gvt = 0;
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -619,7 +620,7 @@ void thread_loop(unsigned int thread_id) {
 		
 		
 		if(safe) {
-			//clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
+			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
 
@@ -640,7 +641,8 @@ void thread_loop(unsigned int thread_id) {
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 			
-			prune_local_queue_with_ts(LPS[current_lp]->commit_horizon_ts);
+			//prune_local_queue_with_ts(LPS[current_lp]->commit_horizon_ts);
+			prune_local_queue_with_ts(local_gvt);
 		}
 		nbc_prune();
 		//events_garbage_collection(commit_time);

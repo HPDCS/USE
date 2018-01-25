@@ -196,7 +196,7 @@ unsigned int fetch_internal(){
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
 		return 0;
-
+		
 	//used by get_next
 	bucket_width = h->bucket_width;
 	bucket = hash(node->timestamp, bucket_width);
@@ -209,6 +209,10 @@ unsigned int fetch_internal(){
 	current_msg = NULL; //DEBUG
 	
 	min = min_node->timestamp;
+		
+	if(local_gvt > min)
+		local_gvt = min;
+
 		
     while(node != NULL){
 			

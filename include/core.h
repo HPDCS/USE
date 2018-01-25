@@ -85,6 +85,7 @@ typedef struct _simulation_configuration {
 
 extern simulation_configuration rootsim_config;
 extern __thread simtime_t current_lvt;
+extern __thread simtime_t local_gvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
 extern __thread simtime_t commit_horizon_ts;

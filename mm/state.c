@@ -279,6 +279,12 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 			list_delete_by_content(lid, LPS[lid]->queue_states, s);
 		}
 	}
+	
+	if(restore_state->lvt != restore_state->last_event->timestamp){ //DEBUG
+		printf("Il checkpoint è sputtanato!\n");
+		gdb_abort;
+	}
+	
 	// Restore the simulation state and correct the state base pointer
 	log_restore(lid, restore_state);
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
@@ -426,9 +432,9 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 	if(to_state != NULL){
 		to_msg = list_prev(to_state->last_event);
 		
-		//Rimozione msg dalla vecchia lista
-		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
-		list_container_of(to_state->last_event)->prev = NULL; 
+//		//Rimozione msg dalla vecchia lista
+//		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
+//		list_container_of(to_state->last_event)->prev = NULL; 
 		
 		next_to_state = to_state;
 		to_state = list_prev(to_state);
@@ -438,7 +444,7 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 
 	//Rimozione Stati
 	while (to_state != NULL){ //TODO: aggiungere tie_breaker e mettere solo >
-		printf(BOLDWHITE("[%u] Sto rimuovendo lo stato %f  minore di %f con indirizzo %p\n"), lid,to_state->last_event->timestamp, commit_horizon, to_state);
+		//printf(BOLDWHITE("[%u] Sto rimuovendo lo stato %f  minore di %f con indirizzo %p\n"), lid,to_state->last_event->timestamp, commit_horizon, to_state);
 		tmp_state = list_prev(to_state);
 		log_delete(to_state->log);
 		to_state->last_event = (void *)0xBABEBEEF;
@@ -453,18 +459,18 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 	}
 	
 	//Aggancio alla nuova lista
-	if(to_msg != NULL){
-		//LA SIZE VA A QUEL PAESE
-		list_container_of(to_msg)->next = NULL;
-		if(((struct rootsim_list*)to_remove_local_evts)->tail != NULL){//ovvero la coda è vuota
-			((struct rootsim_list*)to_remove_local_evts)->tail->next = list_container_of(from_msg);			
-		}
-		else{
-			((struct rootsim_list*)to_remove_local_evts)->head = list_container_of(from_msg);
-		}
-		
-		list_container_of(from_msg)->prev = ((struct rootsim_list*)to_remove_local_evts)->tail;
-		((struct rootsim_list*)to_remove_local_evts)->tail = list_container_of(to_msg);
-	}
+//	if(to_msg != NULL){
+//		//LA SIZE VA A QUEL PAESE
+//		list_container_of(to_msg)->next = NULL;
+//		if(((struct rootsim_list*)to_remove_local_evts)->tail != NULL){//ovvero la coda è vuota
+//			((struct rootsim_list*)to_remove_local_evts)->tail->next = list_container_of(from_msg);			
+//		}
+//		else{
+//			((struct rootsim_list*)to_remove_local_evts)->head = list_container_of(from_msg);
+//		}
+//		
+//		list_container_of(from_msg)->prev = ((struct rootsim_list*)to_remove_local_evts)->tail;
+//		((struct rootsim_list*)to_remove_local_evts)->tail = list_container_of(to_msg);
+//	}
 	
 }

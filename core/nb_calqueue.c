@@ -1140,6 +1140,7 @@ void nbc_prune(void)
 		return;
 		
 	
+	
 	while(to_free_tables_old != NULL)
 	{
 		nbc_bucket_node *my_tmp = to_free_tables_old;
