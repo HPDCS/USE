@@ -1139,7 +1139,7 @@ void nbc_prune(void)
 	if(!mm_safe(prune_array, threads, TID))
 		return;
 		
-	
+	prune_local_queue_with_ts(local_gvt);
 	
 	while(to_free_tables_old != NULL)
 	{

@@ -1,14 +1,10 @@
 #ifndef __UTIL_HPCDS__
 #define __UTIL_HPCDS__
 
-#if DEBUG==1
 #include <signal.h>
 
 #define gdb_abort __asm__("int $3")//raise(SIGINT)
-#else
-#define		gdb_abort printf("gdb_abort\n")
-#endif
-
+	
 #define COLOR_RED   	"\x1b[31m"
 #define RED(s)			"\x1b[31m"s"\x1b[0m"
 #define COLOR_GREEN   	"\x1b[32m"
@@ -50,7 +46,7 @@
 #define assertf(CONDITION, STRING,  ...)        if(CONDITION)\
         {\
         printf( (STRING), __VA_ARGS__);\
-        exit(1);\
+		gdb_abort;\
         }
 #else
 #define assertf(CONDITION, STRING,  ...) {}

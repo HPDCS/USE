@@ -642,7 +642,7 @@ void thread_loop(unsigned int thread_id) {
 			commit_event(current_msg, current_node, current_lp);
 			
 			//prune_local_queue_with_ts(LPS[current_lp]->commit_horizon_ts);
-			prune_local_queue_with_ts(local_gvt);
+			//prune_local_queue_with_ts(local_gvt);
 		}
 		nbc_prune();
 		//events_garbage_collection(commit_time);

@@ -432,9 +432,9 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 	if(to_state != NULL){
 		to_msg = list_prev(to_state->last_event);
 		
-//		//Rimozione msg dalla vecchia lista
-//		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
-//		list_container_of(to_state->last_event)->prev = NULL; 
+		//Rimozione msg dalla vecchia lista
+		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
+		list_container_of(to_state->last_event)->prev = NULL; 
 		
 		next_to_state = to_state;
 		to_state = list_prev(to_state);
@@ -457,8 +457,10 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 		printf("Dopo la clean la coda è vuota\n");
 		gdb_abort;
 	}
+
+
 	
-	//Aggancio alla nuova lista
+//	//Aggancio alla nuova lista
 //	if(to_msg != NULL){
 //		//LA SIZE VA A QUEL PAESE
 //		list_container_of(to_msg)->next = NULL;
