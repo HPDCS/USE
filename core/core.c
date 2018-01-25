@@ -218,7 +218,7 @@ void LPs_metada_init() {
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i+1; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
-		LPS[i]->ckpt_period 			= 10;
+		LPS[i]->ckpt_period 			= CHECKPOINT_PERIOD;
 		LPS[i]->from_last_ckpt 			= 0;
 		LPS[i]->state_log_forced  		= false;
 		LPS[i]->current_base_pointer 	= NULL;

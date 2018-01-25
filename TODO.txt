@@ -4,6 +4,6 @@
 * (per ora diciamo non-bloccante) ongvt 
 - deliver event 1 sola memcopy
 - rollback intelligente
-- Eliminazione Checkpoint
-- Eliminazione eventi in queue_in
+* Eliminazione Checkpoint
+* Eliminazione eventi in queue_in
 - Eliminazione eventi RMV

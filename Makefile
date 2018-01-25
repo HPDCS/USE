@@ -94,7 +94,11 @@ else
 CFLAGS:= $(CFLAGS) -DPREEMPTIVE=0
 endif
 
-
+ifdef CKP_PERIOD
+CFLAGS:= $(CFLAGS) -DCHECKPOINT_PERIOD=$(CKP_PERIOD)
+else
+CFLAGS:= $(CFLAGS) -DCHECKPOINT_PERIOD=50
+endif
 
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\

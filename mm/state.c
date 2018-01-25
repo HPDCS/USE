@@ -415,6 +415,8 @@ void force_LP_checkpoint(unsigned int lid) {
 void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 	state_t *to_state, *tmp_state=NULL;
 	msg_t *from_msg, *to_msg=NULL, *tmp_msg=NULL;
+
+	(void) tmp_msg;
 	
 	from_msg = list_head(LPS[lid]->queue_in);
 	to_state = list_tail(LPS[lid]->queue_states);
