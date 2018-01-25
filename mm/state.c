@@ -407,17 +407,22 @@ void force_LP_checkpoint(unsigned int lid) {
 
 
 void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
-	state_t *to_state, *tmp_state;
+	state_t *to_state, *tmp_state, *next_to_state;
 	msg_t *from_msg, *to_msg;
 	
-
 	from_msg = list_head(LPS[lid]->queue_in);
 
 	to_state = list_tail(LPS[lid]->queue_states);
 
-	while (to_state != NULL &&  to_state->lvt >= commit_horizon){ //TODO: aggiungere tie_breaker e mettere solo >
+	while (to_state != NULL && (to_state->last_event->timestamp) >= commit_horizon){
 		to_state = list_prev(to_state);
 	}//to_state è l'ultimo checkpoint da tenere
+	
+	if(to_state != NULL){//dobbiamo prendere uno stato in più per l'OnGvt
+		to_state = list_prev(to_state);
+	}
+	
+	
 	if(to_state != NULL){
 		to_msg = list_prev(to_state->last_event);
 		
@@ -425,18 +430,26 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
 		list_container_of(to_state->last_event)->prev = NULL; 
 		
-		
+		next_to_state = to_state;
 		to_state = list_prev(to_state);
+		
+		//printf(BOLDWHITE("LP:%u CH:%f DEL:%f\n"), lid, commit_horizon,to_state->last_event->timestamp);
 	}
 
 	//Rimozione Stati
 	while (to_state != NULL){ //TODO: aggiungere tie_breaker e mettere solo >
+		printf(BOLDWHITE("[%u] Sto rimuovendo lo stato %f  minore di %f con indirizzo %p\n"), lid,to_state->last_event->timestamp, commit_horizon, to_state);
 		tmp_state = list_prev(to_state);
-		//log_delete(to_state->log);
+		log_delete(to_state->log);
 		to_state->last_event = (void *)0xBABEBEEF;
 		list_delete_by_content(lid, LPS[lid]->queue_states, to_state); //<-migliorabile
 		
 		to_state = tmp_state;
+	}
+	
+	if( ((struct rootsim_list*)(LPS[lid]->queue_states))->size == 0  ){
+		printf("Dopo la clean la coda è vuota\n");
+		gdb_abort;
 	}
 	
 	//Aggancio alla nuova lista
