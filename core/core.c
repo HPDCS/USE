@@ -99,6 +99,10 @@ bool stop = false;
 unsigned long long *sim_ended;
 
 
+size_t node_size_msg_t;
+size_t node_size_state_t;
+
+
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
 	va_list args;
@@ -178,6 +182,21 @@ void set_affinity(unsigned int tid){
 
 inline void SetState(void *ptr) { //può diventare una macro?
 	ParallelSetState(ptr); 
+}
+
+void nodes_init(){
+		size_t tmp_size;
+		unsigned int i;
+		
+		i = 0;
+		tmp_size = sizeof(struct rootsim_list_node) + sizeof(msg_t);//multiplo di 64
+		while((++i)*CACHE_LINE_SIZE < tmp_size);
+		node_size_msg_t = (i)*CACHE_LINE_SIZE;
+		
+		i = 0;
+		tmp_size = sizeof(struct rootsim_list_node) + sizeof(state_t);//multiplo di 64
+		while((++i)*CACHE_LINE_SIZE < tmp_size);
+		node_size_state_t = (i)*CACHE_LINE_SIZE;
 }
 
 void LPs_metada_init() {
@@ -354,6 +373,7 @@ void init_simulation(unsigned int thread_id){
 		statistics_init();
 		queue_init();
 		numerical_init();
+		nodes_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
@@ -586,10 +606,7 @@ void thread_loop(unsigned int thread_id) {
 			gdb_abort;				
 		}
 #endif
-		
-		
 		///* PROCESS *///
-		// Execute the event in the proper modality
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
 		///* FLUSH */// 
@@ -619,7 +636,6 @@ void thread_loop(unsigned int thread_id) {
 			check_OnGVT(current_lp);	
 		}
 		
-		
 		if(safe && (++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0) ){
 				clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
@@ -637,16 +653,11 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(queue_op);
 #endif
 
-
 		
+		//COMMIT SAFE EVENT
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
-			
-			//prune_local_queue_with_ts(LPS[current_lp]->commit_horizon_ts);
-			//prune_local_queue_with_ts(local_gvt);
 		}
-		nbc_prune();
-		//events_garbage_collection(commit_time);
 
 #if REPORT == 1
 		statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
@@ -654,7 +665,9 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		
 end_loop:
-
+		//LOCAL LISTS PRUNING
+		nbc_prune();
+		//CHECK END SIMULATION
 		if(start_periodic_check_ongvt)
 			if(check_ongvt_period++ % 100 == 0){
 				if(tryLock(last_checked_lp)){
@@ -669,7 +682,7 @@ end_loop:
 				__sync_bool_compare_and_swap(&stop, false, true);
 			}
 		}
-		
+		//PRINT REPORT
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
 			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	

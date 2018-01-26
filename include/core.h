@@ -92,6 +92,9 @@ extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
 
+extern size_t node_size_msg_t;
+extern size_t node_size_state_t;
+
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
