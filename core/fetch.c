@@ -210,9 +210,9 @@ unsigned int fetch_internal(){
 	
 	min = min_node->timestamp;
 		
-	if(local_gvt > min)
+	if(local_gvt < min){
 		local_gvt = min;
-
+	}
 		
     while(node != NULL){
 			
