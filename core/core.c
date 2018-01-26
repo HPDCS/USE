@@ -365,6 +365,7 @@ void init_simulation(unsigned int thread_id){
 
 
 	to_remove_local_evts = new_list(tid, msg_t);
+	to_remove_local_evts_old = new_list(tid, msg_t);
 	freed_local_evts = new_list(tid, msg_t);
 	
 	if(tid == 0){
@@ -558,9 +559,6 @@ void thread_loop(unsigned int thread_id) {
 
 		if(current_evt_state == ANTI_MSG) {
 			current_msg->monitor = (void*) 0xba4a4a;
-		#if DEBUG == 1
-			assert(!list_is_connected(LPS[current_lp]->queue_in, current_msg));
-		#endif
 			delete(nbcalqueue, current_node);
 			unlock(current_lp);
 			continue;

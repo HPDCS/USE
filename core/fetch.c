@@ -466,13 +466,14 @@ get_next:
 void prune_local_queue_with_ts(simtime_t ts){
 	msg_t *tmp_node;
 	msg_t *current = NULL;
-	if(((rootsim_list*)to_remove_local_evts)->size != 0){
-		current = (msg_t*) ((rootsim_list*)to_remove_local_evts)->head->data;
+	
+	if(((rootsim_list*)to_remove_local_evts_old)->head != NULL){
+		current = (msg_t*) ((rootsim_list*)to_remove_local_evts_old)->head->data;
 	}
 	while(current!=NULL){
 		tmp_node = list_next(current);
 		if(current->max_outgoing_ts < ts){
-			list_extract_given_node(tid, to_remove_local_evts, current);
+			list_extract_given_node(tid, to_remove_local_evts_old, current);
 			list_node_clean_by_content(current); //NON DOVREBBE SERVIRE
 			//free(list_container_of(current));
 			list_insert_tail_by_content(freed_local_evts, current);

@@ -1138,8 +1138,6 @@ void nbc_prune(void)
 	
 	if(!mm_safe(prune_array, threads, TID))
 		return;
-		
-	prune_local_queue_with_ts(local_gvt);
 	
 	while(to_free_tables_old != NULL)
 	{
@@ -1168,6 +1166,28 @@ void nbc_prune(void)
 	to_free_tables_new = NULL;
 	
 	mm_new_era(&malloc_status, prune_array, threads, TID);
+	
+	
+	//prune events nodes 
+	prune_local_queue_with_ts(local_gvt);
+	
+	if(((rootsim_list*)to_remove_local_evts)->head != NULL){
+		((struct rootsim_list*)to_remove_local_evts_old)->tail = ((struct rootsim_list*)to_remove_local_evts)->tail;
+		
+		if(((struct rootsim_list*)to_remove_local_evts_old)->tail == NULL){
+			((struct rootsim_list*)to_remove_local_evts_old)->head = ((struct rootsim_list*)to_remove_local_evts)->head;
+		}
+		else{
+			((struct rootsim_list*)to_remove_local_evts_old)->tail->next = ((struct rootsim_list*)to_remove_local_evts)->head;
+		}
+		((struct rootsim_list*)to_remove_local_evts_old)->size += ((struct rootsim_list*)to_remove_local_evts)->size;
+		
+		((struct rootsim_list*)to_remove_local_evts)->tail = NULL;
+		((struct rootsim_list*)to_remove_local_evts)->head = NULL;
+		((struct rootsim_list*)to_remove_local_evts)->size = 0;
+		
+	}
+	
 	
 }
 

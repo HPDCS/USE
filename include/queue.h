@@ -54,6 +54,7 @@ extern __thread unsigned long long * lp_unsafe_set;
 extern __thread unsigned long long * lp_unsafe_set_debug;
 extern __thread unsigned int unsafe_events;
 extern __thread list(msg_t) to_remove_local_evts;
+extern __thread list(msg_t) to_remove_local_evts_old;
 extern __thread list(msg_t) freed_local_evts;
 
 #endif

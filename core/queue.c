@@ -33,6 +33,7 @@ typedef struct __temp_thread_pool {
 
 __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
+__thread list(msg_t) to_remove_local_evts_old = NULL;
 __thread list(msg_t) to_remove_local_evts = NULL;
 __thread list(msg_t) freed_local_evts = NULL;
 
@@ -107,6 +108,8 @@ void queue_deliver_msgs(void) {
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
 
+
+		if(new_hole->monitor == 666) printf("Sto riusando il nodo\n");
         new_hole->monitor = (void *)0x0;
         new_hole->state = 0;
         new_hole->epoch = 0;
