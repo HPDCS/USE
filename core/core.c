@@ -663,8 +663,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		
 end_loop:
-		//LOCAL LISTS PRUNING
-		nbc_prune();
 		//CHECK END SIMULATION
 		if(start_periodic_check_ongvt)
 			if(check_ongvt_period++ % 100 == 0){
@@ -680,6 +678,11 @@ end_loop:
 				__sync_bool_compare_and_swap(&stop, false, true);
 			}
 		}
+
+		
+		//LOCAL LISTS PRUNING
+		nbc_prune();
+		
 		//PRINT REPORT
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
