@@ -8,7 +8,7 @@ C=0
 BEGIN="BEGIN TEST:........$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="TEST ${C} STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-make pholdcount 
+make phold DEBUG=1
 
 while :
 do
@@ -21,7 +21,7 @@ do
 	echo
 	tput setab 0; tput setaf 7;
 	#gdb -ex=r --args ./$1 $2 $3
-	gdb --eval-command=run --eval-command=quit -q --args ./pholdcount $1 $2
+	gdb --eval-command=run --eval-command=quit -q --args ./phold $1 $2
 	#./$1 $2 $3
 	sleep .5
 done

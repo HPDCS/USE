@@ -44,6 +44,7 @@
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
+#define LOG_RESIZE 0
 
 #define BOOL_CAS_ALE(addr, old, new)  CAS_x86(\
 										UNION_CAST(addr, volatile unsigned long long *),\
@@ -609,8 +610,10 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 			//free(new_h);
 		}
 #if DEBUG == 1
+	#if LOG_RESIZE == 1
 		else //DEBUG; decommentare
 			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
+	#endif
 #endif
 	}
 }
@@ -1165,20 +1168,21 @@ void nbc_prune(void)
 	to_free_tables_old = to_free_tables_new;
 	to_free_tables_new = NULL;
 	
-	mm_new_era(&malloc_status, prune_array, threads, TID);
-	
+
 	
 	//prune events nodes 
 	prune_local_queue_with_ts(local_gvt);
 	
 	if(((rootsim_list*)to_remove_local_evts)->head != NULL){
+		struct rootsim_list_node* old_tail = ((struct rootsim_list*)to_remove_local_evts_old)->tail;
 		((struct rootsim_list*)to_remove_local_evts_old)->tail = ((struct rootsim_list*)to_remove_local_evts)->tail;
 		
-		if(((struct rootsim_list*)to_remove_local_evts_old)->tail == NULL){
+		if(old_tail == NULL){
 			((struct rootsim_list*)to_remove_local_evts_old)->head = ((struct rootsim_list*)to_remove_local_evts)->head;
 		}
 		else{
-			((struct rootsim_list*)to_remove_local_evts_old)->tail->next = ((struct rootsim_list*)to_remove_local_evts)->head;
+			old_tail->next = ((struct rootsim_list*)to_remove_local_evts)->head;
+			((struct rootsim_list*)to_remove_local_evts)->head->prev = old_tail;
 		}
 		((struct rootsim_list*)to_remove_local_evts_old)->size += ((struct rootsim_list*)to_remove_local_evts)->size;
 		
@@ -1186,7 +1190,12 @@ void nbc_prune(void)
 		((struct rootsim_list*)to_remove_local_evts)->head = NULL;
 		((struct rootsim_list*)to_remove_local_evts)->size = 0;
 		
-	}
+	}	
+
+
+	mm_new_era(&malloc_status, prune_array, threads, TID);
+	
+	
 	
 	
 }
