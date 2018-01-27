@@ -125,10 +125,12 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 	(void)event;
 	
+	event->monitor = 0x5AFE;
+	
 	if(node == NULL){
 		return false;
 	}
-	
+					
 	if(node != (void*) 0xbadc0de && delete(nbcalqueue, node)){
 		if(LPS[lp_idx]->commit_horizon_ts<node->timestamp  //non sono sotto lock, non è sicuro così
 			|| (LPS[lp_idx]->commit_horizon_ts==node->timestamp && LPS[lp_idx]->commit_horizon_tb<node->counter) 
@@ -136,9 +138,10 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 				LPS[lp_idx]->commit_horizon_ts = node->timestamp; //time min ← evt.ts
 				LPS[lp_idx]->commit_horizon_tb = node->counter;	
 		}
+		
 	#if DEBUG == 1
 		//event->node = 0x5AFE;                //DEBUG
-		assert(__sync_val_compare_and_swap(&event->monitor, 0x0, 0x5AFE) == 0x0);
+		//assert(__sync_val_compare_and_swap(&event->monitor, 0x0, 0x5AFE) == 0x0);
 		//event->monitor = 0x5AFE;
 		event->local_next 		= bound_ptr;       //DEBUG
 		event->local_previous 	= (void*) node;        //DEBUG

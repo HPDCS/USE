@@ -51,6 +51,10 @@
 // then accesses to the list must be protected within critical sections.
 
 
+#ifndef LIST_NODE_PER_ALLOC
+#define LIST_NODE_PER_ALLOC 500
+#endif
+
 #define IDLE_PROCESS	UINT_MAX
 #define GENERIC_LIST IDLE_PROCESS
 

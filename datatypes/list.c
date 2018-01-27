@@ -833,8 +833,6 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 
 }
 
-#define LIST_NODE_PER_ALLOC 1
-
 void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct rootsim_list *free_list) {
 	char *memory_nodes;
 	struct rootsim_list_node *tmp_node;

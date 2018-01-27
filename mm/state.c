@@ -267,6 +267,8 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 
 	// Find the state to be restored, and prune the wrongly computed states
 	restore_state = list_tail(LPS[lid]->queue_states);
+	
+	assert(restore_state!=NULL);
 
 	// It's >= rather than > because we have NOT taken into account simultaneous events YET
 	while (restore_state != NULL && 
@@ -421,6 +423,9 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 	from_msg = list_head(LPS[lid]->queue_in);
 	to_state = list_tail(LPS[lid]->queue_states);
 
+
+	assert(to_state!=NULL);
+
 	while (to_state != NULL && (to_state->last_event->timestamp) >= commit_horizon){
 		to_state = list_prev(to_state);
 	}//to_state è l'ultimo checkpoint da tenere
@@ -475,5 +480,8 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 		list_container_of(from_msg)->prev = ((struct rootsim_list*)to_remove_local_evts)->tail;
 		((struct rootsim_list*)to_remove_local_evts)->tail = list_container_of(to_msg);
 	}
+	
+	
+	assert(list_tail(LPS[lid]->queue_states)!=NULL);
 	
 }

@@ -89,7 +89,7 @@ void queue_clean(){
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
-    simtime_t max = current_msg->timestamp; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
+    //simtime_t max = current_msg->timestamp; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
 #if REPORT == 1
 		clock_timer queue_op;
 #endif
@@ -142,6 +142,8 @@ void queue_deliver_msgs(void) {
 
 bool is_valid(msg_t * event){
 	return  
+			(event->monitor == 0x5afe) 
+			||
             (
                 (event->state & ELIMINATED) != ELIMINATED  
                 &&  (
