@@ -89,7 +89,7 @@ void queue_clean(){
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
-    simtime_t max = 0; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
+    simtime_t max = current_msg->timestamp; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
 #if REPORT == 1
 		clock_timer queue_op;
 #endif
@@ -115,7 +115,7 @@ void queue_deliver_msgs(void) {
         new_hole->epoch = 0;
         new_hole->frame = 0;
         new_hole->tie_breaker = 0;
-        new_hole->max_outgoing_ts = 0;
+        new_hole->max_outgoing_ts = new_hole->timestamp;
 
 #if DEBUG==1
 		if(new_hole->timestamp <= current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
@@ -123,8 +123,8 @@ void queue_deliver_msgs(void) {
 		if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
 #endif
 
-		if(max < new_hole->timestamp)
-			max = new_hole->timestamp;
+		if(current_msg->max_outgoing_ts < new_hole->timestamp)
+			current_msg->max_outgoing_ts = new_hole->timestamp;
 
 #if REPORT == 1
 		clock_timer_start(queue_op);
@@ -136,7 +136,6 @@ void queue_deliver_msgs(void) {
 #endif
     }
 
- 	current_msg->max_outgoing_ts = max;
     _thr_pool._thr_pool_count = 0;
 }
 
@@ -155,19 +154,3 @@ bool is_valid(msg_t * event){
             );
 }
 
-
-void events_garbage_collection(simtime_t commit_time)
-{
-
-    msg_t* tmp;
-    msg_t* cur = (msg_t*)((struct rootsim_list*)to_remove_local_evts)->head->data;
-    while(cur != NULL)
-    {
-        tmp = list_next(cur);
-        if(cur->timestamp < commit_time){
-            list_extract_given_node(tid, to_remove_local_evts, cur);
-            list_place_after_given_node_by_content(tid, freed_local_evts, cur, ((rootsim_list *)freed_local_evts)->head->data);
-        }
-        cur = tmp;
-    }
-}
