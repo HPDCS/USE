@@ -295,6 +295,11 @@ unsigned int fetch_internal(){
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
+					local_next_evt->frame = tid;
+					void* tmp = list_next(lp_ptr->bound);
+					assert(tmp != local_next_evt);
+					if(tmp != NULL)	
+						assert(list_prev(list_next(lp_ptr->bound)) != local_next_evt);
 					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
 					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
 					//list_place_after_given_node_by_content(lp_ptr->lid, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
@@ -472,9 +477,22 @@ void prune_local_queue_with_ts(simtime_t ts){
 	}
 	while(current!=NULL){
 		tmp_node = list_next(current);
+		assert(list_container_of((current))->prev != 0xDDD);
+		assert(list_container_of((current))->next != 0xCCC);
+		assert(current->max_outgoing_ts != 0);
+		
 		if(current->max_outgoing_ts < ts){
 			list_extract_given_node(tid, to_remove_local_evts_old, current);
-			list_node_clean_by_content(current); //NON DOVREBBE SERVIRE
+		
+			if(tmp_node != NULL)	
+				assert(list_prev((tmp_node)) != current);
+
+
+			list_node_clean_by_content(current); 
+			//assert(current->state != -1);
+			//assert(current->data_size == 0);
+			current->state = -1;
+			current->data_size = tid+1;
 			//free(list_container_of(current));
 			list_insert_tail_by_content(freed_local_evts, current);
 			//list_place_after_given_node_by_content(tid, freed_local_evts, current, ((rootsim_list*)freed_local_evts)->head);
