@@ -21,6 +21,11 @@
 
 typedef struct __msg_t msg_t;
 
+typedef struct __temp_thread_pool {
+	unsigned int _thr_pool_count;
+	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
+} __temp_thread_pool;
+
 void queue_init(void);
 
 void queue_insert(unsigned int receiver, double timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
@@ -46,6 +51,7 @@ extern nb_calqueue* nbcalqueue;
 extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
 extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
 extern __thread bool  safe;
+extern __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 extern volatile unsigned int *lp_lock;
 extern __thread unsigned long long * lp_unsafe_set;

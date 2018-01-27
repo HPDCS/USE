@@ -26,11 +26,6 @@ __thread unsigned long long * lp_unsafe_set;
 
 __thread unsigned long long * lp_unsafe_set_debug;
 
-typedef struct __temp_thread_pool {
-	unsigned int _thr_pool_count;
-	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
-} __temp_thread_pool;
-
 __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 __thread list(msg_t) to_remove_local_evts_old = NULL;
@@ -70,8 +65,12 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         abort();
     }
 
+
+    msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+    list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
+
 	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
-	msg_ptr = &_thr_pool.messages[_thr_pool._thr_pool_count++];
+	_thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
 
     msg_ptr->sender_id = current_lp;
     msg_ptr->receiver_id = receiver;
@@ -83,6 +82,24 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 }
 
 void queue_clean(){ 
+    int i = 0;
+    msg_t* current;
+    for (i; i<_thr_pool._thr_pool_count; i++)
+    {
+        current = _thr_pool.messages[i].father;
+        if(current != NULL)
+        {
+
+            list_node_clean_by_content(current); 
+            current->state = -1;
+            current->data_size = tid+1;
+            current->max_outgoing_ts = 0;
+            list_insert_tail_by_content(freed_local_evts, current);
+            _thr_pool.messages[i].father = NULL;
+
+        }
+
+    }
 	_thr_pool._thr_pool_count = 0;
 }
 
@@ -96,14 +113,17 @@ void queue_deliver_msgs(void) {
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++){
 
-        new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-        list_node_clean_by_content(new_hole); //NON DOVREBBE SERVIRE
-			
+        //new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+        //list_node_clean_by_content(new_hole); //NON DOVREBBE SERVIRE
+
+		new_hole = _thr_pool.messages[i].father;
+        _thr_pool.messages[i].father = NULL; 
+
         if(new_hole == NULL){
 			printf("Out of memory in %s:%d", __FILE__, __LINE__);
 			abort();		
 		}
-        memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
+        //memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
@@ -119,7 +139,7 @@ void queue_deliver_msgs(void) {
 
 #if DEBUG==1
 		if(new_hole->timestamp <= current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
-		if(new_hole->timestamp != _thr_pool.messages[i].timestamp){ printf(RED("2Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+		//if(new_hole->timestamp != _thr_pool.messages[i].timestamp){ printf(RED("2Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
 		if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
 #endif
 

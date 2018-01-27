@@ -352,6 +352,8 @@ void round_check_OnGVT(){
 
 void init_simulation(unsigned int thread_id){
 	tid = thread_id;
+	int i = 0;
+
 	
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
@@ -363,10 +365,18 @@ void init_simulation(unsigned int thread_id){
 	// Initialize the set ??
 	unsafe_set_init();
 
+	for(i;i<THR_POOL_SIZE;i++)
+	{
+		_thr_pool.messages[i].father = 0;
+	}
+	_thr_pool._thr_pool_count = 0;
 
 	to_remove_local_evts = new_list(tid, msg_t);
 	to_remove_local_evts_old = new_list(tid, msg_t);
 	freed_local_evts = new_list(tid, msg_t);
+
+
+
 	
 	if(tid == 0){
 		LPs_metada_init();
