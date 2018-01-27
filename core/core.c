@@ -716,5 +716,11 @@ end_loop:
 	} else if (stop){
 		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
+		if(tid==0){
+			unsigned int i, frames = 0;
+			for(i = 0; i< n_prc_tot; i++)
+				frames += LPS[i]->num_executed_frames;
+			printf("Total correctly executed frames: %u\n", frames);
+		}
 	}
 }

@@ -1293,7 +1293,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 bool delete(nb_calqueue *queue, nbc_bucket_node* node){
 	nbc_bucket_node *node_next, *tmp;
 	
-	if(node == NULL){
+	if(node == NULL || node==(void*)0x1){ //NOTA: la seconda condizione non dovrebbe più servire
 		return false;
 	}
 	

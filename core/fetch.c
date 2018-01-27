@@ -155,20 +155,40 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 
 
-#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);	unlock(lp_idx);	/* goto get_next; */	}
-#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);			unlock(lp_idx);	/* goto get_next; */	}
-#define do_skip_inside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx);\
-																	read_new_min = false;\
-																	unlock(lp_idx); /* goto get_next; */	}
+#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)			{	commit_event(event,node,lp_idx);\
+																			unlock(lp_idx);	/* goto get_next; */	}
+		
+#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)			{	delete(nbcalqueue, node);\			
+																			unlock(lp_idx);	/* goto get_next; */	}
+																			
+#define do_skip_inside_lock_and_goto_next(lp_idx)						{	add_lp_unsafe_set(lp_idx);\
+																			read_new_min = false;\
+																			unlock(lp_idx); /* goto get_next; */	}
+		
+#define return_evt_to_main_loop()										{	assert(event->monitor != (void*) 0xBA4A4A);\	
+																			break; 	}
+		
+#define do_commit_outside_lock_and_goto_next(event,node,lp_idx)			{	commit_event(event,node,lp_idx);\
+																			goto get_next;	}
+		
+#define do_remove_outside_lock_and_goto_next(event,node,lp_idx)			{	delete(nbcalqueue, node);\
+																			goto get_next;	}
+		
+#define do_skip_outside_lock_and_goto_next(lp_idx)						{	add_lp_unsafe_set(lp_idx);\
+																			read_new_min = false;\
+																			goto get_next; 	}
 
-#define return_evt_to_main_loop()								{	assert(event->monitor != (void*) 0xBA4A4A);	break; 	}
+#define do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx)	{	if(delete(nbcalqueue, node)){\
+																				list_node_clean_by_content(event);\
+																				list_insert_tail_by_content(to_remove_local_evts, event);\
+																			}\
+																			goto get_next;	}
 
-
-#define do_commit_outside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);					goto get_next;	}
-#define do_remove_outside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);							goto get_next;	}
-#define do_skip_outside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx);\
-																	read_new_min = false;\
-																	goto get_next; 	}
+#define do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx)	{	if(delete(nbcalqueue, node)){\
+																				list_node_clean_by_content(event);\
+																				list_insert_tail_by_content(to_remove_local_evts, event);\
+																			}\
+																			unlock(lp_idx);	/* goto get_next; */	}
 
 
 
@@ -190,7 +210,7 @@ unsigned int fetch_internal(){
 	double bucket_width;
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
-	bool validity, in_past, read_new_min = true;
+	bool validity, in_past, read_new_min = true, from_get_next_and_valid;
 #if DEBUG == 1
 	unsigned int c = 0;
 #endif
@@ -222,6 +242,9 @@ unsigned int fetch_internal(){
 #if DEBUG == 1
 		if(++c%50000==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
 #endif
+
+		from_get_next_and_valid = false;
+
 		event = (msg_t *)node->payload;		// Event under exploration
 		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
@@ -265,8 +288,8 @@ unsigned int fetch_internal(){
 				curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
 			}
 			///* DELETE ELIMINATED *///
-			if(curr_evt_state == ELIMINATED){//if(curr_evt_state == ELIMINATED){
-				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
+			if(curr_evt_state == ELIMINATED){
+				do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED	
 			}
 			///* DELETE BANANA NODE *///
 			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){
@@ -299,13 +322,12 @@ unsigned int fetch_internal(){
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					local_next_evt->frame = tid;
-					void* tmp = list_next(lp_ptr->bound);
-					assert(tmp != local_next_evt);
-					if(tmp != NULL)	
-						assert(list_prev(list_next(lp_ptr->bound)) != local_next_evt);
+					//void* tmp = list_next(lp_ptr->bound);
+					//assert(tmp != local_next_evt);
+					//if(tmp != NULL)	
+					//	assert(list_prev(list_next(lp_ptr->bound)) != local_next_evt);
 					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
 					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
-					//list_place_after_given_node_by_content(lp_ptr->lid, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
 					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_MSG; //
 					set_commit_state_as_banana(local_next_evt); //non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
 					local_next_evt = list_next(lp_ptr->bound);
@@ -326,7 +348,8 @@ unsigned int fetch_internal(){
 					}
 				#endif	
 					event = local_next_evt;
-					node = (void*)0x1;//local_next_evt->node;
+					//node = (void*)0x1;//local_next_evt->node;
+					from_get_next_and_valid = true;
 					ts = event->timestamp;
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
@@ -337,7 +360,7 @@ unsigned int fetch_internal(){
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
 						set_commit_state_as_banana(event);
-						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+						do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx); 		//<<-ELIMINATED
 					}
 					else {
 						return_evt_to_main_loop();
@@ -364,7 +387,7 @@ unsigned int fetch_internal(){
 						return_evt_to_main_loop();
 				}
 				else if(curr_evt_state == ELIMINATED){
-					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED
 				}
 				
 			}
@@ -379,9 +402,9 @@ unsigned int fetch_internal(){
 				///* DELETE ELIMINATED *///
 				if( (curr_evt_state & EXTRACTED) == 0 ){
 			#if DEBUG==1	
-					assert(!list_is_connected(LPS[current_lp]->queue_in, event));
+					//assert(!list_is_connected(LPS[current_lp]->queue_in, event));
 			#endif
-					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);					//<<-ELIMINATED
 				}
 				else{
 			#if DEBUG==1
@@ -453,7 +476,7 @@ get_next:
         return 0;
         
        
- 	if(node == (void*)0x1)
+ 	if(from_get_next_and_valid)
         node = NULL;
  
 #if DEBUG == 1
