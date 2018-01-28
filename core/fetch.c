@@ -125,7 +125,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 	(void)event;
 	
-	event->monitor = 0x5AFE;
+	event->monitor = (void*)0x5AFE;
 	
 	if(node == NULL){
 		return false;
@@ -158,14 +158,14 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define do_commit_inside_lock_and_goto_next(event,node,lp_idx)			{	commit_event(event,node,lp_idx);\
 																			unlock(lp_idx);	/* goto get_next; */	}
 		
-#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)			{	delete(nbcalqueue, node);\			
+#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)			{	delete(nbcalqueue, node);\
 																			unlock(lp_idx);	/* goto get_next; */	}
 																			
 #define do_skip_inside_lock_and_goto_next(lp_idx)						{	add_lp_unsafe_set(lp_idx);\
 																			read_new_min = false;\
 																			unlock(lp_idx); /* goto get_next; */	}
 		
-#define return_evt_to_main_loop()										{	assert(event->monitor != (void*) 0xBA4A4A);\	
+#define return_evt_to_main_loop()										{	assert(event->monitor != (void*) 0xBA4A4A);\
 																			break; 	}
 		
 #define do_commit_outside_lock_and_goto_next(event,node,lp_idx)			{	commit_event(event,node,lp_idx);\
@@ -322,10 +322,6 @@ unsigned int fetch_internal(){
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					local_next_evt->frame = tid;
-					//void* tmp = list_next(lp_ptr->bound);
-					//assert(tmp != local_next_evt);
-					//if(tmp != NULL)	
-					//	assert(list_prev(list_next(lp_ptr->bound)) != local_next_evt);
 					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
 					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
 					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_MSG; //
@@ -401,9 +397,6 @@ unsigned int fetch_internal(){
 
 				///* DELETE ELIMINATED *///
 				if( (curr_evt_state & EXTRACTED) == 0 ){
-			#if DEBUG==1	
-					//assert(!list_is_connected(LPS[current_lp]->queue_in, event));
-			#endif
 					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);					//<<-ELIMINATED
 				}
 				else{
@@ -474,7 +467,6 @@ get_next:
  
  	if(node == NULL)
         return 0;
-        
        
  	if(from_get_next_and_valid)
         node = NULL;
@@ -495,28 +487,27 @@ get_next:
 
 
 void prune_local_queue_with_ts(simtime_t ts){
-	msg_t *tmp_node;
 	msg_t *current = NULL;
+	msg_t *tmp_node = NULL;
 	
 	if(((rootsim_list*)to_remove_local_evts_old)->head != NULL){
 		current = (msg_t*) ((rootsim_list*)to_remove_local_evts_old)->head->data;
 	}
 	while(current!=NULL){
 		tmp_node = list_next(current);
+#if DEBUG==1
 		assert(list_container_of((current))->prev != 0xDDD);
 		assert(list_container_of((current))->next != 0xCCC);
-		assert(current->max_outgoing_ts != 0);
-		
+		assert(current->timestamp==0 || current->max_outgoing_ts != 0);
+#endif
 		if(current->max_outgoing_ts < ts){
 			list_extract_given_node(tid, to_remove_local_evts_old, current);
+#if DEBUG==1
 		
 			if(tmp_node != NULL)	
 				assert(list_prev((tmp_node)) != current);
-
-
+#endif
 			list_node_clean_by_content(current); 
-			//assert(current->state != -1);
-			//assert(current->data_size == 0);
 			current->state = -1;
 			current->data_size = tid+1;
 			//free(list_container_of(current));

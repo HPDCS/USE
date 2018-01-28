@@ -82,9 +82,9 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 }
 
 void queue_clean(){ 
-    int i = 0;
+    unsigned int i = 0;
     msg_t* current;
-    for (i; i<_thr_pool._thr_pool_count; i++)
+    for (; i<_thr_pool._thr_pool_count; i++)
     {
         current = _thr_pool.messages[i].father;
         if(current != NULL)
@@ -128,9 +128,7 @@ void queue_deliver_msgs(void) {
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
 
-
-		if(new_hole->monitor == 666) printf("Sto riusando il nodo\n");
-        new_hole->monitor = (void *)0x0;
+		new_hole->monitor = (void *)0x0;
         new_hole->state = 0;
         new_hole->epoch = 0;
         new_hole->frame = 0;
@@ -162,7 +160,7 @@ void queue_deliver_msgs(void) {
 
 bool is_valid(msg_t * event){
 	return  
-			(event->monitor == 0x5afe) 
+			(event->monitor == (void *)0x5afe) 
 			||
             (
                 (event->state & ELIMINATED) != ELIMINATED  

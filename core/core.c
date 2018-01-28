@@ -365,7 +365,7 @@ void init_simulation(unsigned int thread_id){
 	// Initialize the set ??
 	unsafe_set_init();
 
-	for(i;i<THR_POOL_SIZE;i++)
+	for(;i<THR_POOL_SIZE;i++)
 	{
 		_thr_pool.messages[i].father = 0;
 	}
