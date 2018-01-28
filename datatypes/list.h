@@ -109,6 +109,9 @@ struct rootsim_list {
 
 #define list_insert_tail_by_content(list, node) \
 			(__typeof__(list))__list_insert_tail_by_node((list), list_container_of(node))
+			
+#define list_insert_tail_by_contents(list, size, first, last) \
+			__list_insert_tail_by_nodes((list),size, list_container_of(first), list_container_of(last))
 
 /// Insert a new node in the list. Refer to <__list_insert>() for a more thorough documentation.
 #define list_insert(lid, list, key_name, data) \
@@ -250,6 +253,7 @@ struct rootsim_list {
 extern char *__list_insert_head(unsigned int lid, void *li, unsigned int size, void *data);
 extern char *__list_insert_tail(unsigned int lid, void *li, unsigned int size, void *data);
 extern char *__list_insert_tail_by_node(void *li, struct rootsim_list_node* new_n);
+extern void __list_insert_tail_by_nodes(void *li, size_t size, struct rootsim_list_node* first, struct rootsim_list_node* last);
 extern char *__list_insert(unsigned int lid, void *li, unsigned int size, size_t key_position, void *data);
 extern char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, size_t key_position);
 extern bool __list_delete(unsigned int lid, void *li, unsigned int size, double key, size_t key_position);

@@ -191,7 +191,7 @@ char *__list_insert_tail_by_node(void *li, struct rootsim_list_node* new_n) {
 	size_t size_before = l->size;
 
 	// Is the list empty?
-	if(l->size == 0) {
+	if(l->head == NULL) {
 		l->head = new_n;
 		l->tail = new_n;
 		goto insert_end;
@@ -875,7 +875,30 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 	//return (void *)(ptr + sizeof(struct rootsim_list_node));
 }
 
+void __list_insert_tail_by_nodes(void *li, size_t size, struct rootsim_list_node* first, struct rootsim_list_node* last) {
+//Nota: la size va a quel paese
+	rootsim_list *l = (rootsim_list *)li;
 
+//	assert(l);
+//	size_t size_before = l->size;
+
+	// Is the list empty?
+	if(l->head == NULL) {
+		assert(l->tail==NULL);
+		first->prev = NULL;
+		l->head = first;
+	}
+	else{
+		first->prev = l->tail;
+		l->tail->next = first;
+	}
+	last->next = NULL;
+	l->tail = last;
+
+	l->size += size;
+//	assert(l->size == (size_before + 1));
+//	return new_n->data;
+}
 
 void * list_next_f(void * ptr) {//DEBUG
 	struct rootsim_list_node *__nextptr = list_container_of(ptr)->next;

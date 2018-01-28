@@ -486,7 +486,7 @@ get_next:
 }
 
 
-void prune_local_queue_with_ts(simtime_t ts){
+void prune_local_queue_with_ts_old(simtime_t ts){
 	msg_t *current = NULL;
 	msg_t *tmp_node = NULL;
 	
@@ -517,3 +517,53 @@ void prune_local_queue_with_ts(simtime_t ts){
 		current = tmp_node;
 	}
 }
+
+
+void prune_local_queue_with_ts(simtime_t ts){
+	msg_t *current = NULL;
+	msg_t *tmp_node = NULL;
+
+	msg_t *from = NULL;
+	msg_t *to = NULL;
+	
+	size_t count_nodes= 0;
+	
+
+	if(((rootsim_list*)to_remove_local_evts_old)->head != NULL){
+		current = (msg_t*) ((rootsim_list*)to_remove_local_evts_old)->head->data;
+	}
+	while(current!=NULL){
+		tmp_node = list_next(current);
+		
+		if(current->max_outgoing_ts < ts){
+			from = current;
+			//trovato il primo nodo valido, continuo localmente la ricerca
+			while(current!=NULL && current->max_outgoing_ts < ts){
+				to = current;
+				count_nodes++;
+				current = list_next(current); 
+			}
+			//Stacco dalla vecchia lista
+			if(list_prev(from) != NULL){
+				list_container_of(list_prev(from))->next = list_container_of(to)->next;
+			}else{
+				((rootsim_list*)to_remove_local_evts_old)->head = list_container_of(to)->next;
+			} 
+			if(list_next(to) != NULL){
+				list_container_of(list_next(to))->prev = list_container_of(from)->prev;
+			}else{
+				((rootsim_list*)to_remove_local_evts_old)->tail = list_container_of(from)->prev;
+			}
+			((rootsim_list*)to_remove_local_evts_old)->size -= count_nodes;
+			//Attavvo nella nuova lista
+			list_insert_tail_by_contents(freed_local_evts, count_nodes ,from, to);
+			tmp_node = list_next(to);
+			//resetto i campi
+			to = NULL;
+			from = NULL;
+			count_nodes= 0;
+		}
+		current = tmp_node;
+	}
+}
+
