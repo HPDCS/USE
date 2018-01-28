@@ -282,10 +282,10 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		}
 	}
 	
-	if(restore_state->lvt != restore_state->last_event->timestamp){ //DEBUG
-		printf("Il checkpoint è sputtanato!\n");
-		gdb_abort;
-	}
+//	if(restore_state->lvt != restore_state->last_event->timestamp){ //DEBUG
+//		printf("Il checkpoint è sputtanato!\n");
+//		gdb_abort;
+//	}
 	
 	// Restore the simulation state and correct the state base pointer
 	log_restore(lid, restore_state);

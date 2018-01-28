@@ -403,6 +403,7 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->num_executed_frames++;
 			LPS[current_lp]->state_log_forced = true;
 			LogState(current_lp);
+			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Serve per tirare fuori l'INIT dalla timeline
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
 			//LPS[current_lp]->epoch = 1;
@@ -544,7 +545,6 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
-
 
 #if REPORT == 1 
 			clock_timer_start(rollback_time);
