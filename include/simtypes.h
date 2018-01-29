@@ -15,7 +15,9 @@
 
 #define current_LP_lvt bound->timestamp //used to retrieve the current LVT TODO: usare questo metodo o inserire il campo nella struttura?
 
+#ifndef CLEAN_CKP_INTERVAL
 #define CLEAN_CKP_INTERVAL 1000
+#endif
 
 /// This defines the type with whom timestamps are represented
 typedef double simtime_t;

@@ -49,7 +49,9 @@
 #define BLOCKED_STATE			0x01000
 #define is_blocked_state(state)	(bool)(state & BLOCKED_STATE)
 
+#ifndef ONGVT_PERIOD
 #define ONGVT_PERIOD 200
+#endif
 
 struct __bucket_node;
 

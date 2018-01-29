@@ -424,6 +424,7 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 #if REVERSIBLE == 1
 	unsigned int mode;
 #endif	
+	unsigned long long tmp;
 	queue_clean();//che succede se lascio le parentesi ad una macro?
 	
 	(void)safety;
@@ -441,12 +442,13 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 #endif
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);		
 #if REPORT == 1              
+		tmp = clock_timer_value(event_processing_time);
 		if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
 			statistics_post_data(tid, EVENTS_SAFE, 1);
-			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing_time));
+			statistics_post_data(tid, CLOCK_SAFE, tmp);
 		}else{
 			statistics_post_data(tid, EVENTS_SAFE_SILENT, 1);
-			statistics_post_data(tid, CLOCK_SAFE_SILENT, clock_timer_value(event_processing_time));
+			statistics_post_data(tid, CLOCK_SAFE_SILENT, tmp);
 		}
 #endif
 #if REVERSIBLE == 1
@@ -562,7 +564,7 @@ void thread_loop(unsigned int thread_id) {
 			
 #if REPORT == 1              
 			statistics_post_data(tid, EVENTS_ROLL, 1);
-			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
+			//statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(rollback_time));
 #endif
 			LPS[current_lp]->state = old_state;
 		}

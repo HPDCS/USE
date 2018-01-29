@@ -280,7 +280,7 @@ bool mm_safe(unsigned int * volatile prune_array, unsigned int threads, unsigned
 {
 	unsigned int i = 0;
 	unsigned int flag = 1;
-	if(++prune_count < 10)// TODO
+	if(++prune_count < PRUNE_PERIOD)// TODO
 		return false;
 
 	

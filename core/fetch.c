@@ -240,7 +240,7 @@ unsigned int fetch_internal(){
     while(node != NULL){
 			
 #if DEBUG == 1
-		if(++c%50000==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
+		if(++c%1500==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
 #endif
 
 		from_get_next_and_valid = false;
@@ -324,7 +324,7 @@ unsigned int fetch_internal(){
 					local_next_evt->frame = tid;
 					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
 					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
-					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_MSG; //
+					local_next_evt->state = ANTI_MSG; //__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);
 					set_commit_state_as_banana(local_next_evt); //non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
 					local_next_evt = list_next(lp_ptr->bound);
 				}
