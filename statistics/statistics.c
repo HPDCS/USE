@@ -215,6 +215,24 @@ inline void statistics_post_th_data(unsigned int tid, int type, stat64_t value) 
 
 void gather_statistics() {
 	unsigned int i;
+
+	// Aggregate per thread
+	for(i = 0; i < n_cores; i++) {
+		system_stats->events_committed     += thread_stats[i].events_committed;
+		
+		system_stats->counter_prune        += thread_stats[i].counter_prune;
+		//system_stats->counter_ongvt        += thread_stats[i].counter_ongvt;
+
+		//system_stats->clock_enqueue        += thread_stats[i].clock_enqueue;
+		//system_stats->clock_dequeue        += thread_stats[i].clock_dequeue;
+		//system_stats->clock_deq_lp         += thread_stats[i].clock_deq_lp;
+		system_stats->clock_loop           += thread_stats[i].clock_loop;
+		system_stats->clock_prune          += thread_stats[i].clock_prune;
+		system_stats->clock_loop           += thread_stats[i].clock_loop;
+	}
+
+	system_stats->clock_prune /= system_stats->counter_prune;
+	system_stats->clock_loop /= n_cores;
 	
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
@@ -290,7 +308,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Stashed events..................................: %.2f (%.2f%%)\n",
 		stats->events_stash, percentage(stats->events_stash, stats->events_total));
 #endif
-	printf("Reprocessed events..............................: %.2f (%.2f%%)\n",
+	printf("Silent events...................................: %.2f (%.2f%%)\n",
 		stats->events_silent, percentage(stats->events_silent, stats->events_total));
 	printf("Flushed events..................................: %.2f (%.2f%%)\n",
 		stats->events_enqueued, percentage(stats->events_enqueued, stats->events_total));
@@ -300,7 +318,7 @@ static void _print_statistics(struct stats_t *stats) {
 	
 	printf("\n");
 	
-	printf("Useless work....................................: %.2f\n", stats->events_total - stats->events_silent - stats->total_frames);
+	printf("Useless work....................................: %.2f events\n", stats->events_total - stats->events_silent - stats->total_frames);
 
 	printf("\n");
 
@@ -321,7 +339,7 @@ static void _print_statistics(struct stats_t *stats) {
 		stats->clock_recovery, percentage(stats->clock_recovery, stats->clock_rollback));
 	printf("Checkpoint time.................................: %.2f clocks (%.2f%%)\n",
 		stats->clock_checkpoint, percentage(stats->clock_checkpoint, stats->clock_rollback));
-	printf("Checkpoint mem..................................: %.2f Bytes\n", stats->mem_checkpoint);
+	printf("Checkpoint mem..................................: %.2f B\n", stats->mem_checkpoint);
 	printf("Checkpoint recalculations.......................: %.2f\n", stats->counter_checkpoint_recalc);
 	printf("Checkpoint period...............................: %.2f\n", stats->checkpoint_period);
 
