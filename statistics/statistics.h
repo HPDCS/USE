@@ -38,7 +38,7 @@
 #define STAT_EVENT_SILENT           104        /// Average time to execute the silent execution phase
 #define STAT_EVENT_COMMIT           105        /// Number of commits
 #define STAT_EVENT_FETCHED          106        /// Number of events fetched
-#define STAT_EVENT_FLUSHED          107        /// Number of events flushed
+#define STAT_EVENT_ENQUEUE          107        /// Number of events flushed
 #define STAT_EVENT_UNDO             108        /// Number of events flushed
 #define STAT_EVENT_ANTI             109        /// Number of canceled events already treated
 
@@ -66,6 +66,7 @@
 #define STAT_ROLLBACK               305        /// Number of rollback operations
 #define STAT_CKPT_RECALC            306        /// Number of recalculation operations done
 #define STAT_CKPT_PERIOD            307        /// Average value of the checkpoint interval
+#define STAT_ONGVT                  308        /// Average value of the checkpoint interval
 
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
@@ -79,10 +80,9 @@ struct stats_t {
     stat64_t events_committed;
     stat64_t events_reverse;
     stat64_t events_stash;
-    stat64_t events_silent;//PADS2018
     stat64_t events_fetched;
-    stat64_t events_flushed;
-    stat64_t events_reprocessed;
+    stat64_t events_enqueued;
+    stat64_t events_silent;
     stat64_t events_undo;
     stat64_t events_anti;
 
@@ -92,6 +92,7 @@ struct stats_t {
     stat64_t counter_prune;
     stat64_t counter_safety_check;
     stat64_t counter_checkpoint_recalc;
+    stat64_t counter_ongvt;
     
     stat64_t clock_event;
     stat64_t clock_fetch;
@@ -111,6 +112,8 @@ struct stats_t {
 
     stat64_t mem_checkpoint;
     stat64_t checkpoint_period;
+
+    stat64_t total_frames;
 } __attribute__((aligned (64)));
 
 
@@ -168,8 +171,8 @@ void print_statistics();
 
 //void statistics_post_data(int lid, int type, stat64_t value);
 
-void statistics_post_lp_data(int lid, int type, stat64_t value);
+void statistics_post_lp_data(unsigned int lid, int type, stat64_t value);
 
-void statistics_post_th_data(int lid, int type, stat64_t value);
+void statistics_post_th_data(unsigned int lid, int type, stat64_t value);
 
 #endif // _STATISTICS_H_

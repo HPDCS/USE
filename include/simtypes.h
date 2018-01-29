@@ -15,6 +15,10 @@
 
 #define current_LP_lvt bound->timestamp //used to retrieve the current LVT TODO: usare questo metodo o inserire il campo nella struttura?
 
+#ifndef CLEAN_CKP_INTERVAL
+#define CLEAN_CKP_INTERVAL 1000
+#endif
+
 /// This defines the type with whom timestamps are represented
 typedef double simtime_t;
 
@@ -107,6 +111,8 @@ typedef struct _LP_state {
 	
 	simtime_t commit_horizon_ts;
 	unsigned long long commit_horizon_tb;
+	
+	unsigned int until_clean_ckp;
 
 } LP_state;
 

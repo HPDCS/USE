@@ -21,6 +21,11 @@
 
 typedef struct __msg_t msg_t;
 
+typedef struct __temp_thread_pool {
+	unsigned int _thr_pool_count;
+	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
+} __temp_thread_pool;
+
 void queue_init(void);
 
 void queue_insert(unsigned int receiver, double timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
@@ -28,8 +33,6 @@ void queue_insert(unsigned int receiver, double timestamp, unsigned int event_ty
 //unsigned int queue_pool_size(void);
 
 void queue_deliver_msgs(void);
-
-extern void events_garbage_collection(simtime_t commit_time);
 
 //void queue_destroy(void);
 
@@ -48,12 +51,14 @@ extern nb_calqueue* nbcalqueue;
 extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
 extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
 extern __thread bool  safe;
+extern __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 extern volatile unsigned int *lp_lock;
 extern __thread unsigned long long * lp_unsafe_set;
 extern __thread unsigned long long * lp_unsafe_set_debug;
 extern __thread unsigned int unsafe_events;
 extern __thread list(msg_t) to_remove_local_evts;
+extern __thread list(msg_t) to_remove_local_evts_old;
 extern __thread list(msg_t) freed_local_evts;
 
 #endif

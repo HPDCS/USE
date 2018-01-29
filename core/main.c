@@ -41,25 +41,27 @@ void start_simulation() {
 
 
     printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
-#if SPERIMENTAL == 1
-    printf("\t- SPERIMENTAL features enabled.\n");
-#endif
-#if PREEMPTIVE == 1
-    printf("\t- PREEMPTIVE event realease enabled.\n");
-#endif
+//#if SPERIMENTAL == 1
+//    printf("\t- SPERIMENTAL features enabled.\n");
+//#endif
+//#if PREEMPTIVE == 1
+//    printf("\t- PREEMPTIVE event realease enabled.\n");
+//#endif
 #if DEBUG == 1
     printf("\t- DEBUG mode enabled.\n");
 #endif
     printf("\t- DYMELOR enabled.\n");
     printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
+    printf("\t- CHECKPOINT PERIOD %u\n", CHECKPOINT_PERIOD);
+    printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", CLEAN_CKP_INTERVAL);
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif
-#if REVERSIBLE == 1
-    printf("\t- SPECULATIVE SIMULATION\n");
-#else
-    printf("\t- CONSERVATIVE SIMULATION\n");
-#endif
+//#if REVERSIBLE == 1
+//    printf("\t- SPECULATIVE SIMULATION\n");
+//#else
+//    printf("\t- CONSERVATIVE SIMULATION\n");
+//#endif
     printf("\n" COLOR_RESET);
 
     //Child thread

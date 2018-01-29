@@ -191,7 +191,7 @@ char *__list_insert_tail_by_node(void *li, struct rootsim_list_node* new_n) {
 	size_t size_before = l->size;
 
 	// Is the list empty?
-	if(l->size == 0) {
+	if(l->head == NULL) {
 		l->head = new_n;
 		l->tail = new_n;
 		goto insert_end;
@@ -833,26 +833,72 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 
 }
 
-
-
 void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct rootsim_list *free_list) {
-	char *ptr;
+	char *memory_nodes;
+	struct rootsim_list_node *tmp_node;
+	unsigned int i = 0;
 
-	// DEBUG: il seguente snippet serve per riusare i nodi della lista interna
-	// tuttavia questa ottimizzazione richiede la gestione complementare del
-	// buffer interno dentro la 'prune()'
-	if(free_list->head != NULL){ 
-		return 	list_extract_given_node(lid, free_list, free_list->head);
+	(void) size;
+
+	//Se la coda locale è vuota, la fillo!
+	if(free_list->head == NULL){
+		//size_t node_size = sizeof(struct rootsim_list_node) + size;//multiplo di 64
+		//
+		//while((++i)*CACHE_LINE_SIZE < node_size);
+		//node_size = (i)*CACHE_LINE_SIZE;
+		
+		if(posix_memalign((void**)&memory_nodes, CACHE_LINE_SIZE, (/*node_size*/node_size_msg_t)*LIST_NODE_PER_ALLOC) != 0){
+			printf("List nodes allocation failed\n");
+			abort();
+		}
+		
+		for(i = 0; i < LIST_NODE_PER_ALLOC; i++){
+			tmp_node = (struct rootsim_list_node *) memory_nodes;
+			tmp_node->next = tmp_node->prev = NULL;
+			
+			__list_insert_tail_by_node(free_list, tmp_node);//da fare in loco
+			memory_nodes += (/*node_size*/node_size_msg_t);
+		}
 	}
-	ptr = list_allocate_node(lid, size);
 
-	if(ptr == NULL)
-		return NULL;
-
-	return (void *)(ptr + sizeof(struct rootsim_list_node));
+//	if(free_list->head != NULL){ 
+		return 	list_extract_given_node(lid, free_list, free_list->head->data);
+//	}
+	
+	printf("DEAD CODE!");
+	
+	//ptr = list_allocate_node(lid, size);
+	//
+	//if(ptr == NULL)
+	//	return NULL;
+	//
+	//return (void *)(ptr + sizeof(struct rootsim_list_node));
 }
 
+void __list_insert_tail_by_nodes(void *li, size_t size, struct rootsim_list_node* first, struct rootsim_list_node* last) {
+//Nota: la size va a quel paese
+	rootsim_list *l = (rootsim_list *)li;
 
+//	assert(l);
+//	size_t size_before = l->size;
+
+	// Is the list empty?
+	if(l->head == NULL) {
+		assert(l->tail==NULL);
+		first->prev = NULL;
+		l->head = first;
+	}
+	else{
+		first->prev = l->tail;
+		l->tail->next = first;
+	}
+	last->next = NULL;
+	l->tail = last;
+
+	l->size += size;
+//	assert(l->size == (size_before + 1));
+//	return new_n->data;
+}
 
 void * list_next_f(void * ptr) {//DEBUG
 	struct rootsim_list_node *__nextptr = list_container_of(ptr)->next;

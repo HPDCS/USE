@@ -40,6 +40,7 @@
 #define MAX_PATHLEN			512
 
 
+__thread simtime_t local_gvt = 0;
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -64,7 +65,7 @@ unsigned int check_ongvt_period = 0;
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
 				fetch_timer,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
-				event_processing_time,		//OK: cattura il tempo per processare un evento safe 
+				event_processing_timer,		//OK: cattura il tempo per processare un evento safe 
 				queue_op,
 				rollback_timer
 #if REVERSIBLE == 1
@@ -97,6 +98,10 @@ LP_state **LPS = NULL;
 //used to check termination conditions
 bool stop = false;
 unsigned long long *sim_ended;
+
+
+size_t node_size_msg_t;
+size_t node_size_state_t;
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -180,6 +185,21 @@ inline void SetState(void *ptr) { //può diventare una macro?
 	ParallelSetState(ptr); 
 }
 
+void nodes_init(){
+		size_t tmp_size;
+		unsigned int i;
+		
+		i = 0;
+		tmp_size = sizeof(struct rootsim_list_node) + sizeof(msg_t);//multiplo di 64
+		while((++i)*CACHE_LINE_SIZE < tmp_size);
+		node_size_msg_t = (i)*CACHE_LINE_SIZE;
+		
+		i = 0;
+		tmp_size = sizeof(struct rootsim_list_node) + sizeof(state_t);//multiplo di 64
+		while((++i)*CACHE_LINE_SIZE < tmp_size);
+		node_size_state_t = (i)*CACHE_LINE_SIZE;
+}
+
 void LPs_metada_init() {
 	unsigned int i;
 	int lp_lock_ret;
@@ -188,7 +208,7 @@ void LPs_metada_init() {
 	//rootsim_config.gvt_time_period = 1000;
 	//rootsim_config.scheduler = SMALLEST_TIMESTAMP_FIRST;
 	rootsim_config.checkpointing = PERIODIC_STATE_SAVING;
-	rootsim_config.ckpt_period = 10;
+	rootsim_config.ckpt_period = 100;
 	rootsim_config.gvt_snapshot_cycles = 2;
 	rootsim_config.simulation_time = 0;
 	//rootsim_config.lps_distribution = LP_DISTRIBUTION_BLOCK;
@@ -218,7 +238,7 @@ void LPs_metada_init() {
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i+1; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
-		LPS[i]->ckpt_period 			= 10;
+		LPS[i]->ckpt_period 			= CHECKPOINT_PERIOD;
 		LPS[i]->from_last_ckpt 			= 0;
 		LPS[i]->state_log_forced  		= false;
 		LPS[i]->current_base_pointer 	= NULL;
@@ -228,6 +248,7 @@ void LPs_metada_init() {
 		LPS[i]->mark 					= 0;
 		LPS[i]->epoch 					= 1;
 		LPS[i]->num_executed_frames		= 0;
+		LPS[i]->until_clean_ckp			= 0;
 
 	}
 	
@@ -302,6 +323,8 @@ void check_OnGVT(unsigned int lp_idx){
 		rollback(lp_idx, INFTY, UINT_MAX);
 		//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
 		LPS[lp_idx]->state = old_state;
+
+		statistics_post_lp_data(lp_idx, STAT_ONGVT, 1);
 	}
 }
 
@@ -332,6 +355,8 @@ void round_check_OnGVT(){
 
 void init_simulation(unsigned int thread_id){
 	tid = thread_id;
+	int i = 0;
+
 	
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
@@ -343,9 +368,18 @@ void init_simulation(unsigned int thread_id){
 	// Initialize the set ??
 	unsafe_set_init();
 
+	for(;i<THR_POOL_SIZE;i++)
+	{
+		_thr_pool.messages[i].father = 0;
+	}
+	_thr_pool._thr_pool_count = 0;
 
 	to_remove_local_evts = new_list(tid, msg_t);
+	to_remove_local_evts_old = new_list(tid, msg_t);
 	freed_local_evts = new_list(tid, msg_t);
+
+
+
 	
 	if(tid == 0){
 		LPs_metada_init();
@@ -353,6 +387,7 @@ void init_simulation(unsigned int thread_id){
 		statistics_init();
 		queue_init();
 		numerical_init();
+		nodes_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
@@ -371,6 +406,7 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->num_executed_frames++;
 			LPS[current_lp]->state_log_forced = true;
 			LogState(current_lp);
+			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Serve per tirare fuori l'INIT dalla timeline
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
 			LPS[current_lp]->until_ckpt_recalc = 0;
@@ -390,6 +426,8 @@ void init_simulation(unsigned int thread_id){
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
 //LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
 //inoltre, se passiamo solo il msg_t, possiamo evitare di passare gli altri parametri...era stato fatto così per mantenere il parallelismo con ProcessEvent
+stat64_t execute_time;
+
 #if REVERSIBLE == 1
 	unsigned int mode;
 #endif	
@@ -405,31 +443,33 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 	mode = 1;// ← ASK_EXECUTION_MODE_TO_MATH_MODEL(LP, evt.ts)
 	if (safety || mode == 1){
 #endif
+
 #if REPORT == 1 
-		clock_timer_start(event_processing_time);
+		clock_timer_start(event_processing_timer);
 #endif
-		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);		
-#if REPORT == 1              
-		if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
-			statistics_post_lp_data(LP, STAT_EVENT, 1);
-			statistics_post_lp_data(LP, STAT_CLOCK_EVENT, clock_timer_value(event_processing_time));
-		}else{
-			statistics_post_lp_data(LP, STAT_EVENT_SILENT, 1);
-			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, clock_timer_value(event_processing_time));
+
+		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+
+#if REPORT == 1
+		execute_time = clock_timer_value(event_processing_timer);
+
+		statistics_post_lp_data(LP, STAT_EVENT, 1);
+		statistics_post_lp_data(LP, STAT_CLOCK_EVENT, execute_time);
+
+		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
+			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
 		}
 #endif
+
 #if REVERSIBLE == 1
 	}
-	else{
-#if REPORT == 1 
-		clock_timer_start(stm_event_processing_time);			
-		statistics_post_lp_data(LP, STAT_EVENT_REV, 1);
-#endif
+	else {
 		event->previous_seed = LPS[current_lp]->seed; //forse lo farei a prescindere mettendolo a fattor comune...son dati in cache
 		event->revwin = revwin_create();
 		revwin_reset(event->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 		ProcessEvent_reverse(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 #if REPORT == 1 
+		statistics_post_lp_data(LP, STAT_EVENT_REV, 1);
 		statistics_post_lp_data(LP, STAT_CLOCK_REV, clock_timer_value(stm_event_processing_time));
 		clock_timer_start(stm_safety_wait);
 #endif
@@ -464,11 +504,6 @@ void thread_loop(unsigned int thread_id) {
 		}
 		empty_fetch = 0;
 
-#if REPORT == 1
-		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED, 1);
-		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH, (double)clock_timer_value(fetch_timer));
-#endif
-
 		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
 
@@ -477,6 +512,12 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+
+#if REPORT == 1
+		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED, 1);
+		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH, (double)clock_timer_value(fetch_timer));
+#endif
 
 	#if DEBUG == 1
 		if(!haveLock(current_lp)){//DEBUG
@@ -514,6 +555,10 @@ void thread_loop(unsigned int thread_id) {
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
+#if REPORT == 1 
+			clock_timer_start(rollback_timer);
+#endif
+
 		#if DEBUG == 1
 			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
@@ -521,18 +566,17 @@ void thread_loop(unsigned int thread_id) {
 		#endif
 
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-
+			
 			LPS[current_lp]->state = old_state;
 
-			statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
+			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
+			if(current_evt_state != ANTI_MSG) {
+				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
+			}
 		}
 
 		if(current_evt_state == ANTI_MSG) {
 			current_msg->monitor = (void*) 0xba4a4a;
-
-		#if DEBUG == 1
-			assert(!list_is_connected(LPS[current_lp]->queue_in, current_msg));
-		#endif
 
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 
@@ -582,23 +626,20 @@ void thread_loop(unsigned int thread_id) {
 		LogState(current_lp);
 		
 #if DEBUG == 1
-		if((unsigned int)current_msg->node & 0x1){
+		if((unsigned long long)current_msg->node & 0x1){
 			printf(RED("A - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
 			print_event(current_msg);
 			gdb_abort;				
 		}
 #endif
-		
-		
 		///* PROCESS *///
-		// Execute the event in the proper modality
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
 		///* FLUSH */// 
 		queue_deliver_msgs();
 
 #if DEBUG == 1
-		if((unsigned int)current_msg->node & 0x1){
+		if((unsigned long long)current_msg->node & 0x1){
 			printf(RED("B - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
 			print_event(current_msg);
 			gdb_abort;				
@@ -620,6 +661,11 @@ void thread_loop(unsigned int thread_id) {
 		}else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
 			check_OnGVT(current_lp);	
 		}
+		
+		if(safe && (++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0) ){
+				clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
+		}
+		
 
 	#if DEBUG == 0
 		unlock(current_lp);
@@ -633,25 +679,26 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(queue_op);
 #endif
 
+		
+		//COMMIT SAFE EVENT
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 		}
-		nbc_prune();
-		//events_garbage_collection(commit_time);
 
 #if REPORT == 1
-		statistics_post_lp_data(current_lp, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
-		statistics_post_lp_data(current_lp, STAT_PRUNE_COUNTER, 1);
+		statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
+		statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
 #endif
 		
 end_loop:
-
+		//CHECK END SIMULATION
 		if(start_periodic_check_ongvt)
 			if(check_ongvt_period++ % 100 == 0){
-				while(!tryLock(last_checked_lp));
-				check_OnGVT(last_checked_lp);
-				unlock(last_checked_lp);
-				last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+				if(tryLock(last_checked_lp)){
+					check_OnGVT(last_checked_lp);
+					unlock(last_checked_lp);
+					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+				}
 			}
 
 		if(is_end_sim(current_lp)){
@@ -659,7 +706,12 @@ end_loop:
 				__sync_bool_compare_and_swap(&stop, false, true);
 			}
 		}
+
 		
+		//LOCAL LISTS PRUNING
+		nbc_prune();
+		
+		//PRINT REPORT
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
 			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
@@ -669,7 +721,7 @@ end_loop:
 		}
 	}
 #if REPORT == 1
-	statistics_post_lp_data(current_lp, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
+	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
 
 
@@ -682,5 +734,11 @@ end_loop:
 	} else if (stop){
 		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
+		if(tid==0){
+			unsigned int i, frames = 0;
+			for(i = 0; i< n_prc_tot; i++)
+				frames += LPS[i]->num_executed_frames;
+			printf("Total correctly executed frames: %u\n", frames);
+		}
 	}
 }

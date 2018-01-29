@@ -296,8 +296,8 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	msg_t *last_restored_event;
 	msg_t * bound_next;
 	unsigned int reprocessed_events;
-	unsigned long long starting_frame;
-	unsigned int avg_events_btw_rollback;
+	//unsigned long long starting_frame;
+	//unsigned int avg_events_btw_rollback;
 
 	clock_timer rollback_timer;
 
@@ -317,11 +317,12 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		}
 	}
 
-	statistics_post_lp_data(lid, STAT_ROLLBACK, 1.0);
 	clock_timer_start(rollback_timer);
 
 	// Find the state to be restored, and prune the wrongly computed states
 	restore_state = list_tail(LPS[lid]->queue_states);
+	
+	assert(restore_state!=NULL);
 
 	// It's >= rather than > because we have NOT taken into account simultaneous events YET
 	while (restore_state != NULL && 
@@ -334,6 +335,12 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 			list_delete_by_content(lid, LPS[lid]->queue_states, s);
 		}
 	}
+	
+//	if(restore_state->lvt != restore_state->last_event->timestamp){ //DEBUG
+//		printf("Il checkpoint è sputtanato!\n");
+//		gdb_abort;
+//	}
+	
 	// Restore the simulation state and correct the state base pointer
 	log_restore(lid, restore_state);
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
@@ -346,11 +353,14 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	if(LPS[lid]->state == LP_STATE_ROLLBACK){
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		LPS[lid]->epoch++;
+		// TODO
+		//LPS[lid]->from_last_ckpt = ??;
+
+		//statistics_post_lp_data(lid, STAT_ROLLBACK, 1);
+		statistics_post_lp_data(lid, STAT_CLOCK_ROLLBACK, (double)clock_timer_value(rollback_timer));
 	}
 
 	LPS[lid]->state = restore_state->state;
-
-	statistics_post_lp_data(lid, STAT_CLOCK_ROLLBACK, (double)clock_timer_value(rollback_timer));
 }
 
 
@@ -459,3 +469,78 @@ void force_LP_checkpoint(unsigned int lid) {
 	LPS[lid]->state_log_forced = true;
 }
 
+
+
+
+
+void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
+	state_t *to_state, *tmp_state=NULL;
+	msg_t *from_msg, *to_msg=NULL, *tmp_msg=NULL;
+
+	(void) tmp_msg;
+	
+	from_msg = list_head(LPS[lid]->queue_in);
+	to_state = list_tail(LPS[lid]->queue_states);
+
+
+	assert(to_state!=NULL);
+
+	while (to_state != NULL && (to_state->last_event->timestamp) >= commit_horizon){
+		to_state = list_prev(to_state);
+	}//to_state è l'ultimo checkpoint da tenere
+	
+	if(to_state != NULL){//dobbiamo prendere uno stato in più per l'OnGvt
+		to_state = list_prev(to_state);
+	}
+	
+	if(to_state != NULL){
+		to_msg = list_prev(to_state->last_event); //ultimo evento da buttare
+	
+		///Rimozione msg dalla vecchia lista
+		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
+		list_container_of(to_state->last_event)->prev = NULL; 
+		
+	
+		to_state = list_prev(to_state); //ultimo checkpoint da buttare
+		//if(to_state != NULL)
+		//	to_msg = to_state->last_event;
+	}
+
+	//Rimozione Stati
+	while (to_state != NULL){ //TODO: aggiungere tie_breaker e mettere solo >
+		tmp_state = list_prev(to_state);
+		log_delete(to_state->log);
+		to_state->last_event = (void *)0xBABEBEEF;
+		list_delete_by_content(lid, LPS[lid]->queue_states, to_state); //<-migliorabile
+		to_state = tmp_state;
+	}
+	
+	//while(to_msg != NULL){
+	//	tmp_msg = list_prev(to_msg);
+	//	list_extract_given_node(tid, ((struct rootsim_list*)LPS[lid]->queue_in), to_msg);
+	//	list_node_clean_by_content(to_msg); //NON DOVREBBE SERVIRE
+	//	list_insert_tail_by_content(to_remove_local_evts, to_msg);
+	//	to_msg = tmp_msg;
+	//}
+	
+	
+	
+	//Aggancio alla nuova lista
+	if(to_msg != NULL){
+		//LA SIZE VA A QUEL PAESE
+		list_container_of(to_msg)->next = NULL;
+		if(((struct rootsim_list*)to_remove_local_evts)->tail != NULL){//ovvero la coda è vuota
+			((struct rootsim_list*)to_remove_local_evts)->tail->next = list_container_of(from_msg);			
+		}
+		else{
+			((struct rootsim_list*)to_remove_local_evts)->head = list_container_of(from_msg);
+		}
+		
+		list_container_of(from_msg)->prev = ((struct rootsim_list*)to_remove_local_evts)->tail;
+		((struct rootsim_list*)to_remove_local_evts)->tail = list_container_of(to_msg);
+	}
+	
+	
+	assert(list_tail(LPS[lid]->queue_states)!=NULL);
+	
+}

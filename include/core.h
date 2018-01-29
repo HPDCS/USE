@@ -49,7 +49,9 @@
 #define BLOCKED_STATE			0x01000
 #define is_blocked_state(state)	(bool)(state & BLOCKED_STATE)
 
+#ifndef ONGVT_PERIOD
 #define ONGVT_PERIOD 200
+#endif
 
 struct __bucket_node;
 
@@ -85,11 +87,15 @@ typedef struct _simulation_configuration {
 
 extern simulation_configuration rootsim_config;
 extern __thread simtime_t current_lvt;
+extern __thread simtime_t local_gvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
 extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
+
+extern size_t node_size_msg_t;
+extern size_t node_size_state_t;
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;

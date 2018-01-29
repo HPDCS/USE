@@ -118,17 +118,19 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 	msg_t  * bound_ptr = lp_ptr->bound;
 
 	if(!is_valid(event)){//DEBUG
-		printf(RED("IS NOT VALID "));
+		printf(RED("IS NOT VALID"));
 		print_event(event);
 	}
 #endif
 
 	(void)event;
 	
+	event->monitor = (void*)0x5AFE;
+	
 	if(node == NULL){
 		return false;
 	}
-	
+					
 	if(node != (void*) 0xbadc0de && delete(nbcalqueue, node)){
 		if(LPS[lp_idx]->commit_horizon_ts<node->timestamp  //non sono sotto lock, non è sicuro così
 			|| (LPS[lp_idx]->commit_horizon_ts==node->timestamp && LPS[lp_idx]->commit_horizon_tb<node->counter) 
@@ -136,15 +138,19 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 				LPS[lp_idx]->commit_horizon_ts = node->timestamp; //time min ← evt.ts
 				LPS[lp_idx]->commit_horizon_tb = node->counter;	
 		}
+		
 	#if DEBUG == 1
 		//event->node = 0x5AFE;                //DEBUG
-		assert(__sync_val_compare_and_swap(&event->monitor, 0x0, 0x5AFE) == 0x0);
+		//assert(__sync_val_compare_and_swap(&event->monitor, 0x0, 0x5AFE) == 0x0);
 		//event->monitor = 0x5AFE;
 		event->local_next 		= bound_ptr;       //DEBUG
 		event->local_previous 	= (void*) node;        //DEBUG
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
 		event->deletion_time 	= CLOCK_READ();
 #endif
+
+		statistics_post_th_data(tid, STAT_EVENT_COMMIT, 1);
+
 		return true;
 	}
 	return false;
@@ -152,20 +158,40 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 
 
-#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);	unlock(lp_idx);	/* goto get_next; */	}
-#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);			unlock(lp_idx);	/* goto get_next; */	}
-#define do_skip_inside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx);\
-																	read_new_min = false;\
-																	unlock(lp_idx); /* goto get_next; */	}
+#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)			{	commit_event(event,node,lp_idx);\
+																			unlock(lp_idx);	/* goto get_next; */	}
+		
+#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)			{	delete(nbcalqueue, node);\
+																			unlock(lp_idx);	/* goto get_next; */	}
+																			
+#define do_skip_inside_lock_and_goto_next(lp_idx)						{	add_lp_unsafe_set(lp_idx);\
+																			read_new_min = false;\
+																			unlock(lp_idx); /* goto get_next; */	}
+		
+#define return_evt_to_main_loop()										{	assert(event->monitor != (void*) 0xBA4A4A);\
+																			break; 	}
+		
+#define do_commit_outside_lock_and_goto_next(event,node,lp_idx)			{	commit_event(event,node,lp_idx);\
+																			goto get_next;	}
+		
+#define do_remove_outside_lock_and_goto_next(event,node,lp_idx)			{	delete(nbcalqueue, node);\
+																			goto get_next;	}
+		
+#define do_skip_outside_lock_and_goto_next(lp_idx)						{	add_lp_unsafe_set(lp_idx);\
+																			read_new_min = false;\
+																			goto get_next; 	}
 
-#define return_evt_to_main_loop()								{	assert(event->monitor != (void*) 0xBA4A4A);	break; 	}
+#define do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx)	{	if(delete(nbcalqueue, node)){\
+																				list_node_clean_by_content(event);\
+																				list_insert_tail_by_content(to_remove_local_evts, event);\
+																			}\
+																			goto get_next;	}
 
-
-#define do_commit_outside_lock_and_goto_next(event,node,lp_idx)	{	commit_event(event,node,lp_idx);					goto get_next;	}
-#define do_remove_outside_lock_and_goto_next(event,node,lp_idx)	{	delete(nbcalqueue, node);							goto get_next;	}
-#define do_skip_outside_lock_and_goto_next(lp_idx)				{	add_lp_unsafe_set(lp_idx);\
-																	read_new_min = false;\
-																	goto get_next; 	}
+#define do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx)	{	if(delete(nbcalqueue, node)){\
+																				list_node_clean_by_content(event);\
+																				list_insert_tail_by_content(to_remove_local_evts, event);\
+																			}\
+																			unlock(lp_idx);	/* goto get_next; */	}
 
 
 
@@ -187,7 +213,7 @@ unsigned int fetch_internal(){
 	double bucket_width;
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
-	bool validity, in_past, read_new_min = true;
+	bool validity, in_past, read_new_min = true, from_get_next_and_valid;
 #if DEBUG == 1
 	unsigned int c = 0;
 #endif
@@ -196,7 +222,7 @@ unsigned int fetch_internal(){
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
 		return 0;
-
+		
 	//used by get_next
 	bucket_width = h->bucket_width;
 	bucket = hash(node->timestamp, bucket_width);
@@ -210,11 +236,18 @@ unsigned int fetch_internal(){
 	
 	min = min_node->timestamp;
 		
+	if(local_gvt < min){
+		local_gvt = min;
+	}
+		
     while(node != NULL){
 			
 #if DEBUG == 1
-		if(++c%50000==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
+		if(++c%1500==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
 #endif
+
+		from_get_next_and_valid = false;
+
 		event = (msg_t *)node->payload;		// Event under exploration
 		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
@@ -258,8 +291,8 @@ unsigned int fetch_internal(){
 				curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
 			}
 			///* DELETE ELIMINATED *///
-			if(curr_evt_state == ELIMINATED){//if(curr_evt_state == ELIMINATED){
-				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
+			if(curr_evt_state == ELIMINATED){
+				do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED	
 			}
 			///* DELETE BANANA NODE *///
 			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){
@@ -291,8 +324,10 @@ unsigned int fetch_internal(){
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
-					list_place_after_given_node_by_content(TID, to_remove_local_evts, local_next_evt, ((rootsim_list *)to_remove_local_evts)->head->data);
-					__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);//local_next_evt->state = ANTI_MSG; //
+					local_next_evt->frame = tid;
+					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
+					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
+					local_next_evt->state = ANTI_MSG; //__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);
 					set_commit_state_as_banana(local_next_evt); //non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
 					local_next_evt = list_next(lp_ptr->bound);
 				}
@@ -312,7 +347,8 @@ unsigned int fetch_internal(){
 					}
 				#endif	
 					event = local_next_evt;
-					node = (void*)0x1;//local_next_evt->node;
+					//node = (void*)0x1;//local_next_evt->node;
+					from_get_next_and_valid = true;
 					ts = event->timestamp;
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
@@ -323,7 +359,7 @@ unsigned int fetch_internal(){
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
 						set_commit_state_as_banana(event);
-						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+						do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx); 		//<<-ELIMINATED
 					}
 					else {
 						return_evt_to_main_loop();
@@ -350,7 +386,7 @@ unsigned int fetch_internal(){
 						return_evt_to_main_loop();
 				}
 				else if(curr_evt_state == ELIMINATED){
-					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED
 				}
 				
 			}
@@ -364,10 +400,7 @@ unsigned int fetch_internal(){
 
 				///* DELETE ELIMINATED *///
 				if( (curr_evt_state & EXTRACTED) == 0 ){
-			#if DEBUG==1	
-					assert(!list_is_connected(LPS[current_lp]->queue_in, event));
-			#endif
-					do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);					//<<-ELIMINATED
 				}
 				else{
 			#if DEBUG==1
@@ -437,9 +470,8 @@ get_next:
  
  	if(node == NULL)
         return 0;
-        
        
- 	if(node == (void*)0x1)
+ 	if(from_get_next_and_valid)
         node = NULL;
  
 #if DEBUG == 1
@@ -457,15 +489,84 @@ get_next:
 }
 
 
-void prune_local_queue_with_ts(simtime_t ts){
-	msg_t *tmp_node;
-	msg_t *current = (msg_t*) ((rootsim_list*)to_remove_local_evts)->head->data;
+void prune_local_queue_with_ts_old(simtime_t ts){
+	msg_t *current = NULL;
+	msg_t *tmp_node = NULL;
+	
+	if(((rootsim_list*)to_remove_local_evts_old)->head != NULL){
+		current = (msg_t*) ((rootsim_list*)to_remove_local_evts_old)->head->data;
+	}
 	while(current!=NULL){
 		tmp_node = list_next(current);
+#if DEBUG==1
+		assert(list_container_of((current))->prev != (void *)0xDDD);
+		assert(list_container_of((current))->next != (void *)0xCCC);
+		assert(current->timestamp==0 || current->max_outgoing_ts != 0);
+#endif
 		if(current->max_outgoing_ts < ts){
-			list_extract_given_node(tid, to_remove_local_evts, current);
-			list_place_after_given_node_by_content(tid, freed_local_evts, current, ((rootsim_list*)freed_local_evts)->head);
+			list_extract_given_node(tid, to_remove_local_evts_old, current);
+#if DEBUG==1
+		
+			if(tmp_node != NULL)	
+				assert(list_prev((tmp_node)) != current);
+#endif
+			list_node_clean_by_content(current); 
+			current->state = -1;
+			current->data_size = tid+1;
+			//free(list_container_of(current));
+			list_insert_tail_by_content(freed_local_evts, current);
+			//list_place_after_given_node_by_content(tid, freed_local_evts, current, ((rootsim_list*)freed_local_evts)->head);
 		}
 		current = tmp_node;
 	}
 }
+
+
+void prune_local_queue_with_ts(simtime_t ts){
+	msg_t *current = NULL;
+	msg_t *tmp_node = NULL;
+
+	msg_t *from = NULL;
+	msg_t *to = NULL;
+	
+	size_t count_nodes= 0;
+	
+
+	if(((rootsim_list*)to_remove_local_evts_old)->head != NULL){
+		current = (msg_t*) ((rootsim_list*)to_remove_local_evts_old)->head->data;
+	}
+	while(current!=NULL){
+		tmp_node = list_next(current);
+		
+		if(current->max_outgoing_ts < ts){
+			from = current;
+			//trovato il primo nodo valido, continuo localmente la ricerca
+			while(current!=NULL && current->max_outgoing_ts < ts){
+				to = current;
+				count_nodes++;
+				current = list_next(current); 
+			}
+			//Stacco dalla vecchia lista
+			if(list_prev(from) != NULL){
+				list_container_of(list_prev(from))->next = list_container_of(to)->next;
+			}else{
+				((rootsim_list*)to_remove_local_evts_old)->head = list_container_of(to)->next;
+			} 
+			if(list_next(to) != NULL){
+				list_container_of(list_next(to))->prev = list_container_of(from)->prev;
+			}else{
+				((rootsim_list*)to_remove_local_evts_old)->tail = list_container_of(from)->prev;
+			}
+			((rootsim_list*)to_remove_local_evts_old)->size -= count_nodes;
+			//Attavvo nella nuova lista
+			list_insert_tail_by_contents(freed_local_evts, count_nodes ,from, to);
+			tmp_node = list_next(to);
+			//resetto i campi
+			to = NULL;
+			from = NULL;
+			count_nodes= 0;
+		}
+		current = tmp_node;
+	}
+}
+

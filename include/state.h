@@ -83,5 +83,7 @@ extern void set_checkpoint_period(unsigned int lid, int period);
 extern void force_LP_checkpoint(unsigned int lid);
 extern unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, simtime_t until_ts, unsigned int tie_breaker);
 extern void checkpoint_interval_recalculate(unsigned int lid);
+extern void clean_checkpoint(unsigned int lid, simtime_t commit_horizon);
+
 #endif /* _STATE_MGNT_H_ */
 

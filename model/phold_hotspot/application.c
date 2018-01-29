@@ -14,13 +14,14 @@
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
-	int 	i, j = 123;
-	//event_content_type new_event;
-	int err;
+	unsigned int 	i, j = 123;
 	unsigned int loops; 
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
 	//timer tm_ex;
+	(void) event_content;
+	(void) size;
+	(void) me;
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
@@ -39,12 +40,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			//	state_ptr = states[me];
 
 			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
-			err = posix_memalign((void **)(&state_ptr), 64, 64);
-			if(err < 0) {
-				printf("memalign failed: (%s)\n", strerror(errno));
-				exit(-1);
-			}
-
+			state_ptr = malloc(sizeof(lp_state_type));
+			
             if(state_ptr == NULL){
 				printf("LP state allocation failed: (%s)\n", strerror(errno));
 				exit(-1);
@@ -120,6 +117,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
+	
+	(void) me;
 	
 	//printf("TOTALE: %u\n", snapshot->events);//da_cancellare
 

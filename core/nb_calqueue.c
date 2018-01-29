@@ -46,6 +46,7 @@
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
+#define LOG_RESIZE 0
 
 #define BOOL_CAS_ALE(addr, old, new)  CAS_x86(\
 										UNION_CAST(addr, volatile unsigned long long *),\
@@ -611,8 +612,10 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 			//free(new_h);
 		}
 #if DEBUG == 1
+	#if LOG_RESIZE == 1
 		else //DEBUG; decommentare
 			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
+	#endif
 #endif
 	}
 }
@@ -1140,7 +1143,6 @@ void nbc_prune(void)
 	
 	if(!mm_safe(prune_array, threads, TID))
 		return;
-		
 	
 	while(to_free_tables_old != NULL)
 	{
@@ -1168,7 +1170,35 @@ void nbc_prune(void)
 	to_free_tables_old = to_free_tables_new;
 	to_free_tables_new = NULL;
 	
+
+	
+	//prune events nodes 
+	prune_local_queue_with_ts(local_gvt);
+	
+	if(((rootsim_list*)to_remove_local_evts)->head != NULL){
+		struct rootsim_list_node* old_tail = ((struct rootsim_list*)to_remove_local_evts_old)->tail;
+		((struct rootsim_list*)to_remove_local_evts_old)->tail = ((struct rootsim_list*)to_remove_local_evts)->tail;
+		
+		if(old_tail == NULL){
+			((struct rootsim_list*)to_remove_local_evts_old)->head = ((struct rootsim_list*)to_remove_local_evts)->head;
+		}
+		else{
+			old_tail->next = ((struct rootsim_list*)to_remove_local_evts)->head;
+			((struct rootsim_list*)to_remove_local_evts)->head->prev = old_tail;
+		}
+		((struct rootsim_list*)to_remove_local_evts_old)->size += ((struct rootsim_list*)to_remove_local_evts)->size;
+		
+		((struct rootsim_list*)to_remove_local_evts)->tail = NULL;
+		((struct rootsim_list*)to_remove_local_evts)->head = NULL;
+		((struct rootsim_list*)to_remove_local_evts)->size = 0;
+		
+	}	
+
+
 	mm_new_era(&malloc_status, prune_array, threads, TID);
+	
+	
+	
 	
 }
 
@@ -1265,7 +1295,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 bool delete(nb_calqueue *queue, nbc_bucket_node* node){
 	nbc_bucket_node *node_next, *tmp;
 	
-	if(node == NULL){
+	if(node == NULL || node==(void*)0x1){ //NOTA: la seconda condizione non dovrebbe più servire
 		return false;
 	}
 	

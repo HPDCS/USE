@@ -57,8 +57,14 @@
 #define MINIMUM_SIZE 1
 
 #define FLUSH_SMART 1
+
+#ifndef ENABLE_EXPANSION
 #define ENABLE_EXPANSION 1
+#endif
+
+#ifndef ENABLE_PRUNE
 #define ENABLE_PRUNE 1
+#endif
 
 #define TID tid
 
@@ -143,6 +149,7 @@ extern void getMinLP_internal(unsigned int lp);
 extern unsigned int getMinFree_internal();
 extern unsigned int fetch_internal();
 extern bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx);
+extern void prune_local_queue_with_ts(simtime_t ts);
 
 
 extern unsigned long long hash(double timestamp, double bucket_width);

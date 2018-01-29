@@ -1,5 +1,11 @@
-* Aggiornamento min (DA RICONTROLLARE; ho anche notato in un paio di run tempi anomali, ma non so se sono dovuti ad altre appl)
-- Uso lista free_events + ottimizzazione in batch
-* (per ora bloccante) ongvt 
-- deliver event 1 sola memcopy
+- Rimozione in Batch da to_remove list
 - rollback intelligente
+- allocazione nodi fuori dal lock 
+
+DONE:
+* Aggiornamento min (DA RICONTROLLARE; ho anche notato in un paio di run tempi anomali, ma non so se sono dovuti ad altre appl)
+* (per ora diciamo non-bloccante) ongvt 
+* Eliminazione Checkpoint
+* Eliminazione eventi in queue_in
+- Eliminazione eventi RMV
+- deliver event 1 sola memcopy
