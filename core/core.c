@@ -55,7 +55,7 @@ __thread struct __bucket_node *current_node = 0x0;
 
 __thread unsigned int last_checked_lp = 0;
 unsigned int start_periodic_check_ongvt = 0;
-unsigned int check_ongvt_period = 0;
+__thread unsigned int check_ongvt_period = 0;
 
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
@@ -494,9 +494,14 @@ void thread_loop(unsigned int thread_id) {
 		
 		///* FETCH *///
 #if REPORT == 1
+		//statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
 		clock_timer_start(fetch_timer);
 #endif
 		if(fetch_internal() == 0) {
+#if REPORT == 1
+			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
+			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
+#endif
 			if(++empty_fetch > 500){
 				round_check_OnGVT();
 			}
@@ -512,12 +517,13 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
-
-
+		
 #if REPORT == 1
-		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED, 1);
-		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH, (double)clock_timer_value(fetch_timer));
+		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
+		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH_SUCC, (double)clock_timer_value(fetch_timer));
 #endif
+
+
 
 	#if DEBUG == 1
 		if(!haveLock(current_lp)){//DEBUG
@@ -686,20 +692,21 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 #if REPORT == 1
-		statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
-		statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
+		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
+		//statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
 #endif
 		
 end_loop:
 		//CHECK END SIMULATION
-		if(start_periodic_check_ongvt)
-			if(check_ongvt_period++ % 100 == 0){
+		if(start_periodic_check_ongvt){
+			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
 				if(tryLock(last_checked_lp)){
 					check_OnGVT(last_checked_lp);
 					unlock(last_checked_lp);
 					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
 				}
 			}
+		}
 
 		if(is_end_sim(current_lp)){
 			if(check_termination()){

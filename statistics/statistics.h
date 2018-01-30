@@ -37,10 +37,13 @@
 #define STAT_EVENT_STASH            103        /// ???
 #define STAT_EVENT_SILENT           104        /// Average time to execute the silent execution phase
 #define STAT_EVENT_COMMIT           105        /// Number of commits
-#define STAT_EVENT_FETCHED          106        /// Number of events fetched
+#define STAT_EVENT_FETCHED          106        /// Number of call to fetched
 #define STAT_EVENT_ENQUEUE          107        /// Number of events flushed
 #define STAT_EVENT_UNDO             108        /// Number of events flushed
 #define STAT_EVENT_ANTI             109        /// Number of canceled events already treated
+#define STAT_EVENT_FETCHED_SUCC     110        /// Number of events fetched
+#define STAT_EVENT_FETCHED_UNSUCC   111        /// Number of fetch failed
+#define STAT_GET_NEXT_FETCH			112		   /// Number of nodes seen during fetch
 
 #define STAT_CLOCK_EVENT            200        /// Average time to execute one event
 #define STAT_CLOCK_ROLLBACK         201        /// Average time to execute one rollback
@@ -57,6 +60,8 @@
 #define STAT_CLOCK_PRUNE            212        /// Average time to execute the prune operation
 #define STAT_CLOCK_SAFETY_CHECK     213        /// Average time to execute the safety check
 #define STAT_CLOCK_BTW_EVT          214        /// Average time between two events
+#define STAT_CLOCK_FETCH_SUCC       215        /// Average time spent to fetch a new event
+#define STAT_CLOCK_FETCH_UNSUCC     216        /// Average time spent to fetch a new event
 
 #define STAT_CKPT                   300        /// Number of checkpoints taken  
 #define STAT_CKPT_TIME              301        /// Average time to take one checkpoint
@@ -80,11 +85,14 @@ struct stats_t {
     stat64_t events_committed;
     stat64_t events_reverse;
     stat64_t events_stash;
-    stat64_t events_fetched;
+    stat64_t events_fetched;		//number of fethc call
+    stat64_t events_fetched_succ;	//number of events fetched
+    stat64_t events_fetched_unsucc;	//number of fetch failed
     stat64_t events_enqueued;
     stat64_t events_silent;
     stat64_t events_undo;
     stat64_t events_anti;
+    stat64_t events_get_next_fetch;
 
     stat64_t counter_rollbacks;
     stat64_t counter_recoveries;
@@ -96,6 +104,8 @@ struct stats_t {
     
     stat64_t clock_event;
     stat64_t clock_fetch;
+    stat64_t clock_fetch_succ;//PADS2018
+    stat64_t clock_fetch_unsucc;//PADS2018
     stat64_t clock_stm_wait;
     stat64_t clock_undo_event;
     stat64_t clock_enqueue;
@@ -105,7 +115,8 @@ struct stats_t {
     stat64_t clock_delete;
     stat64_t clock_prune;
     stat64_t clock_safety_check;
-    stat64_t clock_silent;//PADS2018
+    stat64_t clock_silent;	//PADS2018
+    stat64_t clock_safe;	//PADS2018
     stat64_t clock_recovery;
     stat64_t clock_checkpoint;
     stat64_t clock_rollback;
@@ -114,6 +125,14 @@ struct stats_t {
     stat64_t checkpoint_period;
 
     stat64_t total_frames;
+    
+    
+    stat64_t clock_loop_tot;
+    stat64_t clock_event_tot;
+    stat64_t clock_safe_tot;
+    stat64_t clock_frame_tot;
+    
+    
 } __attribute__((aligned (64)));
 
 

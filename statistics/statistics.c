@@ -90,6 +90,18 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].events_anti += value;
 			break;
 
+		case STAT_EVENT_FETCHED_SUCC:
+			stats[idx].events_fetched_succ += value;
+			break;
+
+		case STAT_EVENT_FETCHED_UNSUCC:
+			stats[idx].events_fetched_unsucc += value;
+			break;
+			
+		case STAT_GET_NEXT_FETCH:
+			stats[idx].events_get_next_fetch += value;
+			break;
+
 
 		// ========= COUNTER STATS ========= //
 		case STAT_PRUNE_COUNTER:
@@ -141,9 +153,9 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].clock_dequeue += value;
 			break;
 
-		case STAT_CLOCK_FETCH:
-			stats[idx].clock_fetch += value;
-			break;
+		//case STAT_CLOCK_FETCH:
+		//	stats[idx].clock_fetch += value;
+		//	break;
 
 		case STAT_CLOCK_DEQ_LP:
 			stats[idx].clock_deq_lp += value;
@@ -195,6 +207,14 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].clock_recovery += value;
 			//stats[idx].clock_recovery /= stats[idx].counter_recoveries;
 			break;
+
+		case STAT_CLOCK_FETCH_SUCC:
+			stats[idx].clock_fetch_succ += value;
+			break;
+
+		case STAT_CLOCK_FETCH_UNSUCC:
+			stats[idx].clock_fetch_unsucc += value;
+			break;
 		
 
 		default:
@@ -229,9 +249,15 @@ void gather_statistics() {
 		system_stats->clock_loop           += thread_stats[i].clock_loop;
 		system_stats->clock_prune          += thread_stats[i].clock_prune;
 		system_stats->clock_loop           += thread_stats[i].clock_loop;
+		
+		system_stats->events_fetched       += thread_stats[i].events_fetched;
+		system_stats->events_fetched_unsucc+= thread_stats[i].events_fetched_unsucc;
+		system_stats->clock_fetch_unsucc   += thread_stats[i].clock_fetch_unsucc;
+		system_stats->events_get_next_fetch+= thread_stats[i].events_get_next_fetch;
 	}
 
 	system_stats->clock_prune /= system_stats->counter_prune;
+	system_stats->clock_loop_tot = system_stats->clock_loop;
 	system_stats->clock_loop /= n_cores;
 	
 	// Aggregate per LP
@@ -243,7 +269,9 @@ void gather_statistics() {
 		system_stats->events_undo          += lp_stats[i].events_undo;
 		system_stats->events_stash         += lp_stats[i].events_stash;
 		system_stats->events_silent        += lp_stats[i].events_silent;
-		system_stats->events_fetched       += lp_stats[i].events_fetched;
+		//system_stats->events_fetched       += lp_stats[i].events_fetched;
+		system_stats->events_fetched_succ  += lp_stats[i].events_fetched_succ;
+		//system_stats->events_fetched_unsucc+= lp_stats[i].events_fetched_unsucc;
 		system_stats->events_enqueued       += lp_stats[i].events_enqueued;
 		system_stats->events_anti          += lp_stats[i].events_anti;
 		
@@ -256,7 +284,9 @@ void gather_statistics() {
 		system_stats->counter_ongvt        += lp_stats[i].counter_ongvt;
 
 		system_stats->clock_event          += lp_stats[i].clock_event;
-		system_stats->clock_fetch          += lp_stats[i].clock_fetch;
+		//system_stats->clock_fetch          += lp_stats[i].clock_fetch;
+		system_stats->clock_fetch_succ     += lp_stats[i].clock_fetch_succ;
+		//system_stats->clock_fetch_unsucc   += lp_stats[i].clock_fetch_unsucc;
 		system_stats->clock_undo_event     += lp_stats[i].clock_undo_event;
 		system_stats->clock_enqueue        += lp_stats[i].clock_enqueue;
 		system_stats->clock_dequeue        += lp_stats[i].clock_dequeue;
@@ -275,15 +305,32 @@ void gather_statistics() {
 		
 		system_stats->total_frames         += LPS[i]->num_executed_frames;
 	}
-
+	
+	system_stats->clock_safe          = system_stats->clock_event - system_stats->clock_silent;
+	system_stats->clock_fetch         = system_stats->clock_fetch_succ + system_stats->clock_fetch_unsucc;
+	system_stats->events_fetched      = system_stats->events_fetched_succ + system_stats->events_fetched_unsucc;
+	
+	system_stats->clock_event_tot     = system_stats->clock_event;
+	system_stats->clock_safe_tot     = system_stats->clock_safe;
+	
 	system_stats->clock_event        /= system_stats->events_total;
 	system_stats->clock_fetch        /= system_stats->events_fetched;
+	system_stats->clock_fetch_succ   /= system_stats->events_fetched_succ;
+	system_stats->clock_fetch_unsucc /= system_stats->events_fetched_unsucc;
 	system_stats->clock_undo_event   /= system_stats->events_undo;
 	system_stats->clock_silent       /= system_stats->events_silent;
 	system_stats->clock_safety_check /= system_stats->counter_safety_check;
 	system_stats->clock_rollback     /= system_stats->counter_rollbacks;
 	system_stats->clock_checkpoint   /= system_stats->counter_checkpoints;
 	system_stats->clock_recovery     /= system_stats->counter_recoveries;
+
+	system_stats->clock_safe         /= (system_stats->events_total - system_stats->events_silent);
+	system_stats->clock_frame_tot     = system_stats->clock_safe * system_stats->total_frames;
+
+
+	system_stats->events_get_next_fetch /= system_stats->events_fetched;	
+	system_stats->clock_enqueue       /= system_stats->events_enqueued;
+		
 
 	system_stats->counter_checkpoint_recalc /= n_prc_tot;
 
@@ -295,55 +342,80 @@ static void _print_statistics(struct stats_t *stats) {
 
 	printf(COLOR_CYAN);
 
-	printf("Total events....................................: %.2f\n", stats->events_total);
-	printf("Committed events................................: %.2f (%.2f%%)\n",
-		stats->events_committed, percentage(stats->events_committed, stats->events_total));
-	printf("Straggler events................................: %.2f (%.2f%%)\n",
-		stats->events_straggler, percentage(stats->events_straggler, stats->events_total));
-	printf("Anti events.....................................: %.2f (%.2f%%)\n",
-		stats->events_anti, percentage(stats->events_anti, stats->events_total));
+	printf("Total events....................................: %12llu\n", (unsigned long long)stats->events_total);
+	printf("Committed events................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_committed, percentage(stats->events_committed, stats->events_total));
+	printf("Straggler events................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_straggler, percentage(stats->events_straggler, stats->events_total));
+	printf("Anti events.....................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_anti, percentage(stats->events_anti, stats->events_total));
+	printf("Useless events..................................: %12llu (%4.2f%%)\n", 
+		(unsigned long long)(stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot),percentage((stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot), stats->events_total));
 #if REVERSIBLE==1
-	printf("Reversible events...............................: %.2f (%.2f%%)\n",
-		stats->events_reverse, percentage(stats->events_reverse, stats->events_total));
-	printf("Stashed events..................................: %.2f (%.2f%%)\n",
-		stats->events_stash, percentage(stats->events_stash, stats->events_total));
+	printf("Reversible events...............................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_reverse, percentage(stats->events_reverse, stats->events_total));
+	printf("Stashed events..................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_stash, percentage(stats->events_stash, stats->events_total));
 #endif
-	printf("Silent events...................................: %.2f (%.2f%%)\n",
-		stats->events_silent, percentage(stats->events_silent, stats->events_total));
-	printf("Flushed events..................................: %.2f (%.2f%%)\n",
-		stats->events_enqueued, percentage(stats->events_enqueued, stats->events_total));
-	printf("Fetched events..................................: %.2f (%.2f%%)\n",
-		stats->events_fetched, percentage(stats->events_fetched, stats->events_total));
-	printf("OnGVT invocations...............................: %.2f\n", stats->counter_ongvt);
+	printf("Silent events...................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_silent, percentage(stats->events_silent, stats->events_total));
+		
+	printf("\n");
+	
+	printf("Flushed events..................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_enqueued, percentage(stats->events_enqueued, stats->events_total));
+	printf("Fetched operations..............................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_fetched, percentage(stats->events_fetched_succ, stats->events_total));
+	printf("   Fetch succeed................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_fetched_succ, percentage(stats->events_fetched_succ, stats->events_fetched));
+	printf("   Fetch failed.................................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_fetched_unsucc, percentage(stats->events_fetched_unsucc, stats->events_fetched));
+	printf("   Avg node traversed during fetch..............: %12.2f\n", stats->events_get_next_fetch);
 	
 	printf("\n");
 	
-	printf("Useless work....................................: %.2f events\n", stats->events_total - stats->events_silent - stats->total_frames);
 
-	printf("\n");
-
-	printf("Average time to process an event................: %.2f clocks\n", stats->clock_event);
-	printf("Average time spent to fetch.....................: %.2f clocks (%.2f%%)\n", stats->clock_fetch, 0.0);
-	printf("Average time spent in silent execution..........: %.2f clocks (%.2f%%)\n", stats->clock_silent, 0.0);
+	printf("Average time to process any event...............: %12.2f clocks\n", stats->clock_event);
+	printf("   Average time spent in standard execution.....: %12.2f clocks\n", stats->clock_safe);
+	printf("   Average time spent in silent execution.......: %12.2f clocks (%4.2f%%)\n", stats->clock_silent, 0.0);
+	printf("Average time spent to fetch.....................: %12.2f clocks (%4.2f%%)\n", stats->clock_fetch, 0.0);
+	printf("   Average time in successfull fetch............: %12.2f clocks (%4.2f%%)\n", stats->clock_fetch_succ, 0.0);
+	printf("   Average time in unsuccessfull fetch..........: %12.2f clocks (%4.2f%%)\n", stats->clock_fetch_unsucc, 0.0);
+	printf("Average time spent to Enqueue...................: %12.2f clocks (%4.2f%%)\n", stats->clock_enqueue, 0.0);
+	
+	
 	
 	printf("\n");
 
-	printf("Checkpoint operations...........................: %.2f\n", stats->counter_checkpoints);
-	printf("Restore operations..............................: %.2f\n", stats->counter_recoveries);
-	printf("Rollback operations.............................: %.2f\n", stats->counter_rollbacks);
-
+	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
+	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
+	printf("Rollback operations.............................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
+	printf("CheckOnGVT invocations..........................: %12llu\n", (unsigned long long)stats->counter_ongvt);
+	
 	printf("\n");
 
-	printf("Rollback time...................................: %.2f clocks\n", stats->clock_rollback);
-	printf("Restore time....................................: %.2f clocks (%.2f%%)\n",
-		stats->clock_recovery, percentage(stats->clock_recovery, stats->clock_rollback));
-	printf("Checkpoint time.................................: %.2f clocks (%.2f%%)\n",
+	printf("Save Checkpoint time............................: %12.2f clocks (%4.2f%%)\n",
 		stats->clock_checkpoint, percentage(stats->clock_checkpoint, stats->clock_rollback));
-	printf("Checkpoint mem..................................: %.2f B\n", stats->mem_checkpoint);
-	printf("Checkpoint recalculations.......................: %.2f\n", stats->counter_checkpoint_recalc);
-	printf("Checkpoint period...............................: %.2f\n", stats->checkpoint_period);
+	printf("Restore Checkpoint time.........................: %12.2f clocks (%4.2f%%)\n",
+		stats->clock_recovery, percentage(stats->clock_recovery, stats->clock_rollback));
+	printf("Rollback time...................................: %12.2f clocks\n", stats->clock_rollback);
+	printf("Checkpoint mem..................................: %12u B\n", (unsigned int)stats->mem_checkpoint);
+	printf("Checkpoint recalculations.......................: %12llu\n", (unsigned long long)stats->counter_checkpoint_recalc);
+	printf("Checkpoint period...............................: %12llu\n", (unsigned long long)stats->checkpoint_period);
+	
+	printf("\n\n");
+	
+	
+	printf("Total Clock...............................: %12llu clocks\n", 
+		(unsigned long long)stats->clock_loop_tot);
+	printf("Event Processing..........................: %12llu clocks (%4.2f%%)\n", 
+		(unsigned long long)stats->clock_event_tot, percentage(stats->clock_event_tot,stats->clock_loop_tot));
+	printf("Safe Processing...........................: %12llu clocks (%4.2f%%)\n", 
+		(unsigned long long)stats->clock_safe_tot, percentage(stats->clock_safe_tot,stats->clock_loop_tot));
+	printf("Frame Processing..........................: %12llu clocks (%4.2f%%)\n", 
+		(unsigned long long)stats->clock_frame_tot, percentage(stats->clock_frame_tot,stats->clock_loop_tot));
 
-	printf(COLOR_RESET);
+	printf(COLOR_RESET"\n");
 }
 
 void print_statistics() {

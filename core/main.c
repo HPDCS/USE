@@ -54,6 +54,7 @@ void start_simulation() {
     printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
     printf("\t- CHECKPOINT PERIOD %u\n", CHECKPOINT_PERIOD);
     printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", CLEAN_CKP_INTERVAL);
+    printf("\t- ON_GVT PERIOD %u\n", ONGVT_PERIOD);
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif

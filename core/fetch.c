@@ -214,7 +214,7 @@ unsigned int fetch_internal(){
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
 	bool validity, in_past, read_new_min = true, from_get_next_and_valid;
-#if DEBUG == 1
+#if DEBUG == 1 || REPORT ==1
 	unsigned int c = 0;
 #endif
 
@@ -241,9 +241,12 @@ unsigned int fetch_internal(){
 	}
 		
     while(node != NULL){
-			
+		
+#if DEBUG == 1 || REPORT ==1
+		c++;
+#endif
 #if DEBUG == 1
-		if(++c%1500==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
+		if(c%1500==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
 #endif
 
 		from_get_next_and_valid = false;
@@ -484,6 +487,9 @@ get_next:
     // in the thread main loop.
     current_msg =  event;//(msg_t *) node->payload;
 	current_node = node;
+#if REPORT == 1
+	statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)c);
+#endif
 
     return 1;
 }
