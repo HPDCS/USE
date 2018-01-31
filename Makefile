@@ -69,6 +69,13 @@ else
 CFLAGS:= $(CFLAGS) -DONGVT_PERIOD=200
 endif
 
+
+ifdef PRINT_SCREEN
+CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=$(PRINT_SCREEN)
+else
+CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=1
+endif
+
 ################################# NB CALQUEUE ##########################
 
 #NB_CALQUEUE

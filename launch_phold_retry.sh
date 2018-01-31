@@ -1,15 +1,15 @@
 #!/bin/bash
 
 LP_list="1024"						#numero di lp
-THREAD_list="1 4 8 16 24 32"		#numero di thread
+THREAD_list="4 8 16 32" #"4 8 16 24 32"		#numero di thread
 TEST_list="phold"					#test
-RUN_list="1 2 3 4 5"				#lista del numero di run
+RUN_list="1"				#lista del numero di run
 
 FAN_OUT_list="1" # 50"				#lista fan out
-LOOKAHEAD_list="0.1 0.05 0.01"		#lookahead
+LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"		#lookahead
 LOOP_COUNT_list="400" 				#loop_count #50 100 150 250 400 600" 400=60micsec
 
-CKP_PER_list="10 50 5 1"
+CKP_PER_list="10 100" #"10 50 100"
 
 PUB_list="0.33"
 EPB_list="3"
@@ -40,7 +40,7 @@ for lookahead in $LOOKAHEAD_list
 do
 	for test in $TEST_list 
 	do
-		make $test NBC=1 REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=0 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck}
+		make $test NBC=1 REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
 		mv $test ${test}_lf_hi
 		
 		for run in $RUN_list
@@ -56,7 +56,7 @@ do
 						while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
 						do
 							echo $BEGIN
-							echo $CURRT
+							echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 							echo $FILE
 							#1> $FILE 2>&1 time $EX
 							(time $EX) &> $FILE
