@@ -22,8 +22,8 @@ CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H)
 
 FOLDER="results/results_phold" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
-#mkdir results
-#mkdir results/results_phold
+mkdir -p results
+mkdir -p results/results_phold
 #mkdir ${FOLDER}
 
 for max_lp in $MAX_SKIPPED_LP_list
@@ -42,6 +42,7 @@ for lookahead in $LOOKAHEAD_list
 do
 	for test in $TEST_list 
 	do
+		echo make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
 		make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
 		mv $test ${test}_lf_hi
 		
