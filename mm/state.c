@@ -351,6 +351,9 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);
 
+	if(LPS[lid]->state == LP_STATE_ONGVT || destination_time == INFTY)
+		statistics_post_lp_data(lid, STAT_EVENT_SILENT_FOR_GVT, (double)reprocessed_events);
+
 	//The bound variable is set in silent_execution.
 	if(LPS[lid]->state == LP_STATE_ROLLBACK){
 		rollback_lenght = LPS[lid]->num_executed_frames; 
@@ -362,7 +365,9 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		//LPS[lid]->from_last_ckpt = ??;
 
 		//statistics_post_lp_data(lid, STAT_ROLLBACK, 1);
-		statistics_post_lp_data(lid, STAT_ROLLBACK_LENGTH, (double)rollback_lenght);
+		if(destination_time < INFTY)
+			statistics_post_lp_data(lid, STAT_ROLLBACK_LENGTH, (double)rollback_lenght);
+
 		statistics_post_lp_data(lid, STAT_CLOCK_ROLLBACK, (double)clock_timer_value(rollback_timer));
 	}
 

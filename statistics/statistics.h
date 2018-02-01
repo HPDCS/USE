@@ -36,6 +36,7 @@
 #define STAT_EVENT_STRAGGLER        102        /// Number of straggler events received
 #define STAT_EVENT_STASH            103        /// ???
 #define STAT_EVENT_SILENT           104        /// Average time to execute the silent execution phase
+#define STAT_EVENT_SILENT_FOR_GVT   113        /// Average time to execute the silent execution phase
 #define STAT_EVENT_COMMIT           105        /// Number of commits
 #define STAT_EVENT_FETCHED          106        /// Number of call to fetched
 #define STAT_EVENT_ENQUEUE          107        /// Number of events flushed
@@ -91,6 +92,7 @@ struct stats_t {
     stat64_t events_fetched_unsucc;	//number of fetch failed
     stat64_t events_enqueued;
     stat64_t events_silent;
+    stat64_t events_silent_for_gvt;
     stat64_t events_undo;
     stat64_t events_anti;
     stat64_t events_get_next_fetch;
