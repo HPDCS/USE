@@ -70,6 +70,11 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].events_stash += value;
 			break;
 
+		case STAT_EVENT_SILENT_FOR_GVT:
+			stats[idx].events_silent_for_gvt += value;
+			break;
+
+
 		case STAT_EVENT_SILENT:
 			stats[idx].events_silent += value;
 			break;
