@@ -245,9 +245,9 @@ unsigned int fetch_internal(){
 #if DEBUG == 1 || REPORT ==1
 		c++;
 #endif
-#if DEBUG == 1
-		if(c%1500==0){	printf("Eventi scorsi in fetch %u\n",c); } //DEBUG
-#endif
+
+		if(c==MAX_SKIPPED_LP*n_cores){	return 0; } //DEBUG
+
 
 		from_get_next_and_valid = false;
 
@@ -306,7 +306,10 @@ unsigned int fetch_internal(){
 		
 		//read_new_min = false;
 
-		if(tryLock(lp_idx)) {
+		if(
+!is_in_lp_unsafe_set(lp_idx) &&
+tryLock(lp_idx)
+) {
 			
 			validity = is_valid(event);
 			

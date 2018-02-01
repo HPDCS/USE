@@ -363,7 +363,7 @@ void init_simulation(unsigned int thread_id){
 #endif
 
 	// Set the CPU affinity
-	//set_affinity(tid);//TODO: decommentare per test veri
+	set_affinity(tid);//TODO: decommentare per test veri
 	
 	// Initialize the set ??
 	unsafe_set_init();
