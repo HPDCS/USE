@@ -116,6 +116,10 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].counter_rollbacks += value;
 			break;
 
+		case STAT_ROLLBACK_LENGTH:
+			stats[idx].counter_rollbacks_length += value;
+			break;
+
 		case STAT_ONGVT:
 			stats[idx].counter_ongvt += value;
 			break;
@@ -278,6 +282,7 @@ void gather_statistics() {
 		system_stats->counter_checkpoints  += lp_stats[i].counter_checkpoints;
 		system_stats->counter_recoveries   += lp_stats[i].counter_recoveries;
 		system_stats->counter_rollbacks    += lp_stats[i].counter_rollbacks;
+		system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
 		system_stats->counter_prune        += lp_stats[i].counter_prune;
 		system_stats->counter_checkpoint_recalc += lp_stats[i].counter_checkpoint_recalc;
 		system_stats->counter_safety_check += lp_stats[i].counter_safety_check;
@@ -321,6 +326,7 @@ void gather_statistics() {
 	system_stats->clock_silent       /= system_stats->events_silent;
 	system_stats->clock_safety_check /= system_stats->counter_safety_check;
 	system_stats->clock_rollback     /= system_stats->counter_rollbacks;
+	system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
 	system_stats->clock_checkpoint   /= system_stats->counter_checkpoints;
 	system_stats->clock_recovery     /= system_stats->counter_recoveries;
 
@@ -390,6 +396,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
 	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
 	printf("Rollback operations.............................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
+	printf("AVG Rollbacked Events...........................: %12llu\n", (unsigned long long)stats->counter_rollbacks_length/stats->counter_rollbacks);
 	printf("CheckOnGVT invocations..........................: %12llu\n", (unsigned long long)stats->counter_ongvt);
 	
 	printf("\n");

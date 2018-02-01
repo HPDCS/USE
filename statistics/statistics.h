@@ -69,9 +69,10 @@
 #define STAT_RECOVERY               303        /// Number of state restoration done
 #define STAT_RECOVERY_TIME          304        /// Average time to restore a simulation state
 #define STAT_ROLLBACK               305        /// Number of rollback operations
-#define STAT_CKPT_RECALC            306        /// Number of recalculation operations done
-#define STAT_CKPT_PERIOD            307        /// Average value of the checkpoint interval
-#define STAT_ONGVT                  308        /// Average value of the checkpoint interval
+#define STAT_ROLLBACK_LENGTH        306        /// Number of rollback operations
+#define STAT_CKPT_RECALC            307        /// Number of recalculation operations done
+#define STAT_CKPT_PERIOD            308        /// Average value of the checkpoint interval
+#define STAT_ONGVT                  309        /// Average value of the checkpoint interval
 
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
@@ -95,6 +96,7 @@ struct stats_t {
     stat64_t events_get_next_fetch;
 
     stat64_t counter_rollbacks;
+    stat64_t counter_rollbacks_length;
     stat64_t counter_recoveries;
     stat64_t counter_checkpoints;
     stat64_t counter_prune;
