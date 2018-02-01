@@ -371,7 +371,7 @@ static void _print_statistics(struct stats_t *stats) {
 #endif
 	printf("Silent events...................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_silent, percentage(stats->events_silent, stats->events_total));
-	printf("Silent events for GVT............................: %12llu (%4.2f%%)\n",
+	printf("Silent events for GVT...........................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_silent_for_gvt, percentage(stats->events_silent_for_gvt, stats->events_silent));
 		
 	printf("\n");
