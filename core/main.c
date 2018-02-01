@@ -75,6 +75,7 @@ int main(int argn, char *argv[]) {
 
 	start_simulation(n);
 
+    printf("timestamp reached %f\n", current_lvt);
     printf("Simulation ended (seconds): %.3f\n", (double)timer_value_seconds(exec_time));
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
 

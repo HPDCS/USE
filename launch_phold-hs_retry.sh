@@ -1,22 +1,21 @@
 #!/bin/bash
 
 LP_list="1024"					#numero di lp
-THREAD_list="1 4 8 16 24 32"		#numero di thread
+THREAD_list="1 2 4 8 16 24 32"		#numero di thread
 TEST_list="pholdhotspot"		#test
-RUN_list="1"				#lista del 
-numero di run
+RUN_list="1 2 3 4"				#lista del numero di run
 
 FAN_OUT_list="1"		#lista fan out
-LOOKAHEAD_list="0.1"		#lookahead
-LOOP_COUNT_list="250"	#loop_count
+LOOKAHEAD_list="0.1 0.05 0.01 0"		#lookahead
+LOOP_COUNT_list="400"	#loop_count
 
 PUB_list="0.33"
-EPB_list="6"
+EPB_list="3"
 
 MAX_RETRY="10"
 
-HS_list="10 100"
-PHS_list="0.25 0.5"
+HS_list="10"
+PHS_list="0 0.25 0.5 0.75 1"
 
 FOLDER="results/results_phold_hs" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
@@ -24,7 +23,8 @@ mkdir results
 mkdir results/results_phold
 mkdir ${FOLDER}
 
-
+for run in $RUN_list
+do
 for hs in $HS_list
 do
 for phs in $PHS_list
@@ -44,8 +44,8 @@ do
 		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=0 DEBUG=0 SPERIMENTAL=1 HOTSPOTS=${hs} P_HOTSPOT=${phs}
 		mv $test ${test}_lf_hi
 		
-		for run in $RUN_list
-		do
+#		for run in $RUN_list
+#		do
 			for lp in $LP_list
 				do
 					for threads in $THREAD_list
@@ -65,10 +65,11 @@ do
 						  
 					done
 				done
-		done
+		#done
 		#rm ${test}_lf_nohi
 		rm ${test}_lf_hi
 	done
+done
 done
 done
 done

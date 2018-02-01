@@ -1,17 +1,17 @@
 #!/bin/bash
 
 LP_list="1024"					#numero di lp
-THREAD_list="1 4 8 16 24 32"		#numero di thread
+THREAD_list="1 2 4 8 16 24 32"		#numero di thread
 TEST_list="phold"				#test
-RUN_list="1 2 3 4 5"				#lista del 
+RUN_list="1 2 3 4"				#lista del 
 numero di run
 
-FAN_OUT_list="1 50"		#lista fan out
-LOOKAHEAD_list="0.1 0.001"		#lookahead
-LOOP_COUNT_list="50 100 150 250 400 600"	#loop_count
+FAN_OUT_list="1"		#lista fan out
+LOOKAHEAD_list="0.1 0.01 0.05 0"		#lookahead
+LOOP_COUNT_list="400" #50 100 150 250 400 600"	#loop_count
 
 PUB_list="0.33"
-EPB_list="12 24"
+EPB_list="3"
 
 MAX_RETRY="10"
 
@@ -46,20 +46,20 @@ do
 				do
 					for threads in $THREAD_list
 					do
-						EX2="./${test}_lf_nohi $threads $lp"
+						#EX2="./${test}_lf_nohi $threads $lp"
 						EX4="./${test}_lf_hi $threads $lp"
-						FILE2="${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count-$run"; touch $FILE2
+						#FILE2="${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count-$run"; touch $FILE2
 						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-$loop_count-$run"; touch $FILE4
 						
 						
-						N=0 
-						while [[ $(grep -c "Simulation ended" $FILE2) -eq 0 ]]
-						do
-							echo $FILE2
-							$EX2 > $FILE2
-							if test $N -ge $MAX_RETRY ; then echo break; break; fi
-							N=$(( N+1 ))
-						done
+					#	N=0 
+					#	while [[ $(grep -c "Simulation ended" $FILE2) -eq 0 ]]
+					#	do
+					#		echo $FILE2
+					#		$EX2 > $FILE2
+					#		if test $N -ge $MAX_RETRY ; then echo break; break; fi
+					#		N=$(( N+1 ))
+					#	done
 						
 						N=0 
 						while [[ $(grep -c "Simulation ended" $FILE4) -eq 0 ]]
@@ -74,7 +74,7 @@ do
 					done
 				done
 		done
-		rm ${test}_lf_nohi
+		#rm ${test}_lf_nohi
 		rm ${test}_lf_hi
 	done
 done

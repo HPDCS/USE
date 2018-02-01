@@ -198,8 +198,8 @@ executable: mm core reverse link
 
 link:
 ifeq ($(REVERSIBLE),1)
-	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
-	#/home/ianni/hijacker_install/bin/hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+	#hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+	/home/ianni/hijacker_install/bin/hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 else
 	cp model/__application.o model/__application_hijacked.o
 endif
