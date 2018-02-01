@@ -746,6 +746,7 @@ end_loop:
 			for(i = 0; i< n_prc_tot; i++)
 				frames += LPS[i]->num_executed_frames;
 			printf("Total correctly executed frames: %u\n", frames);
+			printf("Last gvt: %f\n", current_lvt);
 		}
 	}
 }
