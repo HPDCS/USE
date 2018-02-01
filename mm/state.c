@@ -296,6 +296,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	msg_t *last_restored_event;
 	msg_t * bound_next;
 	unsigned int reprocessed_events;
+	unsigned int rollback_lenght;
 	//unsigned long long starting_frame;
 	//unsigned int avg_events_btw_rollback;
 
@@ -347,16 +348,21 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	
 	last_restored_event = restore_state->last_event;
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
+	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);
 
 	//The bound variable is set in silent_execution.
 	if(LPS[lid]->state == LP_STATE_ROLLBACK){
+		rollback_lenght = LPS[lid]->num_executed_frames; 
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
+		rollback_lenght -= LPS[lid]->num_executed_frames;
 		LPS[lid]->epoch++;
+		LPS[lid]->from_last_ckpt = reprocessed_events%CHECKPOINT_PERIOD; // TODO
 		// TODO
 		//LPS[lid]->from_last_ckpt = ??;
 
 		//statistics_post_lp_data(lid, STAT_ROLLBACK, 1);
+		statistics_post_lp_data(lid, STAT_ROLLBACK_LENGTH, (double)rollback_lenght);
 		statistics_post_lp_data(lid, STAT_CLOCK_ROLLBACK, (double)clock_timer_value(rollback_timer));
 	}
 
