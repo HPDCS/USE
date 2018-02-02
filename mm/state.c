@@ -336,6 +336,8 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 			list_delete_by_content(lid, LPS[lid]->queue_states, s);
 		}
 	}
+
+	assert(restore_state!=NULL);
 	
 //	if(restore_state->lvt != restore_state->last_event->timestamp){ //DEBUG
 //		printf("Il checkpoint è sputtanato!\n");

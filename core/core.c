@@ -96,12 +96,25 @@ bool sim_error = false;
 LP_state **LPS = NULL;
 
 //used to check termination conditions
-bool stop = false;
+volatile bool stop = false;
+volatile bool stop_timer = false;
+pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
+unsigned int sec_stop = 0;
 unsigned long long *sim_ended;
 
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
+
+void * do_sleep(){
+	printf("The process will last %d seconds\n", sec_stop);
+	
+	sleep(sec_stop);
+	if(sec_stop != 0)
+		stop_timer = true;
+	pthread_exit(NULL);
+}
+
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -363,7 +376,7 @@ void init_simulation(unsigned int thread_id){
 #endif
 
 	// Set the CPU affinity
-	set_affinity(tid);//TODO: decommentare per test veri
+	//set_affinity(tid);//TODO: decommentare per test veri
 	
 	// Initialize the set ??
 	unsafe_set_init();
@@ -418,6 +431,19 @@ void init_simulation(unsigned int thread_id){
 
 
 	//wait all threads to end the init phase to start togheter
+
+	if(tid == 0)
+	{
+	    int ret;
+		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
+	            fprintf(stderr, "%s\n", strerror(errno));
+	            abort();
+	    }
+	}
+
+
+
+
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -490,7 +516,12 @@ void thread_loop(unsigned int thread_id) {
 #endif	
 
 	///* START SIMULATION *///
-	while (!stop && !sim_error) {
+	while (  
+				(
+					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+				) 
+				&& !sim_error
+		) {
 		
 		///* FETCH *///
 #if REPORT == 1
@@ -502,9 +533,12 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
 			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
 #endif
+
+#if ONGVT_PERIOD != -1
 			if(++empty_fetch > 500){
 				round_check_OnGVT();
 			}
+#endif
 			goto end_loop;
 		}
 		empty_fetch = 0;
@@ -664,9 +698,12 @@ void thread_loop(unsigned int thread_id) {
 				end_sim(current_lp);
 			}
 			LPS[current_lp]->until_ongvt = 0;
-		}else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
+		}
+#if ONGVT_PERIOD != -1
+		else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
 			check_OnGVT(current_lp);	
 		}
+#endif	
 		
 		if(safe && (++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0) ){
 				clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
@@ -698,6 +735,7 @@ void thread_loop(unsigned int thread_id) {
 		
 end_loop:
 		//CHECK END SIMULATION
+#if ONGVT_PERIOD != -1
 		if(start_periodic_check_ongvt){
 			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
 				if(tryLock(last_checked_lp)){
@@ -707,6 +745,7 @@ end_loop:
 				}
 			}
 		}
+#endif
 
 		if(is_end_sim(current_lp)){
 			if(check_termination()){
@@ -738,15 +777,12 @@ end_loop:
 	
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
-	} else if (stop){
+	} else if (stop || stop_timer){
 		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
-			unsigned int i, frames = 0;
-			for(i = 0; i< n_prc_tot; i++)
-				frames += LPS[i]->num_executed_frames;
-			printf("Total correctly executed frames: %u\n", frames);
-			printf("Last gvt: %f\n", current_lvt);
+			pthread_join(sleeper, NULL);
+
 		}
 	}
 }

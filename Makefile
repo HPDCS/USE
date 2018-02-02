@@ -41,7 +41,7 @@ endif
 ifdef DEBUG
 CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
 else
-CFLAGS:= $(CFLAGS) -DDEBUG=0
+CFLAGS:= $(CFLAGS) -DDEBUG=0 -DNDEBUG
 endif
 
 ifdef REPORT

@@ -91,6 +91,8 @@ int main(int argn, char *argv[]) {
     } else {
         n_cores = atoi(argv[1]);
         n_prc_tot = atoi(argv[2]);
+        if(argn == 4)
+            sec_stop = atoi(argv[3]);
     }
   
     printf("***START SIMULATION***\n\n");
@@ -101,13 +103,15 @@ int main(int argn, char *argv[]) {
 	clock_timer_start(simulation_clocks);
 
 	start_simulation();
-
-    printf("Simulation ended (seconds): %.3f\n", (double)timer_value_seconds(exec_time));
-    printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
-
+    double simduration = (double)timer_value_seconds(exec_time);
 
     print_statistics();
 
+    printf("Simulation ended (seconds): %12.2f\n", simduration);
+    printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
+    printf("Last gvt: %f\n", current_lvt);
+    printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
+    printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
     //statistics_fini();
 
     return 0;
