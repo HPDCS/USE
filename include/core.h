@@ -58,6 +58,10 @@ extern  simtime_t gvt;
 /* Average time between consecutive events */
 extern simtime_t t_btw_evts;
 
+extern volatile bool stop;
+extern unsigned int sec_stop;
+extern volatile bool stop_timer;
+
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);

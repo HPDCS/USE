@@ -102,6 +102,7 @@ struct stats_t {
 
 
 extern struct stats_t *thread_stats;
+extern struct stats_t system_stats;
 
 
 

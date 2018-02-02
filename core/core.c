@@ -57,6 +57,7 @@ unsigned int n_cores; //pls cambia nome
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot; //pls cambia nome
 
+unsigned int ready_wt = 0;
 
 /* Commit horizon TODO */
  simtime_t gvt = 0;
@@ -68,9 +69,24 @@ bool sim_error = false;
 void **states;
 
 //used to check termination conditions
-bool stop = false;
+volatile bool stop = false;
+volatile bool stop_timer = false;
+pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
+unsigned int sec_stop = 0;
 bool *can_stop;
 unsigned long long *sim_ended;
+
+
+void * do_sleep(){
+	printf("The process will last %d seconds\n", sec_stop);
+	
+	sleep(sec_stop);
+	if(sec_stop != 0)
+		stop_timer = true;
+	pthread_exit(NULL);
+}
+
+
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -286,8 +302,33 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
+
+
+	if(tid == 0)
+	{
+	    int ret;
+		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
+	            fprintf(stderr, "%s\n", strerror(errno));
+	            abort();
+	    }
+	}
+
+
+
+
+	__sync_fetch_and_add(&ready_wt, 1);
+	__sync_synchronize();
+	while(ready_wt!=n_cores);
+
+
+
 	///* START SIMULATION *///
-	while (!stop && !sim_error) {
+	while (  
+			(
+				 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+			) 
+			&& !sim_error
+	) {
 		//mode = retries = 0; //<--possono sparire?
 
 #if REVERSIBLE == 1
