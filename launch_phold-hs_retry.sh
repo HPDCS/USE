@@ -1,13 +1,13 @@
 #!/bin/bash
 
 LP_list="1024"					#numero di lp
-THREAD_list="1 2 4 8 16 24 32"		#numero di thread
+THREAD_list="1"		#numero di thread
 TEST_list="pholdhotspot"		#test
-RUN_list="1 2 3 4"				#lista del numero di run
+RUN_list="1"				#lista del numero di run
 
 FAN_OUT_list="1"		#lista fan out
-LOOKAHEAD_list="0.1 0.05 0.01 0"		#lookahead
-LOOP_COUNT_list="400"	#loop_count
+LOOKAHEAD_list="0 0.01"		#lookahead
+LOOP_COUNT_list="150 400"	#loop_count
 
 PUB_list="0.33"
 EPB_list="3"
@@ -15,7 +15,9 @@ EPB_list="3"
 MAX_RETRY="10"
 
 HS_list="10"
-PHS_list="0 0.25 0.5 0.75 1"
+PHS_list="0.5 0.75 1"
+
+TEST_DURATION="20"
 
 FOLDER="results/results_phold_hs" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
@@ -50,7 +52,7 @@ do
 				do
 					for threads in $THREAD_list
 					do
-						EX4="./${test}_lf_hi $threads $lp"
+						EX4="./${test}_lf_hi $threads $lp $TEST_DURATION"
 						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-fan-$fan_out-loop-${loop_count}-hs-$hs-phs-$phs-$run"; touch $FILE4
 						
 						N=0 

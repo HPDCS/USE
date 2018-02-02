@@ -1,19 +1,21 @@
 #!/bin/bash
 
 LP_list="1024"				#numero di lp
-THREAD_list="1 2 4 8 16 24 32"	#numero di thread
+THREAD_list="1"	#numero di thread
 TEST_list="tcar"			#test
-RUN_list="1 2 3 4"				#lista del numero di run
+RUN_list="1"				#lista del numero di run
 
-LOOP_COUNT_list="400" # 4500"		#loop_count
-LOOKAHEAD_list="0.1 0.05 0.01 0"	#lookahead
+LOOP_COUNT_list="0" # 4500"		#loop_count
+LOOKAHEAD_list="0"	#lookahead
 ROB_PER_CELLA_list="2"		#robot per cella
 NUM_CELLE_OCC="80 160"		#numero di celle occupate
 
 PUB_list="0.33"
-EPB_list="6"
+EPB_list="3"
 
 MAX_RETRY="10"
+
+TEST_DURATION="20"
 
 FOLDER="results/results_tcar" #/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
 
@@ -49,7 +51,7 @@ do
 					for threads in $THREAD_list
 					do
 #					#	EX2="./${test}_lf_nohi $threads $lp"
-						EX4="./${test}_lf_hi $threads $lp"
+						EX4="./${test}_lf_hi $threads $lp $TEST_DURATION"
 #					#	FILE2="${FOLDER}/${test}-lf-dymelor-nohijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count-$run"; touch $FILE2
 						FILE4="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count-$run"; touch $FILE4
 
