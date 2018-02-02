@@ -22,9 +22,9 @@ CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H)
 
 FOLDER="results/results_tcar" #/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
 
-mkdir results
-mkdir results/results_tcar
-mkdir ${FOLDER}
+mkdir -p results
+mkdir -p results/results_tcar
+#mkdir ${FOLDER}
 
 for pub in $PUB_list
 do
