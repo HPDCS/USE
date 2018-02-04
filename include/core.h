@@ -6,6 +6,7 @@
 #include <math.h>
 #include <float.h>
 #include <reverse.h>
+#include <numerical.h>
 #include "nb_calqueue.h"
 
 #define MAX_LPs	2048
@@ -48,6 +49,8 @@ typedef struct __msg_t
 extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
+extern seed_type lp_seed[];	
+
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;

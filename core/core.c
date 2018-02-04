@@ -67,6 +67,7 @@ simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 bool sim_error = false;
 
 void **states;
+seed_type lp_seed[2048];
 
 //used to check termination conditions
 volatile bool stop = false;
@@ -232,6 +233,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	numerical_init();
 	//process_init_event
 	for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
+		lp_seed[current_lp] = current_lp + 1;
 		ProcessEvent(current_lp, 0, INIT, NULL, 0, states[current_lp]); //current_lp = i;
 		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 	}
@@ -379,7 +381,7 @@ execution:
 #else
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
-			
+			seed_type previous_seed = lp_seed[current_lp];
 			current_msg->revwin = window;
 			revwin_reset(current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 	#if REPORT == 1 
@@ -405,6 +407,7 @@ execution:
 					clock_timer_start(undo_event_processing);
 	#endif					
 					execute_undo_event(current_lp, current_msg->revwin);
+					lp_seed[current_lp] = previous_seed;
 	#if REPORT == 1
 					statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
 					statistics_post_data(tid, EVENTS_ROLL, 1);
