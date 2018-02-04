@@ -420,7 +420,11 @@ execution:
 				}
 	
 				else{
-					if(stop /*is_end_sim(current_lp)*/ //potrebbe convenire guardare il solo lp, così, in caso di più thread, non si rischia di rimanere appesi
+					if(
+						(
+							 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+						)		 
+
 			#if PREEMPTIVE == 1 
 				#if REPORT == 1		
 						|| (!safe && ((unsafe_events/n_cores) * (avg_tot_clock) > (avg_clock_roll + avg_clock_deq + avg_clock_safe - avg_clock_deqlp)))
