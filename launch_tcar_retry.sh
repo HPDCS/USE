@@ -1,21 +1,23 @@
 #!/bin/bash
 
 LP_list="1024"						#numero di lp
-THREAD_list="4 8 16 32" #"4 8 16 24 32"			#numero di thread
+THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"			#numero di thread
 TEST_list="tcar"					#test
 RUN_list="1"				#lista del numero di run
 
-LOOP_COUNT_list="4500" #4500 1000"	#loop_count
-LOOKAHEAD_list="0 0.002"			#lookahead
-ROB_PER_CELLA_list="2"				#robot per cella
-NUM_CELLE_OCC="80 160"				#numero di celle occupate
+LOOP_COUNT_list="0" #4500 1000"	#loop_count
+LOOKAHEAD_list="0"			#lookahead
+ROB_PER_CELLA_list="2 4"				#robot per cella
+NUM_CELLE_OCC="80 160 240 320"				#numero di celle occupate
 
-CKP_PER_list="10 100" #"10 50 100"
+CKP_PER_list="50" #"10 50 100"
 
 PUB_list="0.33"
 EPB_list="3"
 
 MAX_RETRY="10"
+
+TEST_DURATION="20"
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
@@ -51,7 +53,7 @@ do
 				do
 					for threads in $THREAD_list
 					do
-						EX="./${test}_lf_hi $threads $lp"
+						EX="./${test}_lf_hi $threads $lp $TEST_DURATION"
 						FILE="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-look-$lookahead-ck_per-$ck-robpercell-$robot_per_cella-numcellocc-$num_celle_occupate-loop-$loop_count-$run"; touch $FILE
 					
 						N=0

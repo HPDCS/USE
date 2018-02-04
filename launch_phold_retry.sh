@@ -2,20 +2,21 @@
 
 MAX_SKIPPED_LP_list="1000000"
 LP_list="1024"						#numero di lp
-THREAD_list="4 8 16 32" #"4 8 16 24 32"		#numero di thread
+THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"		#numero di thread
 TEST_list="phold"					#test
 RUN_list="1"				#lista del numero di run
 
 FAN_OUT_list="1" # 50"				#lista fan out
 LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"		#lookahead
-LOOP_COUNT_list="100 250 400 600" 				#loop_count #50 100 150 250 400 600" 400=60micsec
+LOOP_COUNT_list="50 150 400 800 1600" 				#loop_count #50 100 150 250 400 600" 400=60micsec
 
-CKP_PER_list="50 100" #"10 50 100"
+CKP_PER_list="50" #"10 50 100"
 
 PUB_list="0.33"
 EPB_list="3"
 
 MAX_RETRY="10"
+TEST_DURATION="20"
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
@@ -52,7 +53,7 @@ do
 				do
 					for threads in $THREAD_list
 					do
-						EX="./${test}_lf_hi $threads $lp"
+						EX="./${test}_lf_hi $threads $lp $TEST_DURATION"
 						FILE="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
 												
 						N=0 
