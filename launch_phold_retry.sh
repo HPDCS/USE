@@ -1,13 +1,13 @@
 #!/bin/bash
 
 LP_list="1024"					#numero di lp
-THREAD_list="1"		#numero di thread
+THREAD_list="2 4 8 16 24 32"		#numero di thread
 TEST_list="phold"				#test
 RUN_list="1"				#lista del numero di run
 
 FAN_OUT_list="1"		#lista fan out
 LOOKAHEAD_list="0 0.01"		#lookahead
-LOOP_COUNT_list="150 400" #50 100 150 250 400 600"	#loop_count
+LOOP_COUNT_list="50 150 400 800 1600" #50 100 150 250 400 600"	#loop_count
 
 PUB_list="0.33"
 EPB_list="3"
@@ -35,10 +35,10 @@ for lookahead in $LOOKAHEAD_list
 do
 	for test in $TEST_list 
 	do
-		make $test NBC=1 	LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=0 DEBUG=0 SPERIMENTAL=1
+		make $test NBC=1 	LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1
 		mv $test ${test}_lf_nohi
 		
-		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=0 DEBUG=0 SPERIMENTAL=1
+		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1
 		mv $test ${test}_lf_hi
 		
 		for run in $RUN_list
@@ -66,7 +66,7 @@ do
 						while [[ $(grep -c "Simulation ended" $FILE4) -eq 0 ]]
 						do
 							echo $FILE4
-							$EX4 > $FILE4
+							$EX4 &> $FILE4
 							if test $N -ge $MAX_RETRY ; then echo break; break; fi
 							N=$(( N+1 ))
 						done  

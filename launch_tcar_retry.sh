@@ -1,14 +1,14 @@
 #!/bin/bash
 
 LP_list="1024"				#numero di lp
-THREAD_list="1"	#numero di thread
+THREAD_list="2 4 8 16 24 32"	#numero di thread
 TEST_list="tcar"			#test
 RUN_list="1"				#lista del numero di run
 
 LOOP_COUNT_list="0" # 4500"		#loop_count
 LOOKAHEAD_list="0"	#lookahead
-ROB_PER_CELLA_list="2"		#robot per cella
-NUM_CELLE_OCC="80 160"		#numero di celle occupate
+ROB_PER_CELLA_list="2 4"		#robot per cella
+NUM_CELLE_OCC="80 160 240 320"		#numero di celle occupate
 
 PUB_list="0.33"
 EPB_list="3"
@@ -39,10 +39,10 @@ do
 
 	for test in $TEST_list
 	do
-		make $test NBC=1 	LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=0 DEBUG=0 SPERIMENTAL=1
+		make $test NBC=1 	LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1
 		mv $test ${test}_lf_nohi
 
-		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=0 DEBUG=0 SPERIMENTAL=1
+		make $test NBC=1 	REVERSIBLE=1 LOOKAHEAD=${lookahead} NUM_CELLE_OCCUPATE=${num_celle_occupate} ROBOT_PER_CELLA=${robot_per_cella} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1
 		mv $test ${test}_lf_hi
 		for run in $RUN_list
 		do

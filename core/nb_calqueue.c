@@ -165,7 +165,7 @@ static inline unsigned long long hash(double timestamp, double bucket_width)
 
 
 	tmp1 = res * bucket_width;
-	tmp2 = tmp1 + bucket_width;
+	tmp2 = (res+1)*bucket_width;
     
 	if(LESS(timestamp, tmp1))
 		return --res;

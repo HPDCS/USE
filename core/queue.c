@@ -214,9 +214,9 @@ retry_on_replica:
 }
 
 void getMinLP(unsigned int lp){
-	nbc_bucket_node * node;
+	nbc_bucket_node * volatile node;
 	simtime_t min;
-	table *h;
+	table * volatile h;
 	
 #if REPORT == 1
 	clock_timer queue_op;

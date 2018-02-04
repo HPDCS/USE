@@ -30,7 +30,7 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
-#if SPERIMENTAL == 0
+#if SPERIMENTAL == 1
 	#define gmf getMinFree_internal
 	#define gml getMinLP_internal
 #else
@@ -235,6 +235,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 		ProcessEvent(current_lp, 0, INIT, NULL, 0, states[current_lp]); //current_lp = i;
 		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 	}
+	nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 }
 
 //Sostituirlo con una bitmap!
