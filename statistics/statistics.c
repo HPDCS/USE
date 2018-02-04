@@ -208,7 +208,7 @@ if(system_stats.events_stm > 0){	//Nota: è una stima e non rispecchia esattamen
 		printf("Avg time spent to ROLLBACK STM event............: 0 clocks\n");
     else
 		printf("Avg time spent to ROLLBACK STM event............: %12llu clocks\n", system_stats.clock_undo_event/system_stats.events_roll);
-    printf("Average useful time spent in STM execution......: %12llu clocks\n\n", (unsigned long long)(tot_avg_stm_cloks/((double)system_stats.commits_stm / system_stats.events_stm)));
+    printf("Average useful time spent in STM execution......: %12llu clocks\n\n", (unsigned long long)(tot_avg_stm_cloks/(system_stats.events_stm > 0 ? (double)system_stats.commits_stm / system_stats.events_stm : 100%)));
 }
 else if(system_stats.commits_stm > 0){
 	printf("ALLERT: there are %ull stm events executeb but 0 stm event committed\n\n", system_stats.commits_stm);
