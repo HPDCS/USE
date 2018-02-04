@@ -422,7 +422,7 @@ execution:
 				else{
 					if(
 						(
-							 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+							 (stop) || (sec_stop)
 						)		 
 
 			#if PREEMPTIVE == 1 
