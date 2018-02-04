@@ -122,7 +122,7 @@ char *__list_insert_head(unsigned int lid, void *li, unsigned int size, void *da
 	memcpy(&new_n->data, data, size);
 
 	// Is the list empty?
-	if(l->size == 0) {
+	if(size_before == 0) {
 		l->head = new_n;
 		l->tail = new_n;
 		goto insert_end;
@@ -189,6 +189,7 @@ char *__list_insert_tail_by_node(void *li, struct rootsim_list_node* new_n) {
 
 	assert(l);
 	size_t size_before = l->size;
+	(void)size_before;
 
 	// Is the list empty?
 	if(l->head == NULL) {
@@ -269,7 +270,7 @@ char *__list_place(unsigned int lid, void *li, size_t key_position, struct roots
 	double key = get_key(new_n->data);
 
 	// Is the list empty?
-	if(l->size == 0) {
+	if(size_before == 0) {
 		new_n->prev = NULL;
 		new_n->next = NULL;
 		l->head = new_n;
@@ -341,7 +342,7 @@ char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, 
 
 	assert(l);
 	size_t size_before = l->size;
-
+	(void)size_before;
 	char *content = NULL;
 	struct rootsim_list_node *n = l->head;
 	double curr_key;
@@ -461,6 +462,7 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 
 	assert(l);
 	size_t size_before = l->size;
+	(void)size_before;
 
 	struct rootsim_list_node *n = list_container_of(ptr);
 	char *content = NULL;
@@ -584,6 +586,7 @@ void list_pop(unsigned int lid, void *li) {
 
 	assert(l);
 	size_t size_before = l->size;
+	(void)size_before;
 
 	struct rootsim_list_node *n = l->head;
 	struct rootsim_list_node *n_next;
@@ -621,7 +624,7 @@ unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_pos
 	size_t size_before = l->size;
 
 	// Attempting to truncate an empty list?
-	if(l->size == 0) {
+	if(size_before == 0) {
 		goto out;
 	}
 
@@ -729,7 +732,7 @@ char *__list_place_after_given_node_by_content(unsigned int lid, void *li, struc
 	//struct rootsim_list_node *n = previous;
 
 	//Queue EMPTY
-	if(list->size == 0) {
+	if(size_before == 0) {
 		new_n->prev = NULL;
 		new_n->next = NULL;
 		list->head = new_n;
@@ -799,6 +802,7 @@ char *__list_extract_given_node(unsigned int lid, void *li,  struct rootsim_list
 
 	assert(l);
 	size_t size_before = l->size;
+	(void)size_before;
 
 	char *content = (char*)n + sizeof(struct rootsim_list_node);
 
