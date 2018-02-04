@@ -426,6 +426,8 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->ckpt_period = 20;
 			//LPS[current_lp]->epoch = 1;
 		}
+
+		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
 

@@ -98,6 +98,14 @@
 #define get_marked(pointer, mark)	(UNION_CAST((UNION_CAST(pointer, unsigned long long)|(mark)), void *))
 #define get_mark(pointer)			(UNION_CAST((UNION_CAST(pointer, unsigned long long) & MASK_MRK), unsigned long long))
 
+#define ONE_EVT_PER_LP		0
+#define ST_BINDING_LP		1
+#define FULL_SPECULATIVE	2
+
+
+#ifndef OPTIMISTIC_MODE
+#define OPTIMISTIC_MODE ONE_EVT_PER_LP
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -232,6 +240,10 @@ unsigned int fetch_internal(){
 	safe = false;
 	current_node = NULL;
 	clear_lp_unsafe_set;
+	#if OPTIMISTIC_MODE == ST_BINDING_LP
+		clear_lp_locked_set;
+	#endif
+		
 	current_msg = NULL; //DEBUG
 	
 	min = min_node->timestamp;
@@ -307,9 +319,15 @@ unsigned int fetch_internal(){
 		//read_new_min = false;
 
 		if(
-!is_in_lp_unsafe_set(lp_idx) &&
-tryLock(lp_idx)
-) {
+#if OPTIMISTIC_MODE != FULL_SPECULATIVE
+	#if OPTIMISTIC_MODE == ONE_EVT_PER_LP
+		!is_in_lp_unsafe_set(lp_idx) &&
+	#else
+		!is_in_lp_locked_set(lp_idx) &&
+	#endif
+#endif
+		tryLock(lp_idx)
+		) {
 			
 			validity = is_valid(event);
 			
@@ -431,7 +449,11 @@ tryLock(lp_idx)
 		else {
 			read_new_min = false;
 			add_lp_unsafe_set(lp_idx);
-		} 
+
+		#if OPTIMISTIC_MODE == ST_BINDING_LP
+			add_lp_locked_set(lp_idx);
+		#endif
+		}
 	
 
 get_next:

@@ -26,6 +26,8 @@ __thread unsigned long long * lp_unsafe_set;
 
 __thread unsigned long long * lp_unsafe_set_debug;
 
+__thread unsigned long long * lp_locked_set;
+
 __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 __thread list(msg_t) to_remove_local_evts_old = NULL;
@@ -45,11 +47,16 @@ void unsafe_set_init(){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
-	if( ( lp_unsafe_set_debug=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
-		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-		abort();	
-	}
-	clear_lp_unsafe_set;
+    if( ( lp_unsafe_set_debug=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+        printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+        abort();    
+    }
+    if( ( lp_locked_set=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+        printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+        abort();    
+    }
+    clear_lp_unsafe_set;
+    clear_lp_locked_set;
 }
 
 void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
