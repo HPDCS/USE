@@ -425,7 +425,7 @@ execution:
 				else{
 					if(
 						(
-							 (stop) || (sec_stop)
+							 (stop) || (stop_timer)
 						)		 
 
 			#if PREEMPTIVE == 1 
