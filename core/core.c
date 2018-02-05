@@ -324,6 +324,9 @@ void thread_loop(unsigned int thread_id) {
 	while(ready_wt!=n_cores);
 
 
+#if REVERSIBLE == 1
+begin:
+#endif
 
 	///* START SIMULATION *///
 	while (  
@@ -334,9 +337,6 @@ void thread_loop(unsigned int thread_id) {
 	) {
 		//mode = retries = 0; //<--possono sparire?
 
-#if REVERSIBLE == 1
-begin:
-#endif
 		/// *FETCH* ///
 #if REPORT == 1
 	clock_timer_start(queue_min);
