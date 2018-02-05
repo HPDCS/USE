@@ -9,15 +9,15 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
 FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 
-INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/
+INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/ -Ireverse/
 LIBS=-pthread -lm
 ARCH_X86=1
 ARCH_X86_64=1
 
 ifdef MALLOC
-CFLAGS=$(FLAGS) -DNO_DYMELOR
+CFLAGS=$(FLAGS) -DNO_DYMELOR -DMALLOC=1
 else
-CFLAGS=$(FLAGS)
+CFLAGS=$(FLAGS)  -DMALLOC=0
 endif
 
 ifdef NBC
@@ -56,10 +56,6 @@ endif
 
 ifdef P_HOTSPOT
 CFLAGS:= $(CFLAGS) -DP_HOTSPOT=$(P_HOTSPOT)
-endif
-
-ifdef ROBOT_PER_CELLA
-CFLAGS:= $(CFLAGS) -DROBOT_PER_CELLA=$(ROBOT_PER_CELLA)
 endif
 
 ifdef PERC_USED_BUCKET
@@ -113,6 +109,8 @@ PHOLD_SOURCES=model/phold/application.c
 
 PHOLDCOUNT_SOURCES=model/phold_count/application.c
 
+PHOLDHOTSPOT_SOURCES=model/phold_hotspot/application.c
+
 HASH_SOURCES=model/hash/application.c\
 				 model/hash/functions.c
 
@@ -128,7 +126,7 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 		    model/robot_explore/neighbours.c
 
 
-TARGET=test
+TARGET=phold
 
 CORE_SOURCES =  core/core.c\
 		core/calqueue.c\
@@ -141,15 +139,13 @@ CORE_SOURCES =  core/core.c\
 		core/hpdcs_math.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
-#		mm/reverse.c\
-#		mm/slab.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
 		mm/recoverable.c
 		
-REVERSE_SOURCES=	mm/reverse.c\
-		mm/slab.c
+REVERSE_SOURCES=	reverse/reverse.c\
+		reverse/slab.c
 
 
 MM_OBJ=$(MM_SOURCES:.c=.o)
@@ -162,6 +158,7 @@ TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
+PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
@@ -187,11 +184,8 @@ phold: clean  _phold executable
 pholdcount: TARGET=pholdcount 
 pholdcount: clean  _pholdcount executable
 
-pholdcount: TARGET=pholdcount 
-pholdcount: clean  _pholdcount mm core link
-
 pholdhotspot: TARGET=pholdhotspot 
-pholdhotspot: clean  _pholdhotspot mm core link
+pholdhotspot: clean  _pholdhotspot executable
 
 robot_explore: TARGET=robot_explore 
 robot_explore: clean _robot_explore executable
@@ -204,8 +198,8 @@ executable: mm core reverse link
 
 link:
 ifeq ($(REVERSIBLE),1)
-	hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
-	#/home/ianni/hijacker_install/bin/hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+	#hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
+	/home/ianni/hijacker_install/bin/hijacker -c script/hijacker-conf.xml -i model/__application.o -o model/__application_hijacked.o
 else
 	cp model/__application.o model/__application_hijacked.o
 endif
@@ -253,6 +247,9 @@ _phold: $(PHOLD_OBJ)
 _pholdcount: $(PHOLDCOUNT_OBJ)
 	@ld -r -g $(PHOLDCOUNT_OBJ) -o model/__application.o
 
+_pholdhotspot: $(PHOLDHOTSPOT_OBJ)
+	@ld -r -g $(PHOLDHOTSPOT_OBJ) -o model/__application.o
+
 _hash: $(HASH_OBJ)
 	@ld -r -g $(HASH_OBJ) -o model/__application.o
 
@@ -272,6 +269,8 @@ clean:
 	@find . -type f -name "traffic "  	  -exec rm {} \;
 	@find . -type f -name "tcar" 		  -exec rm {} \;
 	@find . -type f -name "phold" 		  -exec rm {} \;
+	@find . -type f -name "pholdcount" 	  -exec rm {} \;
+	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
 	

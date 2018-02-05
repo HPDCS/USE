@@ -16,7 +16,7 @@
 inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
-	int 	i, j = 123;
+	unsigned int 	i, j = 123;
 	//event_content_type new_event;
 	int err;
 	unsigned int loops; 
@@ -85,6 +85,11 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 
 			delta = LOOKAHEAD + Expent(TAU);
 			timestamp = now + delta;
+#if DEBUG == 1
+			if(timestamp < now){
+				printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
+			}
+#endif
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
@@ -94,6 +99,11 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 				for(j=0;j<FAN_OUT;j++){
 						delta = LOOKAHEAD + Expent(TAU);
 						timestamp = now + delta;
+#if DEBUG == 1
+						if(timestamp < now){
+							printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
+						}
+#endif
 						ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
 				}
 			}

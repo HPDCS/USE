@@ -30,6 +30,14 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
+#if SPERIMENTAL == 1
+	#define gmf getMinFree_internal
+	#define gml getMinLP_internal
+#else
+	#define gmf getMinFree
+	#define gml getMinLP
+#endif
+
 //id del processo principale
 #define MAIN_PROCESS		0
 #define PRINT_REPORT_RATE	1000000000000000
@@ -49,6 +57,7 @@ unsigned int n_cores; //pls cambia nome
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot; //pls cambia nome
 
+unsigned int ready_wt = 0;
 
 /* Commit horizon TODO */
  simtime_t gvt = 0;
@@ -58,11 +67,27 @@ simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 bool sim_error = false;
 
 void **states;
+seed_type lp_seed[2048];
 
 //used to check termination conditions
-bool stop = false;
+volatile bool stop = false;
+volatile bool stop_timer = false;
+pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
+unsigned int sec_stop = 0;
 bool *can_stop;
 unsigned long long *sim_ended;
+
+
+void * do_sleep(){
+	printf("The process will last %d seconds\n", sec_stop);
+	
+	sleep(sec_stop);
+	if(sec_stop != 0)
+		stop_timer = true;
+	pthread_exit(NULL);
+}
+
+
 
 
 void rootsim_error(bool fatal, const char *msg, ...) {
@@ -158,7 +183,7 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	printf("\t- PREEMPTIVE event realease enabled.\n");
 #endif
 #if DEBUG == 1
-	printf("\t- DEBUGDEBUG mode enabled.\n");
+	printf("\t- DEBUG mode enabled.\n");
 #endif
 #if MALLOC == 1
 	printf("\t- MALLOC enabled.\n");
@@ -190,14 +215,14 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	
 	for (i = 0; i < n_prc_tot; i++) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
-		sim_ended[lps_num/64] = 0;
+		sim_ended[i/64] = 0;
 		can_stop[i] = false;
 	}
 	
-	if(lps_num%(SIZEOF_ULL*8) != 0){
-		for(; i<(LP_ULL_MASK_SIZE*8) ; i++)
+	//if(lps_num%(SIZEOF_ULL*8) != 0){  //////////////////////
+		for(; i<(LP_BIT_MASK_SIZE) ; i++)
 			end_sim(i);
-	}
+	//}
 	
 #if MALLOC == 0
 	dymelor_init();
@@ -208,19 +233,34 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 	numerical_init();
 	//process_init_event
 	for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
+		lp_seed[current_lp] = current_lp + 1;
 		ProcessEvent(current_lp, 0, INIT, NULL, 0, states[current_lp]); //current_lp = i;
 		queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 	}
+	nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 }
 
 //Sostituirlo con una bitmap!
 //Nota: ho visto che viene invocato solo a fine esecuzione
 bool check_termination(void) {
 	unsigned int i;
+	
+	
+	//for (i = 0; i < n_prc_tot; i++) {
+	//	if(!is_end_sim(i)) //[i] != ~(0ULL))
+	//		return false; 
+	//}
+	
+	//for (i = 0; i < n_prc_tot/64; i++) {
+	//	if(sim_ended[i] != ~(0ULL))
+	//		return false; 
+	//}
+	
 	for (i = 0; i < LP_MASK_SIZE; i++) {
 		if(sim_ended[i] != ~(0ULL))
 			return false; 
 	}
+	
 	return true;
 }
 
@@ -230,14 +270,30 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 }
 
 void thread_loop(unsigned int thread_id) {
-	
+#if REPORT == 1
+	clock_timer main_loop_time,			//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
+				queue_min,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
+				event_processing		//OK: cattura il tempo per processare un evento safe 
+#if REVERSIBLE == 1
+				,
+				stm_event_processing,	//OK: cattura il tempo per processare un evento in stm (solo evento)
+				safety_check_op,		//OK: cattura il tempo per estrarre dalla coda il minimo evento associato ad un LP 
+				undo_event_processing,	//OK: cattura il tempo per rollbackare un evento (solo rollback)
+				stm_safety_wait			//OK: cattura il tempo per aspettare che un evento stm diventi safe
+#endif
+				;
+#endif
+
+
+#if REVERSIBLE == 1
+	revwin_t *window;
+	reverse_init(REVWIN_SIZE);
+	window = revwin_create();
+#endif
+
 	//unsigned int mode, old_mode, retries;
 	//double pending_events;
-	revwin_t *window;
-
-	unsigned int effective;
-	unsigned int affinity;
-
+	
 	tid = thread_id;
 	
 	//Set the CPU affinity
@@ -245,40 +301,69 @@ void thread_loop(unsigned int thread_id) {
 	
 	lock_init();
 	
-	reverse_init(REVWIN_SIZE);
-	window = revwin_create();
 
 #if REPORT == 1 
-	clock_timer main_loop_time;
 	clock_timer_start(main_loop_time);
 #endif	
-	///* START SIMULATION *///
-	while (!stop && !sim_error) {
-		
-		//mode = retries = 0; //<--possono sparire?
+
+
+	if(tid == 0)
+	{
+	    int ret;
+		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
+	            fprintf(stderr, "%s\n", strerror(errno));
+	            abort();
+	    }
+	}
+
+
+
+
+	__sync_fetch_and_add(&ready_wt, 1);
+	__sync_synchronize();
+	while(ready_wt!=n_cores);
+
+
+#if REVERSIBLE == 1
 begin:
-		/// *FETCH* ///
-#if SPERIMENTAL == 1
-		if(getMinFree_new() == 0){
-#else
-		if(getMinFree() == 0){
 #endif
-			continue;
-		}
+
+	///* START SIMULATION *///
+	while (  
+			(
+				 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+			) 
+			&& !sim_error
+	) {
+		//mode = retries = 0; //<--possono sparire?
+
+		/// *FETCH* ///
+#if REPORT == 1
+	clock_timer_start(queue_min);
+#endif
+	if(gmf() == 0){
+		continue;
+	}
+#if REPORT == 1
+	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_min));
+	statistics_post_data(tid, EVENTS_FETCHED, 1);
+#endif
+
+#if REVERSIBLE == 1
 execution:		
+#endif
+
 		queue_clean();
 		
 		current_lp = current_msg->receiver_id;	//identificatore lp
 		current_lvt = current_msg->timestamp;	//local virtual time
 				
 		//old_mode = mode;
-		
-		
+				
 		if (safe) {
 		/// ==== SAFE EXECUTION ==== ///
 			//mode = MODE_SAF;
 #if REPORT == 1 
-			clock_timer event_processing;
 			clock_timer_start(event_processing);
 #endif
 			ProcessEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, states[current_lp]);
@@ -287,6 +372,7 @@ execution:
 			statistics_post_data(tid, CLOCK_SAFE, clock_timer_value(event_processing));
 #endif		
 		}
+		
 		else {
 #if REVERSIBLE == 0 
 			((nbc_bucket_node*)current_msg->node)->reserved = false;
@@ -295,42 +381,33 @@ execution:
 #else
 		/// ==== REVERSIBLE EXECUTION ==== ///
 			//mode = MODE_STM;
-	
+			seed_type previous_seed = lp_seed[current_lp];
+			current_msg->revwin = window;
+			revwin_reset(current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
 	#if REPORT == 1 
-			clock_timer stm_event_processing;
 			clock_timer_start(stm_event_processing);			
 			statistics_post_data(tid, EVENTS_STM, 1);
 	#endif
-
-			current_msg->revwin = window;
-			revwin_reset(current_lp, current_msg->revwin);	//<-da mettere una volta sola ad inizio esecuzione
-			
 			ProcessEvent_reverse(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, states[current_lp]);
-
 	#if REPORT == 1 
-			clock_timer stm_safety_wait;
+			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
 			clock_timer_start(stm_safety_wait);
 	#endif			
 			do{
 	#if REPORT == 1
-				clock_timer safety_op;
-				clock_timer_start(safety_op);
+				clock_timer_start(safety_check_op);
 	#endif
-	#if SPERIMENTAL == 1
-				getMinLP_new(current_lp);
-	#else
-				getMinLP(current_lp);
-	#endif
+				gml(current_lp);
 	#if REPORT == 1
-				statistics_post_data(tid, CLOCK_SAFETY_CHECK, clock_timer_value(safety_op));
+				statistics_post_data(tid, CLOCK_SAFETY_CHECK, clock_timer_value(safety_check_op));
 				statistics_post_data(tid, SAFETY_CHECK, 1);
 	#endif
 				if(current_msg != new_current_msg /* && current_msg->node != current_msg->node */){
 	#if REPORT == 1
-					clock_timer undo_event_processing;
 					clock_timer_start(undo_event_processing);
 	#endif					
 					execute_undo_event(current_lp, current_msg->revwin);
+					lp_seed[current_lp] = previous_seed;
 	#if REPORT == 1
 					statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
 					statistics_post_data(tid, EVENTS_ROLL, 1);
@@ -344,24 +421,40 @@ execution:
 					goto execution;
 					
 				}
-	#if PREEMPTIVE == 1
+	
 				else{
-					if(!safe && (unsafe_events/n_cores) * (avg_clock_2) > (avg_clock_roll + avg_clock_deq + avg_clock_2 - avg_clock_safe)){
-					//if(unsafe_events > n_cores){ //TODO
-						statistics_post_data(tid, EVENTS_STASH, 1);
+					if(
+						(
+							 (stop) || (stop_timer)
+						)		 
+
+			#if PREEMPTIVE == 1 
+				#if REPORT == 1		
+						|| (!safe && ((unsafe_events/n_cores) * (avg_tot_clock) > (avg_clock_roll + avg_clock_deq + avg_clock_safe - avg_clock_deqlp)))
+				#else 
+						|| (unsafe_events > n_cores) //TODO
+				#endif
+			#endif
+					){
+						
+			#if REPORT == 1
+						clock_timer_start(undo_event_processing);
+			#endif	
 						execute_undo_event(current_lp, current_msg->revwin);
+			#if REPORT == 1
+						statistics_post_data(tid, CLOCK_UNDO_EVENT, clock_timer_value(undo_event_processing));
+						statistics_post_data(tid, EVENTS_STASH, 1);
+						statistics_post_data(tid, EVENTS_ROLL, 1);
+			#endif
 						((nbc_bucket_node*)current_msg->node)->reserved = false;
 						unlock(current_lp);
 						goto begin;
 					}
 				}
-	#endif
+	
 			}while(!safe);
 				
 	#if REPORT == 1 
-			//Attenzione, ora si sommano i tempi degli eventi squashatu con i relativi eventi eseguiti poi
-			statistics_post_data(tid, CLOCK_STM, clock_timer_value(stm_event_processing));
-			// Collect the time spend in waiting by a commiting event, only
 			statistics_post_data(tid, CLOCK_STM_WAIT, clock_timer_value(stm_safety_wait));
 			statistics_post_data(tid, COMMITS_STM, 1);
 	#endif	
@@ -371,9 +464,12 @@ execution:
 		///* FLUSH */// 
 		commit();
 		
-		if(OnGVT(current_lp, states[current_lp]) && !is_end_sim(current_lp)){
-			end_sim(current_lp);
-			stop = check_termination();
+		if(OnGVT(current_lp, states[current_lp]) /*|| sim_ended[lp/64]==~(0ULL)*/){
+			if(!is_end_sim(current_lp))
+				end_sim(current_lp);
+			
+			if(check_termination())
+				__sync_bool_compare_and_swap(&stop, false, true);
 		}
 		
 		if(tid == MAIN_PROCESS) {
@@ -403,8 +499,8 @@ execution:
 	//statistics_fini();
 	
 	if(sim_error){
-		printf(COLOR_RED "\n[%u] Execution ended for an error\n" COLOR_RESET, tid);
+		printf(COLOR_RED "[%u] Execution ended for an error\n" COLOR_RESET, tid);
 	} else if (stop){
-		printf(COLOR_GREEN "\n[%u] Execution ended correctly\n" COLOR_RESET, tid);
+		printf(COLOR_GREEN "[%u] Execution ended correctly\n" COLOR_RESET, tid);
 	}
 }

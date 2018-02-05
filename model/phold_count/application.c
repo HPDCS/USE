@@ -83,6 +83,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			if(event_type == LOOP && state_ptr->events < COMPLETE_EVENTS){
 				state_ptr->events++;
+				if(now < state_ptr->lvt)
+					printf("\x1b[31m""ERROR: event %f received out of order respect %f\n""\x1b[0m", now, state_ptr->lvt);
+				state_ptr->lvt = now;
 				if(state_ptr->events < COMPLETE_EVENTS)
 				//	ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 					ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);

@@ -161,7 +161,7 @@ extern revwin_t *revwin_create(void);
  *
  * @param window A pointer to a reverse window
  */
-extern void revwin_free(unsigned int lid, revwin_t *win);
+extern void revwin_free(revwin_t *win);
 
 
 /**
@@ -172,7 +172,7 @@ extern void revwin_free(unsigned int lid, revwin_t *win);
  * @param lid The ID of the LP issuing the execution
  * @param win Pointer to the reverse window descriptor
  */
-extern void revwin_reset(unsigned int lid, revwin_t *win);
+extern void revwin_reset(revwin_t *win);
 
 
 /**

@@ -11,9 +11,6 @@
 #define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1ULL << (lp%64)) )
 #define clear_lp_unsafe_set			unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
 
-#define SIZEOF_ULL					sizeof(unsigned long long)
-#define LP_ULL_MASK_SIZE			((n_prc_tot/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL)
-#define LP_MASK_SIZE				((n_prc_tot/(SIZEOF_ULL*8) + 1))
 
 typedef struct __msg_t msg_t;
 
@@ -36,8 +33,6 @@ extern void lock_init();
 
 void getMinLP(unsigned int lp);
 unsigned int getMinFree();
-void getMinLP_new(unsigned int lp);
-unsigned int getMinFree_new();
 void commit();
 
 extern nb_calqueue* nbcalqueue;

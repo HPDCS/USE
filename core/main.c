@@ -19,8 +19,8 @@ unsigned short int number_of_threads = 1;
 //extern double delta_count;
 extern int reverse_execution_threshold;
 
-void *start_thread(void *args) {
-
+void *start_thread(){
+	
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 	
     srand48_r(tid+254, &seedT);
@@ -65,6 +65,10 @@ int main(int argn, char *argv[]) {
         n = atoi(argv[1]);
         init(n, atoi(argv[2]));
     }
+
+    
+    if(argn == 4)
+        sec_stop = atoi(argv[3]);
   
     printf("***START SIMULATION***\n\n");
 
@@ -75,11 +79,16 @@ int main(int argn, char *argv[]) {
 
 	start_simulation(n);
 
-    printf("Simulation ended: %.5f seconds\n", (double)timer_value_seconds(exec_time));
-    printf("Simulation ended: %llu clocks\n", clock_timer_value(simulation_clocks));
-
-
+    double simduration = (double)timer_value_seconds(exec_time);
     print_statistics();
+
+    unsigned int commits_total = system_stats.events_safe + system_stats.commits_stm;
+    
+    printf("Simulation ended (seconds): %12.2f\n", simduration);
+    printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
+    printf("Last gvt: %f\n", current_lvt);
+    printf("EventsPerSec: %12.2f\n", ((double)commits_total)/simduration);
+    printf("EventsPerThreadPerSec: %12.2f\n", ((double)commits_total)/simduration/n_cores);
 
     //statistics_fini();
 

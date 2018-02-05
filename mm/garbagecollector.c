@@ -1,11 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "garbagecollector.h"
 #include <hpdcs_utils.h>
 
 
 
 __thread unsigned int ind = 0;
+__thread unsigned int prune_count = 0;
 
 typedef struct _free_list free_list;
 
@@ -16,7 +18,7 @@ struct _free_list
 };
 
 
-#define UNROLLED_FACTOR 100
+#define UNROLLED_FACTOR 300
 #define USE_POSIX_MEMALIGN 0
 #define USE_GLOBAL_LIST 0
 
@@ -32,11 +34,16 @@ __thread unsigned int private_alloc_node_count = 0;
 #define HEADER_SIZE 16
 
 
+
+
 void* alloc_array_nodes(hpdcs_gc_status *status, unsigned int num_item)
 {
 	linked_gc_node *res, *tmp;
 	unsigned long long res_tmp;
-	res = malloc( num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE);
+	// capire perchè con malloc non va e con calloc si
+	res = malloc( num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE); 
+	//res = calloc( 1,num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE);
+	
 	
 	if(res == NULL)
 		return NULL;
@@ -63,14 +70,15 @@ void* alloc_array_nodes(hpdcs_gc_status *status, unsigned int num_item)
 void free_array_nodes(hpdcs_gc_status *status, void *pointer)
 {
 	linked_gc_node *res = (linked_gc_node*) (((char*) pointer) - HEADER_SIZE) ;
-	free (((char*) res) - res->offset_base) ;
-	//char *tmp = (char*) pointer ;
-	//unsigned int num_item = res->counter;
-	//unsigned int i = 0;
-	//
-	//tmp += HEADER_SIZE ;
-	//for(;i<num_item; i++,tmp += status->block_size + HEADER_SIZE)
-	//	mm_node_free(status, tmp) ;
+	//free (((char*) res) - res->offset_base) ;
+	
+	char *tmp = (char*) pointer ;
+	unsigned int num_item = res->counter;
+	unsigned int i = 0;
+	
+	tmp += HEADER_SIZE ;
+	for(;i<num_item; i++,tmp += status->block_size + HEADER_SIZE)
+		mm_node_free(status, tmp) ;
 	
 }
 
@@ -213,6 +221,18 @@ void mm_node_free(hpdcs_gc_status *status, void* pointer)
 }
 
 
+void mm_node_connect_to_be_freed(hpdcs_gc_status *status, void* pointer)
+{
+	linked_gc_node *res;
+	linked_gc_node *tmp_lists 	= status->to_free_nodes 	;
+	res = (linked_gc_node*) ( ((char*)pointer)- HEADER_SIZE );
+	
+	res->next = tmp_lists;
+	status->to_free_nodes = (void*)res;
+	
+}
+
+
 void mm_node_trash(hpdcs_gc_status *status, void* pointer,  unsigned int counter)
 {
 	linked_gc_node *res;
@@ -241,8 +261,42 @@ void* mm_node_collect(hpdcs_gc_status *status, unsigned int *counter)
 }
 
 
-void mm_new_era(hpdcs_gc_status *status)
+void mm_new_era(hpdcs_gc_status *status, unsigned int *prune_array, unsigned int threads, unsigned int tid)
 {
-	status->to_free_nodes_old = status->to_free_nodes ;
-	status->to_free_nodes = NULL;
+	unsigned int i = 0;
+	
+	if(status->to_free_nodes_old == NULL)
+	{
+		status->to_free_nodes_old = status->to_free_nodes ;
+		status->to_free_nodes = NULL;
+	}
+	
+	for(i=0;i<threads;i++)
+		prune_array[(tid)*threads +i] = 0;
 }
+
+
+bool mm_safe(unsigned int * volatile prune_array, unsigned int threads, unsigned int tid)
+{
+	unsigned int i = 0;
+	unsigned int flag = 1;
+	if(++prune_count < 1)// TODO
+		return false;
+
+	
+	prune_count = 0;
+
+	for(;i<threads;i++)
+	{
+		prune_array[(tid) + i*threads] = 1;
+		flag &= prune_array[(tid)*threads +i];
+	}
+
+	if(flag != 1)
+		return false;
+		
+	
+	return true;
+		
+}
+

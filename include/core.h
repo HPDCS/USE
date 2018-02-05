@@ -6,6 +6,8 @@
 #include <math.h>
 #include <float.h>
 #include <reverse.h>
+#include <numerical.h>
+#include "nb_calqueue.h"
 
 #define MAX_LPs	2048
 
@@ -20,10 +22,16 @@
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 #define end_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
-#define is_end_sim(lp) 	( sim_ended[lp/64] & (1ULL << (lp%64)) )
+#define start_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], ~(1ULL << (lp%64))) )
+#define is_end_sim(lp) 	(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
 
 
-#define INCARNATION_DISP 13 
+#define SIZEOF_ULL					(sizeof(unsigned long long))
+#define LP_BIT_MASK_SIZE			((n_prc_tot/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL*8)
+#define LP_ULL_MASK_SIZE			((n_prc_tot/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL)
+#define LP_MASK_SIZE				((n_prc_tot/(SIZEOF_ULL*8) + 1))
+
+struct __bucket_node;
 
 typedef struct __msg_t
 {
@@ -34,13 +42,15 @@ typedef struct __msg_t
   unsigned int data_size;
   unsigned char data[MAX_DATA_SIZE];
   revwin_t *revwin;			//reverse window to rollback
-  void * node;				//address of the belonging node
+  struct __bucket_node * node;	//address of the belonging node
 } msg_t;
 
 
 extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
+extern seed_type lp_seed[];	
+
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
@@ -50,6 +60,10 @@ extern unsigned int n_prc_tot;
 extern  simtime_t gvt;
 /* Average time between consecutive events */
 extern simtime_t t_btw_evts;
+
+extern volatile bool stop;
+extern unsigned int sec_stop;
+extern volatile bool stop_timer;
 
 
 //Esegue il loop del singolo thread
