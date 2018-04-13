@@ -33,6 +33,7 @@
 
 #include "dymelor.h"
 #include "allocator.h"
+#include <numaif.h>
 
 
 extern void *__real_malloc(size_t);
@@ -153,7 +154,7 @@ int get_numa_node(int core) {
 
 #endif /* HAVE_NUMA */
 
-void* allocate_segment(unsigned int sobj, size_t size) {
+void* allocate_segment(unsigned int sobj, size_t size, unsigned int numa_node) {
 
 	mdt_entry* mdt;
 	char* segment;
@@ -200,6 +201,10 @@ void* allocate_segment(unsigned int sobj, size_t size) {
 		release_mdt_entry(sobj);
 		goto bad_allocate;
 	}
+
+
+	unsigned long numa_mask = 0x1 << (numa_node); 
+	mbind(segment, PAGE_SIZE*numpages, MPOL_BIND, &numa_mask, sizeof(unsigned long), MPOL_MF_MOVE_ALL);
 
 	mdt->addr = segment;
 	mdt->numpages = numpages;
@@ -280,8 +285,8 @@ int release_mdt_entry(int sobj){
 }
 
 
-void *pool_get_memory(unsigned int lid, size_t size) {
-	return allocate_segment(lid, size);
+void *pool_get_memory(unsigned int lid, size_t size, unsigned int numa_node) {
+	return allocate_segment(lid, size, numa_node);
 }
 
 /*

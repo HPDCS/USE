@@ -131,8 +131,8 @@ size_t get_log_size(malloc_state *logged_state){
 */
 void *__wrap_malloc(size_t size) {
 	void *ptr;
-
-	ptr = do_malloc(current_lp, recoverable_state[current_lp], size);
+	unsigned int numa_node = numa_from_lp(current_lp);
+	ptr = do_malloc(current_lp, recoverable_state[current_lp], size, numa_node);
 
 	return ptr;
 }

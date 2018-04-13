@@ -28,6 +28,9 @@
 #define start_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], ~(1ULL << (lp%64))) )
 #define is_end_sim(lp) 	(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
 
+//#define is_LP_on_my_NUMA_node(lp) 
+#define numa_from_lp(lp)	(lp % num_numa_nodes)
+
 
 #define SIZEOF_ULL					(sizeof(unsigned long long))
 #define LP_BIT_MASK_SIZE			((n_prc_tot/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL*8)

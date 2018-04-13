@@ -206,7 +206,7 @@ void set_affinity(unsigned int tid){
 		exit(-1);
 	}
 	current_numa_node = get_current_numa_node();
-	printf("Thread %2.u set to CPU %2.u on NUMA node %2.u\n", tid, current_cpu, current_numa_node);
+	printf("Thread %2u set to CPU %2u on NUMA node %2.u\n", tid, current_cpu, current_numa_node);
 	
 }
 

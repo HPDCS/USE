@@ -201,7 +201,7 @@ static void find_next_free(malloc_area *m_area){
 
 
 
-void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
+void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned int numa_node) {
 	malloc_area *m_area, *prev_area;
 	void *ptr;
 	int bitmap_blocks, num_chunks;
@@ -284,7 +284,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 		#ifdef HAVE_PARALLEL_ALLOCATOR
 		//insert is recoverable in pool_get_memory (was in GLP)
-		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size);
+		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
 		#else
 		m_area->self_pointer = rsalloc(area_size);
 		bzero(m_area->self_pointer, area_size);
