@@ -31,6 +31,7 @@
 #include "lookahead.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
+#include <utmpx.h>
 
 
 //id del processo principale
@@ -56,6 +57,9 @@ __thread struct __bucket_node *current_node = 0x0;
 __thread unsigned int last_checked_lp = 0;
 unsigned int start_periodic_check_ongvt = 0;
 __thread unsigned int check_ongvt_period = 0;
+
+__thread unsigned int current_numa_node;
+__thread unsigned int current_cpu;
 
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
@@ -103,11 +107,14 @@ unsigned int sec_stop = 0;
 unsigned long long *sim_ended;
 
 
+unsigned int num_numa_nodes;
+bool numa_available_bool;
+
 size_t node_size_msg_t;
 size_t node_size_state_t;
 
 void * do_sleep(){
-	printf("The process will last %d seconds\n", sec_stop);
+	//printf("The process will last %d seconds\n", sec_stop);
 	
 	sleep(sec_stop);
 	if(sec_stop != 0)
@@ -154,7 +161,7 @@ void _mkdir(const char *path) {
 	if (opath[len - 1] == '/')
 		opath[len - 1] = '\0';
 
-	// opath plus 1 is a hack to allow also absolute path
+	// Path plus 1 is a hack to allow also absolute path
 	for (p = opath + 1; *p; p++) {
 		if (*p == '/') {
 			*p = '\0';
@@ -179,19 +186,28 @@ void _mkdir(const char *path) {
 	}
 }
 
+unsigned int get_current_numa_node(){
+	if(numa_available() != -1){
+		return numa_node_of_cpu(sched_getcpu());
+	}
+	return 1;
+}
 
 void set_affinity(unsigned int tid){
-	unsigned int id_cpu;
+	unsigned int cpu_per_node;
 	cpu_set_t mask;	
-	id_cpu = (tid % 8) * 4 + (tid/((unsigned int)8));
-	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
+	cpu_per_node = N_CPU/num_numa_nodes;
+	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
 	CPU_ZERO(&mask);
-	CPU_SET(id_cpu, &mask);
+	CPU_SET(current_cpu, &mask);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
 	}
+	current_numa_node = get_current_numa_node();
+	printf("Thread %2.u set to CPU %2.u on NUMA node %2.u\n", tid, current_cpu, current_numa_node);
+	
 }
 
 inline void SetState(void *ptr) { //può diventare una macro?
@@ -270,6 +286,21 @@ void LPs_metada_init() {
 
 	
 }
+
+void numa_init(){
+	//TODO: se riusciamo a farlo con le macro, meglio
+	if(numa_available() != -1){
+		printf("NUMA machine with %u nodes.\n", (unsigned int)  numa_num_configured_nodes());
+		numa_available_bool = true;
+		num_numa_nodes = numa_num_configured_nodes();
+	}
+	else{
+		printf("UMA machine.\n");
+		numa_available_bool = false;
+		num_numa_nodes = 1;
+	}	
+}
+
 
 //Sostituirlo con una bitmap!
 //Nota: ho visto che viene invocato solo a fine esecuzione
@@ -369,14 +400,11 @@ void round_check_OnGVT(){
 void init_simulation(unsigned int thread_id){
 	tid = thread_id;
 	int i = 0;
-
 	
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
 #endif
 
-	// Set the CPU affinity
-	//set_affinity(tid);//TODO: decommentare per test veri
 	
 	// Initialize the set ??
 	unsafe_set_init();
@@ -401,6 +429,7 @@ void init_simulation(unsigned int thread_id){
 		queue_init();
 		numerical_init();
 		nodes_init();
+		numa_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
@@ -434,7 +463,7 @@ void init_simulation(unsigned int thread_id){
 
 	//wait all threads to end the init phase to start togheter
 
-	if(tid == 0)
+	if(tid == 0) //TODO: a cosa serve?
 	{
 	    int ret;
 		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
@@ -442,13 +471,13 @@ void init_simulation(unsigned int thread_id){
 	            abort();
 	    }
 	}
-
-
-
-
+	
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
+	
+	// Set the CPU affinity
+	set_affinity(tid);//TODO: decommentare per test veri
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){

@@ -10,6 +10,7 @@
 #include <statistics.h>
 #include <limits.h>
 #include <nb_calqueue.h>
+#include <numa.h>
 
 #define MAX_LPs	2048
 
@@ -93,6 +94,8 @@ extern __thread unsigned int tid;
 extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
+extern __thread unsigned int current_numa_node;
+extern __thread unsigned int current_cpu;
 
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
@@ -108,6 +111,9 @@ extern simtime_t t_btw_evts;
 extern LP_state **LPS;
 extern volatile bool stop;
 extern unsigned int sec_stop;
+/* Number of numa nodes on the current machine */
+extern unsigned int num_numa_nodes;
+extern bool numa_available_bool;
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
