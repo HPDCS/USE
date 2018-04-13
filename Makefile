@@ -211,6 +211,7 @@ CORE_SOURCES =  core/core.c\
 		core/main.c\
 		core/numerical.c\
 		core/hpdcs_math.c\
+		core/parseparam.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
 
