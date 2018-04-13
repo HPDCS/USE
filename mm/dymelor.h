@@ -196,7 +196,7 @@ extern double checkpoint_bytes_total;
 
 
 // DyMeLoR API
-extern void dymelor_init(void);
+extern void dymelor_init(unsigned int objs);
 extern void dymelor_fini(void);
 extern void set_force_full(unsigned int, int);
 extern void dirty_mem(void *, int);

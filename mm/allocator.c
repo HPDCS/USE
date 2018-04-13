@@ -155,7 +155,6 @@ int get_numa_node(int core) {
 #endif /* HAVE_NUMA */
 
 void* allocate_segment(unsigned int sobj, size_t size, unsigned int numa_node) {
-
 	mdt_entry* mdt;
 	char* segment;
 	int numpages;
@@ -188,11 +187,10 @@ void* allocate_segment(unsigned int sobj, size_t size, unsigned int numa_node) {
 	AUDIT
 	printf("segment allocation - returned mdt is at address %p\n",mdt);
 
-
 	AUDIT
 	printf("allocate segment: request for %ld bytes - actual allocation is of %d pages\n",size,numpages);
 
-        segment = (char*)mmap((void*)NULL,PAGE_SIZE*numpages, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0,0);
+	segment = (char*)mmap((void*)NULL,PAGE_SIZE*numpages, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0,0);
 
 	AUDIT
 	printf("allocate segment: actual allocation is at address %p\n",segment);
@@ -202,9 +200,11 @@ void* allocate_segment(unsigned int sobj, size_t size, unsigned int numa_node) {
 		goto bad_allocate;
 	}
 
-
 	unsigned long numa_mask = 0x1 << (numa_node); 
-	mbind(segment, PAGE_SIZE*numpages, MPOL_BIND, &numa_mask, sizeof(unsigned long), MPOL_MF_MOVE_ALL);
+	if(mbind(segment, PAGE_SIZE*numpages, MPOL_BIND, &numa_mask, sizeof(unsigned long), MPOL_MF_MOVE_ALL) == -1){
+		printf("Memory NUMA binding failed. Please retry disabling the NUMApartitioning.\n");
+		abort();
+	}
 
 	mdt->addr = segment;
 	mdt->numpages = numpages;

@@ -424,7 +424,7 @@ void init_simulation(unsigned int thread_id){
 	
 	if(tid == 0){
 		LPs_metada_init();
-		dymelor_init();
+		dymelor_init(n_prc_tot);
 		statistics_init();
 		queue_init();
 		numerical_init();

@@ -64,28 +64,28 @@ void recoverable_init(void) {
 }
 
 
-void recoverable_fini(void) {
-	unsigned int i, j;
-	malloc_area *current_area;
-
-	for(i = 0; i < n_prc_tot; i++) {
-		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
-			current_area = &(recoverable_state[i]->areas[j]);
-			if (current_area != NULL) {
-				if (current_area->self_pointer != NULL) {
-					#ifdef HAVE_PARALLEL_ALLOCATOR
-					pool_release_memory(i, current_area->self_pointer);
-					#else
-					rsfree(current_area->self_pointer);
-					#endif
-				}
-			}
-		}
-		rsfree(recoverable_state[i]->areas);
-		rsfree(recoverable_state[i]);
-	}
-	rsfree(recoverable_state);
-}
+//void recoverable_fini(void) {
+//	unsigned int i, j;
+//	malloc_area *current_area;
+//
+//	for(i = 0; i < n_prc_tot; i++) {
+//		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
+//			current_area = &(recoverable_state[i]->areas[j]);
+//			if (current_area != NULL) {
+//				if (current_area->self_pointer != NULL) {
+//					#ifdef HAVE_PARALLEL_ALLOCATOR
+//					pool_release_memory(i, current_area->self_pointer);
+//					#else
+//					rsfree(current_area->self_pointer);
+//					#endif
+//				}
+//			}
+//		}
+//		rsfree(recoverable_state[i]->areas);
+//		rsfree(recoverable_state[i]);
+//	}
+//	rsfree(recoverable_state);
+//}
 
 
 
@@ -237,61 +237,61 @@ void *__wrap_calloc(size_t nmemb, size_t size){
 
 
 
-void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
-
-	int i;
-	malloc_state *state;
-	malloc_area *m_area;
-
-	state = recoverable_state[lid];
-
-	// The first NUM_AREAS malloc_areas are placed according to their chunks' sizes. The exceeding malloc_areas can be compacted
-	for(i = NUM_AREAS; i < state->num_areas; i++){
-		m_area = &state->areas[i];
-		
-		if(m_area->alloc_chunks == 0 && m_area->last_access < time_barrier && !CHECK_AREA_LOCK_BIT(m_area)){
-
-			if(m_area->self_pointer != NULL) {
-
-				#ifdef HAVE_PARALLEL_ALLOCATOR
-				pool_release_memory(lid, m_area->self_pointer);
-				#else
-				rsfree(m_area->self_pointer);
-				#endif
-
-				m_area->use_bitmap = NULL;
-				m_area->dirty_bitmap = NULL;
-				m_area->self_pointer = NULL;
-				m_area->area = NULL;
-				m_area->state_changed = 0;
-
-				// Set the pointers
-				if(m_area->prev != -1)
-					state->areas[m_area->prev].next = m_area->next;
-				if(m_area->next != -1)
-					state->areas[m_area->next].prev = m_area->prev;
-
-				// Swap, if possible
-				if(i < state->num_areas - 1) {
-					memcpy(m_area, &state->areas[state->num_areas - 1], sizeof(malloc_area));
-					m_area->idx = i;
-					if(m_area->prev != -1)
-						state->areas[m_area->prev].next = m_area->idx;
-					if(m_area->next != -1)
-						state->areas[m_area->next].prev = m_area->idx;
-					
-					// Update the self pointer
-					*(long long *)m_area->self_pointer = (long long)m_area;
-					
-					// The swapped area will now be checked
-					i--;
-				}
-
-				// Decrement the expected number of areas
-				state->num_areas--;
-			}
-		}
-	}
-}
+//void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
+//
+//	int i;
+//	malloc_state *state;
+//	malloc_area *m_area;
+//
+//	state = recoverable_state[lid];
+//
+//	// The first NUM_AREAS malloc_areas are placed according to their chunks' sizes. The exceeding malloc_areas can be compacted
+//	for(i = NUM_AREAS; i < state->num_areas; i++){
+//		m_area = &state->areas[i];
+//		
+//		if(m_area->alloc_chunks == 0 && m_area->last_access < time_barrier && !CHECK_AREA_LOCK_BIT(m_area)){
+//
+//			if(m_area->self_pointer != NULL) {
+//
+//				#ifdef HAVE_PARALLEL_ALLOCATOR
+//				pool_release_memory(lid, m_area->self_pointer);
+//				#else
+//				rsfree(m_area->self_pointer);
+//				#endif
+//
+//				m_area->use_bitmap = NULL;
+//				m_area->dirty_bitmap = NULL;
+//				m_area->self_pointer = NULL;
+//				m_area->area = NULL;
+//				m_area->state_changed = 0;
+//
+//				// Set the pointers
+//				if(m_area->prev != -1)
+//					state->areas[m_area->prev].next = m_area->next;
+//				if(m_area->next != -1)
+//					state->areas[m_area->next].prev = m_area->prev;
+//
+//				// Swap, if possible
+//				if(i < state->num_areas - 1) {
+//					memcpy(m_area, &state->areas[state->num_areas - 1], sizeof(malloc_area));
+//					m_area->idx = i;
+//					if(m_area->prev != -1)
+//						state->areas[m_area->prev].next = m_area->idx;
+//					if(m_area->next != -1)
+//						state->areas[m_area->next].prev = m_area->idx;
+//					
+//					// Update the self pointer
+//					*(long long *)m_area->self_pointer = (long long)m_area;
+//					
+//					// The swapped area will now be checked
+//					i--;
+//				}
+//
+//				// Decrement the expected number of areas
+//				state->num_areas--;
+//			}
+//		}
+//	}
+//}
 
 
