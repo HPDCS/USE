@@ -1,22 +1,22 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <strings.h>
 #include <ROOT-Sim.h>
 
 #include "application.h"
-#include <lookahead.h>
 
-
-unsigned int limit_complete_calls = COMPLETE_CALLS;//int complete_calls = COMPLETE_CALLS;
 bool pcs_statistics = false;
+unsigned int complete_calls = COMPLETE_CALLS;
 
 
 #define DUMMY_TA 500
 
+double ran;
 
-void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
+void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
+	unsigned int w;
 
-    unsigned int w;
+	//printf("%d executing %d at %f\n", me, event_type, now);
 
 	event_content_type new_event_content;
 
@@ -30,14 +30,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 	lp_state_type *state;
 	state = (lp_state_type*)ptr;
 
-//	printf("Executing %d at %d at %f state %p\n", event_type, me, now, ptr);
-
 	if(state != NULL) {
 		state->lvt = now;
 		state->executed_events++;
 	}
-
-	unsigned char *p[CHANNELS_PER_CELL];
 
 
 	switch(event_type) {
@@ -56,64 +52,60 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			bzero(state, sizeof(lp_state_type));
 			state->channel_counter = CHANNELS_PER_CELL;
 
-			state->ref_ta = state->ta = TA;
-			state->ta_duration = TA_DURATION;
-			state->ta_change = TA_CHANGE;
-			state->channels_per_cell = CHANNELS_PER_CELL;
+			// Read runtime parameters
+			if(IsParameterPresent(event_content, "pcs_statistics"))
+				pcs_statistics = true;
 
-//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-//				p[w] = malloc(sizeof(channel));
-//				if(p[w] == NULL){
-//					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-//					abort();
-//				}
-//				*p[w] = 'x';
-//			}
-//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-//				free(p[w]);
-//			}
-//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-//				p[w] = malloc(sizeof(sir_data_per_cell));
-//				if(p[w] == NULL){
-//					printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-//					abort();
-//				}
-//				*p[w] = 'x';
-//			}
-//			for(w = 0; w < CHANNELS_PER_CELL; w++) {
-//				free(p[w]);
-//			}
+			if(IsParameterPresent(event_content, "ta"))
+				state->ref_ta = state->ta = GetParameterDouble(event_content, "ta");
+			else
+				state->ref_ta = state->ta = TA;
+
+			if(IsParameterPresent(event_content, "ta_duration"))
+				state->ta_duration = GetParameterDouble(event_content, "ta_duration");
+			else
+				state->ta_duration = TA_DURATION;
+
+			if(IsParameterPresent(event_content, "ta_change"))
+				state->ta_change = GetParameterDouble(event_content, "ta_change");
+			else
+				state->ta_change = TA_CHANGE;
+
+			if(IsParameterPresent(event_content, "channels_per_cell"))
+				state->channels_per_cell = GetParameterInt(event_content, "channels_per_cell");
+			else
+				state->channels_per_cell = CHANNELS_PER_CELL;
+
+			if(IsParameterPresent(event_content, "complete_calls"))
+				complete_calls = GetParameterInt(event_content, "complete_calls");
+
+			state->fading_recheck = IsParameterPresent(event_content, "fading_recheck");
+			state->variable_ta = IsParameterPresent(event_content, "variable_ta");
 
 
 			// Show current configuration, only once
 			if(me == 0) {
-				printf("CURRENT CONFIGURATION:\ncomplete calls: %u\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
-					COMPLETE_CALLS, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
+				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
+					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
 				fflush(stdout);
 			}
 
-//			state->channel_counter = state->channels_per_cell;
+			state->channel_counter = state->channels_per_cell;
 
 			// Setup channel state
 			state->channel_state = malloc(sizeof(unsigned int) * 2 * (CHANNELS_PER_CELL / BITS + 1));
-			if(state->channel_state == NULL){
-				printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
-				abort();		
-			}
 			for (w = 0; w < state->channel_counter / (sizeof(int) * 8) + 1; w++)
 				state->channel_state[w] = 0;
 
 			// Start the simulation
-			timestamp = (simtime_t) (TA * Random());
+			timestamp = (simtime_t) (20 * Random());
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
-//			printf("INIT %d: START at %f\n", me, timestamp);
 
 			// If needed, start the first fading recheck
-//			if (state->fading_recheck) {
-//				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * Random());
-//				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
-//			}
-//			printf("INIT %d: RECHECK at %f\n", me, timestamp);
+			//if (state->fading_recheck) {
+				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * Random());
+				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
+		//	}
 
 			break;
 
@@ -128,23 +120,25 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 				state->channel_counter--;
 
-//				new_event_content.channel = allocation(state);
+				new_event_content.channel = allocation(state);
 				new_event_content.from = me;
 				new_event_content.sent_at = now;
+
+//				printf("(%d) allocation %d at %f\n", me, new_event_content.channel, now);
 
 				// Determine call duration
 				switch (DURATION_DISTRIBUTION) {
 
 					case UNIFORM:
-						new_event_content.call_term_time = LOOKAHEAD + now + (simtime_t)(state->ta_duration * Random());
+						new_event_content.call_term_time = now + (simtime_t)(state->ta_duration * Random());
 						break;
 
 					case EXPONENTIAL:
-						new_event_content.call_term_time = LOOKAHEAD + now + (simtime_t)(Expent(state->ta_duration));
+						new_event_content.call_term_time = now + (simtime_t)(Expent(state->ta_duration));
 						break;
 
 					default:
- 						new_event_content.call_term_time = LOOKAHEAD + now + (simtime_t) (5 * Random() );
+ 						new_event_content.call_term_time = now + (simtime_t) (5 * Random() );
 				}
 
 				// Determine whether the call will be handed-off or not
@@ -152,26 +146,26 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 					case UNIFORM:
 
-						handoff_time  = LOOKAHEAD + now + (simtime_t)((state->ta_change) * Random());
+						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
 						break;
 
 					case EXPONENTIAL:
-						handoff_time = LOOKAHEAD + now + (simtime_t)(Expent(state->ta_change));
+						handoff_time = now + (simtime_t)(Expent(state->ta_change));
 						break;
 
 					default:
-						handoff_time = LOOKAHEAD + now + (simtime_t)(5 * Random());
+						handoff_time = now + (simtime_t)(5 * Random());
 
 				}
 
-				if(new_event_content.call_term_time <= handoff_time) {
+				if(new_event_content.call_term_time < handoff_time) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
-					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));  //ERRORE QUI!!!
-					ScheduleNewEvent(new_event_content.cell, handoff_time, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
+					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
 				}
 			}
+
 
 			if (state->variable_ta)
 				state->ta = recompute_ta(state->ref_ta, now);
@@ -180,15 +174,15 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			switch (DISTRIBUTION) {
 
 				case UNIFORM:
-					timestamp= LOOKAHEAD + now + (simtime_t)(state->ta * Random());
+					timestamp= now + (simtime_t)(state->ta * Random());
 					break;
 
 				case EXPONENTIAL:
-					timestamp= LOOKAHEAD + now + (simtime_t)(Expent(state->ta));
+					timestamp= now + (simtime_t)(Expent(state->ta));
 					break;
 
 				default:
-					timestamp= LOOKAHEAD + now + (simtime_t) (5 * Random());
+					timestamp= now + (simtime_t) (5 * Random());
 
 			}
 
@@ -197,15 +191,10 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			break;
 
 		case END_CALL:
-		
-			//printf(" state è all'indirizzo              \t%p  =========================================\n", state);
-			//printf(" channel_counte = %u all'indirizzo  \t%p  =========================================\n", state->channel_counter, &(state->channel_counter));
-			//printf(" complete_calls = %u all'indirizzo  \t%p  =========================================\n", state->complete_calls, &(state->complete_calls));
 
 			state->channel_counter++;
 			state->complete_calls++;
-			
-//			deallocation(me, state, event_content->channel, event_content, now);
+			deallocation(me, state, event_content->channel, now);
 
 			break;
 
@@ -213,34 +202,46 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 			state->channel_counter++;
 			state->leaving_handoffs++;
-//			deallocation(me, state, event_content->channel, event_content, now);
+			deallocation(me, state, event_content->channel, now);
 
-		//	new_event_content.call_term_time =  event_content->call_term_time;
+			new_event_content.call_term_time =  event_content->call_term_time;
+			new_event_content.from = me;
+			new_event_content.dummy = &(state->dummy);
+			ScheduleNewEvent(event_content->cell, now+0.000001, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 			break;
 
-        	case HANDOFF_RECV:
+		case HANDOFF_RECV:
 			state->arriving_handoffs++;
 			state->arriving_calls++;
+
+			ran = Random();
+
+			if(me == 1 && ran < 0.3 && event_content->from == 2){//&& state->dummy_flag == false) {
+				*(event_content->dummy) = 1;
+				state->dummy_flag = true;
+			}
 
 			if (state->channel_counter == 0)
 				state->blocked_on_handoff++;
 			else {
 				state->channel_counter--;
 
-//				new_event_content.channel = allocation(state);
+				new_event_content.channel = allocation(state);
 				new_event_content.call_term_time = event_content->call_term_time;
+
 
 				switch (CELL_CHANGE_DISTRIBUTION) {
 					case UNIFORM:
-						handoff_time  = LOOKAHEAD + now + (simtime_t)((state->ta_change) * Random());
+						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
 
 						break;
 					case EXPONENTIAL:
-						handoff_time = LOOKAHEAD + now + (simtime_t)(Expent( state->ta_change ));
+						handoff_time = now + (simtime_t)(Expent( state->ta_change ));
 
 						break;
 					default:
-						handoff_time = LOOKAHEAD + now + (simtime_t) (5 * Random());
+						handoff_time = now+
+						(simtime_t) (5 * Random());
 				}
 
 				if(new_event_content.call_term_time < handoff_time ) {
@@ -248,7 +249,6 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
 					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
-					ScheduleNewEvent(new_event_content.cell, handoff_time, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 				}
 			}
 
@@ -256,7 +256,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 			break;
 
 
-		case FADING_RECHECK:
+				case FADING_RECHECK:
 
 /*
 			if(state->check_fading)
@@ -282,10 +282,7 @@ void ProcessEvent(unsigned int me, simtime_t now, unsigned int event_type, event
 
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
-	if (snapshot->complete_calls < COMPLETE_CALLS){
-		//printf("%u: ---SS.CS = %u, CS = %u\n",me,snapshot->complete_calls, COMPLETE_CALLS);
+	if (snapshot->complete_calls < complete_calls)
 		return false;
-	}
-	//printf("---SS.CS = %u, CS = %u\n",snapshot->complete_calls, COMPLETE_CALLS);
 	return true;
 }
