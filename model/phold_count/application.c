@@ -73,7 +73,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 			}
 		#else
-			ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+			for(i = 0; i < EVENTS_PER_LP; i++) {
+				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+			}
+			//ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 		#endif
 
 			break;

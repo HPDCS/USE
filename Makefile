@@ -23,7 +23,7 @@ endif
 ifdef OPTIMISTIC_LEVEL
 CFLAGS:=$(CFLAGS)  -DOPTIMISTIC_MODE=$(OPTIMISTIC_LEVEL)
 else
-CFLAGS:=$(CFLAGS)  -DOPTIMISTIC_MODE=0
+CFLAGS:=$(CFLAGS)  -DOPTIMISTIC_MODE=1
 endif
 
 ifdef MALLOC
@@ -36,6 +36,12 @@ ifdef REVERSIBLE
 CFLAGS:= $(CFLAGS) -DREVERSIBLE=$(REVERSIBLE)
 else
 CFLAGS:= $(CFLAGS) -DREVERSIBLE=0
+endif
+
+ifdef VERBOSE
+CFLAGS:=$(CFLAGS) -DVERBOSE=$(VERBOSE)
+else
+CFLAGS:=$(CFLAGS) -DVERBOSE=0
 endif
 
 #MODEL
@@ -185,9 +191,9 @@ TCAR_SOURCES=model/tcar/application.c\
 	            model/tcar/neighbours.c
 
 TRAFFIC_SOURCES=model/traffic/application.c\
-		    model/traffic/functions.c\
-		    model/traffic/init.c\
-		    model/traffic/normal_cdf.c
+				model/traffic/functions.c\
+				model/traffic/init.c\
+				model/traffic/normal_cdf.c
 
 ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 		    model/robot_explore/neighbours.c

@@ -30,7 +30,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 	simtime_t timestamp = 0;
 	event_content_type new_event;
 	int receiver;
-	int i;
+	//int i;
 	car_t *car;
 	
 	event_content_type *event_content = (event_content_type *)event;
@@ -88,7 +88,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 		
 			if(state->queued_elements < state->total_queue_slots) {
 
-				car = enqueue_car(me, event_content->from, state);
+				car = car_enqueue(me, event_content->from, state);
 
 				// Send a leave event
 				ScheduleNewEvent(me, car->leave, LEAVE, &car->car_id, sizeof(unsigned long long));

@@ -27,9 +27,11 @@
 
 
 static car_t *reorder_queue(car_t *head, simtime_t now) {
+    (void) now;
+    
     car_t *curr;
     car_t *prev;
-bool didSwap = false;
+    bool didSwap = false;
     for(didSwap = true; didSwap; ) {
         didSwap = false;
         prev = head;
@@ -132,7 +134,8 @@ static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed) 
 
 void release_cars(unsigned int me, lp_state_type *state) {
 	car_t *curr_car;
-	simtime_t leave_time;
+	//simtime_t leave_time;
+	(void) me;
 	
 	curr_car = state->queue;
 	while(curr_car != NULL) {
@@ -144,9 +147,9 @@ void release_cars(unsigned int me, lp_state_type *state) {
 	}
 }
 
-car_t *enqueue_car(int me, int from, lp_state_type *state) {
+car_t *car_enqueue(int me, int from, lp_state_type *state) {
 	car_t *new_car;
-	car_t *curr_car;
+	//car_t *curr_car;
 	
 	// Create the car node
 	new_car = malloc(sizeof(car_t));
@@ -191,7 +194,9 @@ car_t *enqueue_car(int me, int from, lp_state_type *state) {
 //	}
 
 	state->queue = reorder_queue(state->queue, state->lvt);
-	
+#if VERBOSE > 0
+	printf("ENQUEUE: car %llu entering in LP %u- at time %f. It will depart at time %f\n", new_car->car_id, me, new_car->arrival, new_car->leave);
+#endif	
 	return new_car;
 }
 
@@ -331,11 +336,13 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 	car_t *ret_car;
 	
 	//~printf("\n%d: looking for %llu... ", me, *mark);
-	
+#if VERBOSE > 0	
+	printf("DEQUEUE: car %llu outgoing at LP %u- at time %f. addr: %p\n", mark[0], me, state->lvt, mark);
+#endif
 	curr_car = state->queue;
 	
 	if(curr_car == NULL) {
-		printf("Model error 1\n");
+		printf("ERROR_1: car %llu not found in LP %u\n", *mark, me);
 		abort();
 	}
 	
@@ -355,7 +362,11 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 	}
 	
 	if(curr_car->next == NULL) {
-		printf("Model error 2\n");
+		//while(curr_car->next != NULL && curr_car->next->car_id != *mark) {
+		//	printf("%llu, ", curr_car->next->car_id);
+		//	curr_car = curr_car->next;
+		//}
+		printf("ERROR_2: car %llu not found in LP %u\n", *mark, me);
 		abort();
 	}
 	

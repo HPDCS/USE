@@ -509,7 +509,11 @@ stat64_t execute_time;
 
 
 void thread_loop(unsigned int thread_id) {
-	unsigned int old_state, empty_fetch = 0;
+	unsigned int old_state;
+	
+#if ONGVT_PERIOD != -1
+	unsigned int empty_fetch = 0;
+#endif
 	
 	init_simulation(thread_id);
 	
@@ -543,7 +547,9 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			goto end_loop;
 		}
+#if ONGVT_PERIOD != -1
 		empty_fetch = 0;
+#endif
 
 		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
@@ -606,7 +612,9 @@ void thread_loop(unsigned int thread_id) {
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
-
+#if VERBOSE > 0
+			printf("-Sto ROLLBACKANDO LP %u- da %f a %f-\n", current_lp, LPS[current_lp]->current_LP_lvt ,current_lvt);
+#endif
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 			
 			LPS[current_lp]->state = old_state;
