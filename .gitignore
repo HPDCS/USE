@@ -1,3 +1,5 @@
+results*
+
 # Object files
 *.o
 *.ko
@@ -38,6 +40,7 @@ tcar
 robot_explore
 hash 		 
 phold
+pholdcount
 pcs
 /tcar
 log_test/*

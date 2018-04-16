@@ -93,4 +93,3 @@ typedef unsigned long long clock_timer;
 		})
 
 #endif /* _TIMER_H */
-

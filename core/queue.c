@@ -7,10 +7,13 @@
 #include "queue.h"
 #include "core.h"
 #include "lookahead.h"
+#include "hpdcs_utils.h"
+
 
 //used to take locks on LPs
-unsigned int *lp_lock;
-//event pool used by simulation
+volatile unsigned int *lp_lock;
+
+//event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;
 
 __thread msg_t * current_msg __attribute__ ((aligned (64)));
@@ -21,12 +24,15 @@ __thread unsigned int unsafe_events;
 
 __thread unsigned long long * lp_unsafe_set;
 
-typedef struct __temp_thread_pool {
-	unsigned int _thr_pool_count;
-	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
-} __temp_thread_pool;
+__thread unsigned long long * lp_unsafe_set_debug;
+
+__thread unsigned long long * lp_locked_set;
 
 __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
+
+__thread list(msg_t) to_remove_local_evts_old = NULL;
+__thread list(msg_t) to_remove_local_evts = NULL;
+__thread list(msg_t) freed_local_evts = NULL;
 
 
 
@@ -35,13 +41,22 @@ void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
 }
 
-void lock_init(){
+void unsafe_set_init(){
+	
 	if( ( lp_unsafe_set=malloc(LP_ULL_MASK_SIZE)) == NULL ){
-	//if((lp_unsafe_set=malloc(n_prc_tot/8 + 8))==NULL){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
-	clear_lp_unsafe_set;
+    if( ( lp_unsafe_set_debug=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+        printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+        abort();    
+    }
+    if( ( lp_locked_set=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+        printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
+        abort();    
+    }
+    clear_lp_unsafe_set;
+    clear_lp_locked_set;
 }
 
 void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
@@ -50,7 +65,6 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 
     if(_thr_pool._thr_pool_count == THR_POOL_SIZE) {
         printf("queue overflow for thread %u at time %f: inserting event %d over %d\n", tid, current_lvt, _thr_pool._thr_pool_count, THR_POOL_SIZE);
-        printf("-----------------------------------------------------------------\n");
         abort();
     }
     if(event_size > MAX_DATA_SIZE) {
@@ -58,7 +72,12 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         abort();
     }
 
-    msg_ptr = &_thr_pool.messages[_thr_pool._thr_pool_count++];
+
+    msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+    list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
+
+	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
+	_thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
 
     msg_ptr->sender_id = current_lp;
     msg_ptr->receiver_id = receiver;
@@ -67,185 +86,100 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
     memcpy(msg_ptr->data, event_content, event_size);
-    //event_content andrebbe liberato poi? Chi la libera?
-    //Vedese se ha senso non copiarsi i dati ma portarsi il puntatore (perdendo la località)
-
 }
 
-inline unsigned int queue_pool_size(void) {
-    return _thr_pool._thr_pool_count;
+void queue_clean(){ 
+    unsigned int i = 0;
+    msg_t* current;
+    for (; i<_thr_pool._thr_pool_count; i++)
+    {
+        current = _thr_pool.messages[i].father;
+        if(current != NULL)
+        {
+
+            list_node_clean_by_content(current); 
+            current->state = -1;
+            current->data_size = tid+1;
+            current->max_outgoing_ts = 0;
+            list_insert_tail_by_content(freed_local_evts, current);
+            _thr_pool.messages[i].father = NULL;
+
+        }
+
+    }
+	_thr_pool._thr_pool_count = 0;
 }
 
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
+    //simtime_t max = current_msg->timestamp; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
+    
+#if REPORT == 1
+		clock_timer queue_op;
+#endif
 
-    for(i = 0; i < _thr_pool._thr_pool_count; i++){
-        new_hole = malloc(sizeof(msg_t)); //<-Si può eliminare questa malloc? Vedi queue insert
+    for(i = 0; i < _thr_pool._thr_pool_count; i++) {
+
+        //new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+        //list_node_clean_by_content(new_hole); //NON DOVREBBE SERVIRE
+
+		new_hole = _thr_pool.messages[i].father;
+        _thr_pool.messages[i].father = NULL; 
+
         if(new_hole == NULL){
 			printf("Out of memory in %s:%d", __FILE__, __LINE__);
 			abort();
 		}
-        memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
+        //memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
+        new_hole->father = current_msg;
+        new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
+        new_hole->fatherEpoch = LPS[current_lp]->epoch;
+
+		new_hole->monitor = (void *)0x0;
+        new_hole->state = 0;
+        new_hole->epoch = 0;
+        new_hole->frame = 0;
+        new_hole->tie_breaker = 0;
+        new_hole->max_outgoing_ts = new_hole->timestamp;
+
+#if DEBUG==1
+		if(new_hole->timestamp < current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+		//if(new_hole->timestamp != _thr_pool.messages[i].timestamp){ printf(RED("2Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+		if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+#endif
+
+		if(current_msg->max_outgoing_ts < new_hole->timestamp)
+			current_msg->max_outgoing_ts = new_hole->timestamp;
 
 #if REPORT == 1
-		clock_timer queue_op;
 		clock_timer_start(queue_op);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 
 #if REPORT == 1
-		statistics_post_data(tid, CLOCK_ENQUEUE, clock_timer_value(queue_op));
-		statistics_post_data(tid, EVENTS_FLUSHED, 1);
+		statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
+		statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
 #endif
     }
+
     _thr_pool._thr_pool_count = 0;
 }
 
-inline void queue_clean(void) {
-    _thr_pool._thr_pool_count = 0;
-}
 
-void commit(void) {
-	queue_deliver_msgs();
-#if REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-#endif
-	delete(nbcalqueue, current_msg->node);
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_DELETE, clock_timer_value(queue_op));
-#endif
-	
-#if DEBUG == 0
-	unlock(current_lp);
-#else				
-	if(!unlock(current_lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[current_lp]);
-#endif
-
-#if DEBUG == 1
-	simtime_t old_gvt = gvt; 
-	if(current_lvt > old_gvt) 
-		__sync_bool_compare_and_swap((unsigned long long*)&gvt, (unsigned long long)old_gvt, (unsigned long long)current_lvt);
-	else if (current_lvt < old_gvt-LOOKAHEAD){ 
-		nbc_bucket_node * node = current_msg->node;
-		printf("[%u] ERROR: event coomitted out of order with GVT:%f\n", tid, gvt);
-		printf("\tevent: ts:%f lp:%u resrvd:%u cpy:%u del:%u addr:%p\n", 
-			node->timestamp, node->tag, node->reserved, node->copy, node->deleted, node);
-	}
-#endif
-	free(current_msg);
-#if REPORT == 1
-	clock_timer_start(queue_op);
-#endif
-	//nbc_prune(current_lvt - LOOKAHEAD);
-	nbc_prune();
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_PRUNE, clock_timer_value(queue_op));
-	statistics_post_data(tid, PRUNE_COUNTER, 1);
-#endif
-}
-
-unsigned int getMinFree(){
-	nbc_bucket_node * node;
-	simtime_t ts, min = INFTY;
-	unsigned int lp;
-	table *h;
-
-#if REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-#endif
-    if((node = getMin(nbcalqueue, &h)) == NULL)
-		return 0;
-	safe = false;
-	clear_lp_unsafe_set;
-    min = node->timestamp;
-    
-    while(node != NULL){
-		lp = node->tag;
-		if(!node->reserved){
-			ts = node->timestamp;
-			if((ts >= (min + LOOKAHEAD) || !is_in_lp_unsafe_set(lp) )){
-				if(tryLock(lp)){
-retry_on_replica:
-					if(((unsigned long long)node->next & 1ULL)){ //da verificare se è corretto?
-						if(node->replica != NULL){
-							node = node->replica;
-							goto retry_on_replica;
-						}
-#if DEBUG == 0
-							unlock(lp);
-#else				
-							if(!unlock(lp))	printf("[%u] ERROR: unlock failed; previous value: %u\n", tid, lp_lock[lp]);
-#endif
-
-					}
-					else{
-						break;
-					}
-				}
-			}
-		}
-		//printf("\t\t[%u]getNext: ts:%f lp:%u res:%u lk:%d\n", tid, node->timestamp, node->tag, node->reserved, lp_lock[node->tag*CACHE_LINE_SIZE/4]);
-		add_lp_unsafe_set(lp);
-		node = getNext(node, h);
-    }
-    
-    if(node == NULL){
-		current_msg = NULL;
-	    return 0;
-    }
-    
-    node->reserved = true;
-    current_msg = (msg_t *) node->payload;
-    current_msg->node = node;
-
-	if( ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (ts == min))) && !is_in_lp_unsafe_set(lp) )
-		safe = true;
-    
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_DEQUEUE, clock_timer_value(queue_op));
-	statistics_post_data(tid, EVENTS_FETCHED, 1);
-//	statistics_post_data(tid, T_BTW_EVT, current_msg->timestamp-old_ts); // TODO : possiamo usarlo per la resize? 
-#endif
-    return 1;
-	
-}
-
-void getMinLP(unsigned int lp){
-	nbc_bucket_node * volatile node;
-	simtime_t min;
-	table * h;
-	
-#if REPORT == 1
-	clock_timer queue_op;
-	clock_timer_start(queue_op);
-#endif
-
-restart:
-	min = INFTY;
-	safe = false;
-	    
-	node = getMin(nbcalqueue, &h);
-    min = node->timestamp;
-   	
-    while(node != NULL && node->tag != lp){
-		node = getNext( node, h);
-		if(node == NULL)
-			goto restart;
-    }
-    //printf("\t[%u] Finisched %u at time %f %u\n\n", tid, lp, current_lvt, current_lp);
-
-    node->reserved = true;
-    new_current_msg = (msg_t *) node->payload;
-    new_current_msg->node = node;
-
-	if( (node->timestamp < (min + LOOKAHEAD)) || (LOOKAHEAD==0 && (node->timestamp == min)) ){
-		safe = true;
-	}
-#if REPORT == 1
-	statistics_post_data(tid, CLOCK_DEQ_LP, clock_timer_value(queue_op));
-#endif
+bool is_valid(msg_t * event){
+	return  
+			(event->monitor == (void *)0x5afe) 
+			||
+            (
+                (event->state & ELIMINATED) != ELIMINATED  
+                &&  (
+                        event->father == NULL 
+                        ||  (
+                                (event->father->state  & ELIMINATED) != ELIMINATED  
+                                &&   event->fatherEpoch == event->father->epoch 
+                            )
+                    )       
+            );
 }
 

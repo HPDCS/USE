@@ -56,8 +56,22 @@ double Random(void) {
 	uint32_t *seed1;
 	uint32_t *seed2;
 
-	seed1 = (uint32_t *)&(lp_seed[current_lp]);
-	seed2 = (uint32_t *)((char *)&(lp_seed[current_lp]) + (sizeof(uint32_t)));
+	//UPDATED
+
+
+	//if(thread_seed == 0)
+	//	thread_seed = master_seed;
+	//
+	//seed1 = (uint32_t *)&thread_seed;
+	//seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
+
+	if(rootsim_config.serial) {
+		seed1 = (uint32_t *)&master_seed;
+		seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
+	} else {
+		seed1 = (uint32_t *)&(LPS[current_lp]->seed);
+		seed2 = (uint32_t *)((char *)&(LPS[current_lp]->seed) + (sizeof(uint32_t)));
+	}
 
 	*seed1 = 36969u * (*seed1 & 0xFFFFu) + (*seed1 >> 16u);
 	*seed2 = 18000u * (*seed2 & 0xFFFFu) + (*seed2 >> 16u);

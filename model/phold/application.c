@@ -18,11 +18,14 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
 	//event_content_type new_event;
-	int err;
 	unsigned int loops; 
 	//lp_state_type *state_ptr = &(LPS[me]); //(lp_state_type*)state;
 	lp_state_type *state_ptr = (lp_state_type*)state;
-
+	
+	(void) me;
+	(void) event_content;
+	(void) size;
+	
 	//timer tm_ex;
 	
 
@@ -43,16 +46,23 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 			//	state_ptr = states[me];
 
 			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
-			err = posix_memalign((void **)(&state_ptr), 64, 64);
-			if(err < 0) {
-				printf("memalign failed: (%s)\n", strerror(errno));
+		//	err = posix_memalign((void **)(&state_ptr), 64, 64);
+		//	if(err < 0) {
+		//		printf("memalign failed: (%s)\n", strerror(errno));
+		//		exit(-1);
+		//	}
+		//
+        //    if(state_ptr == NULL){
+		//		printf("LP state allocation failed: (%s)\n", strerror(errno));
+		//		exit(-1);
+        //    }
+            
+            state_ptr = malloc(sizeof(lp_state_type));
+			if(state_ptr == NULL) {
+				printf("malloc failed\n");
 				exit(-1);
 			}
 
-            if(state_ptr == NULL){
-				printf("LP state allocation failed: (%s)\n", strerror(errno));
-				exit(-1);
-            }
 
 			// Explicitly tell ROOT-Sim this is our LP's state
             SetState(state_ptr);
@@ -124,7 +134,7 @@ inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_ty
 	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
-	
+	(void) me;
 	//printf("TOTALE: %u\n", snapshot->events);//da_cancellare
 
 	if(snapshot->events < COMPLETE_EVENTS) {

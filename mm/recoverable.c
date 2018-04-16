@@ -51,11 +51,11 @@ void recoverable_init(void) {
 	
 	register unsigned int i;
 	
-	recoverable_state = __real_malloc(sizeof(malloc_state *) * n_prc_tot);
+	recoverable_state = rsalloc(sizeof(malloc_state *) * n_prc_tot);
 
 	for(i = 0; i < n_prc_tot; i++){
 
-		recoverable_state[i] = __real_malloc(sizeof(malloc_state));
+		recoverable_state[i] = rsalloc(sizeof(malloc_state));
 		if(recoverable_state[i] == NULL)
 			rootsim_error(true, "Unable to allocate memory on malloc init");
 
@@ -76,15 +76,15 @@ void recoverable_fini(void) {
 					#ifdef HAVE_PARALLEL_ALLOCATOR
 					pool_release_memory(i, current_area->self_pointer);
 					#else
-					__real_free(current_area->self_pointer);
+					rsfree(current_area->self_pointer);
 					#endif
 				}
 			}
 		}
-		__real_free(recoverable_state[i]->areas);
-		__real_free(recoverable_state[i]);
+		rsfree(recoverable_state[i]->areas);
+		rsfree(recoverable_state[i]);
 	}
-	__real_free(recoverable_state);
+	rsfree(recoverable_state);
 }
 
 
@@ -156,7 +156,7 @@ void *__wrap_malloc(size_t size) {
 *
 */
 void __wrap_free(void *ptr) {
-	do_free(recoverable_state[current_lp], ptr);
+	do_free(current_lp, recoverable_state[current_lp], ptr);
 }
 
 
@@ -256,7 +256,7 @@ void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
 				#ifdef HAVE_PARALLEL_ALLOCATOR
 				pool_release_memory(lid, m_area->self_pointer);
 				#else
-				__real_free(m_area->self_pointer);
+				rsfree(m_area->self_pointer);
 				#endif
 
 				m_area->use_bitmap = NULL;

@@ -1,5 +1,5 @@
 /**
-*			Copyright (C) 2008-2015 HPDCS Group
+*			Copyright (C) 2008-2017 HPDCS Group
 *			http://www.dis.uniroma1.it/~hpdcs
 *
 *
@@ -7,8 +7,7 @@
 *
 * ROOT-Sim is free software; you can redistribute it and/or modify it under the
 * terms of the GNU General Public License as published by the Free Software
-* Foundation; either version 3 of the License, or (at your option) any later
-* version.
+* Foundation; only version 3 of the License applies.
 *
 * ROOT-Sim is distributed in the hope that it will be useful, but WITHOUT ANY
 * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
@@ -25,11 +24,8 @@
 * @author Alessandro Pellegrini
 */
 
-#include <core.h>
-#include <numerical.h>
-
-#include "dymelor.h"
-#include "allocator.h"
+#include <dymelor.h>
+#include <mm.h>
 
 
 /**
@@ -40,8 +36,9 @@
 *
 */
 void dymelor_init(void) {
-	allocator_init(n_prc_tot);
+	allocator_init();
 	recoverable_init();
+	//unrecoverable_init();
 }
 
 
@@ -56,6 +53,8 @@ void dymelor_init(void) {
 */
 void dymelor_fini(void){
 	recoverable_fini();
+	//unrecoverable_fini();
+	//allocator_fini();
 }
 
 
@@ -128,7 +127,7 @@ void malloc_state_init(bool recoverable, malloc_state *state) {
 	state->timestamp = -1;
 	state->is_incremental = false;
 
-	state->areas = (malloc_area*)__real_malloc(state->max_num_areas * sizeof(malloc_area));
+	state->areas = (malloc_area*)rsalloc(state->max_num_areas * sizeof(malloc_area));
 	if(state->areas == NULL)
 		rootsim_error(true, "Unable to allocate memory at %s:%d\n", __FILE__, __LINE__);
 
@@ -162,19 +161,13 @@ void malloc_state_init(bool recoverable, malloc_state *state) {
 * @return The new size
 */
 static size_t compute_size(size_t size){
-
-	// TODO: cambiare in qualcosa del tipo:
-	// size = (size + sizeof(size_t) + (align_to - 1)) & ~ (align_to - 1);
-
 	// Account for the space needed to keep the pointer to the malloc area
 	size += sizeof(long long);
-
 	size_t size_new;
 
-	size_new = MIN_CHUNK_SIZE;
-
-	while(size_new < size)
-		size_new *= 2;
+	size_new = POWEROF2(size);
+	if(size_new < MIN_CHUNK_SIZE)
+		size_new = MIN_CHUNK_SIZE;
 
 	return size_new;
 }
@@ -209,14 +202,16 @@ static void find_next_free(malloc_area *m_area){
 
 
 void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
-	
 	malloc_area *m_area, *prev_area;
 	void *ptr;
 	int bitmap_blocks, num_chunks;
 	size_t area_size;
 	bool is_recoverable;
-
 	int j;
+
+	#ifndef HAVE_PARALLEL_ALLOCATOR
+	(void)lid;
+	#endif
 
 	size = compute_size(size);
 
@@ -226,18 +221,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 	}
 
 	j = (int)log2(size) - (int)log2(MIN_CHUNK_SIZE);
-	if(mem_pool == NULL) {
-		printf("PANICO 1\n");
-		fflush(stdout);
-		abort();
-	}
 	m_area = &mem_pool->areas[j];
-	if(m_area == NULL) {
-		printf("PANICO\n");
-		fflush(stdout);
-		abort();
-	}
-		
 	is_recoverable = m_area->is_recoverable;
 
 	while(m_area != NULL && m_area->alloc_chunks == m_area->num_chunks){
@@ -252,7 +236,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 		if(mem_pool->num_areas == mem_pool->max_num_areas){
 
-			malloc_area *tmp;
+			malloc_area *tmp = NULL;
 
 			if ((mem_pool->max_num_areas << 1) > MAX_LIMIT_NUM_AREAS)
 				return NULL;
@@ -260,8 +244,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 			mem_pool->max_num_areas = mem_pool->max_num_areas << 1;
 
 			rootsim_error(true, "To reimplement\n");
-			//tmp = (malloc_area *)pool_realloc_memory(mem_pool->areas, mem_pool->max_num_areas * sizeof(malloc_area));a
-			tmp = NULL;
+//			tmp = (malloc_area *)pool_realloc_memory(mem_pool->areas, mem_pool->max_num_areas * sizeof(malloc_area));
 			if(tmp == NULL){
 
 				/**
@@ -299,22 +282,28 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 		area_size = sizeof(malloc_area *) + bitmap_blocks * BLOCK_SIZE * 2 + num_chunks * size;
 
+		#ifdef HAVE_PARALLEL_ALLOCATOR
+		//insert is recoverable in pool_get_memory (was in GLP)
 		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size);
+		#else
+		m_area->self_pointer = rsalloc(area_size);
+		bzero(m_area->self_pointer, area_size);
+		#endif
 
 		if(m_area->self_pointer == NULL){
+			printf("Is recoverable: ");
+			printf(is_recoverable ? "true\n" : "false\n");
 			rootsim_error(true, "DyMeLoR: error allocating space\n");
 		}
 
 		m_area->dirty_chunks = 0;
-		bzero(m_area->self_pointer, area_size);
-		
 		*(unsigned long long *)(m_area->self_pointer) = (unsigned long long)m_area;
 
 		m_area->use_bitmap = (unsigned int *)((char *)m_area->self_pointer + sizeof(malloc_area *));
 
 		m_area->dirty_bitmap = (unsigned int*)((char *)m_area->use_bitmap + bitmap_blocks * BLOCK_SIZE);
-		
-		m_area->area = (void *)((char*)m_area->use_bitmap + bitmap_blocks * BLOCK_SIZE * 2);	
+
+		m_area->area = (void *)((char*)m_area->use_bitmap + bitmap_blocks * BLOCK_SIZE * 2);
 	}
 
 	if(m_area->area == NULL) {
@@ -365,6 +354,10 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 	// Keep track of the malloc_area which this chunk belongs to
 	*(unsigned long long *)ptr = (unsigned long long)m_area->self_pointer;
+
+	//printf("[%d] Ptr:%p \t size:%lu \t result:%p \n",lid,ptr,sizeof(long long),(void*)((char*)ptr + sizeof(long long)));
+
+
 	return (void*)((char*)ptr + sizeof(long long));
 }
 
@@ -372,16 +365,31 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 
 // TODO: multiple checks on m_area->is_recoverable. The code should be refactored
-void do_free(malloc_state *mem_pool, void *ptr) {
+// TODO: lid non necessario qui
+void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
+
+	(void)lid;
 	
+
 	malloc_area * m_area;
 	int idx, bitmap_blocks;
 	size_t chunk_size;
 
-	if(ptr == NULL)
+	if(rootsim_config.serial) {
+		rsfree(ptr);
 		return;
+	}
+
+	if(ptr == NULL) {
+		rootsim_error(false, "Invalid pointer during free\n");
+		return;
+	}
 
 	m_area = get_area(ptr);
+	if(m_area == NULL){
+		rootsim_error(false, "Invalid pointer during free: malloc_area NULL\n");
+		return;
+	}
 
 	chunk_size = m_area->chunk_size;
 	RESET_BIT_AT(chunk_size, 0);
@@ -421,7 +429,7 @@ void do_free(malloc_state *mem_pool, void *ptr) {
 		}
 
 		m_area->state_changed = 1;
-		
+
 		m_area->last_access = current_lvt;
 	}
 

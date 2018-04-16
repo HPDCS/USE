@@ -9,19 +9,27 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
 FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 
-INCLUDE=-I include/ -I mm/ -I core/ -Istatistics/ -Ireverse/
+INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
 LIBS=-pthread -lm
 ARCH_X86=1
 ARCH_X86_64=1
 
-ifdef MALLOC
-CFLAGS=$(FLAGS) -DNO_DYMELOR -DMALLOC=1
+ifdef MAX_SKIPPED_LP
+CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=$(MAX_SKIPPED_LP)
 else
-CFLAGS=$(FLAGS)  -DMALLOC=0
+CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=100000
 endif
 
-ifdef NBC
-CFLAGS:= $(CFLAGS) -DNBC
+ifdef OPTIMISTIC_LEVEL
+CFLAGS:=$(CFLAGS)  -DOPTIMISTIC_MODE=$(OPTIMISTIC_LEVEL)
+else
+CFLAGS:=$(CFLAGS)  -DOPTIMISTIC_MODE=1
+endif
+
+ifdef MALLOC
+CFLAGS:=$(CFLAGS) -DNO_DYMELOR -DMALLOC=1
+else
+CFLAGS:=$(CFLAGS)  -DMALLOC=0
 endif
 
 ifdef REVERSIBLE
@@ -30,56 +38,20 @@ else
 CFLAGS:= $(CFLAGS) -DREVERSIBLE=0
 endif
 
+ifdef VERBOSE
+CFLAGS:=$(CFLAGS) -DVERBOSE=$(VERBOSE)
+else
+CFLAGS:=$(CFLAGS) -DVERBOSE=0
+endif
+
 ifdef LOOKAHEAD
 CFLAGS:= $(CFLAGS) -DLOOKAHEAD=$(LOOKAHEAD)
-endif
-
-ifdef FAN_OUT
-CFLAGS:= $(CFLAGS) -DFAN_OUT=$(FAN_OUT)
-endif
-
-ifdef LOOP_COUNT
-CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
-endif
-
-ifdef NUM_CELLE_OCCUPATE
-CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
-endif
-
-ifdef ROBOT_PER_CELLA
-CFLAGS:= $(CFLAGS) -DROBOT_PER_CELLA=$(ROBOT_PER_CELLA)
-endif
-
-ifdef HOTSPOTS
-CFLAGS:= $(CFLAGS) -DHOTSPOTS=$(HOTSPOTS)
-endif
-
-ifdef P_HOTSPOT
-CFLAGS:= $(CFLAGS) -DP_HOTSPOT=$(P_HOTSPOT)
-endif
-
-ifdef PERC_USED_BUCKET
-CFLAGS:= $(CFLAGS) -DPUB=$(PERC_USED_BUCKET)
-else
-CFLAGS:= $(CFLAGS) -DPUB=0.33
-endif
-
-ifdef ELEM_PER_BUCKET
-CFLAGS:= $(CFLAGS) -DEPB=$(ELEM_PER_BUCKET)
-else
-CFLAGS:= $(CFLAGS) -DEPB=3
-endif
-
-ifdef SPERIMENTAL
-CFLAGS:= $(CFLAGS) -DSPERIMENTAL=$(SPERIMENTAL)
-else
-CFLAGS:= $(CFLAGS) -DSPERIMENTAL=0
 endif
 
 ifdef DEBUG
 CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
 else
-CFLAGS:= $(CFLAGS) -DDEBUG=1
+CFLAGS:= $(CFLAGS) -DDEBUG=0 -DNDEBUG
 endif
 
 ifdef REPORT
@@ -88,14 +60,114 @@ else
 CFLAGS:= $(CFLAGS) -DREPORT=1
 endif
 
-ifdef PREEMPTIVE
-CFLAGS:= $(CFLAGS) -DPREEMPTIVE=$(PREEMPTIVE)
+ifdef LIST_NODE_PER_ALLOC
+CFLAGS:= $(CFLAGS) -DLIST_NODE_PER_ALLOC=$(LIST_NODE_PER_ALLOC)
+endif
+
+ifdef CKP_PERIOD
+CFLAGS:= $(CFLAGS) -DCHECKPOINT_PERIOD=$(CKP_PERIOD)
 else
-CFLAGS:= $(CFLAGS) -DPREEMPTIVE=0
+CFLAGS:= $(CFLAGS) -DCHECKPOINT_PERIOD=50
+endif
+
+ifdef CLEAN_CKP_INTERVAL
+CFLAGS:= $(CFLAGS) -DCLEAN_CKP_INTERVAL=$(CLEAN_CKP_INTERVAL)
+endif
+
+ifdef PRUNE_PERIOD
+CFLAGS:= $(CFLAGS) -DPRUNE_PERIOD=$(PRUNE_PERIOD)
+else
+CFLAGS:= $(CFLAGS) -DPRUNE_PERIOD=50
+endif
+
+ifdef ONGVT_PERIOD
+CFLAGS:= $(CFLAGS) -DONGVT_PERIOD=$(ONGVT_PERIOD)
+else
+CFLAGS:= $(CFLAGS) -DONGVT_PERIOD=-1
 endif
 
 
+ifdef PRINT_SCREEN
+CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=$(PRINT_SCREEN)
+else
+CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=1
+endif
 
+################################# NB CALQUEUE ##########################
+
+#NB_CALQUEUE
+ifdef PERC_USED_BUCKET
+CFLAGS:= $(CFLAGS) -DPUB=$(PERC_USED_BUCKET)
+else
+CFLAGS:= $(CFLAGS) -DPUB=0.33
+endif
+
+#NB_CALQUEUE
+ifdef ELEM_PER_BUCKET
+CFLAGS:= $(CFLAGS) -DEPB=$(ELEM_PER_BUCKET)
+else
+CFLAGS:= $(CFLAGS) -DEPB=3
+endif
+
+#NB_CALQUEUE
+ifdef ENABLE_PRUNE
+CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=$(ENABLE_PRUNE)
+else
+CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=1
+endif
+
+
+#NB_CALQUEUE
+ifdef ENABLE_PRUNE
+CFLAGS:= $(CFLAGS) -DENABLE_EXPANSION=$(ENABLE_EXPANSION)
+else
+CFLAGS:= $(CFLAGS) -DENABLE_EXPANSION=1
+endif
+
+ifdef CKPT_RECALC
+CFLAGS:= $(CFLAGS) -DCKPT_RECALC=$(CKPT_RECALC)
+else
+CFLAGS:= $(CFLAGS) -DCKPT_RECALC=0
+endif
+
+ifdef REPORT
+CFLAGS:= $(CFLAGS) -DREPORT=$(REPORT)
+else
+CFLAGS:= $(CFLAGS) -DREPORT=1
+endif
+################################# USED FOR SINGLE MODELS################
+
+#PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT
+ifdef FAN_OUT
+CFLAGS:= $(CFLAGS) -DFAN_OUT=$(FAN_OUT)
+endif
+
+#PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT / TCAR
+ifdef LOOP_COUNT
+CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
+endif
+
+#TCAR
+ifdef NUM_CELLE_OCCUPATE
+CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
+endif
+
+#TCAR
+ifdef ROBOT_PER_CELLA
+CFLAGS:= $(CFLAGS) -DROBOT_PER_CELLA=$(ROBOT_PER_CELLA)
+endif
+
+#PHOLD_HOTSPOT
+ifdef HOTSPOTS
+CFLAGS:= $(CFLAGS) -DHOTSPOTS=$(HOTSPOTS)
+endif
+
+#PHOLD_HOTSPOT
+ifdef P_HOTSPOT
+CFLAGS:= $(CFLAGS) -DP_HOTSPOT=$(P_HOTSPOT)
+endif
+
+########################################################################
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
 		    model/pcs-prealloc/functions_app.c\
@@ -118,9 +190,9 @@ TCAR_SOURCES=model/tcar/application.c\
 	            model/tcar/neighbours.c
 
 TRAFFIC_SOURCES=model/traffic/application.c\
-		    model/traffic/functions.c\
-		    model/traffic/init.c\
-		    model/traffic/normal_cdf.c
+				model/traffic/functions.c\
+				model/traffic/init.c\
+				model/traffic/normal_cdf.c
 
 ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 		    model/robot_explore/neighbours.c
@@ -134,15 +206,21 @@ CORE_SOURCES =  core/core.c\
 		core/x86.c\
 		core/topology.c\
 		core/queue.c\
+		core/fetch.c\
 		core/main.c\
 		core/numerical.c\
 		core/hpdcs_math.c\
+		core/parseparam.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
-		mm/recoverable.c
+		mm/recoverable.c\
+		mm/checkpoints.c\
+		mm/state.c\
+		datatypes/list.c\
+		mm/platform.c
 		
 REVERSE_SOURCES=	reverse/reverse.c\
 		reverse/slab.c
@@ -162,8 +240,7 @@ PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
-all:
-	echo $(CFLAGS)
+
 all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 

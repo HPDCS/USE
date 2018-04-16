@@ -108,45 +108,45 @@ extern double Gaussian(double m, double s);
 
 
 typedef struct _event_content_type {
-	int	from;
+	int		from;
 	bool	injection; // Tells whether the car is entering the highway or not
 } event_content_type;
 
 
 
 typedef struct _topology {
-	int num_neighbours;
-	unsigned int *neighbours;
+	int 			num_neighbours;
+	unsigned int 	*neighbours;
 } topology_t;
 
 
 
 typedef struct _car {
-	int		from;
-	simtime_t	arrival;
-	simtime_t	leave;
-	bool		accident;
-	bool		stopped;
-	double		traveled;
-	unsigned long long		car_id;
-	struct _car 	*next;
+	int					from;
+	simtime_t			arrival;
+	simtime_t			leave;
+	bool				accident;
+	bool				stopped;
+	double				traveled;
+	unsigned long long	car_id;
+	struct _car 		*next;
 } car_t;
 
 
 
 typedef struct _lp_state_type {
-	simtime_t	lvt;			// Elapsed simulation time
-	bool		accident;
-	unsigned int	total_queue_slots;
-	char		name[NAME_LENGTH];	// Name of the cell
-	int		lp_type;		// Is it a junction or a segment?
-	double		segment_length;		// Length of this road segment. If set to 0, it's a junction
-	double		enter_prob;		// in realtà è una frequency!
-	double		leave_prob;
-	topology_t	*topology;		// Each node can have an arbitrary number of neighbours
-	unsigned int	queued_elements;
-	car_t		*queue;			// Cars passing through the node are stored here
-	unsigned long long 		car_id;
+	simtime_t			lvt;			// Elapsed simulation time
+	bool				accident;
+	unsigned int		total_queue_slots;
+	char				name[NAME_LENGTH];	// Name of the cell
+	int					lp_type;		// Is it a junction or a segment?
+	double				segment_length;		// Length of this road segment. If set to 0, it's a junction
+	double				enter_prob;		// in realtà è una frequency!
+	double				leave_prob;
+	topology_t			*topology;		// Each node can have an arbitrary number of neighbours
+	unsigned int		queued_elements;
+	car_t				*queue;			// Cars passing through the node are stored here
+	unsigned long long 	car_id;
 } lp_state_type;
 
 
@@ -154,7 +154,7 @@ typedef struct _lp_state_type {
 
 
 
-extern car_t *enqueue_car(int me, int from, lp_state_type *state);
+extern car_t *car_enqueue(int me, int from, lp_state_type *state);
 extern car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *);
 extern car_t *car_dequeue_conditional(lp_state_type *state, unsigned long long *);
 extern void inject_new_cars(lp_state_type *state, int me);

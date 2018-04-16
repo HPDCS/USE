@@ -1,5 +1,5 @@
 /**
-*			Copyright (C) 2008-2015 HPDCS Group
+*			Copyright (C) 2008-2017 HPDCS Group
 *			http://www.dis.uniroma1.it/~hpdcs
 *
 *
@@ -7,8 +7,7 @@
 *
 * ROOT-Sim is free software; you can redistribute it and/or modify it under the
 * terms of the GNU General Public License as published by the Free Software
-* Foundation; either version 3 of the License, or (at your option) any later
-* version.
+* Foundation; only version 3 of the License applies.
 *
 * ROOT-Sim is distributed in the hope that it will be useful, but WITHOUT ANY
 * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
@@ -35,9 +34,10 @@
 #include <math.h>
 #include <string.h>
 
-#include <ROOT-Sim.h>
-#include <timer.h>
+
 #include <core.h>
+#include <state.h>
+#include <timer.h>
 
 
 
@@ -46,7 +46,8 @@
  **************************************/
 
 
-
+//ADDED BY MAT 0x00000200000000000
+#define LP_PREALLOCATION_INITIAL_ADDRESS	(void *)0x0000008000000000
 #define MASK 0x00000001		// Mask used to check, set and unset bits
 
 
@@ -55,20 +56,20 @@
 #define BLOCK_SIZE sizeof(unsigned int)
 
 
-#define MIN_CHUNK_SIZE 64	// Size (in bytes) of the smallest chunk provideable by DyMeLoR
-#define MAX_CHUNK_SIZE 2048	// Size (in bytes) of the biggest one. Notice that if this number
+#define MIN_CHUNK_SIZE 128	// Size (in bytes) of the smallest chunk provideable by DyMeLoR
+#define MAX_CHUNK_SIZE 4194304	// Size (in bytes) of the biggest one. Notice that if this number
 				// is too large, performance (and memory usage) might be affected.
 				// If it is too small, large amount of memory requests by the
 				// application level software (i.e, larger than this number)
 				// will fail, as DyMeLoR will not be able to handle them!
 
 #define NUM_AREAS (log2(MAX_CHUNK_SIZE) - log2(MIN_CHUNK_SIZE) + 1)			// Number of initial malloc_areas available (will be increased at runtime if needed)
-#define MAX_NUM_AREAS (NUM_AREAS * 4) 	// Maximum number of allocatable malloc_areas. If MAX_NUM_AREAS
+#define MAX_NUM_AREAS (NUM_AREAS * 32) 	// Maximum number of allocatable malloc_areas. If MAX_NUM_AREAS
 				// malloc_areas are filled at runtime, subsequent malloc() requests
 				// by the application level software will fail.
-#define MAX_LIMIT_NUM_AREAS 100
-#define MIN_NUM_CHUNKS 2*4096	// Minimum number of chunks per malloc_area
-#define MAX_NUM_CHUNKS 4*4096	// Maximum number of chunks per malloc_area
+#define MAX_LIMIT_NUM_AREAS MAX_NUM_AREAS
+#define MIN_NUM_CHUNKS 512	// Minimum number of chunks per malloc_area
+#define MAX_NUM_CHUNKS 4096	// Maximum number of chunks per malloc_area
 
 #define MAX_LOG_THRESHOLD 1.7	// Threshold to check if a malloc_area is underused TODO: retest
 #define MIN_LOG_THRESHOLD 1.7	// Threshold to check if a malloc_area is overused TODO: retest
@@ -121,8 +122,8 @@
 #define RESET_BIT_AT(B,K) ( B &= ~(MASK << K) )
 #define CHECK_BIT_AT(B,K) ( B & (MASK << K) )
 
-#define IS_POWEROF2(x) (1UL << (1 + (63 - __builtin_clzl((x) - 1))))
-
+#define POWEROF2(x) (1UL << (1 + (63 - __builtin_clzl((x) - 1))))
+#define IS_POWEROF2(x) ((x) != 0 && ((x) & ((x) - 1)) == 0)
 
 /// This structure let DyMeLoR handle one malloc area (for serving given-size memory requests)
 struct _malloc_area {
@@ -180,7 +181,18 @@ typedef struct _malloc_state malloc_state;
  ***************/
 
 
+// Variables
+// TODO: quali sono realmente da esporre all'esterno?!
+
+extern int incremental_granularity;
+extern int force_full[MAX_LPs];
 extern malloc_state *m_state[MAX_LPs];
+extern double checkpoint_cost_per_byte;
+extern double recovery_cost_per_byte;
+extern unsigned long total_checkpoints;
+extern unsigned long total_recoveries;
+extern double checkpoint_bytes_total;
+
 
 
 // DyMeLoR API
@@ -195,24 +207,46 @@ extern int get_granularity(void);
 extern size_t dirty_size(unsigned int, void *, double *);
 extern void recoverable_init(void);
 extern void recoverable_fini(void);
+extern void unrecoverable_init(void);
+extern void unrecoverable_fini(void);
 extern void malloc_state_init(bool recoverable, malloc_state *state);
 extern void *do_malloc(unsigned int, malloc_state * mem_pool, size_t size);
-extern void do_free(malloc_state *mem_pool, void *ptr);
+extern void do_free(unsigned int, malloc_state *mem_pool, void *ptr);
 extern void *pool_get_memory(unsigned int lid, size_t size);
 extern void pool_release_memory(unsigned int lid, void *ptr);
+
+// Checkpointing API
+extern void *log_full(int);
+extern void *log_state(int);
+extern void log_restore(int, state_t *);
+extern void log_delete(void *);
 
 // Recoverable Memory API
 extern void *__wrap_malloc(size_t);
 extern void __wrap_free(void *);
 extern void *__wrap_realloc(void *, size_t);
 extern void *__wrap_calloc(size_t, size_t);
-extern void *__real_malloc(size_t);
-extern void __real_free(void *);
-extern void *__real_realloc(void *, size_t);
-extern void *__real_calloc(size_t, size_t);
+extern void clean_buffers_on_gvt(unsigned int, simtime_t);
 
+// Unrecoverable Memory API
+extern void *umalloc(unsigned int, size_t);
+extern void ufree(unsigned int, void *);
+extern void *urealloc(unsigned int, void *, size_t);
+extern void *ucalloc(unsigned int, size_t nmemb, size_t size);
+
+/* Simulation Platform Memory APIs */
+extern  void *rsalloc(size_t);
+extern  void rsfree(void *);
+extern  void *rsrealloc(void *, size_t);
+extern  void *rscalloc(size_t, size_t);
+
+
+extern void ecs_init(void);
 
 extern malloc_state **recoverable_state;
+
+// This is used to help ensure that the platform is not using malloc.
+//#pragma GCC poison malloc free realloc calloc
 
 
 

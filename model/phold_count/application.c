@@ -6,17 +6,21 @@
 #include <lookahead.h>
 
 #include "application.h"
+#include "hpdcs_utils.h"
 
 //#include <timer.h>
 
 //lp_state_type states[4] __attribute__((aligned (64)));
 
+
+#define SAME_TS 1
+
+
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
-	int 	i, j = 123;
+	unsigned int 	i, j = 123;
 	//event_content_type new_event;
-	int err;
 	unsigned int loops; 
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
@@ -24,6 +28,9 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
+
+	(void)event_content;
+	(void)size;
 		
 	//printf("EVENT INIT: %d\n", INIT);	
 	//printf("EVENT TYPE: %d\n", event_type);
@@ -39,14 +46,14 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			//	state_ptr = states[me];
 
 			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
-			err = posix_memalign((void **)(&state_ptr), 64, 64);
-			if(err < 0) {
-				printf("memalign failed: (%s)\n", strerror(errno));
+			state_ptr = malloc(sizeof(lp_state_type));
+			if(state_ptr == NULL) {
+				printf("malloc failed\n");
 				exit(-1);
 			}
 
             if(state_ptr == NULL){
-				printf("LP state allocation failed: (%s)\n", strerror(errno));
+				printf("%d- APP: LP state allocation failed: (%s)\n", me, strerror(errno));
 				exit(-1);
             }
 
@@ -59,10 +66,18 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
+			timestamp = 1.0;
+		#if SAME_TS == 0
 			for(i = 0; i < EVENTS_PER_LP; i++) {
 				timestamp = (simtime_t) LOOKAHEAD + (TAU * Random());
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 			}
+		#else
+			for(i = 0; i < EVENTS_PER_LP; i++) {
+				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+			}
+			//ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+		#endif
 
 			break;
 
@@ -83,12 +98,26 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			if(event_type == LOOP && state_ptr->events < COMPLETE_EVENTS){
 				state_ptr->events++;
-				if(now < state_ptr->lvt)
-					printf("\x1b[31m""ERROR: event %f received out of order respect %f\n""\x1b[0m", now, state_ptr->lvt);
+				if(now < state_ptr->lvt){
+					printf("\x1b[31m""%d- APP: ERROR: event %f received out of order respect %f; last_loop_count: %u\n""\x1b[0m", me, now, state_ptr->lvt, j);
+				}
+				//if(state_ptr->lvt == now){
+				//	printf("[%d] HO RICEVUTO UN EVENTO CON TS=MY_LVT: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
+				//	state_ptr =NULL;state_ptr->lvt *10;
+				//}
+				
+				if(state_ptr->events > now){
+					//printf("%d- APP: ERROR: event %f INCORRECT STATE %d\n""\x1b[0m", me, now, state_ptr->events);
+					//gdb_abort;//state_ptr =NULL;state_ptr->lvt *10;
+				}
 				state_ptr->lvt = now;
-				if(state_ptr->events < COMPLETE_EVENTS)
-				//	ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-					ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);
+				if(state_ptr->events < COMPLETE_EVENTS){
+					ScheduleNewEvent((me+1)%n_prc_tot, now+1.0, LOOP, NULL, 0);
+				//	ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);
+				}
+				else{
+					//printf(GREEN("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n"), me, state_ptr->lvt, state_ptr->events);
+				}
 			
 				//for(j=0;j<FAN_OUT;j++){
 				//		delta = LOOKAHEAD + Expent(TAU);
@@ -120,6 +149,7 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 //	if(snapshot->lvt < COMPLETE_TIME) {
         return false;
     }
+    printf(GREEN("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n"), me, snapshot->lvt, snapshot->events);
 	return true;
 }
 
