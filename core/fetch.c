@@ -217,7 +217,7 @@ unsigned int fetch_internal(){
 	table *h;
 	nbc_bucket_node * node, *node_next, *min_node;
 	simtime_t ts, min = INFTY, lvt_ts;
-	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb, tb, curr_evt_state;
+	unsigned int lp_idx, bucket, size, tail_counter = 0, lvt_tb, tb, curr_evt_state, min_tb;
 	double bucket_width;
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
@@ -247,6 +247,7 @@ unsigned int fetch_internal(){
 	current_msg = NULL; //DEBUG
 	
 	min = min_node->timestamp;
+	min_tb = min_node->counter;
 		
 	if(local_gvt < min){
 		local_gvt = min;
@@ -272,6 +273,7 @@ unsigned int fetch_internal(){
 		if(read_new_min){
 			min_node = node;
 			min = min_node->timestamp;
+			min_tb = min_node->counter;
 		}
 		
 		//fin qui fuori dal lock ha funzionato per 10 minuti <8,3>, anche se la coda ha superato 500 elementi, diminuendo così la contesa	
@@ -282,13 +284,17 @@ unsigned int fetch_internal(){
 		lvt_tb = bound_ptr->tie_breaker; 
 		curr_evt_state = event->state;
 		in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));
-		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
+		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 			
 		///* VALID *///
 		if(validity){ 
 			if(curr_evt_state == EXTRACTED && in_past){
 				///* COMMIT *///
-				if(safe && event->frame != 0){ 
+				if(safe && event->frame != 0){
+				#if DEBUG == 1
+					event->gvt_on_commit = min;
+					event->event_on_gvt_on_commit = (msg_t *)min_node->payload;
+				#endif
 					do_commit_outside_lock_and_goto_next(event, node, lp_idx);
 				}
 				///* EXECUTED AND UNSAFE *///
@@ -374,7 +380,7 @@ unsigned int fetch_internal(){
 					//node = (void*)0x1;//local_next_evt->node;
 					from_get_next_and_valid = true;
 					ts = event->timestamp;
-					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
+					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
 				curr_evt_state = event->state;
 

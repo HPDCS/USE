@@ -613,6 +613,7 @@ void thread_loop(unsigned int thread_id) {
 		}
 	#endif
 
+		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
@@ -642,7 +643,9 @@ void thread_loop(unsigned int thread_id) {
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
 #if VERBOSE > 0
-			printf("-Sto ROLLBACKANDO LP %u- da %f a %f-\n", current_lp, LPS[current_lp]->current_LP_lvt ,current_lvt);
+			printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
+				LPS[current_lp]->bound->timestamp, 	LPS[current_lp]->bound->tie_breaker,	LPS[current_lp]->bound , 
+				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
 #endif
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 			

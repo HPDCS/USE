@@ -66,6 +66,8 @@ typedef struct __msg_t
 	struct __msg_t * local_previous;	//address of the previous event executed on the relative LP ////occhio, potrebbe non servire
 	struct __msg_t * commit_bound;	//address of the previous event executed on the relative LP ////occhio, potrebbe non servire
 
+	simtime_t gvt_on_commit;
+	struct __msg_t * event_on_gvt_on_commit;
 #endif
 
 } msg_t;
