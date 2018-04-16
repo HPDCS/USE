@@ -195,7 +195,7 @@ unsigned int get_current_numa_node(){
 
 void set_affinity(unsigned int tid){
 	unsigned int cpu_per_node;
-	cpu_set_t mask;	
+	cpu_set_t mask;
 	cpu_per_node = N_CPU/num_numa_nodes;
 	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
 	CPU_ZERO(&mask);
@@ -206,7 +206,7 @@ void set_affinity(unsigned int tid){
 		exit(-1);
 	}
 	current_numa_node = get_current_numa_node();
-	printf("Thread %2u set to CPU %2u on NUMA node %2.u\n", tid, current_cpu, current_numa_node);
+	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, current_cpu, current_numa_node);
 	
 }
 
@@ -423,13 +423,13 @@ void init_simulation(unsigned int thread_id){
 
 	
 	if(tid == 0){
+		numa_init();
 		LPs_metada_init();
 		dymelor_init(n_prc_tot);
 		statistics_init();
 		queue_init();
 		numerical_init();
 		nodes_init();
-		numa_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);

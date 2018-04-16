@@ -29,7 +29,7 @@
 #define is_end_sim(lp) 	(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
 
 //#define is_LP_on_my_NUMA_node(lp) 
-#define numa_from_lp(lp)	(lp % num_numa_nodes)
+#define numa_from_lp(lp)	(lp % (1 + ((n_cores-1)*num_numa_nodes)/(N_CPU)) )
 
 
 #define SIZEOF_ULL					(sizeof(unsigned long long))

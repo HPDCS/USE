@@ -378,7 +378,7 @@ static void load_seed(void) {
 		// We now initialize the first long random number. Thanks Unix!
 		// TODO: THIS IS NOT PORTABLE!
 		int fd;
-		if ((fd = open("/dev/random", O_RDONLY)) == -1) {
+		if ((fd = open("/dev/urandom", O_RDONLY)) == -1) {
 			rootsim_error(true, "Unable to initialize the numerical library configuration file %s. Aborting...", conf_file);
 
 		}
