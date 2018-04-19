@@ -332,8 +332,8 @@ unsigned int fetch_internal(){
 		!is_in_lp_locked_set(lp_idx) &&
 	#endif
 #endif
-#ifdef HAVE_PARALLEL_ALLOCATOR
-	is_lp_on_my_numa_node(lp_idx) &&
+#if DISTRIBUTED_FETCH == 1
+		is_lp_on_my_numa_node(lp_idx) &&
 #endif
 		tryLock(lp_idx)
 		) {

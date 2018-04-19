@@ -24,13 +24,14 @@
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
-#define end_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
+#define end_sim(lp)			( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
 #define start_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], ~(1ULL << (lp%64))) )
-#define is_end_sim(lp) 	(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
+#define is_end_sim(lp) 		(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
 
 //#define is_LP_on_my_NUMA_node(lp) 
-#define numa_from_lp(lp)	(lp % (1 + ((n_cores-1)*num_numa_nodes)/(N_CPU)) )
-#define is_lp_on_my_numa_node(lp)	( numa_from_lp(lp) == current_numa_node )
+#define numa_from_lp(lp)			(lp % (1 + ((n_cores-1)*num_numa_nodes)/(N_CPU)) ) //Distributes LPs between NUMA nodes
+#define is_lp_on_my_numa_node(lp)	( numa_from_lp(lp) == current_numa_node )	//verifies if the lp is on the same NUMA node of the current thread
+#define is_lp_mine(lp)				( (lp)%n_cores == tid)	//Not used: create a 1,1 relationship bwtween threads and LPs
 
 
 #define SIZEOF_ULL					(sizeof(unsigned long long))

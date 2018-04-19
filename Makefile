@@ -48,6 +48,15 @@ endif
 
 ifdef NUMA
 CFLAGS:=$(CFLAGS) -DHAVE_PARALLEL_ALLOCATOR
+CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=1
+endif
+
+ifdef PARALLEL_ALLOCATOR
+CFLAGS:=$(CFLAGS) -DHAVE_PARALLEL_ALLOCATOR
+endif
+
+ifdef DISTRIBUTED_FETCH
+CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=1
 endif
 
 ifdef LOOKAHEAD
@@ -350,7 +359,7 @@ clean:
 	@find . -type f -name "phold" 		  -exec rm {} \;
 	@find . -type f -name "pcs" 		  -exec rm {} \;
 	@find . -type f -name "pcs-prealloc"  -exec rm {} \;
-	@find . -type f -name "traffic "  	  -exec rm {} \;
+	@find . -type f -name "traffic"  	  -exec rm {} \;
 	@find . -type f -name "tcar" 		  -exec rm {} \;
 	@find . -type f -name "phold" 		  -exec rm {} \;
 	@find . -type f -name "pholdcount" 	  -exec rm {} \;
