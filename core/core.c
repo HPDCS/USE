@@ -197,7 +197,23 @@ void set_affinity(unsigned int tid){
 	unsigned int cpu_per_node;
 	cpu_set_t mask;
 	cpu_per_node = N_CPU/num_numa_nodes;
-	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+	
+	if(N_CPU == 32){
+		unsigned int thr_to_cpu[] = {	0,4, 8,12,	16,20,24,28,
+										1,5, 9,13,	17,21,25,29,
+										2,6,10,14,	18,22,26,30,
+										3,7,11,15,	19,23,27,31};
+		current_cpu = thr_to_cpu[tid];
+	}
+	else if (N_CPU <= 16){
+		unsigned int thr_to_cpu[] = {	0, 1, 2, 3, 4, 5, 6, 7, 
+										8, 9,10,11,12,13,14,15};
+		current_cpu = thr_to_cpu[tid]%N_CPU;
+	}
+	else{
+		current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+	}
+	
 	CPU_ZERO(&mask);
 	CPU_SET(current_cpu, &mask);
 	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
@@ -599,6 +615,9 @@ void thread_loop(unsigned int thread_id) {
 	#if DEBUG == 1
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+		}
+		if(current_cpu != sched_getcpu()){
+			printf("[%u] Current cpu changed form %u to %u\n", tid, current_cpu, sched_getcpu());
 		}
 	#endif
 

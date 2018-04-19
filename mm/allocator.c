@@ -310,6 +310,13 @@ int allocator_init(unsigned int sobjs) {
 		maps[i].base = addr;
 		maps[i].active = 0;
 		maps[i].size = MDT_ENTRIES;
+	//#ifdef HAVE_PARALLEL_ALLOCATOR
+	//	unsigned long numa_mask = 0x1 << (numa_from_lp(sobjs)); 
+	//	if(mbind(addr, PAGE_SIZE*MDT_PAGES, MPOL_BIND, &numa_mask, num_numa_nodes+1, MPOL_MF_MOVE_ALL) == -1){
+	//		printf("allcoator_init: Failing NUMA binding LP %u to node %u, with mask %p. Please retry disabling the NUMA partitioning: %s.\n",sobjs, numa_from_lp(sobjs), (void *)numa_mask, strerror(errno));
+	//		abort();
+	//	}
+	//#endif
 		AUDIT
 		printf("INIT: sobj %d - base address is %p - active are %d - MDT size is %d\n",i,maps[i].base, maps[i].active, maps[i].size);
 	}

@@ -30,6 +30,7 @@
 
 //#define is_LP_on_my_NUMA_node(lp) 
 #define numa_from_lp(lp)	(lp % (1 + ((n_cores-1)*num_numa_nodes)/(N_CPU)) )
+#define is_lp_on_my_numa_node(lp)	( numa_from_lp(lp) == current_numa_node )
 
 
 #define SIZEOF_ULL					(sizeof(unsigned long long))
