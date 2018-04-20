@@ -766,9 +766,10 @@ void thread_loop(unsigned int thread_id) {
 		}
 #endif	
 		
-		if(safe && (++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0) ){
+		if((++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0)/* && safe*/){
 			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
+			//printf("[%u] LP %u\n",tid, current_lp);
 		}
 		
 
