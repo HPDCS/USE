@@ -2,8 +2,8 @@
 
 MAX_SKIPPED_LP_list="1000000"
 LP_list="1024"						#numero di lp
-THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"		#numero di thread
-TEST_list="phold"					#test
+THREAD_list="1 2 4 8 16 24 32" #"4 8 16 24 32"		#numero di thread
+TEST_list="pcs"					#test
 RUN_list="1"				#lista del numero di run
 
 FAN_OUT_list="1" # 50"				#lista fan out
@@ -44,45 +44,66 @@ mkdir -p results/results_numa
 	for test in $TEST_list 
 	do
 		make $test 
-		mv $test ${test}
+		mv $test ${test}_base
 		
-		make $test PARALLEL_ALLOCATOR=1 
+		make $test PARALLEL_ALLOCATOR=1
 		mv $test ${test}_pa
 		
-		make $test PARALLEL_ALLOCATOR=1 DISTRIBUTED_FETCH=1 
-		mv $test ${test}_pa_df
+		make $test PARALLEL_ALLOCATOR=1 MBIND=1
+		mv $test ${test}_pa_mb
+		
+		make $test PARALLEL_ALLOCATOR=1 MBIND=1 DISTRIBUTED_FETCH=1
+		mv $test ${test}_pa_mb_df
 		
 		make $test DISTRIBUTED_FETCH=1 
 		mv $test ${test}_df
 		
+		make $test PARALLEL_ALLOCATOR=1 DISTRIBUTED_FETCH=1 
+		mv $test ${test}_pa_df
 		
 		for run in $RUN_list
 		do
 			for lp in $LP_list
 				do
-					for threads in $THREAD_list
+					for th in $THREAD_list
 					do
-						EX1="./${test} $threads $lp"
-						EX2="./${test}_pa $threads $lp"
-						EX3="./${test}_pa_df $threads $lp"
-						EX4="./${test}_df $threads $lp"
+						EX1="./${test}_base $th $lp"
+						EX2="./${test}_pa $th $lp" #_mbind
+						EX3="./${test}_pa_mb $th $lp" #_mbind
+						EX4="./${test}_pa_mb_df $th $lp" #_mbind
+						EX5="./${test}_df $th $lp"
+						EX6="./${test}_pa_df $th $lp"
 						
-						FILE1="${FOLDER}/${test}_$threads-$lp-$run"; touch $FILE1
-						FILE2="${FOLDER}/${test}_pa_$threads-$lp-$run"; touch $FILE2
-						FILE3="${FOLDER}/${test}_pa_df_$threads-$lp-$run"; touch $FILE3
-						FILE3="${FOLDER}/${test}_df_$threads-$lp-$run"; touch $FILE3
+						FILE1="${FOLDER}/${test}_$th-$lp"
+						FILE2="${FOLDER}/${test}_pa_$th-$lp"
+						FILE3="${FOLDER}/${test}_pa_mb_$th-$lp"
+						FILE4="${FOLDER}/${test}_pa_mb_df_$th-$lp"
+						FILE5="${FOLDER}/${test}_df_$th-$lp"
+						FILE6="${FOLDER}/${test}_pa_df_$th-$lp"
 						
+						touch ${FILE1}
 						echo $FILE1
-						(time $EX1) &> $FILE1
-						
+						$EX1 > $FILE1
+                    
+						touch ${FILE2}
 						echo $FILE2
-						(time $EX2) &> $FILE2
+						$EX2 > $FILE2
 						
+						touch ${FILE3}
 						echo $FILE3
-						(time $EX3) &> $FILE3
-						
+						$EX3 > $FILE3
+			        
+						touch ${FILE4}
 						echo $FILE4
-						(time $EX4) &> $FILE4
+						$EX4 > $FILE4
+
+						touch ${FILE5}
+						echo ${FILE5}
+						$EX5 > $FILE5
+						
+						touch ${FILE6}
+						echo ${FILE6}
+						$EX5 > $FILE6
 						
 						#N=0 
 						#while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]

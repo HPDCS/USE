@@ -199,13 +199,13 @@ void* allocate_segment(unsigned int sobj, size_t size, unsigned int numa_node) {
 		release_mdt_entry(sobj);
 		goto bad_allocate;
 	}
-
+#ifdef MBIND
 	unsigned long numa_mask = 0x1 << (numa_node); 
 	if(mbind(segment, PAGE_SIZE*numpages, MPOL_BIND, &numa_mask, num_numa_nodes+1, MPOL_MF_MOVE_ALL) == -1){
 		printf("Failing NUMA binding LP %u to node %u, with mask %p. Please retry disabling the NUMA partitioning: %s.\n",sobj, numa_node, (void *)numa_mask, strerror(errno));
 		abort();
 	}
-
+#endif
 	mdt->addr = segment;
 	mdt->numpages = numpages;
 
