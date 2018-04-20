@@ -768,7 +768,7 @@ void thread_loop(unsigned int thread_id) {
 		
 		if(safe && (++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0) ){
 			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
-			//clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
+			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
 
