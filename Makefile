@@ -188,6 +188,26 @@ ifdef P_HOTSPOT
 CFLAGS:= $(CFLAGS) -DP_HOTSPOT=$(P_HOTSPOT)
 endif
 
+#PCS
+ifdef TA_CHANGE
+CFLAGS:= $(CFLAGS) -DTA_CHANGE=$(TA_CHANGE)
+endif
+
+#PCS
+ifdef TA
+CFLAGS:= $(CFLAGS) -DTA=$(TA)
+endif
+
+#PCS
+ifdef TA_DURATION
+CFLAGS:= $(CFLAGS) -DTA_DURATION=$(TA_DURATION)
+endif
+
+#PCS
+ifdef CHANNELS_PER_CELL
+CFLAGS:= $(CFLAGS) -DCHANNELS_PER_CELL=$(CHANNELS_PER_CELL)
+endif
+
 ########################################################################
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\

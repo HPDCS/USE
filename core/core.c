@@ -768,8 +768,8 @@ void thread_loop(unsigned int thread_id) {
 		
 		if((++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0)/* && safe*/){
 			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
+			//ATTENZIONE: non so se non tenere conto del tie_breaker potrebbe essere un problema
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
-			//printf("[%u] LP %u\n",tid, current_lp);
 		}
 		
 
