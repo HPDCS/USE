@@ -222,10 +222,12 @@ unsigned int fetch_internal(){
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
 	bool validity, in_past, read_new_min = true, from_get_next_and_valid;
-#if DEBUG == 1 || REPORT ==1
+#if DEBUG == 1 || REPORT == 1 || DISTRIBUTED_FETCH == 1
 	unsigned int c = 0;
 #endif
-
+#if DISTRIBUTED_FETCH == 1
+	double sum_perc_rollback = 0;
+#endif
 	
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
@@ -255,10 +257,9 @@ unsigned int fetch_internal(){
 		
     while(node != NULL){
 		
-#if DEBUG == 1 || REPORT ==1
+#if DEBUG == 1 || REPORT ==1 || DISTRIBUTED_FETCH == 1
 		c++;
 #endif
-
 		if(c==MAX_SKIPPED_LP*n_cores){	return 0; } //DEBUG
 
 
@@ -269,6 +270,10 @@ unsigned int fetch_internal(){
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 		ts = node->timestamp;				// Timestamp of the event under exploration
 		tb = node->counter;					// Timestamp of the event under exploration
+
+#if DISTRIBUTED_FETCH == 1
+		sum_perc_rollback += LPS[lp_idx]->perc_rollback;
+#endif
 		
 		if(read_new_min){
 			min_node = node;
@@ -333,7 +338,7 @@ unsigned int fetch_internal(){
 	#endif
 #endif
 #if DISTRIBUTED_FETCH == 1
-		is_lp_on_my_numa_node(lp_idx) &&
+		(is_lp_on_my_numa_node(lp_idx) || LPS[idx]->perc_rollback > (sum_perc_rollback/c) ) &&
 #endif
 		tryLock(lp_idx)
 		) {

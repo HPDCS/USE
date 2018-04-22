@@ -113,6 +113,10 @@ typedef struct _LP_state {
 	unsigned long long commit_horizon_tb;
 	
 	unsigned int until_clean_ckp;
+	
+	/* ADDED FOR MASCOTS 2018 */
+	unsigned int num_rollback;
+	unsigned int perc_rollback;
 
 } LP_state;
 
