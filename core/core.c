@@ -753,7 +753,7 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->bound = current_msg;
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
-		LPS[current_lp]->perc_rollback = LPS[current_lp]->num_rollback / LPS[current_lp]->num_executed_frames; // MASCOTS 2018
+		LPS[current_lp]->perc_rollback = ((double) LPS[current_lp]->num_rollback) / ((double) LPS[current_lp]->num_executed_frames); // MASCOTS 2018
 		
 		///* ON_GVT *///
 		if(safe) {

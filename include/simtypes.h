@@ -116,7 +116,7 @@ typedef struct _LP_state {
 	
 	/* ADDED FOR MASCOTS 2018 */
 	unsigned int num_rollback;
-	unsigned int perc_rollback;
+	double perc_rollback;
 
 } LP_state;
 

@@ -338,7 +338,7 @@ unsigned int fetch_internal(){
 	#endif
 #endif
 #if DISTRIBUTED_FETCH == 1
-		(is_lp_on_my_numa_node(lp_idx) || LPS[idx]->perc_rollback > (sum_perc_rollback/c) ) &&
+		(is_lp_on_my_numa_node(lp_idx) || LPS[lp_idx]->perc_rollback > (sum_perc_rollback/c) ) &&
 #endif
 		tryLock(lp_idx)
 		) {
