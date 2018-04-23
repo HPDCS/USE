@@ -208,6 +208,11 @@ ifdef CHANNELS_PER_CELL
 CFLAGS:= $(CFLAGS) -DCHANNELS_PER_CELL=$(CHANNELS_PER_CELL)
 endif
 
+#TRAFFIC
+ifdef FILENAME
+CFLAGS:= $(CFLAGS) -DFILENAME=$(FILENAME)
+endif
+
 ########################################################################
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
