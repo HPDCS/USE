@@ -651,8 +651,9 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
+	#if DISTRIBUTED_FETCH == 1
 			LPS[current_lp]->num_rollback = LPS[current_lp]->num_rollback + 1; // MACOTS 2018
-			
+	#endif	
 
 #if REPORT == 1 
 			clock_timer_start(rollback_timer);
@@ -753,7 +754,9 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->bound = current_msg;
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
+	#if DISTRIBUTED_FETCH == 1
 		LPS[current_lp]->perc_rollback = ((double) LPS[current_lp]->num_rollback) / ((double) LPS[current_lp]->num_executed_frames); // MASCOTS 2018
+	#endif
 		
 		///* ON_GVT *///
 		if(safe) {

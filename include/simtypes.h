@@ -115,8 +115,10 @@ typedef struct _LP_state {
 	unsigned int until_clean_ckp;
 	
 	/* ADDED FOR MASCOTS 2018 */
+#if DISTRIBUTED_FETCH == 1
 	unsigned int num_rollback;
 	double perc_rollback;
+#endif
 
 } LP_state;
 
