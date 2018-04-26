@@ -258,13 +258,16 @@ CORE_SOURCES =  core/core.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
 
-MM_SOURCES=mm/allocator.c\
-		mm/dymelor.c\
+#mm/allocator.c\
+
+MM_SOURCES=mm/dymelor.c\
 		mm/recoverable.c\
 		mm/checkpoints.c\
 		mm/state.c\
 		datatypes/list.c\
-		mm/platform.c
+		mm/platform.c\
+		mm/buddy.c\
+		mm/segment.c
 		
 REVERSE_SOURCES=	reverse/reverse.c\
 		reverse/slab.c
@@ -341,6 +344,7 @@ endif
 
 
 mm: $(MM_OBJ)
+	@echo ld -r -g $(MM_OBJ) -o mm/__mm.o
 	@ld -r -g $(MM_OBJ) -o mm/__mm.o
 
 core: $(CORE_OBJ)

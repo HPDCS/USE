@@ -72,5 +72,5 @@ typedef struct _lp_mem_region{
 
 extern bool allocator_init(unsigned int objs);
 extern void allocator_fini(void);
-extern void *get_segment(unsigned int i);
+extern void *get_segment(unsigned int i, unsigned int numa_node);
 void *get_base_pointer(unsigned int gid);
