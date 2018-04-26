@@ -8,7 +8,7 @@
 #define EXTERNAL_LOOP	7
 
 #define VARIANCE 0.2
-#define COMPLETE_EVENTS 5000
+#define COMPLETE_EVENTS 10000
 #define COMPLETE_TIME 200000
 #define EVENTS_PER_LP 5
 
@@ -21,11 +21,11 @@
 #endif
 
 #ifndef HOTSPOTS
-#define HOTSPOTS 0
+#define HOTSPOTS 10
 #endif
 
 #ifndef P_HOTSPOT
-#define P_HOTSPOT 0
+#define P_HOTSPOT 0.5
 #endif
 
 #define TAU 1

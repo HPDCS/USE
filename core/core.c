@@ -114,8 +114,8 @@ size_t node_size_msg_t;
 size_t node_size_state_t;
 
 #if DISTRIBUTED_FETCH == 1
-__thread unsigned int fetch_mercy_period = 4;
-__thread int fetch_mercy_period_step = 1; //se negativo, indica che lo sto riducendo
+__thread unsigned int fetch_mercy_period = 64;
+__thread int fetch_mercy_period_step = 16; //se negativo, indica che lo sto riducendo
 
 __thread unsigned long long curr_clock = 0;
 __thread unsigned long long prev_clock = 0;
@@ -457,6 +457,9 @@ void init_simulation(unsigned int thread_id){
 
 	
 	if(tid == 0){
+		fetch_mercy_period = n_cores << 1;
+		fetch_mercy_period_step = n_cores >> 1;
+			
 		numa_init();
 		LPs_metada_init();
 		dymelor_init(n_prc_tot);
@@ -583,6 +586,10 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
+#if DISTRIBUTED_FETCH == 1
+	prev_clock = CLOCK_READ();
+#endif
+
 
 	///* START SIMULATION *///
 	while (  
@@ -679,7 +686,7 @@ void thread_loop(unsigned int thread_id) {
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
-#if VERBOSE > 0
+#if VERBOSE > 1
 			printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
 				LPS[current_lp]->bound->timestamp, 	LPS[current_lp]->bound->tie_breaker,	LPS[current_lp]->bound , 
 				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
@@ -839,22 +846,22 @@ end_loop:
 		nbc_prune();
 		
 #if DISTRIBUTED_FETCH == 1
-		if(mercy_period_recalc++ > 10000 /*mercy_period_recalc_period*/){
+		if(mercy_period_recalc++ > 10000/*25000*/ /*mercy_period_recalc_period*/){
 			//PERIODIC MERCY PERIOD RECALCULATION
 			curr_clock = CLOCK_READ();
 			curr_committed = events_committed;
 			curr_throughput = ((double)(curr_committed - prev_committed)*1000000)/((double)(curr_clock - prev_clock));
 			
-		#if VERBOSE > 1
+		#if VERBOSE > 0
 			if (tid == MAIN_PROCESS){ 
-				printf("[%u] MERCY_STEP %u -> MERCY_PERIOD %d\n", tid, fetch_mercy_period_step, fetch_mercy_period);
+				printf("[%u] MERCY_STEP %d -> MERCY_PERIOD %d\n", tid, fetch_mercy_period_step, fetch_mercy_period);
 				printf("[%u] \tPREV_COMM %u - PREV_THR %f\n", tid, prev_committed, prev_throughput);
 				printf("[%u] \tCURR_COMM %u - CURR_THR %f\n", tid, curr_committed, curr_throughput);
 			}
 		#endif
-			
+		if(prev_throughput > 0){
 			if (curr_throughput > prev_throughput){
-				fetch_mercy_period_step = (fetch_mercy_period_step << 1) >> (fetch_mercy_period_step >= (int)n_prc_tot);
+				fetch_mercy_period_step = (fetch_mercy_period_step << 1) >> (fetch_mercy_period_step >= 32 || fetch_mercy_period_step <= -32);
 				//if(same_direction++ > same_direction_threshold)
 				//	mercy_period_recalc_period/2;
 				//	same_direction = 0;
@@ -862,7 +869,7 @@ end_loop:
 				//change_direction = 0;
 			}
 			else{
-				fetch_mercy_period_step = -((fetch_mercy_period_step >> 1) + (fetch_mercy_period_step == 1));//(-1)*(fetch_mercy_period_step > 0) + (fetch_mercy_period_step < 0);
+				fetch_mercy_period_step = -((fetch_mercy_period_step >> 1) << 1*(fetch_mercy_period_step <= 4 && fetch_mercy_period_step >= -4));
 				//if(change_direction++ > change_direction_threshold){
 				//	mercy_period_recalc_period*2;
 				//	change_direction = 0;
@@ -871,12 +878,14 @@ end_loop:
 			}
 			
 			if(((int)fetch_mercy_period + fetch_mercy_period_step) > 0){
-				fetch_mercy_period += fetch_mercy_period_step; 
+				fetch_mercy_period += fetch_mercy_period_step;
+				if(fetch_mercy_period > 128) fetch_mercy_period = 128; 
 			}
 			else{
 				fetch_mercy_period = 0; 
 				fetch_mercy_period_step /= -1*fetch_mercy_period_step; 
 			}
+		}
 					
 			prev_throughput = curr_throughput;
 			prev_clock = curr_clock;
