@@ -106,6 +106,15 @@ pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
 unsigned int sec_stop = 0;
 unsigned long long *sim_ended;
 
+#if DISTRIBUTED_FETCH == 1
+__thread unsigned long long tot_clock_remote_fetch;
+__thread unsigned int num_remote_fetch;
+__thread unsigned long long avg_clock_remote_fetch;
+__thread unsigned long long tot_clock_local_fetch;
+__thread unsigned int num_local_fetch;
+__thread unsigned long long avg_clock_local_fetch;
+__thread unsigned long long cost_local_fetch;
+#endif
 
 unsigned int num_numa_nodes;
 bool numa_available_bool;
@@ -190,7 +199,7 @@ unsigned int get_current_numa_node(){
 	if(numa_available() != -1){
 		return numa_node_of_cpu(sched_getcpu());
 	}
-	return 1;
+	return 0;
 }
 
 void set_affinity(unsigned int tid){
@@ -548,6 +557,21 @@ stat64_t execute_time;
 #endif
 	}
 #endif
+	
+	
+#if DISTRIBUTED_FETCH == 1
+	if(is_lp_on_my_numa_node(LP)){
+		LPS[current_lp]->num_local_execution += 1; // MACOTS 2018
+		LPS[current_lp]->tot_clock_local_execution += clock_timer_value(event_processing_timer); // MACOTS 2018
+		LPS[current_lp]->avg_clock_local_execution = LPS[current_lp]->tot_clock_local_execution / LPS[current_lp]->num_local_execution; // MACOTS 2018
+	}
+	else{
+		LPS[current_lp]->num_remote_execution += 1; // MACOTS 2018
+		LPS[current_lp]->tot_clock_remote_execution += clock_timer_value(event_processing_timer); // MACOTS 2018
+		LPS[current_lp]->avg_clock_remote_execution = LPS[current_lp]->tot_clock_remote_execution / LPS[current_lp]->num_remote_execution; // MACOTS 2018
+	}
+	LPS[current_lp]->cost_remote_execution = LPS[current_lp]->avg_clock_remote_execution - LPS[current_lp]->avg_clock_local_execution;
+#endif	
 		
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
@@ -596,6 +620,8 @@ void thread_loop(unsigned int thread_id) {
 		empty_fetch = 0;
 #endif
 
+
+
 		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
 
@@ -604,6 +630,20 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+#if DISTRIBUTED_FETCH == 1
+	if(is_lp_on_my_numa_node(current_lp)){
+		num_local_fetch += 1; // MACOTS 2018
+		tot_clock_local_fetch += clock_timer_value(fetch_timer); // MACOTS 2018
+		avg_clock_local_fetch = tot_clock_local_fetch / num_local_fetch; // MACOTS 2018
+	}
+	else{
+		num_remote_fetch += 1; // MACOTS 2018
+		tot_clock_remote_fetch += clock_timer_value(fetch_timer); // MACOTS 2018
+		avg_clock_remote_fetch = tot_clock_remote_fetch / num_remote_fetch; // MACOTS 2018
+	}
+	cost_local_fetch = avg_clock_local_fetch - avg_clock_remote_fetch;
+#endif
 		
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
@@ -651,39 +691,44 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
-	#if DISTRIBUTED_FETCH == 1
-			LPS[current_lp]->num_rollback = LPS[current_lp]->num_rollback + 1; // MACOTS 2018
-	#endif	
-
-#if REPORT == 1 
+			
+		#if REPORT == 1 
 			clock_timer_start(rollback_timer);
-#endif
+		#endif
 
 		#if DEBUG == 1
 			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
-#if VERBOSE > 0
-			printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
+		#if VERBOSE > 0
+			printf("Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
 				LPS[current_lp]->bound->timestamp, 	LPS[current_lp]->bound->tie_breaker,	LPS[current_lp]->bound , 
 				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
-#endif
+		#endif
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 			
 			LPS[current_lp]->state = old_state;
-
+		#if REPORT == 1 
 			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
 			if(current_evt_state != ANTI_MSG) {
 				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 			}
+		#endif
+		#if DISTRIBUTED_FETCH == 1
+			LPS[current_lp]->num_rollback += 1; // MACOTS 2018
+			LPS[current_lp]->tot_clock_rollback += clock_timer_value(rollback_timer); // MACOTS 2018
+			LPS[current_lp]->avg_clock_rollback = LPS[current_lp]->tot_clock_rollback / LPS[current_lp]->num_rollback; // MACOTS 2018
+		#endif	
+
 		}
 
 		if(current_evt_state == ANTI_MSG) {
 			current_msg->monitor = (void*) 0xba4a4a;
 
+#if REPORT == 1 
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
-
+#endif
 			delete(nbcalqueue, current_node);
 			unlock(current_lp);
 			continue;
@@ -756,6 +801,7 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->num_executed_frames++;
 	#if DISTRIBUTED_FETCH == 1
 		LPS[current_lp]->perc_rollback = ((double) LPS[current_lp]->num_rollback) / ((double) LPS[current_lp]->num_executed_frames); // MASCOTS 2018
+		LPS[current_lp]->cost_rollback = LPS[current_lp]->avg_clock_rollback * LPS[current_lp]->perc_rollback;
 	#endif
 		
 		///* ON_GVT *///

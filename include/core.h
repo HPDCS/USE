@@ -102,6 +102,16 @@ extern __thread struct __bucket_node *current_node;
 extern __thread unsigned int current_numa_node;
 extern __thread unsigned int current_cpu;
 
+#if DISTRIBUTED_FETCH == 1
+extern __thread unsigned long long tot_clock_remote_fetch;
+extern __thread unsigned int num_remote_fetch;
+extern __thread unsigned long long avg_clock_remote_fetch; //eliminabile
+extern __thread unsigned long long tot_clock_local_fetch;
+extern __thread unsigned int num_local_fetch;
+extern __thread unsigned long long avg_clock_local_fetch; //eliminabile
+extern __thread unsigned long long cost_local_fetch;
+#endif
+
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
 

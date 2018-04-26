@@ -21,11 +21,11 @@
 #endif
 
 #ifndef HOTSPOTS
-#define HOTSPOTS 0
+#define HOTSPOTS 10
 #endif
 
 #ifndef P_HOTSPOT
-#define P_HOTSPOT 0
+#define P_HOTSPOT 0.5
 #endif
 
 #define TAU 1

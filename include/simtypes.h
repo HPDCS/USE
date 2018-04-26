@@ -116,8 +116,23 @@ typedef struct _LP_state {
 	
 	/* ADDED FOR MASCOTS 2018 */
 #if DISTRIBUTED_FETCH == 1
+	unsigned long long cost_rollback; // avg_clock_rollback * perc_rollback
+	unsigned long long cost_remote_execution; // avg_clock_remote_execution - avg_clock_local_execution
+	
+	double perc_rollback; //eliminabile
+	unsigned long long avg_clock_rollback; //eliminabile(?)
+	unsigned long long tot_clock_rollback;
 	unsigned int num_rollback;
-	double perc_rollback;
+		
+	unsigned long long avg_clock_remote_execution; //eliminabile
+	unsigned long long avg_clock_local_execution; //eliminabile
+		
+	unsigned long long tot_clock_local_execution;
+	unsigned int num_local_execution;
+	
+	unsigned long long tot_clock_remote_execution;
+	unsigned int num_remote_execution;
+
 #endif
 
 } LP_state;

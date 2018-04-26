@@ -227,6 +227,7 @@ unsigned int fetch_internal(){
 #endif
 #if DISTRIBUTED_FETCH == 1
 	double sum_perc_rollback = 0;
+	bool good_for_me = false;
 #endif
 	
 	// Get the minimum node from the calendar queue
@@ -328,6 +329,19 @@ unsigned int fetch_internal(){
 		}
 		
 		//read_new_min = false;
+	
+	#if DISTRIBUTED_FETCH == 1
+		good_for_me = (
+			is_lp_on_my_numa_node(lp_idx) ||
+			(
+				//Ma a noi interessa che un LP vada in rollback o che mandi altri in rollback?
+				//Credo la seconda, ma se è così le cose si complicano...
+				//a sto punto potrebbe aver senso fare statistiche per sistema e non più per LP
+				(LPS[lp_idx]->cost_rollback + cost_local_fetch) > LPS[lp_idx]->cost_remote_execution
+			)	
+		) //(is_lp_on_my_numa_node(lp_idx) || LPS[lp_idx]->perc_rollback > alfa * (sum_perc_rollback/c) );
+	#endif
+		
 
 		if(
 #if OPTIMISTIC_MODE != FULL_SPECULATIVE
@@ -338,7 +352,7 @@ unsigned int fetch_internal(){
 	#endif
 #endif
 #if DISTRIBUTED_FETCH == 1
-		(is_lp_on_my_numa_node(lp_idx) || LPS[lp_idx]->perc_rollback > (sum_perc_rollback/c) ) &&
+		(good_for_me) &&
 #endif
 		tryLock(lp_idx)
 		) {
