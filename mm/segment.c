@@ -67,6 +67,7 @@ void *get_segment(GID_t gid, unsigned int numa_node) {
 			rootsim_error(true, "Unable to mmap LPs memory\n");
 			return NULL;
 		}
+	#if NUMA==1
 		unsigned long numa_mask = 0x1 << (numa_node); 
 		if(mbind(mmapped[i], MAX_MMAP, MPOL_BIND, &numa_mask, num_numa_nodes+1, MPOL_MF_MOVE_ALL) == -1){
 			printf("Failing NUMA binding LP %u to node %u, with mask %p. Please retry disabling the NUMA partitioning: %s.\n",
@@ -74,6 +75,7 @@ void *get_segment(GID_t gid, unsigned int numa_node) {
 			abort();
 		}
 		// Access the memory in write mode to force the kernel to create the page table entries
+	#endif	
 		
 		*((char *)mmapped[i]) = 'x';
 		the_address = (char *)the_address + MAX_MMAP;
