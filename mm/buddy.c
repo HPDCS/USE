@@ -252,8 +252,8 @@ bool allocator_init(unsigned int objs) {
 	(void)objs;
 
 	// These are a vector of pointers which are later initialized
-	buddies = rsalloc(sizeof(struct _buddy *) * n_prc);
-	mem_areas = rsalloc(sizeof(void *) * n_prc);
+	buddies = rsalloc(sizeof(struct _buddy *) * n_prc_tot);
+	mem_areas = rsalloc(sizeof(void *) * n_prc_tot);
 
 	// we loop over all gid's to let the underlying kernel module
 	// mmap memory for all distributed LPs
