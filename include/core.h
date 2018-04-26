@@ -140,6 +140,21 @@ extern bool ctrl_mark_elim;
 extern bool ctrl_del_elim;
 extern bool ctrl_del_banana;
 		
+#if DISTRIBUTED_FETCH == 1
+extern __thread unsigned int fetch_mercy_period;
+extern __thread int fetch_mercy_period_step; //se negativo, indica che lo sto riducendo
 
+extern __thread unsigned long long curr_clock;
+extern __thread unsigned long long prev_clock;
+
+extern __thread double curr_throughput;
+extern __thread double prev_throughput;
+
+extern __thread unsigned int prev_committed;
+extern __thread unsigned int curr_committed;
+extern __thread unsigned int events_committed;
+
+extern __thread unsigned int mercy_period_recalc;
+#endif
 
 #endif

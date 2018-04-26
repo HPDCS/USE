@@ -155,10 +155,13 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		event->local_previous 	= (void*) node;        //DEBUG
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
 		event->deletion_time 	= CLOCK_READ();
-#endif
+	#endif
 
 		statistics_post_th_data(tid, STAT_EVENT_COMMIT, 1);
-
+	#if DISTRIBUTED_FETCH == 1
+		//printf("BANANA");
+		events_committed++;
+	#endif
 		return true;
 	}
 	return false;
@@ -224,6 +227,9 @@ unsigned int fetch_internal(){
 	bool validity, in_past, read_new_min = true, from_get_next_and_valid;
 #if DEBUG == 1 || REPORT ==1
 	unsigned int c = 0;
+#endif
+#if DISTRIBUTED_FETCH == 1
+	unsigned int good_counter = 0;
 #endif
 
 	
@@ -323,6 +329,10 @@ unsigned int fetch_internal(){
 		}
 		
 		//read_new_min = false;
+		
+	#if DISTRIBUTED_FETCH == 1
+		good_counter++;
+	#endif
 
 		if(
 #if OPTIMISTIC_MODE != FULL_SPECULATIVE
@@ -333,7 +343,7 @@ unsigned int fetch_internal(){
 	#endif
 #endif
 #if DISTRIBUTED_FETCH == 1
-		is_lp_on_my_numa_node(lp_idx) &&
+		(is_lp_on_my_numa_node(lp_idx) || good_counter > fetch_mercy_period) &&
 #endif
 		tryLock(lp_idx)
 		) {

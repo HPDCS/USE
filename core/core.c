@@ -113,6 +113,23 @@ bool numa_available_bool;
 size_t node_size_msg_t;
 size_t node_size_state_t;
 
+#if DISTRIBUTED_FETCH == 1
+__thread unsigned int fetch_mercy_period = 4;
+__thread int fetch_mercy_period_step = 1; //se negativo, indica che lo sto riducendo
+
+__thread unsigned long long curr_clock = 0;
+__thread unsigned long long prev_clock = 0;
+
+__thread double curr_throughput = 0;
+__thread double prev_throughput = 0;
+
+__thread unsigned int prev_committed = 0;
+__thread unsigned int curr_committed = 0;
+__thread unsigned int events_committed = 0;
+
+__thread unsigned int mercy_period_recalc = 0;
+#endif
+
 void * do_sleep(){
 	//printf("The process will last %d seconds\n", sec_stop);
 	
@@ -190,7 +207,7 @@ unsigned int get_current_numa_node(){
 	if(numa_available() != -1){
 		return numa_node_of_cpu(sched_getcpu());
 	}
-	return 1;
+	return 0;
 }
 
 void set_affinity(unsigned int tid){
@@ -334,6 +351,7 @@ bool check_termination(void) {
 
 // può diventare una macro?
 // [D] no, non potrebbe più essere invocata lato modello altrimenti
+// [A] non è vero, basta mettere la macro nell'header del simulatore
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 	if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
 		queue_insert(receiver, timestamp, event_type, event_content, event_size);
@@ -820,6 +838,53 @@ end_loop:
 		//LOCAL LISTS PRUNING
 		nbc_prune();
 		
+#if DISTRIBUTED_FETCH == 1
+		if(mercy_period_recalc++ > 10000 /*mercy_period_recalc_period*/){
+			//PERIODIC MERCY PERIOD RECALCULATION
+			curr_clock = CLOCK_READ();
+			curr_committed = events_committed;
+			curr_throughput = ((double)(curr_committed - prev_committed)*1000000)/((double)(curr_clock - prev_clock));
+			
+		#if VERBOSE > 1
+			if (tid == MAIN_PROCESS){ 
+				printf("[%u] MERCY_STEP %u -> MERCY_PERIOD %d\n", tid, fetch_mercy_period_step, fetch_mercy_period);
+				printf("[%u] \tPREV_COMM %u - PREV_THR %f\n", tid, prev_committed, prev_throughput);
+				printf("[%u] \tCURR_COMM %u - CURR_THR %f\n", tid, curr_committed, curr_throughput);
+			}
+		#endif
+			
+			if (curr_throughput > prev_throughput){
+				fetch_mercy_period_step = (fetch_mercy_period_step << 1) >> (fetch_mercy_period_step >= (int)n_prc_tot);
+				//if(same_direction++ > same_direction_threshold)
+				//	mercy_period_recalc_period/2;
+				//	same_direction = 0;
+				//}
+				//change_direction = 0;
+			}
+			else{
+				fetch_mercy_period_step = -((fetch_mercy_period_step >> 1) + (fetch_mercy_period_step == 1));//(-1)*(fetch_mercy_period_step > 0) + (fetch_mercy_period_step < 0);
+				//if(change_direction++ > change_direction_threshold){
+				//	mercy_period_recalc_period*2;
+				//	change_direction = 0;
+				//}
+				//same_direction = 0;
+			}
+			
+			if(((int)fetch_mercy_period + fetch_mercy_period_step) > 0){
+				fetch_mercy_period += fetch_mercy_period_step; 
+			}
+			else{
+				fetch_mercy_period = 0; 
+				fetch_mercy_period_step /= -1*fetch_mercy_period_step; 
+			}
+					
+			prev_throughput = curr_throughput;
+			prev_clock = curr_clock;
+			prev_committed = curr_committed;
+
+			mercy_period_recalc = 0;
+		}
+#endif
 		//PRINT REPORT
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
