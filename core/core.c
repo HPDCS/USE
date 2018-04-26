@@ -457,10 +457,10 @@ void init_simulation(unsigned int thread_id){
 
 	
 	if(tid == 0){
-#if DISTRIBUTED_FETCH==1
-		fetch_mercy_period = n_cores << 1;
-		fetch_mercy_period_step = n_cores >> 1;
-#endif			
+		#if DISTRIBUTED_FETCH == 1
+			fetch_mercy_period = n_cores << 1;
+			fetch_mercy_period_step = -1 * (n_cores >> 1);
+		#endif			
 		numa_init();
 		LPs_metada_init();
 		dymelor_init(n_prc_tot);
