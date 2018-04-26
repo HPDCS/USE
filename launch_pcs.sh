@@ -60,7 +60,7 @@ do
 								
 								FILE1="${FOLDER}/${test}_df_${df}-ta_${tav}-tad_${tad}-tac_${tac}_$th-$lp.dat"
 								
-								#touch ${FILE1}
+								touch ${FILE1}
 								#echo $FILE1
 								#$EX1 > $FILE1
 								

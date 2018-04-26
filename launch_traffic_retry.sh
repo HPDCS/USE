@@ -2,11 +2,12 @@
 
 #MAX_SKIPPED_LP_list="1000000"
 LP_list="1024"					#numero di lp
-THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"	#numero di thread
-TEST_list="traffic"		#test
+THREAD_list="32 24 16 8 4 2" #"4 8 16 24 32"	#numero di thread
 RUN_list="1"					#lista del numero di run
 
 LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"	#lookahead
+
+OP_list="0 1 2" #2
 
 #CKP_PER_list="50" #"10 50 100"
 
@@ -20,6 +21,9 @@ MAX_RETRY="10"
 FOLDER="results/results_traffic" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 INPUT_list="30_01 60_01 30_05 60_05"
+ENTERP_list="30 60"
+LEAVEP_list="01 05"
+
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
@@ -36,39 +40,48 @@ mkdir -p ${FOLDER}
 #do
 #for lookahead in $LOOKAHEAD_list
 #do
-for fn in $INPUT_list 
+for run in $RUN_list
 do
-	for test in $TEST_list 
+
+#for fn in $INPUT_list 
+#do
+	for op in $OP_list
 	do
-		echo cp topology_${fn}.txt topology.txt
-		cp model/traffic/topology_${fn}.txt model/traffic/topology.txt
-				
-		echo $test REPORT=1 DEBUG=0 PRINT_SCREEN=0
-		make $test REPORT=1 DEBUG=0 PRINT_SCREEN=0
-		
-		for run in $RUN_list
+		for enp in $ENTERP_list
 		do
-			for lp in $LP_list
+			for lvp in $LEAVEP_list
 			do
-				for threads in $THREAD_list
+				#echo cp topology_${fn}.txt topology.txt
+				#cp model/traffic/topology_${fn}.txt model/traffic/topology.txt
+						
+				echo make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 ENTER_PROB=${enp} LEAVE_PROB=${lvp} OPTIMISTIC_LEVEL=${op}
+				make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 ENTER_PROB=${enp} LEAVE_PROB=${lvp} OPTIMISTIC_LEVEL=${op}
+				
+				for lp in $LP_list
 				do
-					EX="./${test} $threads $lp"
-					FILE="${FOLDER}/${test}_$threads-$lp_$fn_$run.dat"; touch $FILE
-					
-					N=0 
-					while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
+					for threads in $THREAD_list
 					do
-						echo $BEGIN
-						echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
-						echo $FILE
-						$EX > $FILE
-						if test $N -ge $MAX_RETRY ; then echo break; break; fi
-						N=$(( N+1 ))
-					done  
+						EX="./traffic $threads $lp"
+						FILE="${FOLDER}/traffic_${threads}-${lp}_ol${op}_${enp}_${lvp}_${run}.dat"
+						touch $FILE
+						
+						N=0 
+						while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
+						do
+							echo $BEGIN
+							echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
+							echo $FILE
+							$EX > $FILE
+							if test $N -ge $MAX_RETRY ; then echo break; break; fi
+							N=$(( N+1 ))
+						done  
+					done
 				done
 			done
 		done
 	done
+#done
+
 done
 #done
 #done
