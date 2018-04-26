@@ -17,7 +17,7 @@
 #endif
 
 #ifndef LOOP_COUNT
-#define LOOP_COUNT 100
+#define LOOP_COUNT 400
 #endif
 
 #define TAU 1

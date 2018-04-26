@@ -100,6 +100,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 					}
 				}
 			}
+			//MASCOTS2018
+			else if(me < HOTSPOTS) {
+				ScheduleNewEvent(HOTSPOTS+FindReceiver(TOPOLOGY_MESH)%(n_prc_tot-HOTSPOTS), now+LOOKAHEAD, EXTERNAL_LOOP, NULL, 0);
+			}
 
 			//if(event_type == LOOP && Random() < 0.2) {
 			//	ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
