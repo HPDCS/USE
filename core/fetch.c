@@ -343,7 +343,7 @@ unsigned int fetch_internal(){
 	#endif
 #endif
 #if DISTRIBUTED_FETCH == 1
-		(is_lp_on_my_numa_node(lp_idx) || good_counter > fetch_mercy_period) &&
+		(is_lp_on_my_numa_node(lp_idx) || !partitioned_LP/*good_counter > fetch_mercy_period*/) &&
 #endif
 		tryLock(lp_idx)
 		) {

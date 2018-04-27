@@ -128,6 +128,37 @@ __thread unsigned int curr_committed = 0;
 __thread unsigned int events_committed = 0;
 
 __thread unsigned int mercy_period_recalc = 0;
+
+//__________________________________________
+//__thread unsigned long long cost_rollback; // avg_clock_rollback * perc_rollback
+//__thread unsigned long long cost_remote_execution; // avg_clock_remote_execution - avg_clock_local_execution
+ 
+//__thread double perc_rollback; //eliminabile
+//__thread unsigned long long avg_clock_rollback; //eliminabile(?)
+//__thread unsigned long long tot_clock_rollback;
+//__thread unsigned int num_rollback;
+ 	
+__thread unsigned long long avg_clock_remote_execution; //eliminabile
+__thread unsigned long long avg_clock_local_execution; //eliminabile
+	
+__thread unsigned long long tot_clock_local_execution;
+__thread unsigned int num_local_execution;
+ 
+__thread unsigned long long tot_clock_remote_execution;
+__thread unsigned int num_remote_execution;
+
+
+__thread unsigned long long tot_clock_remote_fetch;
+__thread unsigned int num_remote_fetch;
+__thread unsigned long long avg_clock_remote_fetch;
+__thread unsigned long long tot_clock_local_fetch;
+__thread unsigned int num_local_fetch;
+__thread unsigned long long avg_clock_local_fetch;
+//__thread unsigned long long cost_local_fetch;
+
+__thread bool partitioned_LP = true;
+__thread unsigned int decision_period=0;
+__thread unsigned int decision_period_lenght=1000;
 #endif
 
 void * do_sleep(){
@@ -570,6 +601,17 @@ stat64_t execute_time;
 #endif
 	}
 #endif
+
+#if DISTRIBUTED_FETCH == 1
+	if(decision_period == 1){
+		num_local_execution += 1; // MACOTS 2018
+		tot_clock_local_execution += clock_timer_value(event_processing_timer); // MACOTS 2018
+	}
+	else if(decision_period == 2){
+		num_remote_execution += 1; // MACOTS 2018
+		tot_clock_remote_execution += clock_timer_value(event_processing_timer); // MACOTS 2018
+	}
+#endif
 		
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
@@ -630,6 +672,17 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+		
+#if DISTRIBUTED_FETCH == 1
+	if(decision_period == 1){
+		num_local_fetch += 1; // MACOTS 2018
+		tot_clock_local_fetch += clock_timer_value(fetch_timer); // MACOTS 2018
+	}
+	else if(decision_period == 2){
+		num_remote_fetch += 1; // MACOTS 2018
+		tot_clock_remote_fetch += clock_timer_value(fetch_timer); // MACOTS 2018
+	}
+#endif
 		
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
@@ -847,53 +900,87 @@ end_loop:
 		nbc_prune();
 		
 #if DISTRIBUTED_FETCH == 1
-		if(mercy_period_recalc++ > 10000/*25000*/ /*mercy_period_recalc_period*/){
-			//PERIODIC MERCY PERIOD RECALCULATION
-			curr_clock = CLOCK_READ();
-			curr_committed = events_committed;
-			curr_throughput = ((double)(curr_committed - prev_committed)*1000000)/((double)(curr_clock - prev_clock));
+		if(++mercy_period_recalc > decision_period_lenght){
 			
-		#if VERBOSE > 0
-			if (tid == MAIN_PROCESS){ 
-				printf("[%u] MERCY_STEP %d -> MERCY_PERIOD %d\n", tid, fetch_mercy_period_step, fetch_mercy_period);
-				printf("[%u] \tPREV_COMM %u - PREV_THR %f\n", tid, prev_committed, prev_throughput);
-				printf("[%u] \tCURR_COMM %u - CURR_THR %f\n", tid, curr_committed, curr_throughput);
+			if (decision_period == 0){  //FINITO IL PERIODO 0 - STABILIZZAZIONE NUMA
+				tot_clock_local_execution=0;
+				tot_clock_remote_execution=0;
+				num_remote_execution=0;
+				num_local_execution=0;
+				
+				tot_clock_remote_fetch=0;
+				tot_clock_local_fetch=0;
+				num_local_fetch=0;
+				num_remote_fetch=0;
+				
 			}
-		#endif
-		if(prev_throughput > 0){
-			if (curr_throughput > prev_throughput){
-				fetch_mercy_period_step = (fetch_mercy_period_step << 1) >> (fetch_mercy_period_step >= 32 || fetch_mercy_period_step <= -32);
-				//if(same_direction++ > same_direction_threshold)
-				//	mercy_period_recalc_period/2;
-				//	same_direction = 0;
-				//}
-				//change_direction = 0;
+			else if (decision_period == 1){ //FINITO IL PERIODO 1 - ESECUZIONE PARTITIONED
+				avg_clock_local_execution =  (num_local_execution > 0) * (tot_clock_local_execution / num_local_execution); 
+				avg_clock_local_fetch = (num_local_fetch > 0) * (tot_clock_local_fetch / num_local_fetch); 
+				partitioned_LP = false;
 			}
-			else{
-				fetch_mercy_period_step = -((fetch_mercy_period_step >> 1) << 1*(fetch_mercy_period_step <= 4 && fetch_mercy_period_step >= -4));
-				//if(change_direction++ > change_direction_threshold){
-				//	mercy_period_recalc_period*2;
-				//	change_direction = 0;
-				//}
-				//same_direction = 0;
+			else if(decision_period == 2){ //FINITO IL PERIODO 2 - ESECUZIONE SUL MINIMO
+				avg_clock_remote_execution =  (num_remote_execution > 0) * (tot_clock_remote_execution / num_remote_execution); 
+				avg_clock_remote_fetch = (num_remote_fetch > 0) * (tot_clock_remote_fetch / num_remote_fetch); 
+				
+				partitioned_LP = (avg_clock_remote_execution - avg_clock_local_execution) > (avg_clock_local_fetch - avg_clock_remote_fetch);
+				mercy_period_recalc = 100000;
+			}
+			else if(decision_period == 3){
+				partitioned_LP = true;
+				decision_period_lenght = 1000;
 			}
 			
-			if(((int)fetch_mercy_period + fetch_mercy_period_step) > 0){
-				fetch_mercy_period += fetch_mercy_period_step;
-				if(fetch_mercy_period > 128) fetch_mercy_period = 128; 
-			}
-			else{
-				fetch_mercy_period = 0; 
-				fetch_mercy_period_step /= -1*fetch_mercy_period_step; 
-			}
-		}
-					
-			prev_throughput = curr_throughput;
-			prev_clock = curr_clock;
-			prev_committed = curr_committed;
-
+			decision_period = (decision_period + 1) % 4; 
 			mercy_period_recalc = 0;
 		}
+//		if(mercy_period_recalc++ > 10000/*25000*/ /*mercy_period_recalc_period*/){
+//			//PERIODIC MERCY PERIOD RECALCULATION
+//			curr_clock = CLOCK_READ();
+//			curr_committed = events_committed;
+//			curr_throughput = ((double)(curr_committed - prev_committed)*1000000)/((double)(curr_clock - prev_clock));
+//			
+//		#if VERBOSE > 0
+//			if (tid == MAIN_PROCESS){ 
+//				printf("[%u] MERCY_STEP %d -> MERCY_PERIOD %d\n", tid, fetch_mercy_period_step, fetch_mercy_period);
+//				printf("[%u] \tPREV_COMM %u - PREV_THR %f\n", tid, prev_committed, prev_throughput);
+//				printf("[%u] \tCURR_COMM %u - CURR_THR %f\n", tid, curr_committed, curr_throughput);
+//			}
+//		#endif
+//		if(prev_throughput > 0){
+//			if (curr_throughput > prev_throughput){
+//				fetch_mercy_period_step = (fetch_mercy_period_step << 1) >> (fetch_mercy_period_step >= 32 || fetch_mercy_period_step <= -32);
+//				//if(same_direction++ > same_direction_threshold)
+//				//	mercy_period_recalc_period/2;
+//				//	same_direction = 0;
+//				//}
+//				//change_direction = 0;
+//			}
+//			else{
+//				fetch_mercy_period_step = -((fetch_mercy_period_step >> 1) << 1*(fetch_mercy_period_step <= 4 && fetch_mercy_period_step >= -4));
+//				//if(change_direction++ > change_direction_threshold){
+//				//	mercy_period_recalc_period*2;
+//				//	change_direction = 0;
+//				//}
+//				//same_direction = 0;
+//			}
+//			
+//			if(((int)fetch_mercy_period + fetch_mercy_period_step) > 0){
+//				fetch_mercy_period += fetch_mercy_period_step;
+//				if(fetch_mercy_period > 128) fetch_mercy_period = 128; 
+//			}
+//			else{
+//				fetch_mercy_period = 0; 
+//				fetch_mercy_period_step /= -1*fetch_mercy_period_step; 
+//			}
+//		}
+//					
+//			prev_throughput = curr_throughput;
+//			prev_clock = curr_clock;
+//			prev_committed = curr_committed;
+//
+//			mercy_period_recalc = 0;
+//		}
 #endif
 		//PRINT REPORT
 		if(tid == MAIN_PROCESS) {
@@ -917,7 +1004,7 @@ end_loop:
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} else if (stop || stop_timer){
 		//sleep(5);
-		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
+		printf(GREEN( "[%u] Execution ended correctly with mercy period equal to %d\n"), tid, fetch_mercy_period);
 		if(tid==0){
 			pthread_join(sleeper, NULL);
 

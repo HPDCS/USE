@@ -155,6 +155,8 @@ extern __thread unsigned int curr_committed;
 extern __thread unsigned int events_committed;
 
 extern __thread unsigned int mercy_period_recalc;
+
+extern __thread bool partitioned_LP;
 #endif
 
 #endif
