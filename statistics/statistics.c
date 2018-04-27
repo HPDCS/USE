@@ -385,8 +385,9 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("   Fetch failed.................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_fetched_unsucc, percentage(stats->events_fetched_unsucc, stats->events_fetched));
 	printf("   Avg node traversed during fetch..............: %12.2f\n", stats->events_get_next_fetch);
+#if DISTRIBUTED_FETCH==1
 	printf("   Final mercy period...........................: %12u\n", fetch_mercy_period);
-	
+#endif
 	printf("\n");
 	
 

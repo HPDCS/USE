@@ -27,7 +27,7 @@ FOLDER="results/results_numa_new" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir -p results
 mkdir -p results/results_numa
-#mkdir ${FOLDER}
+mkdir -p ${FOLDER}
 
 #for max_lp in $MAX_SKIPPED_LP_list
 #do

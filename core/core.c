@@ -138,8 +138,8 @@ __thread unsigned int mercy_period_recalc = 0;
 //__thread unsigned long long tot_clock_rollback;
 //__thread unsigned int num_rollback;
  	
-__thread unsigned long long avg_clock_remote_execution; //eliminabile
-__thread unsigned long long avg_clock_local_execution; //eliminabile
+__thread double avg_clock_remote_execution; //eliminabile
+__thread double avg_clock_local_execution; //eliminabile
 	
 __thread unsigned long long tot_clock_local_execution;
 __thread unsigned int num_local_execution;
@@ -150,10 +150,10 @@ __thread unsigned int num_remote_execution;
 
 __thread unsigned long long tot_clock_remote_fetch;
 __thread unsigned int num_remote_fetch;
-__thread unsigned long long avg_clock_remote_fetch;
+__thread double avg_clock_remote_fetch;
 __thread unsigned long long tot_clock_local_fetch;
 __thread unsigned int num_local_fetch;
-__thread unsigned long long avg_clock_local_fetch;
+__thread double avg_clock_local_fetch;
 //__thread unsigned long long cost_local_fetch;
 
 __thread bool partitioned_LP = true;
@@ -913,22 +913,33 @@ end_loop:
 				num_local_fetch=0;
 				num_remote_fetch=0;
 				
+				//printf("[%u] STARTING PERIOD 1\n");
 			}
 			else if (decision_period == 1){ //FINITO IL PERIODO 1 - ESECUZIONE PARTITIONED
-				avg_clock_local_execution =  (num_local_execution > 0) * (tot_clock_local_execution / num_local_execution); 
-				avg_clock_local_fetch = (num_local_fetch > 0) * (tot_clock_local_fetch / num_local_fetch); 
+				avg_clock_local_execution =  (num_local_execution > 0) * (((double)tot_clock_local_execution) / num_local_execution); 
+				avg_clock_local_fetch = (num_local_fetch > 0) * (((double)tot_clock_local_fetch) / num_local_fetch); 
 				partitioned_LP = false;
+				printf("[%u] STARTING PERIOD 2\n");
 			}
 			else if(decision_period == 2){ //FINITO IL PERIODO 2 - ESECUZIONE SUL MINIMO
-				avg_clock_remote_execution =  (num_remote_execution > 0) * (tot_clock_remote_execution / num_remote_execution); 
-				avg_clock_remote_fetch = (num_remote_fetch > 0) * (tot_clock_remote_fetch / num_remote_fetch); 
+				avg_clock_remote_execution =  (num_remote_execution > 0) * (((double)tot_clock_remote_execution) / num_remote_execution); 
+				avg_clock_remote_fetch = (num_remote_fetch > 0) * (((double)tot_clock_remote_fetch) / num_remote_fetch); 
 				
 				partitioned_LP = (avg_clock_remote_execution - avg_clock_local_execution) > (avg_clock_local_fetch - avg_clock_remote_fetch);
-				mercy_period_recalc = 100000;
+				decision_period_lenght = 100000;
+				
+				printf("[%u] avg_clock_rem_exe   %10f\n", tid, avg_clock_remote_execution);
+				printf("[%u] avg_clock_loc_exe   %10f\n", tid, avg_clock_local_execution);
+				printf("[%u] avg_clock_rem_fetch %10f\n", tid, avg_clock_remote_fetch);
+				printf("[%u] avg_clock_loc_fetch %10f\n", tid, avg_clock_local_fetch);
+				printf("[%u] ESITO partitioned_LP %u\n", tid, partitioned_LP);
+				printf("[%u] STARTING PERIOD 3\n");
+				
 			}
 			else if(decision_period == 3){
 				partitioned_LP = true;
 				decision_period_lenght = 1000;
+				printf("[%u] STARTING PERIOD 0\n");
 			}
 			
 			decision_period = (decision_period + 1) % 4; 
@@ -1004,7 +1015,11 @@ end_loop:
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} else if (stop || stop_timer){
 		//sleep(5);
+#if DISTRIBUTED_FETCH == 1
 		printf(GREEN( "[%u] Execution ended correctly with mercy period equal to %d\n"), tid, fetch_mercy_period);
+#else
+		printf(GREEN( "[%u] Execution ended correctly \n"), tid);
+#endif
 		if(tid==0){
 			pthread_join(sleeper, NULL);
 
