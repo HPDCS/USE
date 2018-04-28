@@ -224,8 +224,15 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_CLOCK_FETCH_UNSUCC:
 			stats[idx].clock_fetch_unsucc += value;
 			break;
-		
-
+#if DISTRIBUTED_FETCH==1
+		case STAT_PARTITIONED_LP:
+			stats[idx].partitioned_LP += value;
+			break;
+	
+		case STAT_PARTITIONED_LP_CALC:
+			stats[idx].partitioned_LP_calc += value;
+			break;
+#endif
 		default:
 			printf("Unrecognized stat type (%d)\n", type);
 	}
@@ -263,12 +270,16 @@ void gather_statistics() {
 		system_stats->events_fetched_unsucc+= thread_stats[i].events_fetched_unsucc;
 		system_stats->clock_fetch_unsucc   += thread_stats[i].clock_fetch_unsucc;
 		system_stats->events_get_next_fetch+= thread_stats[i].events_get_next_fetch;
+#if DISTRIBUTED_FETCH==1
+		system_stats->partitioned_LP += thread_stats[i].partitioned_LP;
+		system_stats->partitioned_LP_calc += thread_stats[i].partitioned_LP_calc;
+#endif
 	}
 
 	system_stats->clock_prune /= system_stats->counter_prune;
 	system_stats->clock_loop_tot = system_stats->clock_loop;
 	system_stats->clock_loop /= n_cores;
-	
+
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
 		system_stats->events_total         += lp_stats[i].events_total;
@@ -386,8 +397,8 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long long)stats->events_fetched_unsucc, percentage(stats->events_fetched_unsucc, stats->events_fetched));
 	printf("   Avg node traversed during fetch..............: %12.2f\n", stats->events_get_next_fetch);
 #if DISTRIBUTED_FETCH==1
-	printf("   Final mercy period...........................: %12u\n", fetch_mercy_period);
-#endif
+	printf("Avg Fetch Partitioned mode ON...................: %12.2f\n",((double)stats->partitioned_LP)/stats->partitioned_LP_calc);
+#endif	
 	printf("\n");
 	
 

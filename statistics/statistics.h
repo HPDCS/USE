@@ -78,6 +78,9 @@
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
 
+#define STAT_PARTITIONED_LP			500
+#define STAT_PARTITIONED_LP_CALC	501
+
 
 typedef double stat64_t;
 
@@ -135,6 +138,9 @@ struct stats_t {
     stat64_t clock_event_tot;
     stat64_t clock_safe_tot;
     stat64_t clock_frame_tot;
+    
+    stat64_t partitioned_LP;
+    stat64_t partitioned_LP_calc;
     
     
 } __attribute__((aligned (64)));

@@ -3,7 +3,7 @@
 MAX_SKIPPED_LP_list="1000000"
 LP_list="1024"						#numero di lp
 THREAD_list="1 2 4 8 16 24 32" #"4 8 16 24 32"		#numero di thread
-TEST_list="pcs phold pholdhotspot"					#test
+TEST_list="pcs phold pholdhotspot tcar"					#test
 RUN_list="1 2 3 4"				#lista del numero di run
 
 FAN_OUT_list="1" # 50"				#lista fan out
