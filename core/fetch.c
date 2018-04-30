@@ -230,6 +230,7 @@ unsigned int fetch_internal(){
 #endif
 #if DISTRIBUTED_FETCH == 1
 	unsigned int good_counter = 0;
+	simtime_t min_fetchable = - INFTY;
 #endif
 
 	
@@ -332,6 +333,9 @@ unsigned int fetch_internal(){
 		
 	#if DISTRIBUTED_FETCH == 1
 		good_counter++;
+		if(c == - INFTY){
+			min_fetchable = ts;
+		}
 	#endif
 
 		if(
@@ -343,7 +347,7 @@ unsigned int fetch_internal(){
 	#endif
 #endif
 #if DISTRIBUTED_FETCH == 1
-		(is_lp_on_my_numa_node(lp_idx) || good_counter > fetch_mercy_period) &&
+		(is_lp_on_my_numa_node(lp_idx) || ts >= min_fetchable + fetch_mercy_period * (bucket_width / EPB) /*good_counter > fetch_mercy_period*/) &&
 #endif
 		tryLock(lp_idx)
 		) {
