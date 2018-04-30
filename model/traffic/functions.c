@@ -27,7 +27,8 @@
 
 
 static car_t *reorder_queue(car_t *head, simtime_t now) {
-    (void) now;
+    //unsigned int i1=0, i2=0;
+    //(void) now;
     
     car_t *curr;
     car_t *prev;
@@ -36,29 +37,37 @@ static car_t *reorder_queue(car_t *head, simtime_t now) {
         didSwap = false;
         prev = head;
         for(curr = head; (curr != NULL && curr->next != NULL); curr = curr->next) {
+				//i1++;
                 if(curr->leave > curr->next->leave) {
                         if (head == curr) {
                             head = curr->next;      
                             curr->next = head->next; 
                             head->next = curr; 
-                            prev = head;
+                            //prev = head;
                         } else {
                             prev->next = curr->next;
                             curr->next = prev->next->next;
                             prev->next->next = curr;
                         }
                         didSwap = true;
-                } else if (head != curr) {
-                    prev = prev->next;
-                }
+                } 
+                //else if (head != curr) {
+                //    prev = prev->next; //<- verifica
+                //}
+                prev = curr;
         }
+        //if(i2 != 0 && i2 != i1){
+		//	printf("[%f]Prima ho scorso %u elementi ed ora %u\n",now, i2, i1);
+		//}
+		//i2 = i1;
+		//i1 = 0;
     }
 
 
     // Update the portion of traveled space
 	curr = head;
 	while(curr != NULL) {
-		curr->traveled = (curr->leave - curr->arrival) / curr->leave;
+		curr->traveled = (now - curr->arrival) / (curr->leave - curr->arrival);
 		curr = curr->next;
 	}
     return head;
@@ -116,7 +125,7 @@ static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed) 
 	// Compute the speed
 	speed = MIN_SPEED;
 	if(mean_speed > MIN_SPEED) {
-		speed += (mean_speed - MIN_SPEED) * traffic;
+		speed += (mean_speed - MIN_SPEED) * (1 - traffic);
 	}
 
 	do {
@@ -240,7 +249,10 @@ void cause_accident(lp_state_type *state, int me) {
 		return;
 	}
 
-	if(me > 60)
+	//~ if(me > 60)
+		//~ return;
+	
+	if(state->lp_type != JUNCTION)
 		return;
 
 	// An accident happens depending on the number of cars.
@@ -261,11 +273,19 @@ void cause_accident(lp_state_type *state, int me) {
 	mean = (double)state->total_queue_slots / 3.0; // When there are many cars but not that much, accidents are more likely to occur
 	var = RandomRange(0, 100);
 
-	prob = contourcdf(min, max, mean, var);
+	
+	//printf ("<%f,%f,%f,%f> -", min, max, mean, var);
+
+	prob = contourcdf(min, max, mean, var); // <- TORNA SEMPRE 0
+	
+	//printf ("p0: %f -", prob);
+	
 	prob *= (double)ACCIDENT_PROBABILITY;
 
 	// Toss a coin to check whether an accident occured or not
 	coin = Random();
+	
+	//printf ("p1: %f -", prob);
 	
 	// If there is an accident, set the parameters accordingly and determine how long the accident will last
 	if(coin <= prob) {

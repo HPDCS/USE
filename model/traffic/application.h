@@ -68,6 +68,7 @@
 #define ACCIDENT_SIGMA		30
 #define ACCIDENT_LEAVE_TIME	20	// Exponential mean to compute the time increment to leave after an accident
 
+#define KEEP_ALIVE_TIME		200 // Exponential mean of keep alive messages
 
 // EVENTI
 #define ARRIVAL		10

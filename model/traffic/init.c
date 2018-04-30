@@ -77,20 +77,10 @@ static void tokenize_intersection(char *line, lp_state_type *state) {
 
 			case 1: // Car leaving probability
 				state->enter_prob = parseDouble(token);
-#ifdef ENTER_PROB
-				if(state->enter_prob != -1)
-					state->enter_prob = ENTER_PROB;
-#endif
 				break;
-
 			case 2: // Car entering probability
 				state->leave_prob = parseDouble(token);
-#ifdef LEAVE_PROB
-				if(state->leave_prob != -1)
-					state->leave_prob = ((double)LEAVE_PROB)/100;
-#endif
 				break;
-
 			default:
 				fprintf(stderr, "Too many parameters in intersection %s at pass %d\n", state->name, pass);
 				fflush(stderr);
