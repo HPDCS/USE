@@ -46,7 +46,7 @@
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
-#define LOG_RESIZE 0
+#define LOG_RESIZE 1
 
 #define BOOL_CAS_ALE(addr, old, new)  CAS_x86(\
 										UNION_CAST(addr, volatile unsigned long long *),\

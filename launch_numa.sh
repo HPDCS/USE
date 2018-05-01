@@ -23,11 +23,11 @@ DS_list="0 1"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-FOLDER="results/results_numa_new" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/results_numa" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir -p results
 mkdir -p results/results_numa
-#mkdir ${FOLDER}
+mkdir -p ${FOLDER}
 
 #for max_lp in $MAX_SKIPPED_LP_list
 #do
