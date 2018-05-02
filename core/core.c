@@ -661,7 +661,7 @@ void thread_loop(unsigned int thread_id) {
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
-#if VERBOSE > 0
+#if VERBOSE > 1
 			printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
 				LPS[current_lp]->bound->timestamp, 	LPS[current_lp]->bound->tie_breaker,	LPS[current_lp]->bound , 
 				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
@@ -821,13 +821,16 @@ end_loop:
 		nbc_prune();
 		
 		//PRINT REPORT
+#if VERBOSE > 0
 		if(tid == MAIN_PROCESS) {
 			evt_count++;
-			if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
-				printlp("TIME: %f", current_lvt);
+			if (evt_count % 10000 == 0) {	
+			//if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
+				printf("TIME: %f - GVT: %f\n", current_lvt, LPS[current_lp]->commit_horizon_ts);
 				//printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
 		}
+#endif
 	}
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));

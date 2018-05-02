@@ -45,6 +45,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 
 		// This event initializes the simulation state for each LP and inject first events
 		case INIT:
+				
 			state = malloc(sizeof(lp_state_type));
 			if(state == NULL){
 				fprintf(stderr, "ERROR: Unable to allocate simulation state!\n");
@@ -73,9 +74,13 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 			}
 			
 			// Schedule a keep alive event
-			timestamp = now + Expent(10);
+			timestamp = now + 10;//Expent(10);
 			ScheduleNewEvent(me, timestamp, KEEP_ALIVE, NULL, 0);
 			
+			if(me == 0)
+				printf("STARTING TRAFFIC WITH END TIME: %u\n input rate: %f\n output prob: %f\n\n",EXECUTION_TIME, state->enter_prob, state->leave_prob);
+
+		
 			break;
 
 
@@ -93,10 +98,12 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 				// Send a leave event
 				ScheduleNewEvent(me, car->leave, LEAVE, &car->car_id, sizeof(unsigned long long));
 			} else {
-				printf("Object queue full\n");
+				printf("Object queue full: "); if(state->lp_type == JUNCTION) printf(" JUNCTION\n"); else printf(" ROAD\n");
 			}
 
+#if SIMPLE_TRAFFIC == 0		
 			cause_accident(state, me);
+#endif
 
 			// If the arrival is related to a new car entering the highway, schedule
 			// the next car entering
@@ -141,8 +148,10 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 
 
 		case KEEP_ALIVE:
+#if SIMPLE_TRAFFIC == 0		
 			determine_stop(state);
-			timestamp = now + Expent(10);
+#endif
+			timestamp = now + 10;//Expent(10);
 			ScheduleNewEvent(me, timestamp, KEEP_ALIVE, NULL, 0);
 			break;
 
@@ -162,5 +171,6 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	
 	if (snapshot->lvt < EXECUTION_TIME)
 		return false;
+	//printf("LP %u has finished at time %f\n", me, snapshot->lvt);
 	return true;
 }

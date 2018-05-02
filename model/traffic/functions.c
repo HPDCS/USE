@@ -203,7 +203,7 @@ car_t *car_enqueue(int me, int from, lp_state_type *state) {
 //	}
 
 	state->queue = reorder_queue(state->queue, state->lvt);
-#if VERBOSE > 0
+#if VERBOSE > 2
 	printf("ENQUEUE: car %llu entering in LP %u- at time %f. It will depart at time %f\n", new_car->car_id, me, new_car->arrival, new_car->leave);
 #endif	
 	return new_car;
@@ -227,7 +227,6 @@ void inject_new_cars(lp_state_type *state, int me) {
 	new_evt.from = me;
 	new_evt.injection = 1;
 	ScheduleNewEvent(me, timestamp, ARRIVAL, &new_evt, sizeof(event_content_type));
-
 }
 
 
@@ -356,7 +355,7 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 	car_t *ret_car;
 	
 	//~printf("\n%d: looking for %llu... ", me, *mark);
-#if VERBOSE > 0	
+#if VERBOSE > 2	
 	printf("DEQUEUE: car %llu outgoing at LP %u- at time %f. addr: %p\n", mark[0], me, state->lvt, mark);
 #endif
 	curr_car = state->queue;

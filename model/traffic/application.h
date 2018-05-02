@@ -23,6 +23,10 @@
 
 #include <ROOT-Sim.h>
 
+#ifndef SIMPLE_TRAFFIC
+#define SIMPLE_TRAFFIC 0
+#endif
+
 
 #define YEAR 	31536000
 #define WEEK	604800
@@ -31,7 +35,7 @@
 
 // Execution time must be specified in seconds
 #ifndef EXECUTION_TIME
-	#define EXECUTION_TIME	(1 * WEEK)
+	#define EXECUTION_TIME	(1 * DAY/24)
 #endif
 
 
@@ -49,7 +53,7 @@
 
 // A junction has no actual length, yet cars can be queued in it
 #ifndef CARS_PER_JUNCTION
-	#define	CARS_PER_JUNCTION	1000
+	#define	CARS_PER_JUNCTION	10000
 #endif
 
 // A junction has no actual length, yet cars take some time to pass in it
@@ -57,7 +61,11 @@
 	#define	JUNCTION_TRAVERSE_TIME  600	// 10 minutes on average
 #endif
 
-#define MIN_SPEED		15//20
+#if SIMPLE_TRAFFIC !=0
+#define MIN_SPEED		AVERAGE_SPEED//15//20
+#else
+#define MIN_SPEED		20
+#endif
 
 // SIGMA is in Km/h
 #define SPEED_SIGMA		20.0

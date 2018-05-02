@@ -141,7 +141,6 @@ else
 CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=1
 endif
 
-
 #NB_CALQUEUE
 ifdef ENABLE_PRUNE
 CFLAGS:= $(CFLAGS) -DENABLE_EXPANSION=$(ENABLE_EXPANSION)
@@ -209,6 +208,11 @@ endif
 #TRAFFIC
 ifdef LEAVE_PROB
 CFLAGS:= $(CFLAGS) -DLEAVE_PROB=$(LEAVE_PROB)
+endif
+
+#TRAFFIC
+ifdef SIMPLE_TRAFFIC
+CFLAGS:= $(CFLAGS) -DSIMPLE_TRAFFIC=$(SIMPLE_TRAFFIC)
 endif
 
 ########################################################################
