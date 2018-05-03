@@ -77,7 +77,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 			}
 			
 			// Schedule a keep alive event
-			timestamp = now + 10;//Expent(10);
+			timestamp = now + Expent(100);
 			ScheduleNewEvent(me, /*LOOKAHEAD +*/ timestamp, KEEP_ALIVE, NULL, 0);
 			
 			if(me == 0)
@@ -186,7 +186,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, void *event, s
 #if SIMPLE_TRAFFIC == 0		
 			determine_stop(state);
 #endif
-			timestamp = now + 2;//Expent(10);
+			timestamp = now + Expent(100);
 			ScheduleNewEvent(me, /*LOOKAHEAD +*/ timestamp, KEEP_ALIVE, NULL, 0);
 			break;
 

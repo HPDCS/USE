@@ -143,4 +143,5 @@ extern bool ctrl_del_banana;
 #if VERBOSE > 0
 extern __thread unsigned int diff_lp;
 #endif
+
 #endif

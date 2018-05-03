@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #MAX_SKIPPED_LP_list="1000000"
-LP_list="137"					#numero di lp
+LP_list="163"					#numero di lp
 THREAD_list="32 16 8 4 2" #"4 8 16 24 32"	#numero di thread
 RUN_list="1 2 3"					#lista del numero di run
 
 #LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"	#lookahead
 
-OP_list="0 1 2" #2
+OP_list="1 2" #2
 
 #CKP_PER_list="50" #"10 50 100"
 
@@ -52,7 +52,7 @@ do
 #			for lvp in $LEAVEP_list
 #			do
 				echo cp topology_${fn}.txt topology.txt
-				cp model/traffic/small_topology_${fn}.txt topology.txt
+				cp model/traffic/medium_topology_${fn}.txt topology.txt
 						
 				echo make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 OPTIMISTIC_LEVEL=${op} SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50
 				make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 OPTIMISTIC_LEVEL=${op} SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50
