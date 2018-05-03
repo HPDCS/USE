@@ -346,7 +346,8 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 	
 	if(curr_car == NULL) {
 		printf("ERROR_1: car %llu not found in LP %u\n", *mark, me);
-		abort();
+		//abort();
+		return NULL;
 	}
 	
 	if(curr_car->car_id == *mark) {
@@ -371,7 +372,8 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 		//	curr_car = curr_car->next;
 		//}
 		printf("ERROR_2: car %llu not found in LP %u\n", *mark, me);
-		abort();
+		//abort();
+		return NULL;
 	}
 	
 	//~printf("%llu, ", curr_car->next->car_id);
