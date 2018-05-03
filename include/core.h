@@ -14,7 +14,7 @@
 
 #define MAX_LPs	2048
 
-#define THR_POOL_SIZE		128
+#define THR_POOL_SIZE		1024//128
 
 
 #define MODE_SAF	1
@@ -139,7 +139,8 @@ extern bool ctrl_unsafe;
 extern bool ctrl_mark_elim;
 extern bool ctrl_del_elim;
 extern bool ctrl_del_banana;
-		
 
-
+#if VERBOSE > 0
+extern __thread unsigned int diff_lp;
+#endif
 #endif

@@ -576,7 +576,7 @@ void thread_loop(unsigned int thread_id) {
 		
 		///* FETCH *///
 #if REPORT == 1
-		//statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
+		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
 		clock_timer_start(fetch_timer);
 #endif
 		if(fetch_internal() == 0) {
@@ -826,7 +826,9 @@ end_loop:
 			evt_count++;
 			if (evt_count % 10000 == 0) {	
 			//if ((evt_count - PRINT_REPORT_RATE * (evt_count / PRINT_REPORT_RATE)) == 0) {	
-				printf("TIME: %f - GVT: %f\n", current_lvt, LPS[current_lp]->commit_horizon_ts);
+				printf("TIME: %f - GVT: %f CQ_size: %llu CQ_count: %llu CQ_bw: %f\n", current_lvt, LPS[current_lp]->commit_horizon_ts, nbcalqueue->hashtable->size,nbcalqueue->hashtable->counter,nbcalqueue->hashtable->bucket_width);
+				printf("Useless event in fetch: %f\n", diff_lp/(thread_stats[0].events_fetched));
+				printf("Fetch length:           %f\n", thread_stats[0].events_get_next_fetch/(thread_stats[0].events_fetched));
 				//printf(" \tsafety=%u \ttransactional=%u \treversible=%u\n", thread_stats[tid].events_safe, thread_stats[tid].commits_htm, thread_stats[tid].commits_stm);
 			}
 		}

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #MAX_SKIPPED_LP_list="1000000"
-LP_list="1024"					#numero di lp
-THREAD_list="32 24 16 8 4 2 1" #"4 8 16 24 32"	#numero di thread
+LP_list="137"					#numero di lp
+THREAD_list="32 16 8 4 2" #"4 8 16 24 32"	#numero di thread
 RUN_list="1 2 3"					#lista del numero di run
 
 #LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"	#lookahead
@@ -20,7 +20,7 @@ MAX_RETRY="10"
 
 FOLDER="results/results_traffic" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
-INPUT_list="60_01 30_01 10_01 10_001"
+INPUT_list="03_08 05_08 10_08 04_08 07_08" #04_08 07_08
 ENTERP_list="30 60"
 LEAVEP_list="01 05"
 
@@ -52,10 +52,10 @@ do
 #			for lvp in $LEAVEP_list
 #			do
 				echo cp topology_${fn}.txt topology.txt
-				cp model/traffic/topology_${fn}.txt topology.txt
+				cp model/traffic/small_topology_${fn}.txt topology.txt
 						
-				echo make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 OPTIMISTIC_LEVEL=${op}
-				make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 OPTIMISTIC_LEVEL=${op}
+				echo make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 OPTIMISTIC_LEVEL=${op} SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50
+				make traffic REPORT=1 DEBUG=0 PRINT_SCREEN=0 OPTIMISTIC_LEVEL=${op} SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50
 				
 				for lp in $LP_list
 				do

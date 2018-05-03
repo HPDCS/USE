@@ -211,7 +211,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define set_commit_state_as_banana(event)				(	(event)->monitor =  (void*) 0xBA4A4A  	) 
 
 
-
+__thread unsigned int diff_lp = 0;
 
 unsigned int fetch_internal(){
 	table *h;
@@ -225,7 +225,6 @@ unsigned int fetch_internal(){
 #if DEBUG == 1 || REPORT ==1
 	unsigned int c = 0;
 #endif
-
 	
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
@@ -258,7 +257,10 @@ unsigned int fetch_internal(){
 #if DEBUG == 1 || REPORT ==1
 		c++;
 #endif
-
+#if VERBOSE > 0
+		diff_lp++;
+#endif
+	
 		if(c==MAX_SKIPPED_LP*n_cores){	return 0; } //DEBUG
 
 
@@ -322,6 +324,9 @@ unsigned int fetch_internal(){
 			
 		}
 		
+#if VERBOSE > 0
+		diff_lp--;
+#endif		
 		//read_new_min = false;
 
 		if(

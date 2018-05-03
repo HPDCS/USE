@@ -25,11 +25,7 @@
 #include "normal_cdf.h"
 
 
-
-static car_t *reorder_queue(car_t *head, simtime_t now) {
-    //unsigned int i1=0, i2=0;
-    //(void) now;
-    
+static car_t *reorder_queue(car_t *head, simtime_t now, lp_state_type *state) {
     car_t *curr;
     car_t *prev;
     bool didSwap = false;
@@ -37,7 +33,6 @@ static car_t *reorder_queue(car_t *head, simtime_t now) {
         didSwap = false;
         prev = head;
         for(curr = head; (curr != NULL && curr->next != NULL); curr = curr->next) {
-				//i1++;
                 if(curr->leave > curr->next->leave) {
                         if (head == curr) {
                             head = curr->next;      
@@ -51,16 +46,14 @@ static car_t *reorder_queue(car_t *head, simtime_t now) {
                         }
                         didSwap = true;
                 } 
+                
+                //curr->speed = abs(Gaussian(state->segment_length/(curr->leave - curr->arrival), SPEED_SIGMA)); //TODO
                 //else if (head != curr) {
                 //    prev = prev->next; //<- verifica
                 //}
                 prev = curr;
+                
         }
-        //if(i2 != 0 && i2 != i1){
-		//	printf("[%f]Prima ho scorso %u elementi ed ora %u\n",now, i2, i1);
-		//}
-		//i2 = i1;
-		//i1 = 0;
     }
 
 
@@ -74,7 +67,7 @@ static car_t *reorder_queue(car_t *head, simtime_t now) {
 }
 
 
-static unsigned long long get_mark(unsigned int k1, unsigned int k2) {
+unsigned long long get_mark(unsigned int k1, unsigned int k2) {
 	return (unsigned long long)( ((k1 + k2) * (k1 + k2 + 1) / 2) + k2 );
 }
 
@@ -114,7 +107,7 @@ static unsigned long long get_mark(unsigned int k1, unsigned int k2) {
 }
 
 
-static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed) {
+static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed, car_t *car) {
 	double traffic;
 	double speed, real_speed;
 	simtime_t traverse_time;
@@ -131,6 +124,7 @@ static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed) 
 	do {
 		// Compute traverse time according to a Normal distribution
 		real_speed = abs(Gaussian(speed, SPEED_SIGMA));
+		car->speed = real_speed;
 		traverse_time = (simtime_t)(state->segment_length / real_speed);
 	} while(isinf(traverse_time));
 
@@ -165,7 +159,7 @@ car_t *car_enqueue(int me, int from, lp_state_type *state) {
 	bzero(new_car, sizeof(car_t));
 	new_car->from = from;
 	new_car->arrival = state->lvt;
-	new_car->leave = state->lvt + compute_traverse_time(state, AVERAGE_SPEED);
+	new_car->leave = state->lvt /*+LOOKAHEAD*/ + compute_traverse_time(state, AVERAGE_SPEED, new_car);
 	new_car->car_id = get_mark(me, state->car_id++);
 	if(state->accident)
 		new_car->accident = true;
@@ -202,7 +196,7 @@ car_t *car_enqueue(int me, int from, lp_state_type *state) {
 //		curr_car = curr_car->next;
 //	}
 
-	state->queue = reorder_queue(state->queue, state->lvt);
+	state->queue = reorder_queue(state->queue, state->lvt, state);
 #if VERBOSE > 2
 	printf("ENQUEUE: car %llu entering in LP %u- at time %f. It will depart at time %f\n", new_car->car_id, me, new_car->arrival, new_car->leave);
 #endif	
@@ -221,8 +215,7 @@ void inject_new_cars(lp_state_type *state, int me) {
 	}
 
 	// Entering timestamps ditributed according to an Erlang distribution
-	timestamp = state->lvt + (simtime_t)(Expent(state->enter_prob));
-
+	timestamp = state->lvt + (simtime_t)(Expent(state->enter_prob /*-LOOKAHEAD*/))/*+LOOKAHEAD*/;
 	// Send me the inject event
 	new_evt.from = me;
 	new_evt.injection = 1;
@@ -248,9 +241,6 @@ void cause_accident(lp_state_type *state, int me) {
 		return;
 	}
 
-	//~ if(me > 60)
-		//~ return;
-	
 	if(state->lp_type != JUNCTION)
 		return;
 
@@ -273,18 +263,12 @@ void cause_accident(lp_state_type *state, int me) {
 	var = RandomRange(0, 100);
 
 	
-	//printf ("<%f,%f,%f,%f> -", min, max, mean, var);
-
 	prob = contourcdf(min, max, mean, var); // <- TORNA SEMPRE 0
-	
-	//printf ("p0: %f -", prob);
 	
 	prob *= (double)ACCIDENT_PROBABILITY;
 
 	// Toss a coin to check whether an accident occured or not
 	coin = Random();
-	
-	//printf ("p1: %f -", prob);
 	
 	// If there is an accident, set the parameters accordingly and determine how long the accident will last
 	if(coin <= prob) {
@@ -296,7 +280,7 @@ void cause_accident(lp_state_type *state, int me) {
 			duration = (simtime_t)(Gaussian(ACCIDENT_DURATION, ACCIDENT_SIGMA));
 		} while(duration <= 0);
 		
-		ScheduleNewEvent(me, state->lvt + duration, FINISH_ACCIDENT, NULL, 0);
+		ScheduleNewEvent(me, /*LOOKAHEAD+*/ state->lvt + duration, FINISH_ACCIDENT, NULL, 0);
 
 		//~printf("(%d) Accident at node %s at time %f, until %f\n", me, state->name, state->lvt, state->lvt + duration);
 		
@@ -378,6 +362,7 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 	while(curr_car->next != NULL && curr_car->next->car_id != *mark) {
 		//~printf("%llu, ", curr_car->next->car_id);
 		curr_car = curr_car->next;
+		curr_car->speed = abs(Gaussian(state->segment_length/(curr_car->leave - curr_car->arrival), SPEED_SIGMA)); //TODO
 	}
 	
 	if(curr_car->next == NULL) {
@@ -432,5 +417,5 @@ void update_car_leave(lp_state_type *state, unsigned long long id, simtime_t new
 		curr_car = curr_car->next;
 	}
 
-	state->queue = reorder_queue(state->queue, state->lvt);
+	state->queue = reorder_queue(state->queue, state->lvt, state);
 }

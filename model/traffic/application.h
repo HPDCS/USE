@@ -22,6 +22,7 @@
 
 
 #include <ROOT-Sim.h>
+//#include <lookahead.h>
 
 #ifndef SIMPLE_TRAFFIC
 #define SIMPLE_TRAFFIC 0
@@ -35,7 +36,7 @@
 
 // Execution time must be specified in seconds
 #ifndef EXECUTION_TIME
-	#define EXECUTION_TIME	(1 * DAY/24)
+	#define EXECUTION_TIME	(1 * DAY/8)
 #endif
 
 
@@ -54,6 +55,9 @@
 // A junction has no actual length, yet cars can be queued in it
 #ifndef CARS_PER_JUNCTION
 	#define	CARS_PER_JUNCTION	10000
+#endif
+#ifndef JUNCTION_LENGTH
+	#define JUNCTION_LENGTH 0.1
 #endif
 
 // A junction has no actual length, yet cars take some time to pass in it
@@ -139,6 +143,7 @@ typedef struct _car {
 	double				traveled;
 	unsigned long long	car_id;
 	struct _car 		*next;
+	double 				speed;
 } car_t;
 
 
@@ -174,6 +179,7 @@ extern void cause_accident(lp_state_type *state, int me);
 extern void release_cars(unsigned int me, lp_state_type *state);
 extern void update_car_leave(lp_state_type *state, unsigned long long, simtime_t new);
 
+extern unsigned long long get_mark(unsigned int k1, unsigned int k2);
 
 #endif /* _TRAFFIC_APPLICATION_H */
 
