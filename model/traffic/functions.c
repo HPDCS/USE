@@ -25,10 +25,7 @@
 #include "normal_cdf.h"
 
 
-
-static car_t *reorder_queue(car_t *head, simtime_t now) {
-    (void) now;
-    
+static car_t *reorder_queue(car_t *head, simtime_t now, lp_state_type *state) {
     car_t *curr;
     car_t *prev;
     bool didSwap = false;
@@ -41,16 +38,21 @@ static car_t *reorder_queue(car_t *head, simtime_t now) {
                             head = curr->next;      
                             curr->next = head->next; 
                             head->next = curr; 
-                            prev = head;
+                            //prev = head;
                         } else {
                             prev->next = curr->next;
                             curr->next = prev->next->next;
                             prev->next->next = curr;
                         }
                         didSwap = true;
-                } else if (head != curr) {
-                    prev = prev->next;
-                }
+                } 
+                
+                //curr->speed = abs(Gaussian(state->segment_length/(curr->leave - curr->arrival), SPEED_SIGMA)); //TODO
+                //else if (head != curr) {
+                //    prev = prev->next; //<- verifica
+                //}
+                prev = curr;
+                
         }
     }
 
@@ -58,14 +60,14 @@ static car_t *reorder_queue(car_t *head, simtime_t now) {
     // Update the portion of traveled space
 	curr = head;
 	while(curr != NULL) {
-		curr->traveled = (curr->leave - curr->arrival) / curr->leave;
+		curr->traveled = (now - curr->arrival) / (curr->leave - curr->arrival);
 		curr = curr->next;
 	}
     return head;
 }
 
 
-static unsigned long long get_mark(unsigned int k1, unsigned int k2) {
+unsigned long long get_mark(unsigned int k1, unsigned int k2) {
 	return (unsigned long long)( ((k1 + k2) * (k1 + k2 + 1) / 2) + k2 );
 }
 
@@ -105,7 +107,7 @@ static unsigned long long get_mark(unsigned int k1, unsigned int k2) {
 }
 
 
-static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed) {
+static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed, car_t *car) {
 	double traffic;
 	double speed, real_speed;
 	simtime_t traverse_time;
@@ -116,12 +118,13 @@ static simtime_t compute_traverse_time(lp_state_type *state, double mean_speed) 
 	// Compute the speed
 	speed = MIN_SPEED;
 	if(mean_speed > MIN_SPEED) {
-		speed += (mean_speed - MIN_SPEED) * traffic;
+		speed += (mean_speed - MIN_SPEED) * (1 - traffic);
 	}
 
 	do {
 		// Compute traverse time according to a Normal distribution
 		real_speed = abs(Gaussian(speed, SPEED_SIGMA));
+		car->speed = real_speed;
 		traverse_time = (simtime_t)(state->segment_length / real_speed);
 	} while(isinf(traverse_time));
 
@@ -156,7 +159,7 @@ car_t *car_enqueue(int me, int from, lp_state_type *state) {
 	bzero(new_car, sizeof(car_t));
 	new_car->from = from;
 	new_car->arrival = state->lvt;
-	new_car->leave = state->lvt + compute_traverse_time(state, AVERAGE_SPEED);
+	new_car->leave = state->lvt /*+LOOKAHEAD*/ + compute_traverse_time(state, AVERAGE_SPEED, new_car);
 	new_car->car_id = get_mark(me, state->car_id++);
 	if(state->accident)
 		new_car->accident = true;
@@ -193,8 +196,8 @@ car_t *car_enqueue(int me, int from, lp_state_type *state) {
 //		curr_car = curr_car->next;
 //	}
 
-	state->queue = reorder_queue(state->queue, state->lvt);
-#if VERBOSE > 0
+	state->queue = reorder_queue(state->queue, state->lvt, state);
+#if VERBOSE > 2
 	printf("ENQUEUE: car %llu entering in LP %u- at time %f. It will depart at time %f\n", new_car->car_id, me, new_car->arrival, new_car->leave);
 #endif	
 	return new_car;
@@ -212,13 +215,11 @@ void inject_new_cars(lp_state_type *state, int me) {
 	}
 
 	// Entering timestamps ditributed according to an Erlang distribution
-	timestamp = state->lvt + (simtime_t)(Expent(state->enter_prob));
-
+	timestamp = state->lvt + (simtime_t)(Expent(state->enter_prob /*-LOOKAHEAD*/))/*+LOOKAHEAD*/;
 	// Send me the inject event
 	new_evt.from = me;
 	new_evt.injection = 1;
 	ScheduleNewEvent(me, timestamp, ARRIVAL, &new_evt, sizeof(event_content_type));
-
 }
 
 
@@ -240,7 +241,7 @@ void cause_accident(lp_state_type *state, int me) {
 		return;
 	}
 
-	if(me > 60)
+	if(state->lp_type != JUNCTION)
 		return;
 
 	// An accident happens depending on the number of cars.
@@ -261,7 +262,9 @@ void cause_accident(lp_state_type *state, int me) {
 	mean = (double)state->total_queue_slots / 3.0; // When there are many cars but not that much, accidents are more likely to occur
 	var = RandomRange(0, 100);
 
-	prob = contourcdf(min, max, mean, var);
+	
+	prob = contourcdf(min, max, mean, var); // <- TORNA SEMPRE 0
+	
 	prob *= (double)ACCIDENT_PROBABILITY;
 
 	// Toss a coin to check whether an accident occured or not
@@ -277,7 +280,7 @@ void cause_accident(lp_state_type *state, int me) {
 			duration = (simtime_t)(Gaussian(ACCIDENT_DURATION, ACCIDENT_SIGMA));
 		} while(duration <= 0);
 		
-		ScheduleNewEvent(me, state->lvt + duration, FINISH_ACCIDENT, NULL, 0);
+		ScheduleNewEvent(me, /*LOOKAHEAD+*/ state->lvt + duration, FINISH_ACCIDENT, NULL, 0);
 
 		//~printf("(%d) Accident at node %s at time %f, until %f\n", me, state->name, state->lvt, state->lvt + duration);
 		
@@ -336,14 +339,15 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 	car_t *ret_car;
 	
 	//~printf("\n%d: looking for %llu... ", me, *mark);
-#if VERBOSE > 0	
+#if VERBOSE > 2	
 	printf("DEQUEUE: car %llu outgoing at LP %u- at time %f. addr: %p\n", mark[0], me, state->lvt, mark);
 #endif
 	curr_car = state->queue;
 	
 	if(curr_car == NULL) {
 		printf("ERROR_1: car %llu not found in LP %u\n", *mark, me);
-		abort();
+		//abort();
+		return NULL;
 	}
 	
 	if(curr_car->car_id == *mark) {
@@ -359,6 +363,7 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 	while(curr_car->next != NULL && curr_car->next->car_id != *mark) {
 		//~printf("%llu, ", curr_car->next->car_id);
 		curr_car = curr_car->next;
+		curr_car->speed = abs(Gaussian(state->segment_length/(curr_car->leave - curr_car->arrival), SPEED_SIGMA)); //TODO
 	}
 	
 	if(curr_car->next == NULL) {
@@ -367,7 +372,8 @@ car_t *car_dequeue(unsigned int me, lp_state_type *state, unsigned long long *ma
 		//	curr_car = curr_car->next;
 		//}
 		printf("ERROR_2: car %llu not found in LP %u\n", *mark, me);
-		abort();
+		//abort();
+		return NULL;
 	}
 	
 	//~printf("%llu, ", curr_car->next->car_id);
@@ -413,5 +419,5 @@ void update_car_leave(lp_state_type *state, unsigned long long id, simtime_t new
 		curr_car = curr_car->next;
 	}
 
-	state->queue = reorder_queue(state->queue, state->lvt);
+	state->queue = reorder_queue(state->queue, state->lvt, state);
 }

@@ -10,10 +10,11 @@
 #include <statistics.h>
 #include <limits.h>
 #include <nb_calqueue.h>
+#include <numa.h>
 
 #define MAX_LPs	2048
 
-#define THR_POOL_SIZE		128
+#define THR_POOL_SIZE		1024//128
 
 
 #define MODE_SAF	1
@@ -23,9 +24,14 @@
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
-#define end_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
+#define end_sim(lp)			( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
 #define start_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], ~(1ULL << (lp%64))) )
-#define is_end_sim(lp) 	(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
+#define is_end_sim(lp) 		(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
+
+//#define is_LP_on_my_NUMA_node(lp) 
+#define numa_from_lp(lp)			(lp % (1 + ((n_cores-1)*num_numa_nodes)/(N_CPU)) ) //Distributes LPs between NUMA nodes
+#define is_lp_on_my_numa_node(lp)	( numa_from_lp(lp) == current_numa_node )	//verifies if the lp is on the same NUMA node of the current thread
+#define is_lp_mine(lp)				( (lp)%n_cores == tid)	//Not used: create a 1,1 relationship bwtween threads and LPs
 
 
 #define SIZEOF_ULL					(sizeof(unsigned long long))
@@ -93,6 +99,8 @@ extern __thread unsigned int tid;
 extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
+extern __thread unsigned int current_numa_node;
+extern __thread unsigned int current_cpu;
 
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
@@ -108,6 +116,9 @@ extern simtime_t t_btw_evts;
 extern LP_state **LPS;
 extern volatile bool stop;
 extern unsigned int sec_stop;
+/* Number of numa nodes on the current machine */
+extern unsigned int num_numa_nodes;
+extern bool numa_available_bool;
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
@@ -128,7 +139,9 @@ extern bool ctrl_unsafe;
 extern bool ctrl_mark_elim;
 extern bool ctrl_del_elim;
 extern bool ctrl_del_banana;
-		
 
+#if VERBOSE > 0
+extern __thread unsigned int diff_lp;
+#endif
 
 #endif

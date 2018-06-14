@@ -182,7 +182,7 @@ typedef struct _malloc_state malloc_state;
 
 
 // Variables
-// TODO: quali sono realmente da esporre all'esterno?!
+// TODO: Check which one has to be really exposed?!
 
 extern int incremental_granularity;
 extern int force_full[MAX_LPs];
@@ -196,7 +196,7 @@ extern double checkpoint_bytes_total;
 
 
 // DyMeLoR API
-extern void dymelor_init(void);
+extern void dymelor_init(unsigned int objs);
 extern void dymelor_fini(void);
 extern void set_force_full(unsigned int, int);
 extern void dirty_mem(void *, int);
@@ -210,9 +210,9 @@ extern void recoverable_fini(void);
 extern void unrecoverable_init(void);
 extern void unrecoverable_fini(void);
 extern void malloc_state_init(bool recoverable, malloc_state *state);
-extern void *do_malloc(unsigned int, malloc_state * mem_pool, size_t size);
+extern void *do_malloc(unsigned int, malloc_state * mem_pool, size_t size, unsigned int numa_node);
 extern void do_free(unsigned int, malloc_state *mem_pool, void *ptr);
-extern void *pool_get_memory(unsigned int lid, size_t size);
+extern void *pool_get_memory(unsigned int lid, size_t size, unsigned int numa_node);
 extern void pool_release_memory(unsigned int lid, void *ptr);
 
 // Checkpointing API

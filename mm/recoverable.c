@@ -64,28 +64,28 @@ void recoverable_init(void) {
 }
 
 
-void recoverable_fini(void) {
-	unsigned int i, j;
-	malloc_area *current_area;
-
-	for(i = 0; i < n_prc_tot; i++) {
-		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
-			current_area = &(recoverable_state[i]->areas[j]);
-			if (current_area != NULL) {
-				if (current_area->self_pointer != NULL) {
-					#ifdef HAVE_PARALLEL_ALLOCATOR
-					pool_release_memory(i, current_area->self_pointer);
-					#else
-					rsfree(current_area->self_pointer);
-					#endif
-				}
-			}
-		}
-		rsfree(recoverable_state[i]->areas);
-		rsfree(recoverable_state[i]);
-	}
-	rsfree(recoverable_state);
-}
+//void recoverable_fini(void) {
+//	unsigned int i, j;
+//	malloc_area *current_area;
+//
+//	for(i = 0; i < n_prc_tot; i++) {
+//		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
+//			current_area = &(recoverable_state[i]->areas[j]);
+//			if (current_area != NULL) {
+//				if (current_area->self_pointer != NULL) {
+//					#ifdef HAVE_PARALLEL_ALLOCATOR
+//					pool_release_memory(i, current_area->self_pointer);
+//					#else
+//					rsfree(current_area->self_pointer);
+//					#endif
+//				}
+//			}
+//		}
+//		rsfree(recoverable_state[i]->areas);
+//		rsfree(recoverable_state[i]);
+//	}
+//	rsfree(recoverable_state);
+//}
 
 
 
@@ -131,8 +131,8 @@ size_t get_log_size(malloc_state *logged_state){
 */
 void *__wrap_malloc(size_t size) {
 	void *ptr;
-
-	ptr = do_malloc(current_lp, recoverable_state[current_lp], size);
+	unsigned int numa_node = numa_from_lp(current_lp);
+	ptr = do_malloc(current_lp, recoverable_state[current_lp], size, numa_node);
 
 	return ptr;
 }

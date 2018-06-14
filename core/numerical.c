@@ -355,7 +355,7 @@ static void load_seed(void) {
 		// We now initialize the first long random number. Thanks Unix!
 		// TODO: THIS IS NOT PORTABLE!
 		int fd;
-		if ((fd = open("/dev/random", O_RDONLY)) == -1) {
+		if ((fd = open("/dev/urandom", O_RDONLY)) == -1) {
 			rootsim_error(true, "Unable to initialize the numerical library configuration file %s. Aborting...", conf_file);
 
 		}
@@ -385,10 +385,8 @@ static void load_seed(void) {
 }
 
 
-// TODO: con un (non tanto) alto numero di processi logici (> numero di bit di un intero!!), lo shift
-// circolare restituisce a due LP differenti lo stesso seme iniziale. Questo fa sì che, se la logica di
-// programma è la stessa e basata soltanto su numeri casuali, due o più nodi eseguano sempre la stessa
-// sequenza di eventi agli stessi timestamp!!!
+// TODO: with a high number of LPs (greater that the number of bit of an integer), the shift return the same seed to multiple LP.
+//This means that two LPs should produce same events with the same ts!!!
 
 #define RS_WORD_LENGTH (8 * sizeof(seed_type))
 #define ROR(value, places) (value << (places)) | (value >> (RS_WORD_LENGTH - places)) // Circular shift

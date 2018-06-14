@@ -1,12 +1,12 @@
 #!/bin/bash
 
-LP_list="1024"					#numero di lp
-THREAD_list="1 4 8 16 24 32"		#numero di thread
-TEST_list="phold"				#test
-RUN_list="1 2 3 4 5"				#lista del 
+LP_list="1024"					#numero di lps
+THREAD_list="1 4 8 16 24 32"		#numero di threads
+TEST_list="phold"				#test list
+RUN_list="1 2 3 4 5"				
 numero di run
 
-FAN_OUT_list="1 50"		#lista fan out
+FAN_OUT_list="1 50"		#fan out list
 LOOKAHEAD_list="0.1 0.001"		#lookahead
 LOOP_COUNT_list="50 100 150 250 400 600"	#loop_count
 

@@ -53,7 +53,7 @@
 
 #define SAMPLE_SIZE 25
 #define HEAD_ID 0
-#define MAXIMUM_SIZE 65536//32768 //65536
+#define MAXIMUM_SIZE 262144//65536//32768
 #define MINIMUM_SIZE 1
 
 #define FLUSH_SMART 1
@@ -112,7 +112,7 @@ struct table
 	table * volatile new_table;
 	char zpad4[32];
 	atomic_t counter;
-	//atomic_t e_counter;	//TODO: scompattare il counter
+	//atomic_t e_counter;	//TODO: expand counter in enqueued and dequeued
 	//char zpad3[60];
 	//atomic_t d_counter;
 	char zpad1[60];

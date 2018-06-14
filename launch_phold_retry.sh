@@ -1,13 +1,13 @@
 #!/bin/bash
 
 MAX_SKIPPED_LP_list="1000000"
-LP_list="1024"						#numero di lp
-THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"		#numero di thread
-TEST_list="phold"					#test
-RUN_list="1"				#lista del numero di run
+LP_list="1024"						#number of lps
+THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"		#number of threads
+TEST_list="phold"					#test list
+RUN_list="1"				#run number list
 
-FAN_OUT_list="1" # 50"				#lista fan out
-LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"		#lookahead
+FAN_OUT_list="1" # 50"				#fan out list
+LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"		#lookahead list
 LOOP_COUNT_list="50 150 400 800 1600" 				#loop_count #50 100 150 250 400 600" 400=60micsec
 
 CKP_PER_list="50" #"10 50 100"

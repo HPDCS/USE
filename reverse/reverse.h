@@ -4,7 +4,7 @@
 
 #include <sys/types.h>
 
-// FIXME: l'inclusione genera un loop... (-.-)
+// FIXME: this inclusion generates a loop... (-.-)
 //#include <mm/dymelor.h>
 
 

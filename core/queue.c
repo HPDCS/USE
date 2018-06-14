@@ -74,9 +74,9 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 
 
     msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-    list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
+    list_node_clean_by_content(msg_ptr); //IT SHOULD NOT BE USEFUL...REMOVE?    
 
-	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
+	//TODO: use slaballoc instead of malloc to create event descriptor
 	_thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
 
     msg_ptr->sender_id = current_lp;
@@ -113,7 +113,7 @@ void queue_clean(){
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
-    //simtime_t max = current_msg->timestamp; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
+    //simtime_t max = current_msg->timestamp; //it could be done directly on current_msg->max_outgoing_ts
     
 #if REPORT == 1
 		clock_timer queue_op;
@@ -122,7 +122,7 @@ void queue_deliver_msgs(void) {
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
 
         //new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-        //list_node_clean_by_content(new_hole); //NON DOVREBBE SERVIRE
+        //list_node_clean_by_content(new_hole); //IT SHOULD NOT BE USEFUL...REMOVE?
 
 		new_hole = _thr_pool.messages[i].father;
         _thr_pool.messages[i].father = NULL; 
@@ -144,9 +144,8 @@ void queue_deliver_msgs(void) {
         new_hole->max_outgoing_ts = new_hole->timestamp;
 
 #if DEBUG==1
-		if(new_hole->timestamp < current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
-		//if(new_hole->timestamp != _thr_pool.messages[i].timestamp){ printf(RED("2Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
-		if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+		if(new_hole->timestamp < current_lvt){ printf(RED("1Executing event in past!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+		//if(new_hole->timestamp != _thr_pool.messages[i].timestamp){ printf(RED("2Executing event in past!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
 #endif
 
 		if(current_msg->max_outgoing_ts < new_hole->timestamp)

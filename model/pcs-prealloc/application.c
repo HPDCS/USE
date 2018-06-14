@@ -122,7 +122,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			
 			pointer->buff_topology = (_PCS_routing*)malloc(sizeof(_PCS_routing));
 			if(pointer->buff_topology == NULL){
-				printf("Chiamata a malloc errata sulla topologia della rete!\n");
+				printf("malloc wrong on the current network topology!\n");
 				exit(EXIT_FAILURE);
 			}
 	

@@ -35,8 +35,8 @@
 * @author Roberto Vitali
 *
 */
-void dymelor_init(void) {
-	allocator_init();
+void dymelor_init(unsigned int objs) {
+	allocator_init(objs);
 	recoverable_init();
 	//unrecoverable_init();
 }
@@ -52,7 +52,7 @@ void dymelor_init(void) {
 *
 */
 void dymelor_fini(void){
-	recoverable_fini();
+	//recoverable_fini();
 	//unrecoverable_fini();
 	//allocator_fini();
 }
@@ -201,7 +201,7 @@ static void find_next_free(malloc_area *m_area){
 
 
 
-void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
+void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned int numa_node) {
 	malloc_area *m_area, *prev_area;
 	void *ptr;
 	int bitmap_blocks, num_chunks;
@@ -282,13 +282,13 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 
 		area_size = sizeof(malloc_area *) + bitmap_blocks * BLOCK_SIZE * 2 + num_chunks * size;
 
-		#ifdef HAVE_PARALLEL_ALLOCATOR
+	#ifdef HAVE_PARALLEL_ALLOCATOR
 		//insert is recoverable in pool_get_memory (was in GLP)
-		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size);
-		#else
+		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
+	#else
 		m_area->self_pointer = rsalloc(area_size);
 		bzero(m_area->self_pointer, area_size);
-		#endif
+	#endif
 
 		if(m_area->self_pointer == NULL){
 			printf("Is recoverable: ");
@@ -310,7 +310,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size) {
 		rootsim_error(true, "Error while allocating memory at %s:%d\n", __FILE__, __LINE__);
 	}
 
-	// TODO: ricontrollare come viene inizializzato next_chunk
+	// TODO: check how next_chunk is initialized 
 	ptr = (void*)((char*)m_area->area + (m_area->next_chunk * size));
 
 	SET_USE_BIT(m_area, m_area->next_chunk);

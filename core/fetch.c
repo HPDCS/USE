@@ -107,19 +107,6 @@
 #define OPTIMISTIC_MODE ONE_EVT_PER_LP
 #endif
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-/////////////////			 _	 _	 _	 _	      _   __      __		//////////////////
-/////////////////			| \	| |	| \	/ \      / \ |  | /| |  |		//////////////////
-/////////////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		//////////////////
-/////////////////			|	| |	|_/	\_/      /__ |__|  | |__|		//////////////////
-/////////////////														//////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #if DEBUG == 1
 	LP_state *lp_ptr = LPS[lp_idx];
@@ -140,7 +127,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 	}
 					
 	if(node != (void*) 0xbadc0de && delete(nbcalqueue, node)){
-		if(LPS[lp_idx]->commit_horizon_ts<node->timestamp  //non sono sotto lock, non è sicuro così
+		if(LPS[lp_idx]->commit_horizon_ts<node->timestamp  //it is not in mutual exclusion, could be unsafe (?)
 			|| (LPS[lp_idx]->commit_horizon_ts==node->timestamp && LPS[lp_idx]->commit_horizon_tb<node->counter) 
 		){
 				LPS[lp_idx]->commit_horizon_ts = node->timestamp; //time min ← evt.ts
@@ -211,7 +198,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define set_commit_state_as_banana(event)				(	(event)->monitor =  (void*) 0xBA4A4A  	) 
 
 
-
+__thread unsigned int diff_lp = 0;
 
 unsigned int fetch_internal(){
 	table *h;
@@ -225,7 +212,6 @@ unsigned int fetch_internal(){
 #if DEBUG == 1 || REPORT ==1
 	unsigned int c = 0;
 #endif
-
 	
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
@@ -258,7 +244,10 @@ unsigned int fetch_internal(){
 #if DEBUG == 1 || REPORT ==1
 		c++;
 #endif
-
+#if VERBOSE > 0
+		diff_lp++;
+#endif
+	
 		if(c==MAX_SKIPPED_LP*n_cores){	return 0; } //DEBUG
 
 
@@ -275,8 +264,6 @@ unsigned int fetch_internal(){
 			min = min_node->timestamp;
 			min_tb = min_node->counter;
 		}
-		
-		//fin qui fuori dal lock ha funzionato per 10 minuti <8,3>, anche se la coda ha superato 500 elementi, diminuendo così la contesa	
 		
 		validity = is_valid(event);
 		bound_ptr = lp_ptr->bound;
@@ -322,6 +309,9 @@ unsigned int fetch_internal(){
 			
 		}
 		
+#if VERBOSE > 0
+		diff_lp--;
+#endif		
 		//read_new_min = false;
 
 		if(
@@ -331,6 +321,9 @@ unsigned int fetch_internal(){
 	#else
 		!is_in_lp_locked_set(lp_idx) &&
 	#endif
+#endif
+#if DISTRIBUTED_FETCH == 1
+		is_lp_on_my_numa_node(lp_idx) &&
 #endif
 		tryLock(lp_idx)
 		) {
@@ -348,17 +341,17 @@ unsigned int fetch_internal(){
 		
 			if(validity) {
 		
-				//da qui in poi il bound è congelato ed è nel passato rispetto al mio evento
+				//from this point the bound variable is freezed and of course is in the past
 				/// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///
 				local_next_evt = list_next(lp_ptr->bound);
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
 					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					local_next_evt->frame = tid;
-					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
+					list_node_clean_by_content(local_next_evt); //SHOULD NOT BE USEFUL
 					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
 					local_next_evt->state = ANTI_MSG; //__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);
-					set_commit_state_as_banana(local_next_evt); //non necessario: è un ottimizzazione del che permette che non vengano fatti rollback in più
+					set_commit_state_as_banana(local_next_evt); //not required: it is an optimization to reduce the number of rollback
 					local_next_evt = list_next(lp_ptr->bound);
 				}
 				
@@ -380,14 +373,14 @@ unsigned int fetch_internal(){
 					//node = (void*)0x1;//local_next_evt->node;
 					from_get_next_and_valid = true;
 					ts = event->timestamp;
-					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
+					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//not work moving on this line!!!
 				}
 				curr_evt_state = event->state;
 
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
-						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
+						//or it was eliminated, or it was and antimessage in the future...in any case it has to be considered as executed (?)
 						set_commit_state_as_banana(event);
 						do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx); 		//<<-ELIMINATED
 					}
@@ -577,13 +570,13 @@ void prune_local_queue_with_ts(simtime_t ts){
 		
 		if(current->max_outgoing_ts < ts){
 			from = current;
-			//trovato il primo nodo valido, continuo localmente la ricerca
+			//found the first valid node, the research is continued locally
 			while(current!=NULL && current->max_outgoing_ts < ts){
 				to = current;
 				count_nodes++;
 				current = list_next(current); 
 			}
-			//Stacco dalla vecchia lista
+			//removing the node from the old list
 			if(list_prev(from) != NULL){
 				list_container_of(list_prev(from))->next = list_container_of(to)->next;
 			}else{
@@ -595,10 +588,10 @@ void prune_local_queue_with_ts(simtime_t ts){
 				((rootsim_list*)to_remove_local_evts_old)->tail = list_container_of(from)->prev;
 			}
 			((rootsim_list*)to_remove_local_evts_old)->size -= count_nodes;
-			//Attavvo nella nuova lista
+			//attaching the node in the new list
 			list_insert_tail_by_contents(freed_local_evts, count_nodes ,from, to);
 			tmp_node = list_next(to);
-			//resetto i campi
+			//resetting local variables
 			to = NULL;
 			from = NULL;
 			count_nodes= 0;

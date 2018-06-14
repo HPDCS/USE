@@ -1,16 +1,18 @@
-#Versione test - non uso ottimizzazioni del compilatore
+#Test version - compilator optimizations disabled
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 
-FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0 
+FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
+
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
 FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
+#-DNUM_NUMA_NODES=$(shell lscpu | grep 'NUMA node(s)' | head -1 | awk '{print $3}')
 
 INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
-LIBS=-pthread -lm
+LIBS=-pthread -lm -lnuma
 ARCH_X86=1
 ARCH_X86_64=1
 
@@ -44,6 +46,24 @@ else
 CFLAGS:=$(CFLAGS) -DVERBOSE=0
 endif
 
+ifdef NUMA
+CFLAGS:=$(CFLAGS) -DHAVE_PARALLEL_ALLOCATOR
+CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=1
+CFLAGS:=$(CFLAGS) -DMBIND=1
+endif
+
+ifdef PARALLEL_ALLOCATOR
+CFLAGS:=$(CFLAGS) -DHAVE_PARALLEL_ALLOCATOR
+endif
+
+ifdef DISTRIBUTED_FETCH
+CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=1
+endif
+
+ifdef MBIND
+CFLAGS:=$(CFLAGS) -DMBIND=1
+endif
+
 ifdef LOOKAHEAD
 CFLAGS:= $(CFLAGS) -DLOOKAHEAD=$(LOOKAHEAD)
 endif
@@ -67,7 +87,7 @@ endif
 ifdef CKP_PERIOD
 CFLAGS:= $(CFLAGS) -DCHECKPOINT_PERIOD=$(CKP_PERIOD)
 else
-CFLAGS:= $(CFLAGS) -DCHECKPOINT_PERIOD=50
+CFLAGS:= $(CFLAGS) -DCHECKPOINT_PERIOD=20
 endif
 
 ifdef CLEAN_CKP_INTERVAL
@@ -86,6 +106,11 @@ else
 CFLAGS:= $(CFLAGS) -DONGVT_PERIOD=-1
 endif
 
+ifdef CKPT_RECALC
+CFLAGS:= $(CFLAGS) -DCKPT_RECALC=$(CKPT_RECALC)
+else
+CFLAGS:= $(CFLAGS) -DCKPT_RECALC=0
+endif
 
 ifdef PRINT_SCREEN
 CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=$(PRINT_SCREEN)
@@ -116,7 +141,6 @@ else
 CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=1
 endif
 
-
 #NB_CALQUEUE
 ifdef ENABLE_PRUNE
 CFLAGS:= $(CFLAGS) -DENABLE_EXPANSION=$(ENABLE_EXPANSION)
@@ -124,17 +148,6 @@ else
 CFLAGS:= $(CFLAGS) -DENABLE_EXPANSION=1
 endif
 
-ifdef CKPT_RECALC
-CFLAGS:= $(CFLAGS) -DCKPT_RECALC=$(CKPT_RECALC)
-else
-CFLAGS:= $(CFLAGS) -DCKPT_RECALC=0
-endif
-
-ifdef REPORT
-CFLAGS:= $(CFLAGS) -DREPORT=$(REPORT)
-else
-CFLAGS:= $(CFLAGS) -DREPORT=1
-endif
 ################################# USED FOR SINGLE MODELS################
 
 #PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT
@@ -165,6 +178,41 @@ endif
 #PHOLD_HOTSPOT
 ifdef P_HOTSPOT
 CFLAGS:= $(CFLAGS) -DP_HOTSPOT=$(P_HOTSPOT)
+endif
+
+#PCS
+ifdef TA_CHANGE
+CFLAGS:= $(CFLAGS) -DTA_CHANGE=$(TA_CHANGE)
+endif
+
+#PCS
+ifdef TA
+CFLAGS:= $(CFLAGS) -DTA=$(TA)
+endif
+
+#PCS
+ifdef TA_DURATION
+CFLAGS:= $(CFLAGS) -DTA_DURATION=$(TA_DURATION)
+endif
+
+#PCS
+ifdef CHANNELS_PER_CELL
+CFLAGS:= $(CFLAGS) -DCHANNELS_PER_CELL=$(CHANNELS_PER_CELL)
+endif
+
+#TRAFFIC
+ifdef ENTER_PROB
+CFLAGS:= $(CFLAGS) -DENTER_PROB=$(ENTER_PROB)
+endif
+
+#TRAFFIC
+ifdef LEAVE_PROB
+CFLAGS:= $(CFLAGS) -DLEAVE_PROB=$(LEAVE_PROB)
+endif
+
+#TRAFFIC
+ifdef SIMPLE_TRAFFIC
+CFLAGS:= $(CFLAGS) -DSIMPLE_TRAFFIC=$(SIMPLE_TRAFFIC)
 endif
 
 ########################################################################
@@ -309,6 +357,7 @@ reverse: $(REVERSE_OBJ)
 	@echo "[CC] $@"
 	@$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@ $(LIBS)
 
+
 _pcs_prealloc: $(PCS_PREALLOC_OBJ)
 	@ld -r -g $(PCS_PREALLOC_OBJ) -o model/__application.o
 
@@ -343,7 +392,7 @@ clean:
 	@find . -type f -name "phold" 		  -exec rm {} \;
 	@find . -type f -name "pcs" 		  -exec rm {} \;
 	@find . -type f -name "pcs-prealloc"  -exec rm {} \;
-	@find . -type f -name "traffic "  	  -exec rm {} \;
+	@find . -type f -name "traffic"  	  -exec rm {} \;
 	@find . -type f -name "tcar" 		  -exec rm {} \;
 	@find . -type f -name "phold" 		  -exec rm {} \;
 	@find . -type f -name "pholdcount" 	  -exec rm {} \;

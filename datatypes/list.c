@@ -37,15 +37,15 @@ void *umalloc(unsigned int lid, size_t s) {
 	if(rootsim_config.serial)
 		return rsalloc(s);
 
-	#ifdef HAVE_PARALLEL_ALLOCATOR
-	if(rootsim_config.disable_allocator)
-		return rsalloc(s);
-
-	return do_malloc(lid, unrecoverable_state[lid], s);
-	#else
+//	#ifdef HAVE_PARALLEL_ALLOCATOR
+//	if(rootsim_config.disable_allocator)
+//		return rsalloc(s);
+//
+//	return do_malloc(lid, unrecoverable_state[lid], s);
+//	#else
 	(void)lid;
 	return rsalloc(s);
-	#endif
+//	#endif
 }
 
 
@@ -58,24 +58,24 @@ void ufree(unsigned int lid, void *ptr) {
 		return;
 	}
 
-	#ifdef HAVE_PARALLEL_ALLOCATOR
-	if(rootsim_config.disable_allocator) {
-		rsfree(ptr);
-		return;
-	}
-		
-/*	if(lid >=n_prc){
-		printf("kernel is: %d LP is %d (%d) belonging to kernel: %d, try to change recoverable[%d] to recoverable[%d]: %p\n",kid,lid,GidToLid(lid),GidToKernel(lid),lid,GidToLid(lid),unrecoverable_state[GidToLid(lid)]);
-		fflush(stdout);
-		do_free(GidToLid(lid), unrecoverable_state[GidToLid(lid)], ptr);
-		return;
-	}else*/
-
-	do_free(lid, unrecoverable_state[lid], ptr);
-	#else
+//	#ifdef HAVE_PARALLEL_ALLOCATOR
+//	if(rootsim_config.disable_allocator) {
+//		rsfree(ptr);
+//		return;
+//	}
+//		
+///*	if(lid >=n_prc){
+//		printf("kernel is: %d LP is %d (%d) belonging to kernel: %d, try to change recoverable[%d] to recoverable[%d]: %p\n",kid,lid,GidToLid(lid),GidToKernel(lid),lid,GidToLid(lid),unrecoverable_state[GidToLid(lid)]);
+//		fflush(stdout);
+//		do_free(GidToLid(lid), unrecoverable_state[GidToLid(lid)], ptr);
+//		return;
+//	}else*/
+//
+//	do_free(lid, unrecoverable_state[lid], ptr);
+//	#else
 	(void)lid;
 	rsfree(ptr);
-	#endif
+//	#endif
 }
 
 
@@ -844,9 +844,9 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 
 	(void) size;
 
-	//Se la coda locale è vuota, la fillo!
+	//If the queue is empty, it is filled up!!
 	if(free_list->head == NULL){
-		//size_t node_size = sizeof(struct rootsim_list_node) + size;//multiplo di 64
+		//size_t node_size = sizeof(struct rootsim_list_node) + size;//multiple di 64
 		//
 		//while((++i)*CACHE_LINE_SIZE < node_size);
 		//node_size = (i)*CACHE_LINE_SIZE;
@@ -860,7 +860,7 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 			tmp_node = (struct rootsim_list_node *) memory_nodes;
 			tmp_node->next = tmp_node->prev = NULL;
 			
-			__list_insert_tail_by_node(free_list, tmp_node);//da fare in loco
+			__list_insert_tail_by_node(free_list, tmp_node);//to do locally
 			memory_nodes += (/*node_size*/node_size_msg_t);
 		}
 	}
@@ -926,7 +926,7 @@ struct rootsim_list_node * list_search_error(struct rootsim_list * queue){
 		if((unsigned int)event->timestamp != event->frame)
 			return node;
 		
-		if(node == NULL && queue->tail != node) printf(("l'ultimo non non è la coda\n"));	
+		if(node == NULL && queue->tail != node) printf(("The last node is not the tail\n"));	
 		node = node->next;
 	}
 	return node;
@@ -944,7 +944,7 @@ void list_print_error(struct rootsim_list * queue){
 			print_event(event);
 		}
 		
-		if(node == NULL && queue->tail != node) printf(RED("l'ultimo non non è la coda\n"));	
+		if(node == NULL && queue->tail != node) printf(RED("The last node is not the tail\n"));	
 		node = node->next;
 	}
 }

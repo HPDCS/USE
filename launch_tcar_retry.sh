@@ -1,14 +1,14 @@
 #!/bin/bash
 
-LP_list="1024"						#numero di lp
-THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"			#numero di thread
-TEST_list="tcar"					#test
-RUN_list="1"				#lista del numero di run
+LP_list="1024"						#number of lps
+THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"			#number of threads
+TEST_list="tcar"					#test list
+RUN_list="1"				#run number list
 
 LOOP_COUNT_list="0" #4500 1000"	#loop_count
 LOOKAHEAD_list="0"			#lookahead
 ROB_PER_CELLA_list="2 4"				#robot per cella
-NUM_CELLE_OCC="80 160 240 320"				#numero di celle occupate
+NUM_CELLE_OCC="80 160 240 320"				#occupied cell list
 
 CKP_PER_list="50" #"10 50 100"
 

@@ -33,6 +33,7 @@
 
 #include "dymelor.h"
 #include "allocator.h"
+#include <numaif.h>
 
 
 extern void *__real_malloc(size_t);
@@ -153,8 +154,7 @@ int get_numa_node(int core) {
 
 #endif /* HAVE_NUMA */
 
-void* allocate_segment(unsigned int sobj, size_t size) {
-
+void* allocate_segment(unsigned int sobj, size_t size, unsigned int numa_node) {
 	mdt_entry* mdt;
 	char* segment;
 	int numpages;
@@ -187,11 +187,10 @@ void* allocate_segment(unsigned int sobj, size_t size) {
 	AUDIT
 	printf("segment allocation - returned mdt is at address %p\n",mdt);
 
-
 	AUDIT
 	printf("allocate segment: request for %ld bytes - actual allocation is of %d pages\n",size,numpages);
 
-        segment = (char*)mmap((void*)NULL,PAGE_SIZE*numpages, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0,0);
+	segment = (char*)mmap((void*)NULL,PAGE_SIZE*numpages, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, 0,0);
 
 	AUDIT
 	printf("allocate segment: actual allocation is at address %p\n",segment);
@@ -200,7 +199,13 @@ void* allocate_segment(unsigned int sobj, size_t size) {
 		release_mdt_entry(sobj);
 		goto bad_allocate;
 	}
-
+#ifdef MBIND
+	unsigned long numa_mask = 0x1 << (numa_node); 
+	if(mbind(segment, PAGE_SIZE*numpages, MPOL_BIND, &numa_mask, num_numa_nodes+1, MPOL_MF_MOVE_ALL) == -1){
+		printf("Failing NUMA binding LP %u to node %u, with mask %p. Please retry disabling the NUMA partitioning: %s.\n",sobj, numa_node, (void *)numa_mask, strerror(errno));
+		abort();
+	}
+#endif
 	mdt->addr = segment;
 	mdt->numpages = numpages;
 
@@ -280,8 +285,8 @@ int release_mdt_entry(int sobj){
 }
 
 
-void *pool_get_memory(unsigned int lid, size_t size) {
-	return allocate_segment(lid, size);
+void *pool_get_memory(unsigned int lid, size_t size, unsigned int numa_node) {
+	return allocate_segment(lid, size, numa_node);
 }
 
 /*
@@ -305,6 +310,13 @@ int allocator_init(unsigned int sobjs) {
 		maps[i].base = addr;
 		maps[i].active = 0;
 		maps[i].size = MDT_ENTRIES;
+	//#ifdef HAVE_PARALLEL_ALLOCATOR
+	//	unsigned long numa_mask = 0x1 << (numa_from_lp(sobjs)); 
+	//	if(mbind(addr, PAGE_SIZE*MDT_PAGES, MPOL_BIND, &numa_mask, num_numa_nodes+1, MPOL_MF_MOVE_ALL) == -1){
+	//		printf("allcoator_init: Failing NUMA binding LP %u to node %u, with mask %p. Please retry disabling the NUMA partitioning: %s.\n",sobjs, numa_from_lp(sobjs), (void *)numa_mask, strerror(errno));
+	//		abort();
+	//	}
+	//#endif
 		AUDIT
 		printf("INIT: sobj %d - base address is %p - active are %d - MDT size is %d\n",i,maps[i].base, maps[i].active, maps[i].size);
 	}

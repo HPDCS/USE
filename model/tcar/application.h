@@ -5,20 +5,14 @@
 
 #include <ROOT-Sim.h>
 
-/* DISTRIBUZIONI TIMESTAMP */
+/* TIMESTAMP DISTRIBUTION */
 #define UNIFORME	0
 #define ESPONENZIALE 	1
 
 #define DISTRIBUZIONE ESPONENZIALE
 
 
-
-/* Per simulare il time stepping del modello da cui abbiamo preso spunto dove si diceva che:
- *"ogni movimento di un robot impiega 1 time-step e che ogni robot si muove 1 volta per ogni time-step"
- */
 #define TIME_STEP 1.0
-
-
 
 
 // EVENT TYPES

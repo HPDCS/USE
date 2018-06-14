@@ -102,7 +102,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 					printf("\x1b[31m""%d- APP: ERROR: event %f received out of order respect %f; last_loop_count: %u\n""\x1b[0m", me, now, state_ptr->lvt, j);
 				}
 				//if(state_ptr->lvt == now){
-				//	printf("[%d] HO RICEVUTO UN EVENTO CON TS=MY_LVT: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
+				//	printf("[%d] RECEIVED AN EVENT WITH TS=MY_LVT: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
 				//	state_ptr =NULL;state_ptr->lvt *10;
 				//}
 				
@@ -143,7 +143,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	
-	//printf("TOTALE: %u\n", snapshot->events);//da_cancellare
+	//printf("TOTALE: %u\n", snapshot->events);//to_remove
 
 	if(snapshot->events < COMPLETE_EVENTS) {
 //	if(snapshot->lvt < COMPLETE_TIME) {

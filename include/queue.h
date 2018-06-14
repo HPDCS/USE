@@ -5,7 +5,7 @@
 #include "nb_calqueue.h"
 
 #define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
-#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
+#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //can be replaced by an atomic write
 #define haveLock(lp)				((lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1))
 #define checkLock(lp)				(lp_lock[lp*CACHE_LINE_SIZE/4])
 

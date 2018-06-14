@@ -259,7 +259,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			if(stop_silent){
 				if(local_next_evt->timestamp < until_ts || 
 				(local_next_evt->timestamp == until_ts && local_next_evt->tie_breaker <= tie_breaker)){ 
-					printf(RED("Ho beccato un evento non valido durante On_GVT\n")); 
+					printf(RED("Found an invalid event during On_GVT\n")); 
 					print_event(local_next_evt);
 					gdb_abort;
 				}
@@ -327,7 +327,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 
 	// It's >= rather than > because we have NOT taken into account simultaneous events YET
 	while (restore_state != NULL && 
-		( restore_state->lvt >= destination_time || !is_valid(restore_state->last_event) ) ) { //TODO: aggiungere tie_breaker e mettere solo >
+		( restore_state->lvt >= destination_time || !is_valid(restore_state->last_event) ) ) { //TODO: add tie_breaker with > (instead of >=)
 		s = restore_state;
 		restore_state = list_prev(restore_state);
 		if(LPS[lid]->state == LP_STATE_ROLLBACK){
@@ -340,7 +340,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	assert(restore_state!=NULL);
 	
 //	if(restore_state->lvt != restore_state->last_event->timestamp){ //DEBUG
-//		printf("Il checkpoint è sputtanato!\n");
+//		printf("The checkpoint is ruined!\n");
 //		gdb_abort;
 //	}
 	
@@ -500,49 +500,49 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 
 	while (to_state != NULL && (to_state->last_event->timestamp) >= commit_horizon){
 		to_state = list_prev(to_state);
-	}//to_state è l'ultimo checkpoint da tenere
+	}//to_state is the last checkpoint to keep
 	
-	if(to_state != NULL){//dobbiamo prendere uno stato in più per l'OnGvt
+	if(to_state != NULL){// we need an additional state for OnGvt
 		to_state = list_prev(to_state);
 	}
 	
 	if(to_state != NULL){
-		to_msg = list_prev(to_state->last_event); //ultimo evento da buttare
+		to_msg = list_prev(to_state->last_event); //last event to be removed
 	
 		///Rimozione msg dalla vecchia lista
 		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
 		list_container_of(to_state->last_event)->prev = NULL; 
 		
 	
-		to_state = list_prev(to_state); //ultimo checkpoint da buttare
+		to_state = list_prev(to_state); //last checkpoint to be removed
 		//if(to_state != NULL)
 		//	to_msg = to_state->last_event;
 	}
 
-	//Rimozione Stati
-	while (to_state != NULL){ //TODO: aggiungere tie_breaker e mettere solo >
+	//Removal states
+	while (to_state != NULL){ //TODO: adding tie_breaker and use only > (instead of !=)
 		tmp_state = list_prev(to_state);
 		log_delete(to_state->log);
 		to_state->last_event = (void *)0xBABEBEEF;
-		list_delete_by_content(lid, LPS[lid]->queue_states, to_state); //<-migliorabile
+		list_delete_by_content(lid, LPS[lid]->queue_states, to_state); //<-should be improved
 		to_state = tmp_state;
 	}
 	
 	//while(to_msg != NULL){
 	//	tmp_msg = list_prev(to_msg);
 	//	list_extract_given_node(tid, ((struct rootsim_list*)LPS[lid]->queue_in), to_msg);
-	//	list_node_clean_by_content(to_msg); //NON DOVREBBE SERVIRE
+	//	list_node_clean_by_content(to_msg); //it should not be required
 	//	list_insert_tail_by_content(to_remove_local_evts, to_msg);
 	//	to_msg = tmp_msg;
 	//}
 	
 	
 	
-	//Aggancio alla nuova lista
+	//Adding to the new list
 	if(to_msg != NULL){
-		//LA SIZE VA A QUEL PAESE
+		//NOTE: in this way the size of the list il ruined
 		list_container_of(to_msg)->next = NULL;
-		if(((struct rootsim_list*)to_remove_local_evts)->tail != NULL){//ovvero la coda è vuota
+		if(((struct rootsim_list*)to_remove_local_evts)->tail != NULL){//if the queue is empty
 			((struct rootsim_list*)to_remove_local_evts)->tail->next = list_container_of(from_msg);			
 		}
 		else{

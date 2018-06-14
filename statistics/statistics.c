@@ -6,7 +6,6 @@
 #include <simtypes.h>
 
 
-//Variabili da tunare durante l'esecuzione per throttling e threshold
 extern double delta_count;
 extern unsigned int reverse_execution_threshold_main;
 
