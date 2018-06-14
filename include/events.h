@@ -77,10 +77,10 @@ typedef struct _msg_hdr_t {
 	// Kernel's information
 	unsigned int   		sender;
 	unsigned int   		receiver;
-	// TODO: non serve davvero, togliere
+	// TODO: not required, remove
 	int   			type;
 	unsigned long long	rendezvous_mark;	/// Unique identifier of the message, used for rendez-vous event
-	// TODO: fine togliere
+	// TODO: remove until here
 	simtime_t		timestamp;
 	simtime_t		send_time;
 	unsigned long long	mark;

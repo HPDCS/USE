@@ -310,7 +310,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 		rootsim_error(true, "Error while allocating memory at %s:%d\n", __FILE__, __LINE__);
 	}
 
-	// TODO: ricontrollare come viene inizializzato next_chunk
+	// TODO: check how next_chunk is initialized 
 	ptr = (void*)((char*)m_area->area + (m_area->next_chunk * size));
 
 	SET_USE_BIT(m_area, m_area->next_chunk);

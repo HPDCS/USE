@@ -104,7 +104,7 @@
 // Allowed length for an LP's name
 #define NAME_LENGTH	32
 
-// <------ Togliere per il rilascio!
+// <------ to remove!
 #include <float.h>
 #define WORD_LENGTH (8 * sizeof(unsigned long))
 #define ROR(value, places) ((value << (places)) | (value >> (WORD_LENGTH - (places))));
@@ -155,7 +155,7 @@ typedef struct _lp_state_type {
 	char				name[NAME_LENGTH];	// Name of the cell
 	int					lp_type;		// Is it a junction or a segment?
 	double				segment_length;		// Length of this road segment. If set to 0, it's a junction
-	double				enter_prob;		// in realtà è una frequency!
+	double				enter_prob;		// it is a frequency!
 	double				leave_prob;
 	topology_t			*topology;		// Each node can have an arbitrary number of neighbours
 	unsigned int		queued_elements;

@@ -182,7 +182,7 @@ typedef struct _malloc_state malloc_state;
 
 
 // Variables
-// TODO: quali sono realmente da esporre all'esterno?!
+// TODO: Check which one has to be really exposed?!
 
 extern int incremental_granularity;
 extern int force_full[MAX_LPs];

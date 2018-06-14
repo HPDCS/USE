@@ -1,4 +1,4 @@
-#Versione test - non uso ottimizzazioni del compilatore
+#Test version - compilator optimizations disabled
 
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm

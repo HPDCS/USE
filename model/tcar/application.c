@@ -43,10 +43,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			}
 
 			if((NUM_CELLE_OCCUPATE % 2) == 0){
-				//Occupo le "prime" e "ultime" celle
+				// occuping the "firsts" and the "lasts" cells
 				if(me < (NUM_CELLE_OCCUPATE/2) || me >= ((n_prc_tot)-(NUM_CELLE_OCCUPATE/2))) {
 					for(i = 0; i < ROBOT_PER_CELLA; i++) {
-						// genero un evento di REGION_IN
+						// generating an event for REGION_IN
 						delta = (simtime_t)(20 * Random());
 						if(delta < LOOKAHEAD)
 							delta += LOOKAHEAD;
@@ -56,7 +56,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			} else {
 				if(me <= (NUM_CELLE_OCCUPATE / 2) || me >= ((n_prc_tot) - (NUM_CELLE_OCCUPATE / 2))){
 					for(i = 0; i < ROBOT_PER_CELLA; i++){
-						// genero un evento di REGION_IN
+						// generating an event for REGION_IN
 						delta = (simtime_t)(20 * Random());
 						if(delta < LOOKAHEAD)
 							delta += LOOKAHEAD;
@@ -85,7 +85,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			new_event_content.cell = me;
 			new_event_content.new_trails = pointer->trails;
 			
-			delta = TIME_STEP/100000; //qui voglio indicare che l'evento è immediatamente successivo, ma con il LA questo non succede
+			delta = TIME_STEP/100000; //generating an event to be executed immediately next
 					if(delta < LOOKAHEAD)
 						delta += LOOKAHEAD;
 
@@ -99,7 +99,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				}
 			}
 
-			// genero un evento di REGION_OUT
+			// generating an event for REGION_OUT
 			ScheduleNewEvent(me, now + delta, REGION_OUT, NULL, 0);
 
 			break;
@@ -163,8 +163,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 }
 
 
-// funzione dell'applicazione invocata dalla piattaforma
-// per stabilire se la simulazione e' terminata
 int OnGVT(unsigned int me, lp_state_type *snapshot) {
 	
 	//printf("value %d ", snapshot->trails);

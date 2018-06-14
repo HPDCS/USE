@@ -6,7 +6,7 @@
 #include <ROOT-Sim.h>
 #include <math.h>
 
-/* DISTRIBUZIONI TIMESTAMP */
+/* TIMESTAMP DISTRIBUTION */
 #define UNIFORME	0
 #define ESPONENZIALE 	1
 

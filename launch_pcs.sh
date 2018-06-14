@@ -1,10 +1,10 @@
 #!/bin/bash
 
 MAX_SKIPPED_LP_list="1000000"
-LP_list="1024 256"						#numero di lp
-THREAD_list="1 2 4 8 16 24 32" #"4 8 16 24 32"		#numero di thread
+LP_list="1024 256"						#number of lps
+THREAD_list="1 2 4 8 16 24 32" #"4 8 16 24 32"		#number of  threads
 TEST_list="pcs"					#test
-RUN_list="1"				#lista del numero di run
+RUN_list="1"				
 
 DF_list="0 1" #DISTRIBUTED_FETCH
 

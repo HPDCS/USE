@@ -1,14 +1,14 @@
 #!/bin/bash
 
-LP_list="1024"				#numero di lp
-THREAD_list="1 4 8 16 32"	#numero di thread
-TEST_list="tcar"			#test
-RUN_list="1 2"				#lista del numero di run
+LP_list="1024"				#number of lps
+THREAD_list="1 4 8 16 32"	#number of threads
+TEST_list="tcar"			#test list
+RUN_list="1 2"				#run number list
 
-LOOKAHEAD_list="0.2 0.002"	#lookahead
-LOOP_COUNT_list="1000"		#loop_count
-ROB_PER_CELLA_list="2"		#robot per cella
-NUM_CELLE_OCC="80 160"		#numero di celle occupate
+LOOKAHEAD_list="0.2 0.002"	#lookahead list
+LOOP_COUNT_list="1000"		#loop_count list
+ROB_PER_CELLA_list="2"		#robot per cell list
+NUM_CELLE_OCC="80 160"		#occupied cell list
 
 FOLDER="results/results_tcar/results_tcar_$(date +%Y%m%d)-$(date +%H%M)"
 

@@ -112,7 +112,7 @@ struct table
 	table * volatile new_table;
 	char zpad4[32];
 	atomic_t counter;
-	//atomic_t e_counter;	//TODO: scompattare il counter
+	//atomic_t e_counter;	//TODO: expand counter in enqueued and dequeued
 	//char zpad3[60];
 	//atomic_t d_counter;
 	char zpad1[60];

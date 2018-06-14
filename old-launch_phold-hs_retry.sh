@@ -1,8 +1,8 @@
 #!/bin/bash
 
-LP_list="1024"					#numero di lp
-THREAD_list="4 8 16 24 32"	#numero di thread
-TEST_list="pholdhotspot"		#test
+LP_list="1024"					#number of lp
+THREAD_list="4 8 16 24 32"	#number of thread
+TEST_list="pholdhotspot"		#tests list
 RUN_list="1"					#lista del numero di run
 
 FAN_OUT_list="1"				#lista fan out

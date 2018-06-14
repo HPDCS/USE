@@ -505,7 +505,7 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 						right_node,
 						new_node_pointer
 					)){
-				//printf("insert_std: evt type %u\n", ((msg_t*)(new_node[0]->payload))->type);//da_cancellare
+				//printf("insert_std: evt type %u\n", ((msg_t*)(new_node[0]->payload))->type);//to remove
 			#if DEBUG==1
 				((*new_node)->payload)->creation_time = CLOCK_READ();
 			#endif
@@ -613,7 +613,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		}
 #if DEBUG == 1
 	#if LOG_RESIZE == 1
-		else //DEBUG; decommentare
+		else //DEBUG; 
 			printf("%u - CHANGE SIZE from %u to %u, items %u OLD_TABLE:%p NEW_TABLE:%p\n", TID, size, new_size, counter, h, new_h);
 	#endif
 #endif
@@ -701,7 +701,7 @@ static double compute_mean_separation_time(table* h,
 	sample_size = (new_size <= 5) ? (new_size/2) : (5 + (unsigned int)((double)new_size / 10));
 	sample_size = (sample_size > SAMPLE_SIZE) ? SAMPLE_SIZE : sample_size;
     
-	double sample_array[SAMPLE_SIZE+1]; //<--DA SISTEMARE STANDARD C90
+	double sample_array[SAMPLE_SIZE+1];
     
     //read nodes until the total samples is reached or until someone else do it
 	while(counter != sample_size && new_h->bucket_width == -1.0)
@@ -718,7 +718,7 @@ static double compute_mean_separation_time(table* h,
 			{
 				tmp_timestamp = tmp->timestamp;
 				tmp_next = tmp->next;
-				//I will consider ognly valid nodes (VAL or MOV) In realtà se becco nodi MOV posso uscire!
+				//I will consider ognly valid nodes (VAL or MOV). Really, If a MOV node is found, it is possible to exit!
 				if(!is_marked(tmp_next, DEL) && !is_marked(tmp_next, INV))
 				{
 					if( //belong to the current bucket
@@ -1265,7 +1265,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 						#if LOG_DEQUEUE == 1
 						LOG("DEQUEUE: NULL 0 - %llu %llu\n", index, index % size);
 						#endif
-						//printf("CODA VUOTA!!!!\n");
+						//printf("EMPTY QUEUE!!!!\n");
 						return NULL;
 					}
 					if(counter > 0 && BOOL_CAS(&(min->next), min_next, left_node))
@@ -1295,7 +1295,7 @@ nbc_bucket_node* getMin(nb_calqueue *queue, table ** hres){
 bool delete(nb_calqueue *queue, nbc_bucket_node* node){
 	nbc_bucket_node *node_next, *tmp;
 	
-	if(node == NULL || node==(void*)0x1){ //NOTA: la seconda condizione non dovrebbe più servire
+	if(node == NULL || node==(void*)0x1){ //NOTA: the second condition could be useless
 		return false;
 	}
 	
@@ -1323,6 +1323,6 @@ bool delete(nb_calqueue *queue, nbc_bucket_node* node){
 }
 
 
-nbc_bucket_node* unmarked(void *pointer){ //da cancellare
+nbc_bucket_node* unmarked(void *pointer){ //to remove
 	return (nbc_bucket_node *)((unsigned long long) pointer & MASK_PTR) ;
 }

@@ -7,7 +7,7 @@
 #include <sched.h>
 #include <pthread.h>
 #include <string.h>
-//#include <immintrin.h> //supporto transazionale
+//#include <immintrin.h> //hardware transactional support
 #include <stdarg.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -34,8 +34,7 @@
 #include <utmpx.h>
 
 
-//id del processo principale
-#define MAIN_PROCESS		0
+#define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
 
 #define MAX_PATHLEN			512
@@ -67,9 +66,9 @@ __thread unsigned int current_cpu;
 
 //timer
 #if REPORT == 1
-__thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
-				fetch_timer,				//OK: cattura il tempo per fare un estrazione che va a buon fine 		
-				event_processing_timer,		//OK: cattura il tempo per processare un evento safe 
+__thread clock_timer main_loop_time,		//total execution time on single core
+				fetch_timer,				//time used to correctly fetch an event 		
+				event_processing_timer,		//time used to process a safe event 
 				queue_op,
 				rollback_timer
 #if REVERSIBLE == 1
@@ -84,15 +83,15 @@ unsigned int ready_wt = 0;
 simulation_configuration rootsim_config;
 
 /* Total number of cores required for simulation */
-unsigned int n_cores; //pls cambia nome
+unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
-unsigned int n_prc_tot; //pls cambia nome
+unsigned int n_prc_tot;
 
 
 /* Commit horizon TODO */
  simtime_t gvt = 0;
 /* Average time between consecutive events */
-simtime_t t_btw_evts = 0.1; //Non saprei che metterci
+simtime_t t_btw_evts = 0.1;
 
 bool sim_error = false;
 
@@ -114,8 +113,8 @@ size_t node_size_msg_t;
 size_t node_size_state_t;
 
 void * do_sleep(){
-	//printf("The process will last %d seconds\n", sec_stop);
-	
+	if(sec_stop != 0)
+		printf("The simulation will last %d seconds\n", sec_stop);
 	sleep(sec_stop);
 	if(sec_stop != 0)
 		stop_timer = true;
@@ -226,7 +225,7 @@ void set_affinity(unsigned int tid){
 	
 }
 
-inline void SetState(void *ptr) { //può diventare una macro?
+inline void SetState(void *ptr) { //make it as macro?
 	ParallelSetState(ptr); 
 }
 
@@ -235,12 +234,12 @@ void nodes_init(){
 		unsigned int i;
 		
 		i = 0;
-		tmp_size = sizeof(struct rootsim_list_node) + sizeof(msg_t);//multiplo di 64
+		tmp_size = sizeof(struct rootsim_list_node) + sizeof(msg_t);//multiple of 64
 		while((++i)*CACHE_LINE_SIZE < tmp_size);
 		node_size_msg_t = (i)*CACHE_LINE_SIZE;
 		
 		i = 0;
-		tmp_size = sizeof(struct rootsim_list_node) + sizeof(state_t);//multiplo di 64
+		tmp_size = sizeof(struct rootsim_list_node) + sizeof(state_t);//multiple of 64
 		while((++i)*CACHE_LINE_SIZE < tmp_size);
 		node_size_state_t = (i)*CACHE_LINE_SIZE;
 }
@@ -304,7 +303,7 @@ void LPs_metada_init() {
 }
 
 void numa_init(){
-	//TODO: se riusciamo a farlo con le macro, meglio
+	//TODO: make it as macro if possible
 	if(numa_available() != -1){
 		printf("NUMA machine with %u nodes.\n", (unsigned int)  numa_num_configured_nodes());
 		numa_available_bool = true;
@@ -318,8 +317,8 @@ void numa_init(){
 }
 
 
-//Sostituirlo con una bitmap!
-//Nota: ho visto che viene invocato solo a fine esecuzione
+//TODO: use a bitmap
+//Note: called at end execution
 bool check_termination(void) {
 	unsigned int i;
 	
@@ -332,27 +331,12 @@ bool check_termination(void) {
 	return true;
 }
 
-// può diventare una macro?
-// [D] no, non potrebbe più essere invocata lato modello altrimenti
+// can be replaced with a macro?
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 	if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
 		queue_insert(receiver, timestamp, event_type, event_content, event_size);
 	}
 }
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////			 _	 _	 _	 _	      _   __      __		/////////////////////////////////////
-///////////			| \	| |	| \	/ \      / \ |  | /| |  |		/////////////////////////////////////
-///////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		/////////////////////////////////////
-///////////			|	| |	|_/	\_/      /__ |__|  | |__|		/////////////////////////////////////
-///////////														/////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 
 //#define print_event(event)	printf("   [LP:%u->%u]: TS:%f TB:%u EP:%u IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p\n",event->sender_id, event->receiver_id, event->timestamp, event->tie_breaker, event->epoch, is_valid(event),event, event->node);
@@ -364,7 +348,7 @@ void check_OnGVT(unsigned int lp_idx){
 	LPS[lp_idx]->until_ongvt = 0;
 	
 	if(!is_end_sim(lp_idx)){
-		// Ripristina stato sul commit_horizon
+		//Restore state on the commit_horizon
 		old_state = LPS[lp_idx]->state;
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
 		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
@@ -377,7 +361,7 @@ void check_OnGVT(unsigned int lp_idx){
 			start_periodic_check_ongvt = 1;
 			end_sim(lp_idx);
 		}
-		// Ripristina stato sul bound
+		// Restore state on the bound
 		LPS[lp_idx]->state = LP_STATE_ROLLBACK;
 		//printf("%d- BUILD STATE AFTER GVT START LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
 		rollback(lp_idx, INFTY, UINT_MAX);
@@ -457,14 +441,14 @@ void init_simulation(unsigned int thread_id){
        		current_msg->father 		= NULL;//
        		current_msg->epoch 		= LPS[current_lp]->epoch;//
        		current_msg->monitor 		= 0x0;//
-			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
+			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
+			queue_deliver_msgs();
 			LPS[current_lp]->bound = current_msg;
 			LPS[current_lp]->num_executed_frames++;
 			LPS[current_lp]->state_log_forced = true;
 			LogState(current_lp);
-			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Serve per tirare fuori l'INIT dalla timeline
+			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
 			LPS[current_lp]->until_ckpt_recalc = 0;
@@ -479,8 +463,7 @@ void init_simulation(unsigned int thread_id){
 
 	//wait all threads to end the init phase to start togheter
 
-	if(tid == 0) //TODO: a cosa serve?
-	{
+	if(tid == 0 && do_sleep != 0){
 	    int ret;
 		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
 	            fprintf(stderr, "%s\n", strerror(errno));
@@ -493,24 +476,22 @@ void init_simulation(unsigned int thread_id){
 	while(ready_wt!=n_cores);
 	
 	// Set the CPU affinity
-	set_affinity(tid);//TODO: decommentare per test veri
+	set_affinity(tid);
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
-//LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
-//inoltre, se passiamo solo il msg_t, possiamo evitare di passare gli altri parametri...era stato fatto così per mantenere il parallelismo con ProcessEvent
+//LP and event_ts are equal to current_LP and current_lvt, so they can be removed
+//moreover, passing only the msg_t we could use only this one as input patameter
 stat64_t execute_time;
 
 #if REVERSIBLE == 1
 	unsigned int mode;
 #endif	
-	queue_clean();//che succede se lascio le parentesi ad una macro?
+	queue_clean();
 	
 	(void)safety;
 	(void)event;
 
-	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
-	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
 
 #if REVERSIBLE == 1
 	mode = 1;// ← ASK_EXECUTION_MODE_TO_MATH_MODEL(LP, evt.ts)
@@ -537,9 +518,9 @@ stat64_t execute_time;
 #if REVERSIBLE == 1
 	}
 	else {
-		event->previous_seed = LPS[current_lp]->seed; //forse lo farei a prescindere mettendolo a fattor comune...son dati in cache
+		event->previous_seed = LPS[current_lp]->seed; //move outside the if_else
 		event->revwin = revwin_create();
-		revwin_reset(event->revwin);	//<-da mettere una volta sola ad inizio esecuzione
+		revwin_reset(event->revwin);	//<-to do only one time at the beginnig of the execution 
 		ProcessEvent_reverse(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 #if REPORT == 1 
 		statistics_post_lp_data(LP, STAT_EVENT_REV, 1);
@@ -549,7 +530,7 @@ stat64_t execute_time;
 	}
 #endif
 		
-	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
+	return;
 }
 
 
@@ -614,7 +595,7 @@ void thread_loop(unsigned int thread_id) {
 
 	#if DEBUG == 1
 		if(!haveLock(current_lp)){//DEBUG
-			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+			printf(RED("[%u] Executing without lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
 		if(current_cpu != sched_getcpu()){
 			printf("[%u] Current cpu changed form %u to %u\n", tid, current_cpu, sched_getcpu());
@@ -624,11 +605,11 @@ void thread_loop(unsigned int thread_id) {
 
 	#if DEBUG == 1	
 		if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
-			printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
+			printf(RED("TL: 0xba4a4a found!\n")); print_event(current_msg);
 			gdb_abort;
-			// FIXME: deriva dal merge tra stats e core
+			// FIXME: derived from the merge between stats and core
 			unlock(current_lp);
-			continue; //TODO: verificare
+			continue; //TODO: to verify
 		}
 	#endif
 
@@ -642,9 +623,9 @@ void thread_loop(unsigned int thread_id) {
 	#if DEBUG == 1
 			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG) {
 				if(current_evt_monitor == (void*) 0xba4a4a){
-					printf(RED("Ho una banana che non è ANTI-MSG\n"));
+					printf(RED("There is a ba4a4a that is not an ANTI-MSG\n"));
 				}
-				printf(RED("Ho ricevuto due volte di fila lo stesso messaggio e non è un antievento\n!!!!!"));
+				printf(RED("Received multiple time the same event that is not an anti one\n!!!!!"));
 				print_event(current_msg);
 				//gdb_abort;
 			}
@@ -662,7 +643,7 @@ void thread_loop(unsigned int thread_id) {
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
 #if VERBOSE > 1
-			printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
+			printf("*** ROLLBACKING LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
 				LPS[current_lp]->bound->timestamp, 	LPS[current_lp]->bound->tie_breaker,	LPS[current_lp]->bound , 
 				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
 #endif
@@ -688,7 +669,7 @@ void thread_loop(unsigned int thread_id) {
 
 	#if DEBUG==1
 		if((unsigned long long)current_msg->node & (unsigned long long)0x1){
-			printf(RED("Si sta eseguendo un nodo eliminato"));
+			printf(RED("Processing a deleted event"));
 		}
 	#endif
 
@@ -728,7 +709,7 @@ void thread_loop(unsigned int thread_id) {
 		
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){
-			printf(RED("A - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
+			printf(RED("A - Node removed while processing it!!!\n"));
 			print_event(current_msg);
 			gdb_abort;				
 		}
@@ -741,7 +722,7 @@ void thread_loop(unsigned int thread_id) {
 
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){
-			printf(RED("B - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
+			printf(RED("B - Node removed while processing it!!!\n"));
 			print_event(current_msg);
 			gdb_abort;				
 		}
@@ -768,7 +749,7 @@ void thread_loop(unsigned int thread_id) {
 		
 		if((++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0)/* && safe*/){
 			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
-			//ATTENZIONE: non so se non tenere conto del tie_breaker potrebbe essere un problema
+			//ATTENTION: We should take care of the tie_breaker?
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		

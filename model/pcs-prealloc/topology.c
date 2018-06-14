@@ -11,7 +11,7 @@ int __FindReceiver(unsigned int sender , void * addr)
 {
 	// sender is the process' gid
 
-	extern int **edges; /* [i][0] mi dice con quanti nodi e' connesso l'i-esimo */
+	extern int **edges; /* [i][0] say how much nodes are connected to the i-th */
 	unsigned int receiver, temp;
  	double u;
 
@@ -19,28 +19,16 @@ int __FindReceiver(unsigned int sender , void * addr)
         pcs = (lp_state_type*) addr;
 
 	switch (TOPOLOGY) {
-
-
-     	       case EXAGON:
-
-		// la lettura delle celle adiacenti avviene nello stato stesso del LP
-                 receiver = ((int) ((pcs->buff_topology->num_adjacent ) * Random())) ;
-		 receiver = pcs->buff_topology->adjacent_identities[receiver];
-
-		 break;
-
-
+		case EXAGON:
+			receiver = ((int) ((pcs->buff_topology->num_adjacent ) * Random())) ;
+			receiver = pcs->buff_topology->adjacent_identities[receiver];
+			break;
 		case POINT_TO_POINT:
 			receiver=((int) ( n_prc_tot * Random())) ;
-
-			/* modifica hot spot */
-
-		break;
-
+			/* hot spot update*/
+			break;
 		case BID_RING:
 			u= Random();
-
-
 			if (( u < 0.5 ) && (u >= 0.0 ) ) {
 				receiver= sender - 1;
 			} else {
@@ -71,7 +59,7 @@ int __FindReceiver(unsigned int sender , void * addr)
 			temp= ((int) ( (edges[sender][0]) * Random())) ;
 
 			if (temp==(edges[sender][0]+1)) {
-				//fprintf(fout, "ERRORE nell'indirizzamento hyper: indice estrattto casualmente =%d\n", temp);
+				//fprintf(fout, "ERRORE nell'indirizzamento hyper: randomly extracted index =%d\n", temp);
 				//fprintf(fout, "assegnero' edges[%d][%d] quando al max si arriva a %d\n\n", sender, temp+1, sender, edges[sender][0] );
 				//fprintf(fout, "assegnero' edges[%d][%d] quando al max si arriva a %d\n\n", sender, temp+1, sender);
 				//fclose( fout );
@@ -128,7 +116,7 @@ void set_my_topology(unsigned int gid, _PCS_routing *buffer) {
 	if (TOPOLOGY != EXAGON) return; 
 
 	if ((D*D)!=n_prc_tot) {
-		printf("Mappa esagonale mal specificata, controllare processi_totali e D\n");
+		printf("The hexagonal map is not defined, check processi_totli and D\n");
 		exit(-1);
 	}
 

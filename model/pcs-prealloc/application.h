@@ -25,7 +25,7 @@
 
 
 
-/* DISTRIBUZIONI TIMESTAMP */
+/* TIMESTAMP DISTRIBUTION*/
 #define UNIFORME	0
 #define ESPONENZIALE 	1
 
@@ -64,10 +64,10 @@
 #define D  (int)sqrt(n_prc_tot)
 
 /* TOPOLOGIE */
-#define POINT_TO_POINT 		0		/* punto- punto*/
-#define BID_RING		1		/* anello bidirezionale */
-#define UNI_RING		2		/* anello unidirezione */
-#define HYPER			3		/* ipercubo */
+#define POINT_TO_POINT 	0		/* point_to_point*/
+#define BID_RING		1		/* bidirectional ring */
+#define UNI_RING		2		/* unidirectional ring */
+#define HYPER			3		/* hypercube */
 #define STAR			4
 #define MESH			5
 #define EXAGON                  6
@@ -107,7 +107,7 @@
 	((int)I % BITS)) 
 
 
-// struttura rappresentante il contenuto applicativo di un messaggio scambiato tra LP
+// message structure
 typedef struct _event_content_type {
 	unsigned int cell;
 	unsigned int second_cell;
@@ -115,7 +115,7 @@ typedef struct _event_content_type {
 	simtime_t   call_term_time;
 } event_content_type;
 
-// Taglia di 28 byte
+// Size: 28 bytes
 typedef struct __PCS_routing{
 	int num_adjacent;
 	unsigned int adjacent_identities[6];
@@ -128,7 +128,7 @@ typedef struct __PCS_routing{
 #define MAX_POWER (3000)
 #define SIR_AIM		(10)
 
-// Taglia di 16 byte
+// Size: 16 bytes
 typedef struct _sir_data_per_cell{
 
     //double distance;
@@ -136,7 +136,7 @@ typedef struct _sir_data_per_cell{
     double power;
 } sir_data_per_cell;
 
-// Taglia di 16 byte
+// Size: 16 bytes
 typedef struct _channel{
 	int channel_id;
 	int used;
@@ -144,7 +144,7 @@ typedef struct _channel{
 } channel;
 
 
-// Taglia di 68 byte + 4*dim array
+// Size: 68 bytes + 4*dim array
 typedef struct _lp_state_type{
 	simtime_t time;
 	bool check_fading;

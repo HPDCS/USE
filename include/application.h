@@ -6,7 +6,7 @@
 #include "time_util.h"
 
 
-//Torna 1 in caso si verifica la condizione di fine simulazione
+//Return 1 if the end simulation condition is found to be true
 int StopSimulation(void); 
 
 

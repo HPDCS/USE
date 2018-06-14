@@ -40,7 +40,7 @@ void* alloc_array_nodes(hpdcs_gc_status *status, unsigned int num_item)
 {
 	linked_gc_node *res, *tmp;
 	unsigned long long res_tmp;
-	// capire perchè con malloc non va e con calloc si
+	//TODO: verify why work only with calloc and not with malloc
 	res = malloc( num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE); 
 	//res = calloc( 1,num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE);
 	

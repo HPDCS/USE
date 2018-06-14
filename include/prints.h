@@ -30,7 +30,7 @@
 
 #endif // DEBUG == 1
 
-#define evt_state_str(state) state == 1 ? "ESTRATTO" : state == 2 ? "CANCELLATO" : state == 3 ? "ANTI_EVENT" : "UNKNOWN"
+#define evt_state_str(state) state == 1 ? "EXTRACTED" : state == 2 ? "DELETED" : state == 3 ? "ANTI_EVENT" : "UNKNOWN"
 
 
 #endif
