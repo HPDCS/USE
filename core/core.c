@@ -510,13 +510,13 @@ stat64_t execute_time;
 
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state;
-	
+
 #if ONGVT_PERIOD != -1
 	unsigned int empty_fetch = 0;
 #endif
-	
+
 	init_simulation(thread_id);
-	
+
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
