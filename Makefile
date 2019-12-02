@@ -200,7 +200,8 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=phold
 
-CORE_SOURCES =  core/core.c\
+CORE_SOURCES=core/trampoline.S\
+		core/core.c\
 		core/calqueue.c\
 		core/nb_calqueue.c\
 		core/x86.c\
@@ -221,8 +222,8 @@ MM_SOURCES=mm/allocator.c\
 		mm/state.c\
 		datatypes/list.c\
 		mm/platform.c
-		
-REVERSE_SOURCES=	reverse/reverse.c\
+
+REVERSE_SOURCES=reverse/reverse.c\
 		reverse/slab.c
 
 
