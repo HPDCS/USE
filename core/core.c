@@ -703,19 +703,33 @@ void thread_loop(unsigned int thread_id) {
 			gdb_abort;				
 		}
 #endif
+#if IPI==1
+#if DEBUG==1
+        printf("print thread pool and collision list before execute event\n");
+		print_lp_id_in_thread_pool_list();
+        print_lp_id_in_collision_list();
+#endif
+#endif
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
 #if IPI==1
-		printf("i'm here\n");
-        print_lp_id_in_thread_pool_list();
-        printf("now\n");
+#if DEBUG==1
+        printf("print thread pool and collision list after execute event before queue_deliver_msgs\n");
+		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
-		///* POST_INFORMATIONS_PER_LP_DEST *///
-        exit(0);
+#endif
 #endif
 		///* FLUSH */// 
 		queue_deliver_msgs();
+
+#if IPI==1
+#if DEBUG==1
+        printf("print thread pool and collision list after queue_deliver_msgs\n");
+		print_lp_id_in_thread_pool_list();
+        print_lp_id_in_collision_list();
+#endif
+#endif
 
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){

@@ -96,7 +96,6 @@ void unsafe_set_init(){
 void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 
     msg_t *msg_ptr;
-    printf("queue insert\n");
     if(_thr_pool._thr_pool_count == THR_POOL_SIZE) {
         printf("queue overflow for thread %u at time %f: inserting event %d over %d\n", tid, current_lvt, _thr_pool._thr_pool_count, THR_POOL_SIZE);
         abort();
@@ -124,35 +123,26 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 
 #if IPI==1
     //insert msg with minimum timestamp in collision list(if not exist alloc node,if exist swap if it has smaller timestamp
-    int index=msg_ptr->receiver_id%THR_POOL_SIZE;//return index of hash table
-    printf("index=%d,receiver_id %d,timestamp=%lf\n",index,msg_ptr->receiver_id,msg_ptr->timestamp);
+    int index=msg_ptr->receiver_id%THR_HASH_TABLE_SIZE;//return index of hash table
     struct node**head=&(_thr_pool.collision_list[index]);//head of collision list
-    //printf("head=%p\n",head);
     struct node*p=*head;
     msg_t*msg;
 
     while(p!=NULL){
         msg=(msg_t*)p->data;
         if(msg_ptr->receiver_id == msg->receiver_id){
-            printf("same lp founded\n");
-            print_list(*head,print_lp_id);
             if(msg_ptr->timestamp < msg->timestamp){
-                print_list(*head,print_lp_id);
                 p->data=msg_ptr;
                 return;
             }
-            printf("same lp greater timestamp\n");
-            print_list(*head,print_lp_id);
             //same LP but greater timestamp
             return;
         }
         p=p->next;
     }
-    printf("lp not found\n");
     //LP not found,add element to collision list
     struct node*new_node=get_new_node(msg_ptr);
     insert_at_head(new_node,head);
-    print_list(*head,print_lp_id);
 #endif
 
 }
@@ -189,7 +179,6 @@ void queue_deliver_msgs(void) {
 #endif
 #if IPI == 1
     for(i = 0; i < THR_HASH_TABLE_SIZE; i++) {
-        int res=0;
         struct node**head=&(_thr_pool.collision_list[i]);
         struct node*p=*head;
         msg_t *msg,*msg_dest_LP;
@@ -198,20 +187,38 @@ void queue_deliver_msgs(void) {
             unsigned short lp_id=msg->receiver_id;
 
             while(1){
-                msg_dest_LP=LPS[lp_id]->best_evt_reliable;
-                if(msg_dest_LP==NULL){
-                    printf("msg_dest is NULL\n");
-                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                if(safe){
+                    msg_dest_LP=LPS[lp_id]->best_evt_reliable;
+                    if(msg_dest_LP==NULL){
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
                             (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
-                        continue;
+                            continue;
+                    }
+                    else if(msg->timestamp < msg_dest_LP->timestamp){//msg_dest_LP!=NULL
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                                (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
+                            continue;
+                    }
+                    //modified
+                    atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
+                    break;
                 }
-                else if(msg->timestamp < msg_dest_LP->timestamp){//msg_dest_LP!=NULL
-                    printf("minor timestamp\n");
-                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                else{//not safe
+                    msg_dest_LP=LPS[lp_id]->best_evt_unreliable;
+                    if(msg_dest_LP==NULL){
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
                             (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
-                        continue;
+                            continue;
+                    }
+                    else if(msg->timestamp < msg_dest_LP->timestamp){//msg_dest_LP!=NULL
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
+                                (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
+                            continue;
+                    }
+                    //modified
+                    atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));
+                    break;
                 }
-                break;
             }
             p=p->next;
         }
