@@ -9,7 +9,6 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
-
 //used to take locks on LPs
 volatile unsigned int *lp_lock;
 
@@ -34,11 +33,46 @@ __thread list(msg_t) to_remove_local_evts_old = NULL;
 __thread list(msg_t) to_remove_local_evts = NULL;
 __thread list(msg_t) freed_local_evts = NULL;
 
+#if IPI==1
 
+void print_lp_id(void*data){
+    msg_t*msg=(msg_t*)data;
+    printf("LP id=%d\n",msg->receiver_id);
+}
 
+void print_lp_id_in_collision_list(){
+    if(_thr_pool._thr_pool_count==0){
+        printf("empty collision list\n");
+    }
+    for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
+        if(_thr_pool.collision_list[i]==NULL)
+            continue;
+        print_list(_thr_pool.collision_list[i],print_lp_id);
+    }
+}
+
+void print_lp_id_in_thread_pool_list(){
+    if(_thr_pool._thr_pool_count==0){
+        printf("empty thread pool\n");
+    }
+    for(unsigned int i=0;i<_thr_pool._thr_pool_count;i++){
+        printf("LP id=%d\n",_thr_pool.messages[i].father->receiver_id);
+    }
+}
+
+#endif
 
 void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
+
+#if IPI==1
+    //initialize collision_list
+    for (int i=0; i<THR_HASH_TABLE_SIZE; i++)
+    {
+        _thr_pool.collision_list[i]=NULL;
+    }
+#endif
+
 }
 
 void unsafe_set_init(){
@@ -62,7 +96,7 @@ void unsafe_set_init(){
 void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 
     msg_t *msg_ptr;
-
+    printf("queue insert\n");
     if(_thr_pool._thr_pool_count == THR_POOL_SIZE) {
         printf("queue overflow for thread %u at time %f: inserting event %d over %d\n", tid, current_lvt, _thr_pool._thr_pool_count, THR_POOL_SIZE);
         abort();
@@ -86,6 +120,41 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
     memcpy(msg_ptr->data, event_content, event_size);
+
+
+#if IPI==1
+    //insert msg with minimum timestamp in collision list(if not exist alloc node,if exist swap if it has smaller timestamp
+    int index=msg_ptr->receiver_id%THR_POOL_SIZE;//return index of hash table
+    printf("index=%d,receiver_id %d,timestamp=%lf\n",index,msg_ptr->receiver_id,msg_ptr->timestamp);
+    struct node**head=&(_thr_pool.collision_list[index]);//head of collision list
+    //printf("head=%p\n",head);
+    struct node*p=*head;
+    msg_t*msg;
+
+    while(p!=NULL){
+        msg=(msg_t*)p->data;
+        if(msg_ptr->receiver_id == msg->receiver_id){
+            printf("same lp founded\n");
+            print_list(*head,print_lp_id);
+            if(msg_ptr->timestamp < msg->timestamp){
+                print_list(*head,print_lp_id);
+                p->data=msg_ptr;
+                return;
+            }
+            printf("same lp greater timestamp\n");
+            print_list(*head,print_lp_id);
+            //same LP but greater timestamp
+            return;
+        }
+        p=p->next;
+    }
+    printf("lp not found\n");
+    //LP not found,add element to collision list
+    struct node*new_node=get_new_node(msg_ptr);
+    insert_at_head(new_node,head);
+    print_list(*head,print_lp_id);
+#endif
+
 }
 
 void queue_clean(){ 
@@ -118,8 +187,47 @@ void queue_deliver_msgs(void) {
 #if REPORT == 1
 		clock_timer queue_op;
 #endif
+#if IPI == 1
+    for(i = 0; i < THR_HASH_TABLE_SIZE; i++) {
+        int res=0;
+        struct node**head=&(_thr_pool.collision_list[i]);
+        struct node*p=*head;
+        msg_t *msg,*msg_dest_LP;
+        while(p!=NULL){
+            msg=(msg_t*)p->data;
+            unsigned short lp_id=msg->receiver_id;
+
+            while(1){
+                msg_dest_LP=LPS[lp_id]->best_evt_reliable;
+                if(msg_dest_LP==NULL){
+                    printf("msg_dest is NULL\n");
+                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                            (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
+                        continue;
+                }
+                else if(msg->timestamp < msg_dest_LP->timestamp){//msg_dest_LP!=NULL
+                    printf("minor timestamp\n");
+                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                            (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
+                        continue;
+                }
+                break;
+            }
+            p=p->next;
+        }
+
+        //free collision_list
+        if(_thr_pool.collision_list[i]!=NULL){
+            free_memory_list(_thr_pool.collision_list[i]);
+            _thr_pool.collision_list[i]=NULL;
+        }
+    }
+
+#endif
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
+
+
 
         //new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
         //list_node_clean_by_content(new_hole); //NON DOVREBBE SERVIRE

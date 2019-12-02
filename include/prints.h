@@ -32,5 +32,4 @@
 
 #define evt_state_str(state) state == 1 ? "ESTRATTO" : state == 2 ? "CANCELLATO" : state == 3 ? "ANTI_EVENT" : "UNKNOWN"
 
-
 #endif

@@ -14,10 +14,18 @@ LIBS=-pthread -lm
 ARCH_X86=1
 ARCH_X86_64=1
 
+
+
 ifdef MAX_SKIPPED_LP
 CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=$(MAX_SKIPPED_LP)
 else
 CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=100000
+endif
+
+ifdef IPI
+CFLAGS:=$(CFLAGS) -DIPI=$(IPI)
+else
+CFLAGS:=$(CFLAGS) -DIPI=0
 endif
 
 ifdef OPTIMISTIC_LEVEL
@@ -212,6 +220,7 @@ CORE_SOURCES =  core/core.c\
 		core/hpdcs_math.c\
 		core/parseparam.c\
 		statistics/statistics.c\
+		core/simple_dynamic_list.c\
 		mm/garbagecollector.c
 
 MM_SOURCES=mm/allocator.c\

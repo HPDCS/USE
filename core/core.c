@@ -263,6 +263,17 @@ void LPs_metada_init() {
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
 
+#if IPI==1
+		LPS[i]->best_evt_reliable=NULL;
+        LPS[i]->num_times_modified_best_evt_reliable=0;
+        LPS[i]->num_times_choosen_best_evt_reliable=0;
+
+        LPS[i]->best_evt_unreliable=NULL;
+        LPS[i]->num_times_modified_best_evt_unreliable=0;
+        LPS[i]->num_times_choosen_best_evt_unreliable=0;
+#endif
+
+
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
@@ -429,6 +440,13 @@ void init_simulation(unsigned int thread_id){
 
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
+
+#if IPI==1
+        print_lp_id_in_thread_pool_list();
+        printf("after print\n");
+        print_lp_id_in_collision_list();
+#endif
+
 	}
 
 
@@ -516,7 +534,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	
 	init_simulation(thread_id);
-	
+	printf("init simulation finished\n");
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
@@ -688,6 +706,14 @@ void thread_loop(unsigned int thread_id) {
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
+#if IPI==1
+		printf("i'm here\n");
+        print_lp_id_in_thread_pool_list();
+        printf("now\n");
+        print_lp_id_in_collision_list();
+		///* POST_INFORMATIONS_PER_LP_DEST *///
+        exit(0);
+#endif
 		///* FLUSH */// 
 		queue_deliver_msgs();
 

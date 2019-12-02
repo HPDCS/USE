@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "nb_calqueue.h"
+#include <simple_dynamic_list.h>
 
 #define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //può essere sostituita da una scrittura atomica
@@ -30,7 +31,15 @@ typedef struct __msg_t msg_t;
 typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
 	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
+
+#if IPI==1
+    struct node* collision_list[THR_HASH_TABLE_SIZE]  __attribute__ ((aligned (64)));
+#endif
+
 } __temp_thread_pool;
+
+void print_lp_id_in_collision_list();
+void print_lp_id_in_thread_pool_list();
 
 void queue_init(void);
 

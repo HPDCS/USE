@@ -108,19 +108,21 @@ typedef struct _LP_state {
 #if DEBUG == 1
 	msg_t* 	last_rollback_event;
 #endif
-	
+
 	simtime_t commit_horizon_ts;
 	unsigned long long commit_horizon_tb;
 	
 	unsigned int until_clean_ckp;
 
-	msg_t*best_evt_reliable;
+#if IPI==1
+	msg_t *best_evt_reliable;
 	unsigned long num_times_modified_best_evt_reliable;
 	unsigned long num_times_choosen_best_evt_reliable;
 
     msg_t*best_evt_unreliable;
     unsigned long num_times_modified_best_evt_unreliable;
     unsigned long num_times_choosen_best_evt_unreliable;
+#endif
 
 } LP_state;
 
