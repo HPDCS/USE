@@ -29,6 +29,7 @@
 #include "nb_calqueue.h"
 #include "simtypes.h"
 #include "lookahead.h"
+#include "ipi_ctrl.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
 
@@ -515,6 +516,9 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int empty_fetch = 0;
 #endif
 
+	/* TODO: update text_start/end values */
+	ipi_register_thread(thread_id, cfv_trampoline, 0x0UL, 0x0UL);
+
 	init_simulation(thread_id);
 
 #if REPORT == 1 
@@ -779,10 +783,12 @@ end_loop:
 			}
 		}
 	}
+
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
 
+	ipi_unregister_thread();
 
 	// Unmount statistical data
 	// FIXME

@@ -9,14 +9,27 @@
 #include <pthread.h>
 
 
+#define IPI_REGISTER_THREAD     (1U << 2)
+#define IPI_UNREGISTER_THREAD   (1U << 3)
+#define IPI_SET_TEXT_START      (1U << 4)
+#define IPI_SET_TEXT_END        (1U << 5)
+
+
+int ipi_register_thread(int, unsigned long, unsigned long, unsigned long);
+int ipi_unregister_thread(void);
+
+
 static __thread int fd;
 static __thread int cpu;
+static __thread cpu_set_t oldset;
 
 
 static inline int pin_thread_to_core(int core)
 {
 	int sched_cpu;
 	cpu_set_t cpuset;
+
+    pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &oldset);
 
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
@@ -35,13 +48,29 @@ static inline int pin_thread_to_core(int core)
 	return 0;
 }
 
-int ipi_register_thread(int tid)
+static inline int remove_thread_pinning(void)
+{
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &oldset))
+        return 1;
+
+    return 0;
+}
+
+int ipi_register_thread(int tid, unsigned long callback,
+        unsigned long text_start, unsigned long text_end)
 {
     if (tid < 0)
     {
     	printf("The argument \"tid\" is a negative value. "
     			"Thread will work with no IPI support.\n");
 		return 1;
+    }
+
+    if (text_end < text_start)
+    {
+        printf("Invalid arguments \"text_start\" and \"text_end\". "
+                "Thread will work with no IPI support.\n");
+        return 1;
     }
 
     cpu = tid;
@@ -57,43 +86,74 @@ int ipi_register_thread(int tid)
     {
         printf("Unable to open IPI device. "
         		"Thread will work with no IPI support.\n");
+
+        if (remove_thread_pinning())
+            printf("Unable to remove thread pinning from core %d.\n", cpu);
+
         return 1;
     }
 
-    if (ioctl(fd, IPI_REGISTER_THREAD, ipi_trampoline) < 0)
+    if (ioctl(fd, IPI_REGISTER_THREAD, callback) < 0)
     {
         printf("Unable to register thread for IPI on core %d. "
         		"Thread will work with no IPI support.\n", cpu);
+
         close(fd);
+
+        if (remove_thread_pinning())
+            printf("Unable to remove thread pinning from core %d.\n", cpu);
+
         return 1;
     }
 
-    if (ioctl(fd, IPI_SET_TEXT_START, (unsigned long) start_func) < 0)
+    if (ioctl(fd, IPI_SET_TEXT_START, text_start) < 0)
     {
-        printf("Unable to set text_start address.\n");
+        printf("Unable to set text_start with address 0x%lx. "
+                "Thread will work with no IPI support.\n", text_start);
+
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
+
+        if (remove_thread_pinning())
+            printf("Unable to remove thread pinning from core %d.\n", cpu);
+
         return 1;
     }
 
-    if (ioctl(fd, IPI_SET_TEXT_END, (unsigned long) end_func) < 0)
+    if (ioctl(fd, IPI_SET_TEXT_END, text_end) < 0)
     {
-        printf("Unable to set text_end address.\n");
+        printf("Unable to set text_end with address 0x%lx. "
+                "Thread will work with no IPI support.\n", text_end);
+
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
+
+        if (remove_thread_pinning())
+            printf("Unable to remove thread pinning from core %d.\n", cpu);
+
         return 1;
     }
 
-    working_function(cpu);
+    return 0;
+}
+
+int ipi_unregister_thread(void)
+{
+    int res = 0;
 
     if (ioctl(fd, IPI_UNREGISTER_THREAD) < 0)
     {
         printf("Unable to unregister thread for IPI support on core %d.\n", cpu);
-        close(fd);
-        return 1;
+        res = 1;
     }
 
     close(fd);
 
-    return 0;
+    if (remove_thread_pinning())
+    {
+        printf("Unable to remove thread pinning from core %d.\n", cpu);
+        res = 1;
+    }
+
+    return res;
 }
