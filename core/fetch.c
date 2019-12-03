@@ -122,6 +122,8 @@
 
 #if IPI==1
 void swap_with_best_evt(simtime_t min,simtime_t min_tb){
+    //don't swap events seeing only timestamps:minimm timestamp must be relative to an event to be processed
+    //don't swap if minimum timestamp is relative to an event to be "ignored"
     simtime_t timestamp_reliable,timestamp_unreliable,ts;
     unsigned short tie_breaker_reliable,tie_breaker_unreliable,tb;
     timestamp_reliable=INFTY;//double max
@@ -141,10 +143,10 @@ void swap_with_best_evt(simtime_t min,simtime_t min_tb){
     if(timestamp_reliable==timestamp_unreliable && timestamp_reliable==INFTY){
         //nop,both are INFTY, (tie breaker don't care)
     }
-    else if(timestamp_reliable<timestamp_unreliable
-        || (timestamp_reliable==timestamp_unreliable && tie_breaker_reliable <= tie_breaker_unreliable) ){//min is evt_reliable
+    else if( (timestamp_reliable<timestamp_unreliable)
+        || ( (timestamp_reliable==timestamp_unreliable) && (tie_breaker_reliable <= tie_breaker_unreliable) ) ){//min is evt_reliable
         if(timestamp_reliable<current_lvt
-        || (timestamp_reliable==current_lvt && tie_breaker_reliable <= current_msg->tie_breaker) ){//min is evt_reliable and it is high priority compared to current_evt
+        || ( (timestamp_reliable==current_lvt) && (tie_breaker_reliable <= current_msg->tie_breaker) ) ){//min is evt_reliable and it is high priority compared to current_evt
             //update current_msg and safe variables
             //current_msg=best_evt_reliable;
             //ts=timestamp_reliable;
@@ -157,8 +159,8 @@ void swap_with_best_evt(simtime_t min,simtime_t min_tb){
         }
     }
     else{//min is evt_unreliable
-        if(timestamp_unreliable<current_lvt
-        || (timestamp_unreliable==current_lvt && tie_breaker_unreliable <= current_msg->tie_breaker) ){//min is evt_unreliable and it is high priority compared to current_evt
+        if( (timestamp_unreliable<current_lvt)
+        || ( (timestamp_unreliable==current_lvt) && (tie_breaker_unreliable <= current_msg->tie_breaker) ) ){//min is evt_unreliable and it is high priority compared to current_evt
             //update current_msg and safe variables
             //current_msg=best_evt_unreliable;
             //ts=timestamp_unreliable;

@@ -131,7 +131,8 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     while(p!=NULL){
         msg=(msg_t*)p->data;
         if(msg_ptr->receiver_id == msg->receiver_id){
-            if(msg_ptr->timestamp < msg->timestamp){
+            if( (msg_ptr->timestamp < msg->timestamp )
+            || ( (msg_ptr->timestamp == msg->timestamp ) && (msg_ptr->tie_breaker <= msg->tie_breaker) ) ){
                 p->data=msg_ptr;
                 return;
             }
@@ -194,7 +195,8 @@ void queue_deliver_msgs(void) {
                             (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
                             continue;
                     }
-                    else if(msg->timestamp < msg_dest_LP->timestamp){//msg_dest_LP!=NULL
+                    else if( (msg->timestamp < msg_dest_LP->timestamp)
+                    || ( (msg->timestamp == msg_dest_LP->timestamp) && (msg->tie_breaker<=msg_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
                         if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
                                 (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
                             continue;
@@ -210,7 +212,8 @@ void queue_deliver_msgs(void) {
                             (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
                             continue;
                     }
-                    else if(msg->timestamp < msg_dest_LP->timestamp){//msg_dest_LP!=NULL
+                    else if( (msg->timestamp < msg_dest_LP->timestamp)
+                    || ( (msg->timestamp == msg_dest_LP->timestamp) && (msg->tie_breaker<=msg_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
                         if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
                                 (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
                             continue;
