@@ -1,6 +1,7 @@
 #include "simple_dynamic_list.h"
 #include <stdlib.h>
 #include <stdio.h>
+
 int count_element_linked_list(struct node*head){
     int count=0;
     if (head==NULL){
@@ -13,47 +14,6 @@ int count_element_linked_list(struct node*head){
     }
     return count;
 }
-
-/*int remove_after_node(struct node**ppos){
-    if(ppos==NULL ){
-        return -1;
-    }
-    if(*ppos==NULL){
-        return -1;
-    }
-    struct node *r = *ppos;
-    struct node*q=r->next;
-    if(q==NULL){//fine della lista
-        *ppos=r->next;
-        free(r);
-        r=NULL;
-    }
-    else {
-        *ppos = r->next;
-        free(r);
-        r=NULL;
-    }
-    return 0;
-}*/
-
-/*int delete_head(struct node** head){//non è importante il valore iniziale di oldhead
-    //initializza oldhead con il primo nodo della lista e distrugge il primo nodo della lista
-    if(head==NULL){
-        return -1;//error
-    }
-    if(*head == NULL){//nessuna testa da eliminare
-        return -2;//no head
-    }
-    if ((*head)-> next == NULL){//c'è un solo nodo in lista
-        free(*head);
-        *head = NULL;
-    }else{
-        struct node*temp=(*head)->next;
-        free(*head);
-        *head =temp;
-    }
-    return 0;
-}*/
 
 int insert_first(struct node *new_node, struct node **head){//inserisce il primo nodo
     if(new_node==NULL || head==NULL){

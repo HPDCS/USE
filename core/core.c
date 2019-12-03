@@ -442,9 +442,12 @@ void init_simulation(unsigned int thread_id){
 		printf("EXECUTED ALL INIT EVENTS\n");
 
 #if IPI==1
+#if VERBOSE > 0
+		printf("lp id in thread pool list\n");
         print_lp_id_in_thread_pool_list();
-        printf("after print\n");
+        printf("lp id in collision list\n");
         print_lp_id_in_collision_list();
+#endif
 #endif
 
 	}
@@ -534,7 +537,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	
 	init_simulation(thread_id);
-	printf("init simulation finished\n");
+
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
@@ -703,33 +706,65 @@ void thread_loop(unsigned int thread_id) {
 			gdb_abort;				
 		}
 #endif
+
 #if IPI==1
 #if DEBUG==1
+    if(_thr_pool._thr_pool_count!=0){
+        printf("not empty collision list\n");
+        abort();
+    }
+    for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
+        if(_thr_pool.collision_list[i]!=NULL){
+            printf("not empty collision list\n");
+            abort();
+        }
+    }
+
+#endif//DEBUG
+#if VERBOSE > 0
         printf("print thread pool and collision list before execute event\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
-#endif
-#endif
+#endif//VERBOSE
+
+#endif//IPI
+
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
 #if IPI==1
-#if DEBUG==1
+
+#if VERBOSE > 0
         printf("print thread pool and collision list after execute event before queue_deliver_msgs\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
-#endif
+#endif//VERBOSE
+
 #endif
 		///* FLUSH */// 
 		queue_deliver_msgs();
 
 #if IPI==1
 #if DEBUG==1
+    if(_thr_pool._thr_pool_count!=0){
+        printf("not empty collision list\n");
+        abort();
+    }
+    for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
+        if(_thr_pool.collision_list[i]!=NULL){
+            printf("not empty collision list\n");
+            abort();
+        }
+
+    }
+
+#endif//DEBUG
+#if VERBOSE > 0
         printf("print thread pool and collision list after queue_deliver_msgs\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
-#endif
-#endif
+#endif//VERBOSE
+#endif//IPI
 
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){

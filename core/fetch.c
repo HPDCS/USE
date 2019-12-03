@@ -120,6 +120,60 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
+#if IPI==1
+void swap_with_best_evt(simtime_t min,simtime_t min_tb){
+    simtime_t timestamp_reliable,timestamp_unreliable,ts;
+    unsigned short tie_breaker_reliable,tie_breaker_unreliable,tb;
+    timestamp_reliable=INFTY;//double max
+    timestamp_unreliable=INFTY;//double max
+    msg_t *best_evt_reliable=LPS[current_lp]->best_evt_reliable;
+    msg_t *best_evt_unreliable=LPS[current_lp]->best_evt_unreliable;
+    //update timestamps if not NULL
+    if(best_evt_reliable!=NULL){
+        timestamp_reliable=best_evt_reliable->timestamp;
+        tie_breaker_reliable=best_evt_reliable->tie_breaker;
+    }
+    if(best_evt_unreliable!=NULL){
+        timestamp_unreliable=best_evt_unreliable->timestamp;
+        tie_breaker_unreliable=best_evt_unreliable->tie_breaker;
+    }
+    //find min timestamp
+    if(timestamp_reliable==timestamp_unreliable && timestamp_reliable==INFTY){
+        //nop,both are INFTY, (tie breaker don't care)
+    }
+    else if(timestamp_reliable<timestamp_unreliable
+        || (timestamp_reliable==timestamp_unreliable && tie_breaker_reliable <= tie_breaker_unreliable) ){//min is evt_reliable
+        if(timestamp_reliable<current_lvt
+        || (timestamp_reliable==current_lvt && tie_breaker_reliable <= current_msg->tie_breaker) ){//min is evt_reliable and it is high priority compared to current_evt
+            //update current_msg and safe variables
+            //current_msg=best_evt_reliable;
+            //ts=timestamp_reliable;
+            //tb=tie_breaker_reliable;
+            //safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(current_lp);
+            //reset information
+            CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
+                        (unsigned long)best_evt_reliable,(unsigned long)NULL);
+            LPS[current_lp]->num_times_choosen_best_evt_reliable++;
+        }
+    }
+    else{//min is evt_unreliable
+        if(timestamp_unreliable<current_lvt
+        || (timestamp_unreliable==current_lvt && tie_breaker_unreliable <= current_msg->tie_breaker) ){//min is evt_unreliable and it is high priority compared to current_evt
+            //update current_msg and safe variables
+            //current_msg=best_evt_unreliable;
+            //ts=timestamp_unreliable;
+            //tb=tie_breaker_unreliable;
+            //safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(current_lp);
+            //reset information
+            CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_unreliable),
+                        (unsigned long)best_evt_unreliable,(unsigned long)NULL);
+            LPS[current_lp]->num_times_choosen_best_evt_unreliable++;
+        }
+    }
+    return;
+}
+#endif
+
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #if DEBUG == 1
 	LP_state *lp_ptr = LPS[lp_idx];
@@ -380,6 +434,7 @@ unsigned int fetch_internal(){
 					//node = (void*)0x1;//local_next_evt->node;
 					from_get_next_and_valid = true;
 					ts = event->timestamp;
+					//non va ricalcolato il tb rispetto al local_next_evt che è event???
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
 				curr_evt_state = event->state;
@@ -484,7 +539,7 @@ get_next:
 				if(is_marked(node_next, MOV) || node->replica != NULL){
     					//printf("FETCH DONE 3\n");
 						return 0;
-					}
+				}
 				break;
 			}
 			else {
@@ -517,7 +572,14 @@ get_next:
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
     current_msg =  event;//(msg_t *) node->payload;
-	current_node = node;
+    current_node = node;
+
+#if IPI==1
+    current_lp = current_msg->receiver_id;
+    swap_with_best_evt(min,min_tb);
+#endif
+
+
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)c);
 #endif

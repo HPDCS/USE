@@ -114,6 +114,13 @@ int main(int argn, char *argv[]) {
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
     //statistics_fini();
 
+#if IPI==1
+    for(unsigned int i=0;i<n_prc_tot;i++){
+        printf("modified reliable %ld choosen reliable %ld modified unreliable %ld choosen unreliable %ld\n",
+                LPS[i]->num_times_modified_best_evt_reliable,LPS[i]->num_times_choosen_best_evt_reliable,
+                LPS[i]->num_times_modified_best_evt_unreliable,LPS[i]->num_times_choosen_best_evt_unreliable);
+    }
+#endif
     return 0;
 }
 
