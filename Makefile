@@ -86,11 +86,17 @@ else
 CFLAGS:= $(CFLAGS) -DONGVT_PERIOD=-1
 endif
 
-
 ifdef PRINT_SCREEN
 CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=$(PRINT_SCREEN)
 else
 CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=1
+endif
+
+ifdef IPI_SUPPORT
+# This flag enables that code that
+# makes it possible for threads to
+# send and receive IPI interrupts.
+CFLAGS:= $(CFLAGS) -DIPI_SUPPORT
 endif
 
 ################################# NB CALQUEUE ##########################
@@ -200,7 +206,9 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=phold
 
-CORE_SOURCES=core/trampoline.S\
+CORE_SOURCES=core/jmp.S\
+		core/trampoline.S\
+		core/ipi_ctrl.c\
 		core/core.c\
 		core/calqueue.c\
 		core/nb_calqueue.c\

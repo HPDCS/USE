@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sched.h>
+#include <setjmp.h>
 #include <pthread.h>
 #include <string.h>
 //#include <immintrin.h> //supporto transazionale
@@ -29,6 +30,7 @@
 #include "nb_calqueue.h"
 #include "simtypes.h"
 #include "lookahead.h"
+#include "jmp.h"
 #include "ipi_ctrl.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
@@ -61,6 +63,13 @@ __thread unsigned int check_ongvt_period = 0;
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
+#ifdef IPI_SUPPORT
+__thread jmp_buf env;
+__thread cntx_buf cntx;
+#endif
+
+__thread unsigned long interruptible_section_start = 0UL;
+__thread unsigned long interruptible_section_end = 0UL;
 
 //timer
 #if REPORT == 1
@@ -516,8 +525,11 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int empty_fetch = 0;
 #endif
 
-	/* TODO: update text_start/end values */
-	ipi_register_thread(thread_id, cfv_trampoline, 0x0UL, 0x0UL);
+#ifdef IPI_SUPPORT
+	unsigned int first_iteration = 1;
+#endif
+
+	ipi_register_thread(thread_id, cfv_trampoline, interruptible_section_start, interruptible_section_end);
 
 	init_simulation(thread_id);
 
@@ -532,7 +544,27 @@ void thread_loop(unsigned int thread_id) {
 				) 
 				&& !sim_error
 		) {
-		
+
+#ifdef IPI_SUPPORT
+		if (first_iteration)
+		{
+			first_iteration = 0;
+
+			if (setjmp(env))
+			{
+				/*
+				 * We will return to this point in the
+				 * execution upon a longjmp invocation
+				 * with same "jmp_buf" data.
+				 *
+				 * USE THIS BRANCH TO RESET ANY GLOBAL
+				 * AND LOCAL VARIABLE THAT MAY RESULT
+				 * INCONSISTENT AFTER "longjmp" CALL. 
+				 */
+			}
+		}
+#endif
+
 		///* FETCH *///
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);

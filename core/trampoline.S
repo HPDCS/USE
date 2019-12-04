@@ -1,31 +1,61 @@
 .file	"trampoline.S"
-		.text
+.text
 
-.globl	cfv_trampoline
-		.type	cfv_trampoline, @function
-
+.align 4
+.globl cfv_trampoline
+.type cfv_trampoline, @function
 cfv_trampoline:
 
-	# save RAX
+	/* save RAX */
 	pushq		%rax
 
-	# save FLAGS
+	/* save FLAGS */
 	lahf
 	seto		%al
 	pushq		%rax
 
-	# TODO: additional filters should be placed here;
-	#       before giving control to the USE function
-	#       in charge of performing rollbacks
+	/* save RDI */
+	pushq		%rdi
 
-	# restore FLAGS
+	/* %rdi <--- context_buffer */
+	movq		%fs:0, %rdi
+	addq		cntx@gottpoff(%rip), %rdi
+
+	/* SAVES CURRENT CONTEXT */
+	call		_set_jmp
+
+	/* retval_of(_set_jmp) != 0 ? */
+	testl		%eax, %eax
+	jnz			.L1
+
+	/*************** TODO *****************
+	*                                     *
+	*  call    use_check_lp_is_not_valid  *
+	*                                     *
+	**************************************/
+
+	/* %rsi <--- 1 */
+	movq		$0x1, %rsi
+
+	/* %rdi <--- context_buffer */
+	movq		%fs:0, %rdi
+	addq		cntx@gottpoff(%rip), %rdi
+
+	/* RESTORES CURRENT CONTEXT */
+	call		_long_jmp
+
+.L1:
+	/* restore RDI */
+	popq		%rdi
+
+	/* restore FLAGS */
 	popq		%rax
 	addb		$0x7f, %al
 	sahf
 
-	# restore RAX
+	/* restore RAX */
 	popq		%rax
 
 	retq
 
-.size	cfv_trampoline, .-cfv_trampoline
+.size cfv_trampoline, .-cfv_trampoline
