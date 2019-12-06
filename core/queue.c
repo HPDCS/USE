@@ -65,14 +65,6 @@ void print_lp_id_in_thread_pool_list(){
 void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
 
-#if IPI==1
-    //initialize collision_list
-    for (int i=0; i<THR_HASH_TABLE_SIZE; i++)
-    {
-        _thr_pool.collision_list[i]=NULL;
-    }
-#endif
-
 }
 
 void unsafe_set_init(){
@@ -122,6 +114,8 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 
 
 #if IPI==1
+    //event state set to NEW_EVT in queue_deliver_msgs
+
     //insert msg with minimum timestamp in collision list(if not exist alloc node,if exist swap if it has smaller timestamp
     int index=msg_ptr->receiver_id%THR_HASH_TABLE_SIZE;//return index of hash table
     struct node**head=&(_thr_pool.collision_list[index]);//head of collision list
@@ -134,16 +128,19 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
             if( (msg_ptr->timestamp < msg->timestamp )
             || ( (msg_ptr->timestamp == msg->timestamp ) && (msg_ptr->tie_breaker <= msg->tie_breaker) ) ){
                 p->data=msg_ptr;
-                return;
+                break;
             }
             //same LP but greater timestamp
-            return;
+            break;
         }
         p=p->next;
     }
-    //LP not found,add element to collision list
-    struct node*new_node=get_new_node(msg_ptr);
-    insert_at_head(new_node,head);
+    if(p==NULL){
+        //LP not found,add element to collision list
+        struct node*new_node=get_new_node(msg_ptr);
+        insert_at_head(new_node,head);
+    }
+    
 #endif
 
 }

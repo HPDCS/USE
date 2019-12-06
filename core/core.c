@@ -402,8 +402,13 @@ void init_simulation(unsigned int thread_id){
 	to_remove_local_evts_old = new_list(tid, msg_t);
 	freed_local_evts = new_list(tid, msg_t);
 
-
-
+#if IPI==1
+    //initialize collision_list
+    for (int i=0; i<THR_HASH_TABLE_SIZE; i++)
+    {
+        _thr_pool.collision_list[i]=NULL;
+    }
+#endif
 	
 	if(tid == 0){
 		LPs_metada_init();
@@ -580,6 +585,15 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+#if IPI==1
+#if DEBUG==1
+		if( (current_evt_state!=ANTI_MSG) && (current_evt_state!= EXTRACTED) ){
+			printf("current_evt_state=%lld\n",current_evt_state);
+			gdb_abort;
+		}
+#endif
+#endif
 		
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
@@ -608,9 +622,14 @@ void thread_loop(unsigned int thread_id) {
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
+
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
+
+#if IPI==1
+rollback://if current_msg is in past then go to rollback!
+#endif
 
 	#if DEBUG == 1
 			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG) {
@@ -650,6 +669,7 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 		if(current_evt_state == ANTI_MSG) {
+
 			current_msg->monitor = (void*) 0xba4a4a;
 
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
@@ -673,6 +693,15 @@ void thread_loop(unsigned int thread_id) {
 		
 		// The current_msg should be allocated with list allocator
 		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
+
+		#if IPI==1
+		#if DEBUG==1
+			if(current_msg->frame!=0){
+				printf("event not connected to localqueue,but it was executed!!!\n");
+				gdb_abort;
+			}
+		#endif
+		#endif
 	#if DEBUG == 1 
 			msg_t *bound_t, *next_t;
 			bound_t = LPS[current_lp]->bound;
@@ -711,12 +740,12 @@ void thread_loop(unsigned int thread_id) {
 #if DEBUG==1
     if(_thr_pool._thr_pool_count!=0){
         printf("not empty collision list\n");
-        abort();
+        gdb_abort;
     }
     for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
         if(_thr_pool.collision_list[i]!=NULL){
             printf("not empty collision list\n");
-            abort();
+            gdb_abort;
         }
     }
 
@@ -731,6 +760,28 @@ void thread_loop(unsigned int thread_id) {
 
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
+		
+		#if IPI==1
+		#if DEBUG==1
+		if(current_msg->state==ANTI_MSG){
+			LPS[current_lp]->bound = current_msg;//now current_msg is ANTI_MSG in past
+			current_msg->frame = LPS[current_lp]->num_executed_frames;//now current_msg is ANTI_MSG in past EXECUTED
+			LPS[current_lp]->num_executed_frames++;
+			//free collision_list
+			for(i = 0; i < THR_HASH_TABLE_SIZE; i++) {
+	        	if(_thr_pool.collision_list[i]!=NULL){
+	            	free_memory_list(_thr_pool.collision_list[i]);
+	            	_thr_pool.collision_list[i]=NULL;
+	        	}
+	        }
+	        //free thread pool
+	        queue_clean();
+			goto rollback;
+			//è possibile non aumentare l'epoca perché non vengono prodotti eventi figli, in realtà se viene aumentata non è un problema
+			//quindi posso chiamare la funzione di rollback cosi come è
+		}
+		#endif
+		#endif
 
 #if IPI==1
 
@@ -748,12 +799,12 @@ void thread_loop(unsigned int thread_id) {
 #if DEBUG==1
     if(_thr_pool._thr_pool_count!=0){
         printf("not empty collision list\n");
-        abort();
+        gdb_abort;
     }
     for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
         if(_thr_pool.collision_list[i]!=NULL){
             printf("not empty collision list\n");
-            abort();
+            gdb_abort;
         }
 
     }

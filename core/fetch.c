@@ -41,6 +41,9 @@
 #include "prints.h"
 #include "timer.h"
 
+#if IPI==1
+#include <time.h>
+#endif
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
@@ -123,7 +126,7 @@
 #if IPI==1
 void swap_with_best_evt(simtime_t min,simtime_t min_tb){
     //don't swap events seeing only timestamps:minimm timestamp must be relative to an event to be processed
-    //don't swap if minimum timestamp is relative to an event to be "ignored"
+    //hence don't swap if minimum timestamp is relative to an event to be "ignored"
     simtime_t timestamp_reliable,timestamp_unreliable,ts;
     unsigned short tie_breaker_reliable,tie_breaker_unreliable,tb;
     timestamp_reliable=INFTY;//double max
@@ -174,7 +177,105 @@ void swap_with_best_evt(simtime_t min,simtime_t min_tb){
     }
     return;
 }
-#endif
+
+
+msg_t*update_evt_state(msg_t*evt,bool must_check_curr_evt_state){
+	msg_t *new_evt=NULL;
+	if(!must_check_curr_evt_state){
+		new_evt=evt;
+	}
+	else{
+		new_evt=0x4;//todo
+	return new_evt;
+}
+
+msg_t*swap_with_best_event(msg_t*curr_evt,bool from_new_evt_to_extracted,bool must_check_curr_evt_state){
+	//assumiamo per il momento che l'informazione postata per LP viene postata solo quando vengono prodotti dei nuovi eventi
+	//di un evento specifico,quindi lo stato dell'evento postato inizialmente è NEW_EVT e siccome viene utilizzata solo da lui
+	//non può diventare or extracted perché in quel caso l'informazione viene utilizzata e resettata
+	//restore state of current if other events are best.
+	msg_t *best_evt_reliable=LPS[current_lp]->best_evt_reliable;
+    msg_t *best_evt_unreliable=LPS[current_lp]->best_evt_unreliable;
+    msg_t best_evt;
+    
+    //ritorna il nuovo evento da eseguire con lo stato eventualmente modificato o null
+    if(curr_evt==NULL && best_evt_reliable ==NULL){
+    	//no infos,return NULL
+    	return NULL;
+    }
+    if(curr_evt==NULL && best_evt_reliable!=NULL){
+    	//no need to check if curr_state must be restorered,because curr_evt is NULL
+    	#if DEBUG==1
+    		if(best_evt_reliable->state==ANTI_MSG || best_evt_reliable->state==EXTRACTED){
+    			gdb_abort;
+    		}
+    	#endif
+    	CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
+            (unsigned long)best_evt_reliable,(unsigned long)NULL);
+    	LPS[current_lp]->num_times_choosen_best_evt_reliable++;
+    	return update_evt_state(best_evt_reliable,true);
+    }
+    //curr_evt!=NULL
+    if(best_evt_reliable==NULL){//best event is curr_evt
+    	//no need to check if curr_state must be restorered,because curr_evt is best
+    	return update_evt_state(curr_evt,must_check_curr_evt_state);
+    }
+    else{//curr_evt!=NULL and best_evt_reliable !=NULL
+    	#if DEBUG==1
+    			if(best_evt_reliable->state==ANTI_MSG || best_evt_reliable->state==EXTRACTED){
+    				gdb_abort;
+    			}
+    		#endif
+    	if(curr_evt==best_evt_reliable){
+    		CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
+            (unsigned long)best_evt_reliable,(unsigned long)NULL);
+            //not increment counter,i don't have used information
+    		return update_evt_state(curr_evt,must_check_curr_evt_state);
+    	}
+    	//curr_evt!=NULL and best_evt_reliable !=NULL and are different events
+    	//for now it can be NEW_EVT or ELIMINATED
+
+    	if(best_evt_reliable->state==ELIMINATED){
+    		//eliminalo dalla coda, è safe farlo qui oppure ignora??
+    		//if(delete(nbcalqueue, node)){vedere bene come fare la delete e se è importante il valore dell'if
+			//	list_node_clean_by_content(event);
+			//	list_insert_tail_by_content(to_remove_local_evts, event);
+			//}
+    		CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
+            (unsigned long)best_evt_reliable,(unsigned long)NULL);
+    		//no need to check if curr_state must be restorered,because curr_evt is best
+    		return update_evt_state(curr_evt,must_check_curr_evt_state);
+    		}
+    	}
+    	//state of best_evt_reliable is not ELIMINATED,is NEW_EVT(actual state can be changed from other threads)
+    	if(best_evt_reliable->timestamp > curr_evt->timestamp){//curr has best_timestamp
+    		if(!must_check_curr_evt_state)
+    			//no need to check if curr_state must be restorered,because curr_evt is best
+    			return curr_evt;
+    		else{
+    			//potrei potenzialmente cambiare entrambi gli stati e solo successivamente scegliere il migliore
+    			//ho verificato che non è eliminato,verosimilmente non rimarrà eliminato, in ogni caso per ora scelgo di non usare l'informazione,prendo quella più prioritaria
+    			return update_evt_state(curr_evt,must_check_curr_evt_state);
+    		}
+    		
+    	}
+    	else{//timestamp dell'evento reliable è minore
+
+    		//potrei potenzialmente cambiare entrambi gli stati e solo successivamente scegliere il migliore
+    		//ho verificato che non è eliminato,verosimilmente non rimarrà eliminato, in ogni caso per ora scelgo di usare l'informazione,prendo quella più prioritaria
+    		if(from_new_evt_to_extracted){//restore event state to NEW_EVT
+    			CAS_x86((unsigned long long*)&(curr_evt->state),EXTRACTED,NEW_EVT);
+    			//se lo swap è avvenuto ok,altrimenti è diventato anti_msg eliminalo as banana
+    		}
+    		CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
+            (unsigned long)best_evt_reliable,(unsigned long)NULL);
+            LPS[current_lp]->num_times_choosen_best_evt_reliable++;
+    		return update_evt_state(best_evt_reliable,true);
+    	}
+    }
+    return NULL;//never reached
+}
+#endif//IPI
 
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #if DEBUG == 1
@@ -345,8 +446,9 @@ unsigned int fetch_internal(){
 		///* VALID *///
 		if(validity){ 
 			if(curr_evt_state == EXTRACTED && in_past){
+			//cristian:valid event extracted and in past,or now it is in "executed" state or eventually will be executed from another thread
 				///* COMMIT *///
-				if(safe && event->frame != 0){
+				if(safe && event->frame != 0){//cristian:this event is safe and executed,can be committed
 				#if DEBUG == 1
 					event->gvt_on_commit = min;
 					event->event_on_gvt_on_commit = (msg_t *)min_node->payload;
@@ -354,6 +456,7 @@ unsigned int fetch_internal(){
 					do_commit_outside_lock_and_goto_next(event, node, lp_idx);
 				}
 				///* EXECUTED AND UNSAFE *///
+				//cristian:it can be in state "not executed" or(not exclusive) "not safe", ignore it
 				else{ 
 					read_new_min = false;
 					do_skip_outside_lock_and_goto_next(lp_idx);
@@ -364,15 +467,15 @@ unsigned int fetch_internal(){
 		///* NOT VALID *///
 		else{
 			///* MARK NON VALID NODE *///
-			if((curr_evt_state & ELIMINATED) == 0){
-				curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
+			if((curr_evt_state & ELIMINATED) == 0){//cristian:state "new_evt" or(exclusive) "extracted"
+				curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);//cristian:"eliminated" or(exclusive) "anti_msg"
 			}
 			///* DELETE ELIMINATED *///
-			if(curr_evt_state == ELIMINATED){
+			if(curr_evt_state == ELIMINATED){//cristian:state is eliminated, remove it from calqueue
 				do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED	
 			}
 			///* DELETE BANANA NODE *///
-			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){
+			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){//cristian:state is anti_msg and it is handled, remove it from calqueue
 				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
 			}
 			
@@ -436,43 +539,80 @@ unsigned int fetch_internal(){
 					//node = (void*)0x1;//local_next_evt->node;
 					from_get_next_and_valid = true;
 					ts = event->timestamp;
-					//non va ricalcolato il tb rispetto al local_next_evt che è event???
+					//cristian:non va ricalcolato il tb rispetto al local_next_evt che è event???
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
 				curr_evt_state = event->state;
 
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
-				if(curr_evt_state == 0x0) {
-					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){
+				if(curr_evt_state == 0x0) {//cristian:state is new_evt
+					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){//cristian:after sync_or_and_fetch new state is EXTRACTED or(exclusive) ANTI_MSG
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
-						set_commit_state_as_banana(event);
+						set_commit_state_as_banana(event);//cristian:ANTI_MSG never executed from state NEW_EVT->mark as handled and remove from calqueue
 						do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx); 		//<<-ELIMINATED
 					}
-					else {
+					else {//cristian:state is changed to extracted,only this thread with lock can change this state from new_evt to extracted
+						//cristian:this event extracted can be in the past or future,but is never been executed so return it to simulation loop
 						return_evt_to_main_loop();
 					}
 				}
 				///* VALID AND NOT EXECUTED AND LOCK TAKEN AND EXTRACTED *///
-				else if(curr_evt_state == EXTRACTED){
-					if(in_past){
+				else if(curr_evt_state == EXTRACTED){//event is not new_evt in fact it is extracted previously from another thread(only lock owner can change state to extracted!!)
+					if(in_past){//cristian:this event valid+extracted+in past was executed from another thread,ignore it
+						#if IPI==1
+
+						#if DEBUG ==1
+							if(event->frame==0){
+								printf("event EXTRACTED in past not EXECUTED\n");
+								gdb_abort;
+							}
+						#endif
+
+						#endif
 						do_skip_inside_lock_and_goto_next(lp_idx);
 					}
-					else{
+					else{//cristian:this event valid+extracted+in future must be executed,return it to simulation loop
+						
+						#if IPI==1
+
+						#if DEBUG ==1
+							if(event->frame==0){
+								printf("event EXTRACTED in future never EXECUTED\n");
+								gdb_abort;
+							}
+						#endif
+
+						#endif
 						return_evt_to_main_loop();
+						
 					}
 				}
-				else if(curr_evt_state == ANTI_MSG){
-					if(!in_past){
+				//cristian:2 chance:anti_msg in future, anti_msg in past
+				else if(curr_evt_state == ANTI_MSG){//cristian:state is anti_msg,remark:we have the lock,lp's bound is freezed,an event in past/future remain concurrently in past/future
+					if(!in_past){//cristian:anti_msg in the future,mark it as handled
 						set_commit_state_as_banana(event);
 					}
 
-					if(event->monitor == (void*) 0xba4a4a){
+					if(event->monitor == (void*) 0xba4a4a){//cristian:if event in state anti_msg is mark as handled remove it from calqueue
+						//cristian:now an event anti_msg in the future is marked as handled
 						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
-					else
+					else//cristian:event anti_msg in past not handled,return it to simulation_loop:
+						//cristian:if it is anti_msg,then another thread
+						//in the past (in wall clock time) has changed its state to extracted and executed it!!!!
+					 	#if IPI==1
+
+						#if DEBUG ==1
+							if(event->frame==0){
+								printf("event ANTI_MSG in past not EXECUTED\n");
+								gdb_abort;
+							}
+						#endif
+
+						#endif
 						return_evt_to_main_loop();
 				}
-				else if(curr_evt_state == ELIMINATED){
+				else if(curr_evt_state == ELIMINATED){//cristian:state is eliminated,remove it from calqueue
 					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED
 				}
 				
@@ -481,35 +621,39 @@ unsigned int fetch_internal(){
 			else {
 								
 				///* MARK NON VALID NODE *///
-				if( (curr_evt_state & ELIMINATED) == 0 ){ 
-					curr_evt_state = __sync_or_and_fetch(&(event->state),ELIMINATED);
+				if( (curr_evt_state & ELIMINATED) == 0 ){ //cristian:state is "new_evt" or(exclusive) "extracted"
+					//event is invalid but current_state is considered valid, set event_state in order to invalidate itself
+					curr_evt_state = __sync_or_and_fetch(&(event->state),ELIMINATED);//cristian:new state is "eliminated" or(exclusive) "anti_msg"
 				}
 
 				///* DELETE ELIMINATED *///
-				if( (curr_evt_state & EXTRACTED) == 0 ){
+				if( (curr_evt_state & EXTRACTED) == 0 ){//cristian:state is "new_evt" or(exclusive) "eliminated", but if it is 
+					//cristian:new_evt it was changed to eliminated in the previous branch!!!so the event state is eliminated!!!!
 					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);					//<<-ELIMINATED
 				}
-				else{
+				else{//cristian:the event state is not eliminated,new_evt or extracted,so state event must be anti_msg!!!!
 			#if DEBUG==1
 					assert(curr_evt_state == ANTI_MSG);
 			#endif
 					///* ANTI-MESSAGE IN THE FUTURE*///
-					if(!in_past){
+					if(!in_past){//cristian:anti_msg in the future,mark it as handled
 							set_commit_state_as_banana(event);
 					}	
 
 					///* DELETE BANANA NODE *///
-					if(event->monitor == (void*) 0xba4a4a){
+					if(event->monitor == (void*) 0xba4a4a){//cristian:anti_msg handled,remove it from calqueue
 						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 					}
 					///* ANTI-MESSAGE IN THE PAST*///
-					else{
+					else{//cristian:anti_msg in past not handled,return it to simulation loop
+						//cristian:if it is anti_msg,then another thread
+						//in the past (in wall clock time) has changed its state to extracted and executed it!!!!
 						return_evt_to_main_loop();
 					}
 				}
 			}
 		}
-		else {
+		else {//cristian:try lock failed,lock is already locked,add current_lp(lp_idx) to lp_unsafe_set,lp_locked_set
 			read_new_min = false;
 			add_lp_unsafe_set(lp_idx);
 
@@ -522,6 +666,7 @@ unsigned int fetch_internal(){
 get_next:
 		// GET NEXT NODE PRECEDURE
 		// From this point over the code is to retrieve the next event on the queue
+		//cristian:retrieve next_node from calqueue that it is visible to simulation yet.
 		do {
 			node_next = node->next;
 			if(is_marked(node_next, MOV) || node->replica != NULL) {
@@ -576,10 +721,38 @@ get_next:
     current_msg =  event;//(msg_t *) node->payload;
     current_node = node;
 
-#if IPI==1
-    current_lp = current_msg->receiver_id;
-    swap_with_best_evt(min,min_tb);
-#endif
+/*#if IPI==1
+    if(lp_idx!=current_msg->receiver_id){
+    	printf("invalid lp idx\n");
+    	gdb_abort;
+    }
+    //current_lp = current_msg->receiver_id;
+    lp_ptr = LPS[lp_idx];
+    if(current_msg->state==EXTRACTED){
+    	ts = current_msg->timestamp;
+		tb = current_msg->tie_breaker;
+		if(bound_ptr != lp_ptr->bound){
+			printf("invalid bound_ptr\n");
+			gdb_abort;
+		}
+		bound_ptr = lp_ptr->bound;
+		lvt_ts = bound_ptr->timestamp; 
+		lvt_tb = bound_ptr->tie_breaker;
+		in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
+    	if(current_msg->frame==0 && in_past){
+    		srand(time(NULL));   // Initialization, should only be called once.
+    		int random_num=((int)rand())%20;// Returns a pseudo-random integer between 0 and RAND_MAX,[0,20-1] 
+    		if(random_num<=2){
+    		//skip/ignore this event and execute again fetch_internal_function
+    			printf("event extracted in past not executed\n");
+    			unlock(lp_idx);//unlock lp
+    			fetch_internal();//retry fetch_internal
+    		}
+    	}
+    	
+    }
+    //swap_with_best_evt(min,min_tb);
+#endif*/
 
 
 #if REPORT == 1
