@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sched.h>
-#include <setjmp.h>
 #include <pthread.h>
 #include <string.h>
 //#include <immintrin.h> //supporto transazionale
@@ -64,7 +63,7 @@ __thread unsigned int check_ongvt_period = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
 #ifdef IPI_SUPPORT
-__thread jmp_buf env;
+__thread cntx_buf cntx_loop;
 __thread cntx_buf cntx;
 #endif
 
@@ -550,7 +549,7 @@ void thread_loop(unsigned int thread_id) {
 		{
 			first_iteration = 0;
 
-			if (setjmp(env))
+			if (set_jmp(&cntx_loop))
 			{
 				/*
 				 * We will return to this point in the
