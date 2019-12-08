@@ -93,9 +93,6 @@ CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=1
 endif
 
 ifdef IPI_SUPPORT
-# This flag enables that code that
-# makes it possible for threads to
-# send and receive IPI interrupts.
 CFLAGS:= $(CFLAGS) -DIPI_SUPPORT
 endif
 
