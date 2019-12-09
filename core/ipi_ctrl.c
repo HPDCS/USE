@@ -17,8 +17,8 @@
 #define IPI_SET_TEXT_END            (1U << 7)
 
 
-int ipi_register_thread(int, unsigned long, unsigned long, unsigned long);
-int ipi_unregister_thread(void);
+int ipi_register_thread(int, unsigned long, void **, unsigned long, unsigned long, unsigned long);
+int ipi_unregister_thread(void **);
 
 
 static __thread int fd;
