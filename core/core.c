@@ -528,8 +528,8 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int first_iteration = 1;
 #endif
 
-	ipi_register_thread(thread_id, cfv_trampoline, &alternate_stack, alternate_stack_area,
-							interruptible_section_start, interruptible_section_end);
+	ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
+		alternate_stack_area, interruptible_section_start, interruptible_section_end);
 
 	init_simulation(thread_id);
 
