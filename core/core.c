@@ -67,7 +67,7 @@ __thread cntx_buf cntx_loop;
 __thread int ipi_registration_error = 0;
 
 __thread void * alternate_stack = NULL;
-__thread unsigned long alternate_stack_area = 0UL;
+__thread unsigned long alternate_stack_area = 4096UL;
 
 __thread unsigned long interruptible_section_start = 0UL;
 __thread unsigned long interruptible_section_end = 0UL;
