@@ -628,7 +628,9 @@ void thread_loop(unsigned int thread_id) {
 			) {
 
 #if IPI==1
+#if CHECK_ROLLBACK_AFTER_EXECUTION==1
 rollback://if current_msg is in past then go to rollback!
+#endif
 #endif
 
 	#if DEBUG == 1
@@ -702,6 +704,7 @@ rollback://if current_msg is in past then go to rollback!
 			}
 		#endif
 		#endif
+
 	#if DEBUG == 1 
 			msg_t *bound_t, *next_t;
 			bound_t = LPS[current_lp]->bound;
@@ -762,13 +765,20 @@ rollback://if current_msg is in past then go to rollback!
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 		
 		#if IPI==1
-		#if DEBUG==1
-		if(current_msg->state==ANTI_MSG){
+		#if CHECK_ROLLBACK_AFTER_EXECUTION==1//if is 2 not
+		if(current_msg->state==ANTI_MSG){//read again event state,if is changed it is ANTI_MSG(from EXTRACTED to ANTI_MSG)
+			printf("rollback in time\n");
+			// re-update event information
+			current_lp = current_msg->receiver_id;	// LP index
+			current_lvt = current_msg->timestamp;	// Local Virtual Time
+			current_evt_state   = current_msg->state;//current_evt_state
+			current_evt_monitor = current_msg->monitor;
+
 			LPS[current_lp]->bound = current_msg;//now current_msg is ANTI_MSG in past
 			current_msg->frame = LPS[current_lp]->num_executed_frames;//now current_msg is ANTI_MSG in past EXECUTED
 			LPS[current_lp]->num_executed_frames++;
 			//free collision_list
-			for(i = 0; i < THR_HASH_TABLE_SIZE; i++) {
+			for(unsigned i = 0; i < THR_HASH_TABLE_SIZE; i++) {
 	        	if(_thr_pool.collision_list[i]!=NULL){
 	            	free_memory_list(_thr_pool.collision_list[i]);
 	            	_thr_pool.collision_list[i]=NULL;

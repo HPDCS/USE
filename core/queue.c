@@ -126,7 +126,12 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         msg=(msg_t*)p->data;
         if(msg_ptr->receiver_id == msg->receiver_id){
             if( (msg_ptr->timestamp < msg->timestamp )
-            || ( (msg_ptr->timestamp == msg->timestamp ) && (msg_ptr->tie_breaker <= msg->tie_breaker) ) ){
+            // || ( (msg_ptr->timestamp == msg->timestamp ) && (msg_ptr->tie_breaker <= msg->tie_breaker) ) 
+            //tie_breaker not exist yet:if 2 events (for same LP) have same minimum timestamp,keep pointer to first
+            //it is correct because "child" events are generated sequentially in respect of father's execution
+            //and these events are flushed to calqueue in order,so first event will has minimum tie_breaker
+            //in respect of other events same timestamp same LP(generated from same father event)
+            ){
                 p->data=msg_ptr;
                 break;
             }
@@ -172,64 +177,10 @@ void queue_deliver_msgs(void) {
     unsigned int i;
     //simtime_t max = current_msg->timestamp; //potrebbe essere fatto direttamente su current_msg->max_outgoing_ts
     
+//cristian:first flush event to calqueue,then post informations per LP
+//flush all events generated to calqueue
 #if REPORT == 1
 		clock_timer queue_op;
-#endif
-#if IPI == 1
-    for(i = 0; i < THR_HASH_TABLE_SIZE; i++) {
-        struct node**head=&(_thr_pool.collision_list[i]);
-        struct node*p=*head;
-        msg_t *msg,*msg_dest_LP;
-        while(p!=NULL){
-            msg=(msg_t*)p->data;
-            unsigned short lp_id=msg->receiver_id;
-
-            while(1){
-                if(safe){
-                    msg_dest_LP=LPS[lp_id]->best_evt_reliable;
-                    if(msg_dest_LP==NULL){
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
-                            (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
-                            continue;
-                    }
-                    else if( (msg->timestamp < msg_dest_LP->timestamp)
-                    || ( (msg->timestamp == msg_dest_LP->timestamp) && (msg->tie_breaker<=msg_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
-                                (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
-                            continue;
-                    }
-                    //modified
-                    atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
-                    break;
-                }
-                else{//not safe
-                    msg_dest_LP=LPS[lp_id]->best_evt_unreliable;
-                    if(msg_dest_LP==NULL){
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
-                            (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
-                            continue;
-                    }
-                    else if( (msg->timestamp < msg_dest_LP->timestamp)
-                    || ( (msg->timestamp == msg_dest_LP->timestamp) && (msg->tie_breaker<=msg_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
-                                (unsigned long)msg_dest_LP,(unsigned long)msg)==0)
-                            continue;
-                    }
-                    //modified
-                    atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));
-                    break;
-                }
-            }
-            p=p->next;
-        }
-
-        //free collision_list
-        if(_thr_pool.collision_list[i]!=NULL){
-            free_memory_list(_thr_pool.collision_list[i]);
-            _thr_pool.collision_list[i]=NULL;
-        }
-    }
-
 #endif
 
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
@@ -279,6 +230,72 @@ void queue_deliver_msgs(void) {
     }
 
     _thr_pool._thr_pool_count = 0;
+
+//post per LP information if needed
+//when event is flushed to calqueue it has also tie_breaker info
+#if IPI == 1
+    for(i = 0; i < THR_HASH_TABLE_SIZE; i++) {
+        struct node**head=&(_thr_pool.collision_list[i]);
+        struct node*p=*head;
+        msg_t *msg,*msg_dest_LP;
+        while(p!=NULL){
+            msg=(msg_t*)p->data;
+            unsigned short lp_id=msg->receiver_id;
+
+            while(1){
+                //father event is safe?
+                if(safe){//safe info is overwrited only in fetch_internal() function
+                    msg_dest_LP=LPS[lp_id]->best_evt_reliable;
+                    if(msg_dest_LP==NULL){
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                            (unsigned long)msg_dest_LP,(unsigned long)msg)==0)//CAS failed
+                            continue;
+                        //information modified
+                        atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
+                    }
+                    else if( (msg->timestamp < msg_dest_LP->timestamp)
+                        //check also tie_breaker,here tie_breaker is valid information
+                    || ( (msg->timestamp == msg_dest_LP->timestamp) && (msg->tie_breaker<=msg_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                                (unsigned long)msg_dest_LP,(unsigned long)msg)==0)//CAS failed
+                            continue;
+                        //information modified
+                        atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
+                    }
+                    break;//timestamp is greater,exit
+                }
+                else{//not safe
+                    msg_dest_LP=LPS[lp_id]->best_evt_unreliable;
+                    if(msg_dest_LP==NULL){
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
+                            (unsigned long)msg_dest_LP,(unsigned long)msg)==0)//CAS failed
+                            continue;
+                        //modified
+                        atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));
+                    }
+                    else if( (msg->timestamp < msg_dest_LP->timestamp)
+                    //check also tie_breaker,here tie_breaker is valid information
+                    || ( (msg->timestamp == msg_dest_LP->timestamp) && (msg->tie_breaker<=msg_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
+                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
+                                (unsigned long)msg_dest_LP,(unsigned long)msg)==0)//CAS failed
+                            continue;
+                        //modified
+                        atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));
+                    }
+                    break;//timestamp is greater,exit
+                }
+            }
+            p=p->next;
+        }
+
+        //free collision_list info
+        if(_thr_pool.collision_list[i]!=NULL){
+            free_memory_list(_thr_pool.collision_list[i]);
+            _thr_pool.collision_list[i]=NULL;
+        }
+    }
+
+#endif
 }
 
 
