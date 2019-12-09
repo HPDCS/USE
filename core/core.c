@@ -64,6 +64,8 @@ __thread unsigned int check_ongvt_period = 0;
 
 __thread cntx_buf cntx_loop;
 
+__thread int ipi_registration_error = 0;
+
 __thread void * alternate_stack = NULL;
 __thread unsigned long alternate_stack_area = 0UL;
 
@@ -528,7 +530,7 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int first_iteration = 1;
 #endif
 
-	ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
+	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
 		alternate_stack_area, interruptible_section_start, interruptible_section_end);
 
 	init_simulation(thread_id);
@@ -820,7 +822,8 @@ end_loop:
 	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
 
-	ipi_unregister_thread(&alternate_stack);
+	if (!(ipi_registration_error))
+		ipi_unregister_thread(&alternate_stack);
 
 	// Unmount statistical data
 	// FIXME
