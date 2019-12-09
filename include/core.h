@@ -109,6 +109,8 @@ extern LP_state **LPS;
 extern volatile bool stop;
 extern unsigned int sec_stop;
 
+extern void cfv_trampoline(void);
+
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
 //void init(unsigned int _thread_num, unsigned int);
@@ -121,8 +123,6 @@ extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void check_OnGVT(unsigned int lp_idx);
-
-extern void cfv_trampoline(void);
 
 //DEBUG
 extern bool ctrl_commit;	

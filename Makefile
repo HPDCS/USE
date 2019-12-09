@@ -203,9 +203,10 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=phold
 
-CORE_SOURCES=core/jmp.S\
-		core/trampoline.S\
-		core/ipi_ctrl.c\
+ASM_SOURCES=core/jmp.S\
+		core/trampoline.S
+
+CORE_SOURCES=core/ipi_ctrl.c\
 		core/core.c\
 		core/calqueue.c\
 		core/nb_calqueue.c\
@@ -233,6 +234,7 @@ REVERSE_SOURCES=reverse/reverse.c\
 
 
 MM_OBJ=$(MM_SOURCES:.c=.o)
+ASM_OBJ=$(ASM_SOURCES:.S=.o)
 CORE_OBJ=$(CORE_SOURCES:.c=.o)
 REVERSE_OBJ=$(REVERSE_SOURCES:.c=.o)
 
@@ -276,7 +278,7 @@ robot_explore: clean _robot_explore executable
 hash: TARGET=hash 
 hash: clean _hash executable
 
-executable: mm core reverse link
+executable: mm asm core reverse link
 
 
 link:
@@ -289,21 +291,24 @@ endif
 ifeq ($(MALLOC),1)
 	cp  model/__application_hijacked.o model/application-mm.o
 #	ld -r -o model/application.o model/__application_hijacked.o  
-#	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o reverse/__reverse.o $(LIBS)
+#	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__asm.o core/__core.o reverse/__reverse.o $(LIBS)
 #	ld -r  -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
-#	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__core.o $(LIBS)
-#	gcc $(CFLAGS) -o $(TARGET) model/__application.o core/__core.o $(LIBS)
+#	gcc $(CFLAGS) -o $(TARGET) model/__application_hijacked.o core/__asm.o core/__core.o $(LIBS)
+#	gcc $(CFLAGS) -o $(TARGET) model/__application.o core/__asm.o core/__core.o $(LIBS)
 else
 	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application_hijacked.o --whole-archive mm/__mm.o
 #	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
-#	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__core.o $(LIBS)
+#	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__asm.o core/__core.o $(LIBS)
 endif
-	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__core.o $(LIBS)
+	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__asm.o core/__core.o $(LIBS)
 
 
 
 mm: $(MM_OBJ)
 	@ld -r -g $(MM_OBJ) -o mm/__mm.o
+
+asm: $(ASM_OBJ)
+	@ld -r -g $(ASM_OBJ) -o core/__asm.o
 
 core: $(CORE_OBJ)
 	@ld -r -g $(CORE_OBJ) -o core/__core.o
