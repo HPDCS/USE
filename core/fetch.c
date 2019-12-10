@@ -257,7 +257,7 @@ unsigned int fetch_internal(){
 		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 		ts = node->timestamp;				// Timestamp of the event under exploration
-		tb = node->counter;					// Timestamp of the event under exploration
+		tb = node->counter;					// Tiebreaker of the event under exploration
 		
 		if(read_new_min){
 			min_node = node;
@@ -373,9 +373,15 @@ unsigned int fetch_internal(){
 					//node = (void*)0x1;//local_next_evt->node;
 					from_get_next_and_valid = true;
 					ts = event->timestamp;
-					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//not work moving on this line!!!
+					tb = node->counter;
+					//the state of the node is set to EXTRACTED because it is the expected one. 
+					//In case it is become ANTI, we lost the update. This is done because we cannot retrieve the relative node.
+					curr_evt_state = EXTRACTED; 
+					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
-				curr_evt_state = event->state;
+				else {
+					curr_evt_state = event->state;
+				}
 
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {
