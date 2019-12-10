@@ -27,7 +27,7 @@ void *start_thread(){
     srand48_r(tid+254, &seedT);
 
 	//START THREAD (definita in core.c)
-	thread_loop(tid, (tid+1)*INCARNATION_DISP);
+	thread_loop(tid);
 
 	pthread_exit(NULL);
 
@@ -74,7 +74,7 @@ void start_simulation() {
     }
 
     //Main thread
-    thread_loop(0,0);
+    thread_loop(0);
 
     for(i = 0; i < n_cores-1; i++){
         pthread_join(p_tid[i], NULL);

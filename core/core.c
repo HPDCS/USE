@@ -87,8 +87,6 @@ unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot;
 
-unsigned int ready_wt = 0;
-
 /* Commit horizon TODO */
  simtime_t gvt = 0;
 /* Average time between consecutive events */
