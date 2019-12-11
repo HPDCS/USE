@@ -526,10 +526,6 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int empty_fetch = 0;
 #endif
 
-#ifdef IPI_SUPPORT
-	unsigned int first_iteration = 1;
-#endif
-
 	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
 		alternate_stack_area, interruptible_section_start, interruptible_section_end);
 
@@ -539,33 +535,28 @@ void thread_loop(unsigned int thread_id) {
 	clock_timer_start(main_loop_time);
 #endif	
 
+#ifdef IPI_SUPPORT
+	if (set_jmp(&cntx_loop))
+	{
+		/*
+		 * We will return to this point in the
+		 * execution upon a longjmp invocation
+		 * with same "jmp_buf" data.
+		 *
+		 * USE THIS BRANCH TO RESET ANY GLOBAL
+		 * AND LOCAL VARIABLE THAT MAY RESULT
+		 * INCONSISTENT AFTER "longjmp" CALL. 
+		 */
+	}
+#endif
+
 	///* START SIMULATION *///
-	while (  
+	while (
 				(
 					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
 				) 
 				&& !sim_error
 		) {
-
-#ifdef IPI_SUPPORT
-		if (first_iteration)
-		{
-			first_iteration = 0;
-
-			if (set_jmp(&cntx_loop))
-			{
-				/*
-				 * We will return to this point in the
-				 * execution upon a longjmp invocation
-				 * with same "jmp_buf" data.
-				 *
-				 * USE THIS BRANCH TO RESET ANY GLOBAL
-				 * AND LOCAL VARIABLE THAT MAY RESULT
-				 * INCONSISTENT AFTER "longjmp" CALL. 
-				 */
-			}
-		}
-#endif
 
 		///* FETCH *///
 #if REPORT == 1
