@@ -2,6 +2,7 @@
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -18,7 +19,7 @@
 
 
 int ipi_register_thread(int, unsigned long, void **, unsigned long, unsigned long, unsigned long);
-int ipi_unregister_thread(void **);
+int ipi_unregister_thread(void **, unsigned long);
 
 
 static __thread int fd;
@@ -28,26 +29,26 @@ static __thread cpu_set_t oldset;
 
 static inline int alloc_alternate_stack_area(void ** stack, unsigned long stack_size)
 {
+    int res = 1;
+
     if (((*stack) = malloc((size_t) stack_size)) != NULL)
-    {
-        /* Here we will place the "mlock" syscall in
-           case the kernel approach would not work. */
+        if (mlock((const void *) (*stack), (size_t) stack_size) == 0)
+            res = 0;
 
-        return 0;
-    }
-
-    return 1;
+    return res;
 }
 
-static inline int free_alternate_stack_area(void ** stack)
+static inline int free_alternate_stack_area(void ** stack, unsigned long alternate_stack_size)
 {
-    /* Here we will place the "munlock" syscall in
-       case the kernel approach would not work. */
+    int res = 1;
+
+    if (munlock((const void *) (*stack), (size_t) alternate_stack_size) == 0)
+        res = 0;
 
     free((*stack));
     (*stack) = NULL;
 
-    return 0;
+    return res;
 }
 
 static inline int pin_thread_to_core(int core)
@@ -131,7 +132,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         printf("Unable to open IPI device. "
         		"Thread will work with no IPI support.\n");
 
-        if (free_alternate_stack_area(alternate_stack))
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
         if (remove_thread_pinning())
@@ -147,7 +148,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         close(fd);
 
-        if (free_alternate_stack_area(alternate_stack))
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
         if (remove_thread_pinning())
@@ -164,7 +165,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
 
-        if (free_alternate_stack_area(alternate_stack))
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
         if (remove_thread_pinning())
@@ -181,7 +182,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
 
-        if (free_alternate_stack_area(alternate_stack))
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
         if (remove_thread_pinning())
@@ -198,7 +199,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
 
-        if (free_alternate_stack_area(alternate_stack))
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
         if (remove_thread_pinning())
@@ -215,7 +216,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
 
-        if (free_alternate_stack_area(alternate_stack))
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
         if (remove_thread_pinning())
@@ -227,7 +228,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
     return 0;
 }
 
-int ipi_unregister_thread(void ** alternate_stack)
+int ipi_unregister_thread(void ** alternate_stack, unsigned long alternate_stack_size)
 {
     int res = 0;
 
@@ -239,7 +240,7 @@ int ipi_unregister_thread(void ** alternate_stack)
 
     close(fd);
 
-    if (alternate_stack != NULL && free_alternate_stack_area(alternate_stack))
+    if (alternate_stack != NULL && free_alternate_stack_area(alternate_stack, alternate_stack_size))
         printf("Unable to free the \"alternate_stack\" memory area.\n");
 
     if (remove_thread_pinning())

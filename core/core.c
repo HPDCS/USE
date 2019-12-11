@@ -547,7 +547,10 @@ void thread_loop(unsigned int thread_id) {
 		 * AND LOCAL VARIABLE THAT MAY RESULT
 		 * INCONSISTENT AFTER "longjmp" CALL. 
 		 */
+		printf("[IPI_4_USE] - We jumped back from an interrupted execution!!!\n");
 	}
+	else
+		printf("[IPI_4_USE] - First time we saved the execution context!!!\n");
 #endif
 
 	///* START SIMULATION *///
@@ -814,7 +817,7 @@ end_loop:
 #endif
 
 	if (!(ipi_registration_error))
-		ipi_unregister_thread(&alternate_stack);
+		ipi_unregister_thread(&alternate_stack, alternate_stack_area);
 
 	// Unmount statistical data
 	// FIXME
