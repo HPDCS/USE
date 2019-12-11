@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <pthread.h>
+#include <string.h>
 
 
 #define IPI_REGISTER_THREAD         (1U << 2)
@@ -31,21 +32,29 @@ static inline int alloc_alternate_stack_area(void ** stack, unsigned long stack_
 {
     int res = 1;
 
-    if (((*stack) = malloc((size_t) stack_size)) != NULL)
-        if (mlock((const void *) (*stack), (size_t) stack_size) == 0)
-            res = 0;
+    if (((*stack) = mmap(NULL, (size_t) stack_size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_STACK, 0, 0)) != MAP_FAILED)
+    {
+        res = 0;
+
+        memset((*stack), 0, (size_t) stack_size);
+
+        if (mlock((const void *) (*stack), (size_t) stack_size) != 0)
+            printf("Unable to lock the \"alternate_stack\" memory area.\n");
+    }
 
     return res;
 }
 
-static inline int free_alternate_stack_area(void ** stack, unsigned long alternate_stack_size)
+static inline int free_alternate_stack_area(void ** stack, unsigned long stack_size)
 {
     int res = 1;
 
-    if (munlock((const void *) (*stack), (size_t) alternate_stack_size) == 0)
+    if (munlock((const void *) (*stack), (size_t) stack_size) != 0)
+        printf("Unable to unlock the \"alternate_stack\" memory area.\n");
+
+    if (munmap((*stack), (size_t) stack_size) == 0)
         res = 0;
 
-    free((*stack));
     (*stack) = NULL;
 
     return res;

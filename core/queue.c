@@ -1,3 +1,5 @@
+/* DEBUG_IPI */
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -156,6 +158,18 @@ void queue_deliver_msgs(void) {
 		clock_timer_start(queue_op);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+
+        /* DEBUG_IPI */
+        unsigned int lcl_tid;
+        for (lcl_tid=0; lcl_tid<n_cores; lcl_tid++)
+        {
+            if (((lp_lock[(new_hole->receiver_id)*CACHE_LINE_SIZE/4]) == (lcl_tid+1)))
+            {
+                // printf("[IPI_4_USE] - Thread %d is sending an IPI to Thread %d with LP %d.\n", tid, lcl_tid, new_hole->receiver_id);
+                if (syscall(174, lcl_tid))
+                    printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+            }
+        }
 
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));

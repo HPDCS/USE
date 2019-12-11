@@ -33,7 +33,7 @@ cfv_trampoline:
 	addq		cntx_loop@gottpoff(%rip), %rdi
 
 	/* RESTORES CURRENT CONTEXT */
-	call		_long_jmp
+	/* call		_long_jmp */
 
 	/*****************************************
 	 * CURRENTLY THIS CONTEXT NEVER RESUMES. *

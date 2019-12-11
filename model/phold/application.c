@@ -11,6 +11,13 @@
 
 //lp_state_type states[4] __attribute__((aligned (64)));
 
+/* DEBUG_IPI */
+void dummy_start_foo(void)
+{
+	return;
+}
+
+
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
@@ -126,6 +133,13 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			abort();
 			break;
 	}
+}
+
+
+/* DEBUG_IPI */
+void dummy_end_foo(void)
+{
+	return;
 }
 	
 

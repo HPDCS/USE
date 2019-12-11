@@ -526,6 +526,10 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int empty_fetch = 0;
 #endif
 
+	/* DEBUG_IPI */
+	interruptible_section_start = (unsigned long) dummy_start_foo;
+	interruptible_section_end = (unsigned long) dummy_end_foo;
+
 	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
 		alternate_stack_area, interruptible_section_start, interruptible_section_end);
 
