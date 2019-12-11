@@ -137,7 +137,12 @@ extern __thread unsigned int TID;
 extern __thread struct drand48_data seedT;
 extern nbc_bucket_node *g_tail;
 
+#if IPI==1
+extern nbc_bucket_node *nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, unsigned int tag);
+#else
 extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, unsigned int tag);
+#endif//IPI
+
 extern void nbc_prune(void);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_bucket, unsigned int elem_per_bucket);
 

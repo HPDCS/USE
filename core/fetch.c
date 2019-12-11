@@ -198,7 +198,8 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 																			}\
 																			goto get_next;	}
 
-#define  do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx)	{	if(delete(nbcalqueue, node)){\
+#define  do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx) {\
+                                                                            if(delete(nbcalqueue, node)){\
 																				list_node_clean_by_content(event);\
 																				list_insert_tail_by_content(to_remove_local_evts, event);\
 																			}\
@@ -731,6 +732,7 @@ msg_t*update_evt_statev3(msg_t*event,bool must_check_evt_state){
 	bool validity, in_past;
 
 	if(!must_check_evt_state){//nop to do
+		printf("nothing to do\n");
 		return event;
 	}
 	else{//taken from fetch_internal try_lock succesful,replace skip/go_next with return NULL and return_main_loop with return event
@@ -944,7 +946,7 @@ msg_t*update_evt_statev3(msg_t*event,bool must_check_evt_state){
 	
 }
 
-static inline void reset_current_LP_infov3(msg_t*evt,bool reliable){
+static void reset_current_LP_infov3(msg_t*evt,bool reliable){
 	if(reliable){
 		CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
     	(unsigned long)evt,(unsigned long)NULL);
@@ -960,7 +962,7 @@ static inline void reset_current_LP_infov3(msg_t*evt,bool reliable){
 	return;
 }
 
-static inline void update_statisticsv3(bool reliable){
+static void update_statisticsv3(bool reliable){
 	if(reliable){
 		LPS[current_lp]->num_times_choosen_best_evt_reliable++;
 	}
@@ -970,15 +972,15 @@ static inline void update_statisticsv3(bool reliable){
 	return;
 }
 
-static inline msg_t*only_curr_to_handlev3(msg_t*curr_evt,bool must_check_curr_evt_state){
+static msg_t*only_curr_to_handlev3(msg_t*curr_evt,bool must_check_curr_evt_state){
 	return update_evt_statev3(curr_evt,must_check_curr_evt_state);
 }
 
-static inline msg_t*only_curr_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state){
+static msg_t*only_curr_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state){
 	return only_curr_to_handlev3(curr_evt,must_check_curr_evt_state);
 }
 
-static inline void restore_evt_statev3(msg_t*evt){
+static void restore_evt_statev3(msg_t*evt){
 	nbc_bucket_node * node;
 	if(CAS_x86((unsigned long long*)&(evt->state),EXTRACTED,NEW_EVT)==0){//CAS failed,event state is ANTI_MSG (from NEW_EVT)
 		set_commit_state_as_banana(evt);//cristian:ANTI_MSG never executed from state NEW_EVT->mark as handled and remove from calqueue
@@ -989,7 +991,7 @@ static inline void restore_evt_statev3(msg_t*evt){
 		}
 	}
 }
-static inline msg_t*only_curr_not_fetchable_and_one_evt_to_handlev3(msg_t*curr_evt,msg_t*evt,bool reliable){
+static msg_t*only_curr_not_fetchable_and_one_evt_to_handlev3(msg_t*curr_evt,msg_t*evt,bool reliable){
 	msg_t*best_evt;
 
 	if(curr_evt==evt){
@@ -1023,19 +1025,21 @@ static inline msg_t*only_curr_not_fetchable_and_one_evt_to_handlev3(msg_t*curr_e
     return NULL;
 }
 
-static inline msg_t*only_curr_and_one_evt_to_handlev3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*evt,bool reliable){
+static msg_t*only_curr_and_one_evt_to_handlev3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*evt,bool reliable){
 	msg_t*best_evt;
-
+	printf("curr=0x%lx,evt=0x%lx\n",curr_evt,evt);
 	if(curr_evt==evt){
+
 		//reset information
-		reset_current_LP_infov3(evt,reliable);
+		printf("same info\n");
+		//reset_current_LP_infov3(evt,reliable);
 		return only_curr_to_handlev3(curr_evt,must_check_curr_evt_state);
 	}
 	else{
 		if( (evt->timestamp < curr_evt->timestamp)
 				|| (( evt->timestamp == curr_evt->timestamp) && (evt->tie_breaker <= curr_evt->tie_breaker) ))
 		{//no need to check get_next_and_valid because timestamp is smaller than current->timestamp(current->timestamp has already execute get_next_and_valid)
-			
+			printf("timestamp smaller\n");
 			reset_current_LP_infov3(evt,reliable);
 			best_evt=update_evt_statev3(evt,true);
 			if(best_evt!=NULL){
@@ -1059,11 +1063,11 @@ static inline msg_t*only_curr_and_one_evt_to_handlev3(msg_t*curr_evt,bool must_c
     gdb_abort;
     return NULL;
 }
-static inline msg_t*curr_not_null_and_one_evt_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*evt,bool reliable){
+static msg_t*curr_not_null_and_one_evt_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*evt,bool reliable){
 	return only_curr_and_one_evt_to_handlev3(curr_evt,must_check_curr_evt_state,from_new_evt_to_extracted_curr_evt,evt,reliable);
 }
 
-static inline msg_t*curr_not_null_reliable_not_null_unreliable_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*best_evt_reliable,msg_t*best_evt_unreliable){
+static msg_t*curr_not_null_reliable_not_null_unreliable_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*best_evt_reliable,msg_t*best_evt_unreliable){
 	//ALL events are not NULL
 	msg_t*best_evt;
 	if( (best_evt_reliable->timestamp < best_evt_unreliable->timestamp)
@@ -1091,11 +1095,11 @@ static inline msg_t*curr_not_null_reliable_not_null_unreliable_not_nullv3(msg_t*
 	return NULL;
 }
 
-static inline msg_t*curr_not_null_reliable_null_unreliable_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*best_evt_unreliable){
+static msg_t*curr_not_null_reliable_null_unreliable_not_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*best_evt_unreliable){
 	return curr_not_null_and_one_evt_not_nullv3(curr_evt,must_check_curr_evt_state,from_new_evt_to_extracted_curr_evt,best_evt_unreliable,false);
 }
 
-static inline msg_t*curr_not_null_reliable_not_null_unreliable_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*best_evt_reliable){
+static msg_t*curr_not_null_reliable_not_null_unreliable_nullv3(msg_t*curr_evt,bool must_check_curr_evt_state,bool from_new_evt_to_extracted_curr_evt,msg_t*best_evt_reliable){
 	return curr_not_null_and_one_evt_not_nullv3(curr_evt,must_check_curr_evt_state,from_new_evt_to_extracted_curr_evt,best_evt_reliable,true);
 }
 
@@ -1115,6 +1119,7 @@ msg_t*swap_with_best_eventv3(msg_t*curr_evt,bool from_new_evt_to_extracted_curr_
 	//curr_evt !=NULL and curr_evt already checks local_queue(get_local_next_and_valid)
 	//update current_lp before call this function!
 
+	printf("swap event\n");
 	msg_t *best_evt_reliable=LPS[current_lp]->best_evt_reliable;
     msg_t *best_evt_unreliable=LPS[current_lp]->best_evt_unreliable;
 
@@ -1134,18 +1139,23 @@ msg_t*swap_with_best_eventv3(msg_t*curr_evt,bool from_new_evt_to_extracted_curr_
     }
     //curr_evt !=NULL
     if(curr_evt!=NULL && best_evt_reliable ==NULL && best_evt_unreliable==NULL){//case:100
+    	printf("only_curr_not_null\n");
     	return only_curr_not_nullv3(curr_evt,must_check_curr_evt_state);
     }
     //cases left: 101,110,111
 
     else if(best_evt_reliable==NULL){//case 101 curr_evt is not NULL,best_evt_reliable is NULL,best_unreliable not NULL
+    	printf("curr_not_null_reliable_null_unreliable_not_null\n");
+    	printf("curr=0x%lx,unreliable=0x%lx\n",curr_evt,best_evt_unreliable);
     	return curr_not_null_reliable_null_unreliable_not_nullv3(curr_evt,must_check_curr_evt_state,from_new_evt_to_extracted_curr_evt,best_evt_unreliable);
     }
     else{//case 110 or case 111 curr_evt!=NULL and best_evt_reliable !=NULL
     	if(best_evt_unreliable==NULL){//case 110
+    		printf("curr_not_null_reliable_not_null_unreliable_null\n");
     		return curr_not_null_reliable_not_null_unreliable_nullv3(curr_evt,must_check_curr_evt_state,from_new_evt_to_extracted_curr_evt,best_evt_reliable);
     	}
     	else{//case 111
+    		printf("curr_not_null_reliable_not_null_unreliable_not_null\n");
     		return curr_not_null_reliable_not_null_unreliable_not_nullv3(curr_evt,must_check_curr_evt_state,from_new_evt_to_extracted_curr_evt,best_evt_reliable,best_evt_unreliable);
     	}
     }
@@ -1155,6 +1165,111 @@ msg_t*swap_with_best_eventv3(msg_t*curr_evt,bool from_new_evt_to_extracted_curr_
     return NULL;
 }
 #endif//IPI
+
+static void reset_current_LP_infov4(nbc_bucket_node*node,bool reliable){
+    if(reliable){
+        CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
+        (unsigned long)node,(unsigned long)NULL);
+        //not increment counter,I don't have used information
+        //no need to check if curr_state must be restorered,because curr_evt is best
+    }
+    else{
+        CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_unreliable),
+        (unsigned long)node,(unsigned long)NULL);
+        //not increment counter,I don't have used information
+        //no need to check if curr_state must be restorered,because curr_evt is best
+    }
+    return;
+}
+
+static void update_statisticsv4(bool reliable){
+    if(reliable){
+        LPS[current_lp]->num_times_choosen_best_evt_reliable++;
+    }
+    else{
+        LPS[current_lp]->num_times_choosen_best_evt_unreliable++;
+    }
+    return;
+}
+void swap_nodesv4(nbc_bucket_node**node1,nbc_bucket_node**node2,int i,int k,int*id_current_node,int*id_reliable,int*id_unreliable){
+    nbc_bucket_node*temp_node;
+    temp_node=*node1;
+    *node1=*node2;
+    *node2=temp_node;
+    if(i==*id_current_node){
+        *id_current_node=k;
+    }
+    else if(k==*id_current_node){
+        *id_current_node=i;
+    }
+    if(i==*id_reliable){
+        *id_reliable=k;
+    }
+    else if(k==*id_reliable){
+        *id_reliable=i;
+    }
+    if(i==*id_unreliable){
+        *id_unreliable=k;
+    }
+    else if(k==*id_unreliable){
+        *id_unreliable=i;
+    }
+    return;
+}
+bool first_has_greater_tsv4(nbc_bucket_node*node1,nbc_bucket_node*node2){
+    if(node1==NULL){
+        return true;
+    }
+    else if(node2==NULL){
+        return false;
+    }
+    //node1!=NULL and node2!=NULL
+    if( (node1->timestamp < node2->timestamp)
+                    || ( (node1->timestamp == node2->timestamp) && (node1->counter<=node2->counter) ) ){
+        return false;
+    }          
+    return true;
+}
+void sort_nodesv4(nbc_bucket_node**array_node,int num_elem,int*id_current_node,int*id_reliable,int*id_unreliable){
+    
+    *id_current_node=0;
+    *id_reliable=1;
+    *id_unreliable=2;
+
+
+    if(array_node[0]==NULL){
+        printf("now curr_evt must be not NULL\n");
+        gdb_abort;
+    }
+    /*if((array_node[1]==array_node[2]) && (array_node[1]!=NULL)){
+        printf("0x%lx,0x%lx\n",array_node[1],array_node[2]);
+        printf("reliable and not reliable must be different to each other\n");
+        //può accadere se nodo inizialmente unreliable ,viene promosso a reliable e poi eseguito
+        gdb_abort;
+    }*/
+    //curr_evt !=NULL
+    if(array_node[0]== array_node[1]){
+        reset_current_LP_infov4(array_node[1],true);
+        array_node[1]=NULL;
+    }
+    if(array_node[0]==array_node[2]){
+        reset_current_LP_infov4(array_node[2],false);
+        array_node[2]=NULL;
+    }
+    if((array_node[1]==array_node[2]) && (array_node[1]!=NULL)){
+        reset_current_LP_infov4(array_node[2],false);
+        array_node[2]=NULL;
+    }
+    //selection sort
+    for(int i=0;i<num_elem;i++){
+        for(int k=i+1;k<num_elem;k++){
+            if(first_has_greater_tsv4(array_node[i],array_node[k])){
+                swap_nodesv4(&(array_node[i]),&(array_node[k]),i,k,id_current_node,id_reliable,id_unreliable);   
+            }
+        }
+    }
+    return;
+}
 
 unsigned int fetch_internal(){
 	//local variables node and event:at the end of this function we have node with an event to execute
@@ -1180,6 +1295,12 @@ unsigned int fetch_internal(){
 
 #if IPI==1
 	bool from_new_evt_to_extracted_curr_evt=false;//updated to true only when lock held,event_valid,state==NEW_EVT
+    nbc_bucket_node *array_node[3];
+    int num_nodes=3;
+    int curr_id;
+    int id_current_node;//current_event is taken from node into calqueue
+    int id_reliable;
+    int id_unreliable;
 #endif
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
@@ -1203,9 +1324,15 @@ unsigned int fetch_internal(){
 	min = min_node->timestamp;
 	min_tb = min_node->counter;
 		
-	if(local_gvt < min){
+	if(local_gvt < min){//update local_gvt with a greater value: greater value means a more updated view of calqueue in respect of other threads with smaller local_gvt
 		local_gvt = min;
 	}
+    #if IPI==1
+    else if(local_gvt>min){
+        printf("impossible insert node before min node\n");
+        gdb_abort;
+    }
+    #endif
 		
     while(node != NULL){
 		
@@ -1239,7 +1366,7 @@ unsigned int fetch_internal(){
 		curr_evt_state = event->state;
 		in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));
 		safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
-			
+		
 		///* VALID *///
 		if(validity){ 
 			if(curr_evt_state == EXTRACTED && in_past){
@@ -1273,6 +1400,7 @@ unsigned int fetch_internal(){
 			}
 			///* DELETE BANANA NODE *///
 			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){//cristian:state is anti_msg and it is handled, remove it from calqueue
+                //remove only in case event->monitor==banana because concurrently another thread is executing this node and we cannot remove it
 				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
 			}
 			
@@ -1290,7 +1418,83 @@ unsigned int fetch_internal(){
 #endif
 		tryLock(lp_idx)
 		) {
-			
+            #if IPI==1
+            if(tid>=0){
+                id_current_node=0;
+                id_reliable=1;
+                id_unreliable=2;
+                array_node[0]=node;//current
+                array_node[1]=LPS[lp_idx]->best_evt_reliable;//reliable
+                array_node[2]=LPS[lp_idx]->best_evt_unreliable;//unreliable
+                current_lp=lp_idx;
+                #if DEBUG==1
+                for(int i=0;i<num_nodes;i++){
+                    if(array_node[i]!=NULL){
+                        if(array_node[i]->tag!=lp_idx){
+                            if(i==id_reliable){
+                                printf("invalid LP id in array_node,reliable node,lp_idx=%d,node->tag=%d,event->receiver_id=%d\n",
+                                    lp_idx,array_node[i]->tag,array_node[i]->payload->receiver_id);
+                            }
+                            else if(i==id_unreliable){
+                                printf("invalid LP id in array_node,unreliable node,lp_idx=%d,node->tag=%d,event->receiver_id=%d\n",
+                                    lp_idx,array_node[i]->tag,array_node[i]->payload->receiver_id);
+                            }
+                            else if(i==id_current_node){
+                                printf("invalid LP id in array_node,current_node,lp_idx=%d,node->tag=%d,event->receiver_id=%d\n",
+                                    lp_idx,array_node[i]->tag,array_node[i]->payload->receiver_id);
+                            }
+                            else{
+                                printf("invalid id i=%d\n",i);
+                            }
+                            gdb_abort;
+                        }
+                    }
+                }
+                #endif
+                
+                sort_nodesv4(array_node,num_nodes,&id_current_node,&id_reliable,&id_unreliable);
+                curr_id=0;
+retry_with_new_node:
+                if(curr_id>=num_nodes){
+                    node=array_node[id_current_node];//goto next node of current_node
+                    //event = (msg_t *)node->payload;
+                    //ts = node->timestamp;
+                    //tb = node->counter;
+                    //in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));//calculate in_past for each events
+                    //safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//calculate safe for each events
+                    add_lp_unsafe_set(lp_idx);
+                    read_new_min = false;
+                    unlock(lp_idx);
+                    goto get_next;
+                }
+                node=array_node[curr_id];//get_node[i] from array sorted
+                //reset information
+                if(curr_id==id_reliable){
+                    reset_current_LP_infov4(node,true);
+                }
+                else if(curr_id==id_unreliable){
+                    reset_current_LP_infov4(node,false);
+                }
+                curr_id++;
+                //curr_id=num_nodes;
+                //node=array_node[id_current_node];//get_node[i] from array sorted
+                //curr_id=id_current_node;
+                //printf("node 0x%lx\n",node);
+                if(node==NULL){
+                    goto retry_with_new_node;
+                }
+
+                event = (msg_t *)node->payload;
+                //lp_idx = node->tag;//it does not change between events same LP
+                //lp_ptr = LPS[lp_idx];//it does not change between events same LP
+                ts = node->timestamp;
+                tb = node->counter;
+                //bound_ptr = lp_ptr->bound;//it can change between events same LP
+                //lvt_ts = bound_ptr->timestamp;
+                //lvt_tb = bound_ptr->tie_breaker;
+            }
+            #endif
+
 			validity = is_valid(event);
 			
 			if(bound_ptr != lp_ptr->bound){
@@ -1300,7 +1504,12 @@ unsigned int fetch_internal(){
 				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
 			}
 		
-			curr_evt_state = event->state;
+            #if IPI==1
+            in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));//calculate in_past for each events
+            safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//calculate safe for each events
+			#endif
+
+            curr_evt_state = event->state;
 		
 			if(validity) {
 		
@@ -1337,32 +1546,37 @@ unsigned int fetch_internal(){
 					from_get_next_and_valid = true;
 					ts = event->timestamp;
 					//cristian:non va ricalcolato il tb rispetto al local_next_evt che è event???
+                    //in past non va ricalcolato,sia se avviene lo swap sia se non avviene la variabile past assume lo stesso valore
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
 				}
 				//node non viene aggiornato rispetto all'evento corrente,quindi se viene preso un evento EXTRACTED dalla coda locale,
 				//nodo non aggiornato,l'evento cambia ad anti_MSG,viene aggiornato current_state e viene rimosso dalla coda global,ma il nodo scorretto viene rimosso
 				curr_evt_state = event->state;
 
-				/*#if IPI==1
-				#if DEBUG==1
-					if(node->payload!=event){
-						printf("invalid node or event\n");
-						gdb_abort;
-					}
-				#endif
-				#endif*/
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {//cristian:state is new_evt
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){//cristian:after sync_or_and_fetch new state is EXTRACTED or(exclusive) ANTI_MSG
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
 						set_commit_state_as_banana(event);//cristian:ANTI_MSG never executed from state NEW_EVT->mark as handled and remove from calqueue
-						do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx); 		//<<-ELIMINATED
+						if(curr_id==id_current_node){
+                            if(delete(nbcalqueue, node)){
+                                list_node_clean_by_content(event);
+                                list_insert_tail_by_content(to_remove_local_evts, event);
+                            }
+                        }
+                        goto retry_with_new_node;
+                            
 					}
 					else {//cristian:state is changed to extracted,only this thread with lock can change this state from new_evt to extracted
 						//cristian:this event extracted can be in the past or future,but is never been executed so return it to simulation loop
 						#if IPI==1
 						from_new_evt_to_extracted_curr_evt=true;
 						#endif
+                        #if DEBUG == 1
+                        if(!haveLock(lp_idx)){//DEBUG
+                            printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, lp_idx, checkLock(lp_idx)-1);
+                        }
+                        #endif
 						return_evt_to_main_loop();
 					}
 				}
@@ -1379,7 +1593,9 @@ unsigned int fetch_internal(){
 						#endif
 
 						#endif
-						do_skip_inside_lock_and_goto_next(lp_idx);
+                            //do_skip_inside_lock_and_goto_next(lp_idx);
+                            goto retry_with_new_node;//doskip=goto retry
+						
 					}
 					else{//cristian:this event valid+extracted+in future must be executed,return it to simulation loop
 						
@@ -1393,6 +1609,11 @@ unsigned int fetch_internal(){
 						#endif
 
 						#endif
+                        #if DEBUG == 1
+                        if(!haveLock(lp_idx)){//DEBUG
+                            printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, lp_idx, checkLock(lp_idx)-1);
+                        }
+                        #endif
 						return_evt_to_main_loop();
 						
 					}
@@ -1405,7 +1626,12 @@ unsigned int fetch_internal(){
 
 					if(event->monitor == (void*) 0xba4a4a){//cristian:if event in state anti_msg is mark as handled remove it from calqueue
 						//cristian:now an event anti_msg in the future is marked as handled
-						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+                        if(curr_id==id_current_node){
+                            delete(nbcalqueue, node);
+                            
+                        }
+                        goto retry_with_new_node;
+						
 					}
 					else{//cristian:event anti_msg in past not handled,return it to simulation_loop:
 						//cristian:if it is anti_msg,then another thread
@@ -1420,11 +1646,22 @@ unsigned int fetch_internal(){
 						#endif
 
 						#endif
+                        #if DEBUG == 1
+                        if(!haveLock(lp_idx)){//DEBUG
+                            printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, lp_idx, checkLock(lp_idx)-1);
+                        }
+                        #endif
 						return_evt_to_main_loop();
 					}//parentesi aggiunte da cristian insieme al debug==1
 				}
 				else if(curr_evt_state == ELIMINATED){//cristian:state is eliminated,remove it from calqueue
-					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED
+                    if(curr_id==id_current_node){
+                            if(delete(nbcalqueue, node)){
+                                list_node_clean_by_content(event);
+                                list_insert_tail_by_content(to_remove_local_evts, event);
+                            }
+                    }
+                    goto retry_with_new_node;
 				}
 				
 			}
@@ -1440,7 +1677,13 @@ unsigned int fetch_internal(){
 				///* DELETE ELIMINATED *///
 				if( (curr_evt_state & EXTRACTED) == 0 ){//cristian:state is "new_evt" or(exclusive) "eliminated", but if it is 
 					//cristian:new_evt it was changed to eliminated in the previous branch!!!so the event state is eliminated!!!!
-					do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);					//<<-ELIMINATED
+                    if(curr_id==id_current_node){
+                            if(delete(nbcalqueue, node)){
+                                list_node_clean_by_content(event);
+                                list_insert_tail_by_content(to_remove_local_evts, event);
+                            }
+                    }
+                    goto retry_with_new_node;
 				}
 				else{//cristian:the event state is not eliminated,new_evt or extracted,so state event must be anti_msg!!!!
 			#if DEBUG==1
@@ -1453,12 +1696,20 @@ unsigned int fetch_internal(){
 
 					///* DELETE BANANA NODE *///
 					if(event->monitor == (void*) 0xba4a4a){//cristian:anti_msg handled,remove it from calqueue
-						do_remove_inside_lock_and_goto_next(event,node,lp_idx);
+                        if(curr_id==id_current_node){
+                            delete(nbcalqueue, node);
+                        }
+                        goto retry_with_new_node;
 					}
 					///* ANTI-MESSAGE IN THE PAST*///
 					else{//cristian:anti_msg in past not handled,return it to simulation loop
 						//cristian:if it is anti_msg,then another thread
 						//in the past (in wall clock time) has changed its state to extracted and executed it!!!!
+                        #if DEBUG == 1
+                        if(!haveLock(lp_idx)){//DEBUG
+                            printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, lp_idx, checkLock(lp_idx)-1);
+                        }
+                        #endif
 						return_evt_to_main_loop();
 					}
 				}
@@ -1530,61 +1781,13 @@ get_next:
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
 
-#if IPI==1
-
-	//before exit from this function we must update current_lp,current_msg,current_node and safety
-
-	current_lp=event->receiver_id;//update info on current_lp before execute swap_event
-	if(current_lp!=lp_idx){
-		gdb_abort;
-	}
-	event=swap_with_best_eventv3(event,from_new_evt_to_extracted_curr_evt,false);
-	ts=event->timestamp;
-    tb=event->tie_breaker;
-    safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(current_lp);
-    current_msg =  event;//update current_msg
-    current_node=container_of(&event,nbc_bucket_node,payload);//update current_node
-    if(current_node->payload!=event){
-    	printf("invalid current_node\n");
-    	gdb_abort;
+    current_lp=event->receiver_id;//update info on current_lp before execute swap_event
+    if(current_lp!=lp_idx){
+        printf("invalid LP id\n");
+        gdb_abort;
     }
-else
 	current_msg =  event;//(msg_t *) node->payload;
     current_node = node;
-#endif
-/*#if IPI==1
-    if(lp_idx!=current_msg->receiver_id){
-    	printf("invalid lp idx\n");
-    	gdb_abort;
-    }
-    //current_lp = current_msg->receiver_id;
-    lp_ptr = LPS[lp_idx];
-    if(current_msg->state==EXTRACTED){
-    	ts = current_msg->timestamp;
-		tb = current_msg->tie_breaker;
-		if(bound_ptr != lp_ptr->bound){
-			printf("invalid bound_ptr\n");
-			gdb_abort;
-		}
-		bound_ptr = lp_ptr->bound;
-		lvt_ts = bound_ptr->timestamp; 
-		lvt_tb = bound_ptr->tie_breaker;
-		in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
-    	if(current_msg->frame==0 && in_past){
-    		srand(time(NULL));   // Initialization, should only be called once.
-    		int random_num=((int)rand())%20;// Returns a pseudo-random integer between 0 and RAND_MAX,[0,20-1] 
-    		if(random_num<=2){
-    		//skip/ignore this event and execute again fetch_internal_function
-    			printf("event extracted in past not executed\n");
-    			unlock(lp_idx);//unlock lp
-    			fetch_internal();//retry fetch_internal
-    		}
-    	}
-    	
-    }
-    //swap_with_best_evt(min,min_tb);
-#endif*/
-
 
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)c);

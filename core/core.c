@@ -763,11 +763,12 @@ rollback://if current_msg is in past then go to rollback!
 
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
-		
+		//printf("thread pool after execute event %d tid %d\n",_thr_pool._thr_pool_count,tid);
 		#if IPI==1
-		#if CHECK_ROLLBACK_AFTER_EXECUTION==1//if is 2 not
+		#if CHECK_ROLLBACK_AFTER_EXECUTION==1//
 		if(current_msg->state==ANTI_MSG){//read again event state,if is changed it is ANTI_MSG(from EXTRACTED to ANTI_MSG)
-			printf("rollback in time\n");
+			printf("rollback in time tid %d\n",tid);
+			printf("%d\n",_thr_pool._thr_pool_count);
 			// re-update event information
 			current_lp = current_msg->receiver_id;	// LP index
 			current_lvt = current_msg->timestamp;	// Local Virtual Time
@@ -784,8 +785,10 @@ rollback://if current_msg is in past then go to rollback!
 	            	_thr_pool.collision_list[i]=NULL;
 	        	}
 	        }
-	        //free thread pool
-	        queue_clean();
+	        //free events in thread pool
+	        queue_clean();//se thread pool count>0 non solo stampa rollback in time,
+	        //ma va in abort perché la queue clean viene chiamata,
+	        //la prima volta che va in abort rimuovere la gdb_abort in queue clean
 			goto rollback;
 			//è possibile non aumentare l'epoca perché non vengono prodotti eventi figli, in realtà se viene aumentata non è un problema
 			//quindi posso chiamare la funzione di rollback cosi come è

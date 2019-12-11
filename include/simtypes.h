@@ -8,7 +8,7 @@
 #include <events.h>
 #include <state.h>
 #include <numerical.h>
-
+#include <nb_calqueue.h>
 
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
@@ -115,11 +115,11 @@ typedef struct _LP_state {
 	unsigned int until_clean_ckp;
 
 #if IPI==1
-	msg_t *best_evt_reliable;
+	struct __bucket_node*best_evt_reliable;
 	unsigned long num_times_modified_best_evt_reliable;
 	unsigned long num_times_choosen_best_evt_reliable;
 
-    msg_t*best_evt_unreliable;
+    struct __bucket_node*best_evt_unreliable;
     unsigned long num_times_modified_best_evt_unreliable;
     unsigned long num_times_choosen_best_evt_unreliable;
 #endif
