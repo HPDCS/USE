@@ -159,6 +159,7 @@ void queue_deliver_msgs(void) {
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 
+#ifdef IPI_SUPPORT
         /* DEBUG_IPI */
         unsigned int lcl_tid;
         for (lcl_tid=0; lcl_tid<n_cores; lcl_tid++)
@@ -170,6 +171,7 @@ void queue_deliver_msgs(void) {
                     printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
             }
         }
+#endif
 
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));

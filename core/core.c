@@ -552,6 +552,10 @@ void thread_loop(unsigned int thread_id) {
 		 * INCONSISTENT AFTER "longjmp" CALL. 
 		 */
 		printf("[IPI_4_USE] - We jumped back from an interrupted execution!!!\n");
+		if (!haveLock(current_lp))
+			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+		else
+			unlock(current_lp);
 	}
 	else
 		printf("[IPI_4_USE] - First time we saved the execution context!!!\n");
