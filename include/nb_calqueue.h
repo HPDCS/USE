@@ -69,7 +69,7 @@
 #define TID tid
 
 #if IPI==1
-#define BAD_NODE NULL
+#define BAD_NODE 0x1 //must be not null
 #endif
 /**
  *  Struct that define a node in a bucket

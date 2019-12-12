@@ -673,13 +673,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			current_msg->monitor = (void*) 0xba4a4a;
 
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
-#if IPI==1
-			if(current_node!=BAD_NODE){
-				delete(nbcalqueue, current_node);
-			}
-#else
 			delete(nbcalqueue, current_node);
-#endif
 			unlock(current_lp);
 			continue;
 		}
@@ -873,19 +867,10 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		clock_timer_start(queue_op);
 #endif
 
-#if IPI==1
-		if(safe){
-			if(current_node!=BAD_NODE){
-				commit_event(current_msg, current_node, current_lp);
-			}
-		}
-			
-#else
 		//COMMIT SAFE EVENT
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 		}
-#endif
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
