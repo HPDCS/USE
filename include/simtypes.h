@@ -115,11 +115,11 @@ typedef struct _LP_state {
 	unsigned int until_clean_ckp;
 
 #if IPI==1
-	struct __bucket_node*best_evt_reliable;
+	msg_t*best_evt_reliable;
 	unsigned long num_times_modified_best_evt_reliable;
 	unsigned long num_times_choosen_best_evt_reliable;
 
-    struct __bucket_node*best_evt_unreliable;
+    msg_t*best_evt_unreliable;
     unsigned long num_times_modified_best_evt_unreliable;
     unsigned long num_times_choosen_best_evt_unreliable;
 #endif

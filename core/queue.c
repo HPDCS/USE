@@ -118,10 +118,10 @@ void queue_clean(){
     msg_t* current;
     for (; i<_thr_pool._thr_pool_count; i++)
     {
-        #if IPI==1
-                printf("executed\n");
-                gdb_abort;
-            #endif
+#if IPI==1
+        printf("executed\n");
+        gdb_abort;
+#endif
         current = _thr_pool.messages[i].father;
         if(current != NULL)
         {
@@ -189,25 +189,23 @@ void queue_deliver_msgs(void) {
 		clock_timer_start(queue_op);
 #endif
 #if IPI==1
-        nbc_bucket_node *flushed_node=nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
-        if(flushed_node->tag!=new_hole->receiver_id){
-            printf("invalid tag and receiver_id in queue_deliver_msgs\n");
-            gdb_abort;
-        }
+        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+        //now new_hole has a tie_breaker
+
         //insert node with minimum timestamp in collision list(if not exist alloc node,if exist swap if it has smaller timestamp)
         int index=new_hole->receiver_id%THR_HASH_TABLE_SIZE;//return index of hash table
         struct node**head=&(_thr_pool.collision_list[index]);//head of collision list
         struct node*p=*head;
-        nbc_bucket_node *bucket_node;//bucket in collision list
+        msg_t *event_in_list;//bucket in collision list
 
         while(p!=NULL){
-            bucket_node=(nbc_bucket_node *)p->data;//node inside collision list
-            if(new_hole->receiver_id==bucket_node->tag)//node for same LP
+            event_in_list=(msg_t *)p->data;//node inside collision list
+            if(new_hole->receiver_id==event_in_list->receiver_id)//node for same LP
             {
-                if( (new_hole->timestamp < bucket_node->timestamp )
-                 || ( (new_hole->timestamp == bucket_node->timestamp ) && (new_hole->tie_breaker <= bucket_node->counter) ) 
+                if( (new_hole->timestamp < event_in_list->timestamp )
+                 || ( (new_hole->timestamp == event_in_list->timestamp ) && (new_hole->tie_breaker <= event_in_list->tie_breaker) ) 
                 ){//update min node
-                    p->data=flushed_node;//update node information
+                    p->data=new_hole;//update node information
                     break;
                 }
                 //same LP but greater timestamp
@@ -217,9 +215,10 @@ void queue_deliver_msgs(void) {
         }
         if(p==NULL){
             //LP not found,add element to collision list
-            struct node*new_node=get_new_node(flushed_node);
+            struct node*new_node=get_new_node(new_hole);
             insert_at_head(new_node,head);
         }
+        
 #else
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 #endif
@@ -238,37 +237,32 @@ void queue_deliver_msgs(void) {
     for(i = 0; i < THR_HASH_TABLE_SIZE; i++) {
         struct node**head=&(_thr_pool.collision_list[i]);//get collision_list[i]
         struct node*p=*head;
-        nbc_bucket_node *bucket_node,*bucket_dest_LP;
+        msg_t *event_in_list,*event_dest_LP;
         while(p!=NULL){
-            bucket_node=(nbc_bucket_node *)p->data;//node inside collision list
-            unsigned int lp_id=bucket_node->tag;
-            #if DEBUG==1
-            if(bucket_node->payload->receiver_id!=lp_id){
-                printf("invalid tag and receiver id in flush thread_pool_hash_table\n");
-            }
-            #endif
+            event_in_list=(msg_t *)p->data;//node inside collision list
+            unsigned int lp_id=event_in_list->receiver_id;
             while(1){
                 //father event is safe?
                 if(safe){//safe info is overwrited only in fetch_internal() function
-                    bucket_dest_LP=(nbc_bucket_node *)LPS[lp_id]->best_evt_reliable;
+                    event_dest_LP=(msg_t *)LPS[lp_id]->best_evt_reliable;
                     #if DEBUG==1
-                        if(bucket_dest_LP!=NULL && bucket_dest_LP->tag!=lp_id){
-                            printf("invalid tag and LP id in flush thread_pool_hash_table\n");
+                        if(event_dest_LP!=NULL && event_dest_LP->receiver_id!=lp_id){
+                            printf("invalid tag and LP id in flush thread_pool_hash_table reliable node\n");
                             gdb_abort;
                         }
                     #endif
-                    if(bucket_dest_LP==NULL){
+                    if(event_dest_LP==NULL){
                         if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
-                            (unsigned long)bucket_dest_LP,(unsigned long)bucket_node)==0)//CAS failed
+                            (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //information modified
                         atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
                     }
-                    else if( (bucket_node->timestamp < bucket_dest_LP->timestamp)
+                    else if( (event_in_list->timestamp < event_dest_LP->timestamp)
                         //check also tie_breaker,here tie_breaker is valid information
-                    || ( (bucket_node->timestamp == bucket_dest_LP->timestamp) && (bucket_node->counter<=bucket_dest_LP->counter) ) ){//msg_dest_LP!=NULL
+                    || ( (event_in_list->timestamp == event_dest_LP->timestamp) && (event_in_list->tie_breaker<=event_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
                         if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
-                                (unsigned long)bucket_dest_LP,(unsigned long)bucket_node)==0)//CAS failed
+                                (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //information modified
                         atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
@@ -276,25 +270,25 @@ void queue_deliver_msgs(void) {
                     break;//timestamp is greater,exit
                 }
                 else{//not safe
-                    bucket_dest_LP=(nbc_bucket_node *)LPS[lp_id]->best_evt_unreliable;
+                    event_dest_LP=(msg_t *)LPS[lp_id]->best_evt_unreliable;
                     #if DEBUG==1
-                        if(bucket_dest_LP!=NULL && bucket_dest_LP->tag!=lp_id){
-                            printf("invalid tag and LP id in flush thread_pool_hash_table\n");
+                        if(event_dest_LP!=NULL && event_dest_LP->receiver_id!=lp_id){
+                            printf("invalid tag and LP id in flush thread_pool_hash_table unreliable node\n");
                             gdb_abort;
                         }
                     #endif
-                    if(bucket_dest_LP==NULL){
+                    if(event_dest_LP==NULL){
                         if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
-                            (unsigned long)bucket_dest_LP,(unsigned long)bucket_node)==0)//CAS failed
+                            (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //modified
                         atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));
                     }
-                    else if( (bucket_node->timestamp < bucket_dest_LP->timestamp)
+                    else if( (event_in_list->timestamp < event_dest_LP->timestamp)
                     //check also tie_breaker,here tie_breaker is valid information
-                    || ( (bucket_node->timestamp == bucket_dest_LP->timestamp) && (bucket_node->counter<=bucket_dest_LP->counter) ) ){//msg_dest_LP!=NULL
+                    || ( (event_in_list->timestamp == event_dest_LP->timestamp) && (event_in_list->tie_breaker<=event_dest_LP->tie_breaker) ) ){//msg_dest_LP!=NULL
                         if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
-                                (unsigned long)bucket_dest_LP,(unsigned long)bucket_node)==0)//CAS failed
+                                (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //modified
                         atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));

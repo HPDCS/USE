@@ -1075,34 +1075,6 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
  *
  * @return true if the event is inserted in the hashtable, else false
  */
-#if IPI==1
-nbc_bucket_node *nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned int tag)
-{
-	// TODO
-	nbc_bucket_node *new_node = node_malloc(payload, timestamp, 0);
-	table *h, *old_h = NULL;	
-	
-#if DEBUG==1
-	if(new_node->payload != NULL)
-		((msg_t*)new_node->payload)->node= (void*) 0xBADC0DE;
-#endif
-	new_node->tag = tag;
-
-	do
-	{
-		if(old_h != (h = read_table(queue)))
-		{
-			old_h = h;
-			new_node->epoch = 0;//(h->current & MASK_EPOCH);
-		}
-	} while(!insert_std(h, &new_node, REMOVE_DEL_INV));
-
-	
-	ATOMIC_INC(&(h->counter));
-	return new_node;
-}
-#else
-
 void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned int tag)
 {
 	// TODO
@@ -1127,7 +1099,6 @@ void nbc_enqueue(nb_calqueue* queue, double timestamp, void* payload, unsigned i
 	
 	ATOMIC_INC(&(h->counter));
 }
-#endif//IPI
 
 static inline bool CAS_for_mark( nbc_bucket_node* right_node, nbc_bucket_node* right_node_next)
 {

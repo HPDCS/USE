@@ -381,7 +381,6 @@ void init_simulation(unsigned int thread_id){
 	tid = thread_id;
 	int i = 0;
 
-	
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
 #endif
@@ -452,7 +451,7 @@ void init_simulation(unsigned int thread_id){
         print_lp_id_in_thread_pool_list();
         printf("lp id in collision list\n");
         print_lp_id_in_collision_list();
-#endif
+#endif//VERBOSE
 #endif
 
 	}
@@ -546,7 +545,6 @@ void thread_loop(unsigned int thread_id) {
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
-
 	///* START SIMULATION *///
 	while (  
 				(
@@ -629,7 +627,7 @@ void thread_loop(unsigned int thread_id) {
 
 #if IPI==1
 #if CHECK_ROLLBACK_AFTER_EXECUTION==1
-rollback://if current_msg is in past then go to rollback!
+rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 #endif
 #endif
 
@@ -675,8 +673,13 @@ rollback://if current_msg is in past then go to rollback!
 			current_msg->monitor = (void*) 0xba4a4a;
 
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
-
+#if IPI==1
+			if(current_node!=BAD_NODE){
+				delete(nbcalqueue, current_node);
+			}
+#else
 			delete(nbcalqueue, current_node);
+#endif
 			unlock(current_lp);
 			continue;
 		}
@@ -696,14 +699,14 @@ rollback://if current_msg is in past then go to rollback!
 		// The current_msg should be allocated with list allocator
 		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
 
-		#if IPI==1
-		#if DEBUG==1
+#if IPI==1
+#if DEBUG==1
 			if(current_msg->frame!=0){
 				printf("event not connected to localqueue,but it was executed!!!\n");
 				gdb_abort;
 			}
-		#endif
-		#endif
+#endif
+#endif
 
 	#if DEBUG == 1 
 			msg_t *bound_t, *next_t;
@@ -763,9 +766,9 @@ rollback://if current_msg is in past then go to rollback!
 
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
-		//printf("thread pool after execute event %d tid %d\n",_thr_pool._thr_pool_count,tid);
-		#if IPI==1
-		#if CHECK_ROLLBACK_AFTER_EXECUTION==1//
+#if IPI==1
+#if CHECK_ROLLBACK_AFTER_EXECUTION==1
+		//TODO
 		if(current_msg->state==ANTI_MSG){//read again event state,if is changed it is ANTI_MSG(from EXTRACTED to ANTI_MSG)
 			printf("rollback in time tid %d\n",tid);
 			printf("%d\n",_thr_pool._thr_pool_count);
@@ -778,6 +781,7 @@ rollback://if current_msg is in past then go to rollback!
 			LPS[current_lp]->bound = current_msg;//now current_msg is ANTI_MSG in past
 			current_msg->frame = LPS[current_lp]->num_executed_frames;//now current_msg is ANTI_MSG in past EXECUTED
 			LPS[current_lp]->num_executed_frames++;
+
 			//free collision_list
 			for(unsigned i = 0; i < THR_HASH_TABLE_SIZE; i++) {
 	        	if(_thr_pool.collision_list[i]!=NULL){
@@ -786,24 +790,20 @@ rollback://if current_msg is in past then go to rollback!
 	        	}
 	        }
 	        //free events in thread pool
-	        queue_clean();//se thread pool count>0 non solo stampa rollback in time,
-	        //ma va in abort perché la queue clean viene chiamata,
-	        //la prima volta che va in abort rimuovere la gdb_abort in queue clean
+	        queue_clean();
 			goto rollback;
-			//è possibile non aumentare l'epoca perché non vengono prodotti eventi figli, in realtà se viene aumentata non è un problema
-			//quindi posso chiamare la funzione di rollback cosi come è
+			//ricontrollare...è possibile non aumentare l'epoca perché non vengono prodotti eventi figli, in realtà se viene aumentata non è un problema
+			//quindi posso chiamare la funzione di rollback cosi come è??????
 		}
-		#endif
-		#endif
+#endif//CHECK_ROLLBACK_AFTER_EXECUTION
+#endif//IPI
 
 #if IPI==1
-
 #if VERBOSE > 0
         printf("print thread pool and collision list after execute event before queue_deliver_msgs\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
 #endif//VERBOSE
-
 #endif
 		///* FLUSH */// 
 		queue_deliver_msgs();
@@ -821,7 +821,6 @@ rollback://if current_msg is in past then go to rollback!
         }
 
     }
-
 #endif//DEBUG
 #if VERBOSE > 0
         printf("print thread pool and collision list after queue_deliver_msgs\n");
@@ -874,11 +873,19 @@ rollback://if current_msg is in past then go to rollback!
 		clock_timer_start(queue_op);
 #endif
 
-		
+#if IPI==1
+		if(safe){
+			if(current_node!=BAD_NODE){
+				commit_event(current_msg, current_node, current_lp);
+			}
+		}
+			
+#else
 		//COMMIT SAFE EVENT
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 		}
+#endif
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
