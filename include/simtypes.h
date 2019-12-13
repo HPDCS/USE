@@ -116,12 +116,13 @@ typedef struct _LP_state {
 
 #if IPI==1
 	msg_t*best_evt_reliable;
-	unsigned long num_times_modified_best_evt_reliable;
-	unsigned long num_times_choosen_best_evt_reliable;
-
     msg_t*best_evt_unreliable;
+#if IPI_STATISTICS==1
+    unsigned long num_times_modified_best_evt_reliable;
+	unsigned long num_times_choosen_best_evt_reliable;
     unsigned long num_times_modified_best_evt_unreliable;
     unsigned long num_times_choosen_best_evt_unreliable;
+#endif//IPI_STATISTICS
 #endif
 
 } LP_state;

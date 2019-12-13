@@ -16,7 +16,7 @@
 #define THR_POOL_SIZE		128
 
 #if IPI==1
-#define THR_HASH_TABLE_SIZE THR_POOL_SIZE
+#define THR_HASH_TABLE_SIZE (THR_POOL_SIZE)
 #endif
 
 #define MODE_SAF	1

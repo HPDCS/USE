@@ -65,6 +65,7 @@ void free_memory_list(struct node*head){
     }
     return;
 }
+
 void print_list(struct node*head,void(*print_elem)(void*data)){
     if(head==NULL){
         printf("empty list\n");

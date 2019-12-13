@@ -234,7 +234,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                 if(curr_id==id_current_node){\
                             delete(nbcalqueue, node);\
                         }; }
-
+#if IPI_STATISTICS==1
 #define update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid) {\
 				    if(curr_id==id_reliable && from_get_next_and_valid==false){\
 				        update_statistics(true);\
@@ -242,8 +242,8 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 				    else if(curr_id==id_unreliable && from_get_next_and_valid==false){\
 				        update_statistics(false);\
 				    }; }
-
-
+#endif
+				    
 static void reset_current_LP_info(msg_t*event,bool reliable){
     if(reliable){
         CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
@@ -255,7 +255,7 @@ static void reset_current_LP_info(msg_t*event,bool reliable){
     }
     return;
 }
-
+#if IPI_STATISTICS==1
 static void update_statistics(bool reliable){
     if(reliable){
         LPS[current_lp]->num_times_choosen_best_evt_reliable++;
@@ -265,6 +265,8 @@ static void update_statistics(bool reliable){
     }
     return;
 }
+#endif
+
 void swap_nodes(msg_t**event1,msg_t**event2,int i,int k,int*id_current_node,int*id_reliable,int*id_unreliable){
 	//swap two nodes with their relative indexes
     msg_t*temp_event;
@@ -306,35 +308,39 @@ bool first_has_greater_ts(msg_t*event1,msg_t*event2){
     }          
     return true;
 }
-void sort_events(msg_t**array_events,int num_elem,int*id_current_node,int*id_reliable,int*id_unreliable){
+void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_reliable,int*id_unreliable){
     //indexes must be already initialized
-
-    if(array_events[0]==NULL){
+#if DEBUG==1
+    if(array_events[*id_current_node]==NULL){
         printf("curr_evt must be not NULL\n");
         gdb_abort;
     }
-    if((array_events[1]==array_events[2]) && (array_events[1]!=NULL)){
-        printf("0x%lx,0x%lx\n",(long unsigned int)array_events[1],(long unsigned int)array_events[2]);
+    if((array_events[*id_reliable]==array_events[*id_unreliable]) && (array_events[*id_reliable]!=NULL)){
+        printf("0x%lx,0x%lx\n",(long unsigned int)array_events[*id_reliable],(long unsigned int)array_events[*id_unreliable]);
         printf("reliable and not reliable must be different to each other\n");
         //può accadere se nodo inizialmente unreliable ,viene promosso a reliable e poi eseguito
         gdb_abort;
     }
+#endif
     //curr_evt !=NULL
-    if(array_events[0]== array_events[1]){
-        reset_current_LP_info(array_events[1],true);
-        array_events[1]=NULL;
+    if(array_events[*id_current_node]== array_events[*id_reliable]){
+        reset_current_LP_info(array_events[*id_reliable],true);
+        array_events[*id_reliable]=NULL;
+        swap_nodes(&(array_events[*id_reliable]),&(array_events[*id_unreliable]),*id_reliable,*id_unreliable,id_current_node,id_reliable,id_unreliable);
+    	(*num_elem)--;
     }
-    if(array_events[0]==array_events[2]){
-        reset_current_LP_info(array_events[2],false);
-        array_events[2]=NULL;
+    if(array_events[*id_current_node]==array_events[*id_unreliable]){
+        reset_current_LP_info(array_events[*id_unreliable],false);
+        array_events[*id_unreliable]=NULL;
+        (*num_elem)--;
     }
     /*if((array_events[1]==array_events[2]) && (array_events[1]!=NULL)){
         reset_current_LP_info(array_events[2],false);
         array_events[2]=NULL;//reset unreliable information
     }*/
     //selection sort
-    for(int i=0;i<num_elem;i++){
-        for(int k=i+1;k<num_elem;k++){
+    for(int i=0;i<*num_elem;i++){
+        for(int k=i+1;k<*num_elem;k++){
             if(first_has_greater_ts(array_events[i],array_events[k])){
                 swap_nodes(&(array_events[i]),&(array_events[k]),i,k,id_current_node,id_reliable,id_unreliable);   
             }
@@ -525,7 +531,7 @@ unsigned int fetch_internal(){
 #if DEBUG==1
             check_LP_id_info(array_events, num_events, lp_idx, id_current_node, id_reliable, id_unreliable);
 #endif//DEBUG
-            sort_events(array_events,num_events,&id_current_node,&id_reliable,&id_unreliable);
+            sort_events(array_events,&num_events,&id_current_node,&id_reliable,&id_unreliable);
             curr_id=0;
 retry_with_new_node:
             if(curr_id>=num_events){
@@ -864,8 +870,7 @@ get_next:
     if(from_get_next_and_valid)
         node = NULL;
 #endif
- 	
- 
+
 #if DEBUG == 1
 	if(node == (void*)0x5afe){
 		printf(RED("NON VA"));
@@ -876,7 +881,9 @@ get_next:
     // in the thread main loop.
 #if IPI==1
     current_lp=event->receiver_id;//update info on current_lp before execute swap_event
+#if IPI_STATISTICS==1
     update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid);
+#endif
     
 #endif
     current_msg = event;//(msg_t *) node->payload;

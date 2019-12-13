@@ -265,12 +265,13 @@ void LPs_metada_init() {
 
 #if IPI==1
 		LPS[i]->best_evt_reliable=NULL;
+		LPS[i]->best_evt_unreliable=NULL;
+#if IPI_STATISTICS==1
         LPS[i]->num_times_modified_best_evt_reliable=0;
         LPS[i]->num_times_choosen_best_evt_reliable=0;
-
-        LPS[i]->best_evt_unreliable=NULL;
         LPS[i]->num_times_modified_best_evt_unreliable=0;
         LPS[i]->num_times_choosen_best_evt_unreliable=0;
+#endif//IPI_STATISTICS
 #endif
 
 
@@ -446,7 +447,7 @@ void init_simulation(unsigned int thread_id){
 		printf("EXECUTED ALL INIT EVENTS\n");
 
 #if IPI==1
-#if VERBOSE > 0
+#if VERBOSE > 0 && COLLISION_LIST==1
 		printf("lp id in thread pool list\n");
         print_lp_id_in_thread_pool_list();
         printf("lp id in collision list\n");
@@ -750,7 +751,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
     }
 
 #endif//DEBUG
-#if VERBOSE > 0
+#if VERBOSE > 0 && COLLISION_LIST==1
         printf("print thread pool and collision list before execute event\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
@@ -777,12 +778,19 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			LPS[current_lp]->num_executed_frames++;
 
 			//free collision_list
+			#if COLLISION_LIST==1
 			for(unsigned i = 0; i < THR_HASH_TABLE_SIZE; i++) {
 	        	if(_thr_pool.collision_list[i]!=NULL){
 	            	free_memory_list(_thr_pool.collision_list[i]);
 	            	_thr_pool.collision_list[i]=NULL;
 	        	}
 	        }
+	        #else
+	        for(unsigned i = 0; i < THR_HASH_TABLE_SIZE; i++) {
+	            	_thr_pool.collision_list[i]=NULL;
+	        	}
+	        }
+	        #endif
 	        //free events in thread pool
 	        queue_clean();
 			goto rollback;
@@ -793,7 +801,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 #endif//IPI
 
 #if IPI==1
-#if VERBOSE > 0
+#if VERBOSE > 0 && COLLISION_LIST==1
         printf("print thread pool and collision list after execute event before queue_deliver_msgs\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
@@ -816,7 +824,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 
     }
 #endif//DEBUG
-#if VERBOSE > 0
+#if VERBOSE > 0 && COLLISION_LIST==1
         printf("print thread pool and collision list after queue_deliver_msgs\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
