@@ -214,12 +214,12 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define goto_next_information curr_id++;\
                 goto retry_with_new_node;\
 
-#define reset_LP_info(curr_id,id_reliable,id_unreliable,event) {\
+#define reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx) {\
                 		if(curr_id==id_reliable){\
-                			reset_current_LP_info(event,true);\
+                			reset_current_LP_info(event,true,lp_idx);\
             			}\
             			else if(curr_id==id_unreliable){\
-                			reset_current_LP_info(event,false);\
+                			reset_current_LP_info(event,false,lp_idx);\
             			}; }
 
 #define remove_removed_if_current_node(curr_id,id_current_node,event,node) {\
@@ -235,33 +235,33 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                             delete(nbcalqueue, node);\
                         }; }
 #if IPI_STATISTICS==1
-#define update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid) {\
+#define update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid,lp_idx) {\
 				    if(curr_id==id_reliable && from_get_next_and_valid==false){\
-				        update_statistics(true);\
+				        update_statistics(true,lp_idx);\
 				    }\
 				    else if(curr_id==id_unreliable && from_get_next_and_valid==false){\
-				        update_statistics(false);\
+				        update_statistics(false,lp_idx);\
 				    }; }
 #endif
 				    
-static void reset_current_LP_info(msg_t*event,bool reliable){
+static void reset_current_LP_info(msg_t*event,bool reliable,int lp_idx){
     if(reliable){
-        CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_reliable),
+        CAS_x86((unsigned long long*)&(LPS[lp_idx]->best_evt_reliable),
         (unsigned long)event,(unsigned long)NULL);
     }
     else{
-        CAS_x86((unsigned long long*)&(LPS[current_lp]->best_evt_unreliable),
+        CAS_x86((unsigned long long*)&(LPS[lp_idx]->best_evt_unreliable),
         (unsigned long)event,(unsigned long)NULL);
     }
     return;
 }
 #if IPI_STATISTICS==1
-static void update_statistics(bool reliable){
+static void update_statistics(bool reliable,int lp_idx){
     if(reliable){
-        LPS[current_lp]->num_times_choosen_best_evt_reliable++;
+        LPS[lp_idx]->num_times_choosen_best_evt_reliable++;
     }
     else{
-        LPS[current_lp]->num_times_choosen_best_evt_unreliable++;
+        LPS[lp_idx]->num_times_choosen_best_evt_unreliable++;
     }
     return;
 }
@@ -308,7 +308,7 @@ bool first_has_greater_ts(msg_t*event1,msg_t*event2){
     }          
     return true;
 }
-void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_reliable,int*id_unreliable){
+void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_reliable,int*id_unreliable,int lp_idx){
     //indexes must be already initialized
 #if DEBUG==1
     if(array_events[*id_current_node]==NULL){
@@ -324,13 +324,13 @@ void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_re
 #endif
     //curr_evt !=NULL
     if(array_events[*id_current_node]== array_events[*id_reliable]){
-        reset_current_LP_info(array_events[*id_reliable],true);
+        reset_current_LP_info(array_events[*id_reliable],true,lp_idx);
         array_events[*id_reliable]=NULL;
         swap_nodes(&(array_events[*id_reliable]),&(array_events[*id_unreliable]),*id_reliable,*id_unreliable,id_current_node,id_reliable,id_unreliable);
     	(*num_elem)--;
     }
     if(array_events[*id_current_node]==array_events[*id_unreliable]){
-        reset_current_LP_info(array_events[*id_unreliable],false);
+        reset_current_LP_info(array_events[*id_unreliable],false,lp_idx);
         array_events[*id_unreliable]=NULL;
         (*num_elem)--;
     }
@@ -531,7 +531,7 @@ unsigned int fetch_internal(){
 #if DEBUG==1
             check_LP_id_info(array_events, num_events, lp_idx, id_current_node, id_reliable, id_unreliable);
 #endif//DEBUG
-            sort_events(array_events,&num_events,&id_current_node,&id_reliable,&id_unreliable);
+            sort_events(array_events,&num_events,&id_current_node,&id_reliable,&id_unreliable,lp_idx);
             curr_id=0;
 retry_with_new_node:
             if(curr_id>=num_events){
@@ -587,15 +587,16 @@ retry_with_new_node:
 						local_next_evt->timestamp < ts || 
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < tb)
 					)
-				){
+				)
 #else
 				if( local_next_evt != NULL && 
 					(
 						local_next_evt->timestamp < ts || 
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < node->counter)
 					)
-				){
+				)
 #endif
+				{
 				#if DEBUG==1
 					if(local_next_evt->monitor == (void*) 0x5AFE){ //DEBUG
 						printf("[%u]GET_NEXT_AND_VALID: \n",tid); 
@@ -635,7 +636,7 @@ retry_with_new_node:
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
 						set_commit_state_as_banana(event);//cristian:ANTI_MSG never executed from state NEW_EVT->mark as handled and remove from calqueue
                         remove_removed_if_current_node(curr_id,id_current_node,event,node);
-                        reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+                        reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
                         goto_next_information;
 #else
                         //o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
@@ -647,7 +648,7 @@ retry_with_new_node:
 					else {//cristian:state is changed to extracted,only this thread with lock can change this state from new_evt to extracted
 						//cristian:this event extracted can be in the past or future,but is never been executed so return it to simulation loop
 #if IPI==1
-						reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+						reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
 #endif
 						return_evt_to_main_loop();
 					}
@@ -667,7 +668,7 @@ retry_with_new_node:
 						}
 #endif//DEBUG
 
-                        reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+                        reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
                         goto_next_information;
 #else
                         do_skip_inside_lock_and_goto_next(lp_idx);
@@ -686,7 +687,7 @@ retry_with_new_node:
 							//nop,no need of reset_LP_info
 						}
 						else{
-							reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+							reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
 						}
 #endif//IPI
 						return_evt_to_main_loop();
@@ -710,8 +711,8 @@ retry_with_new_node:
 					if(event->monitor == (void*) 0xba4a4a){//cristian:if event in state anti_msg is mark as handled remove it from calqueue
 						//cristian:now an event anti_msg in the future is marked as handled
 #if IPI==1
-                        remove_if_current_node(curr_id,id_current_node,node)
-                        reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+                        remove_if_current_node(curr_id,id_current_node,node);
+                        reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
                         goto_next_information;
 #else
                         do_remove_inside_lock_and_goto_next(event,node,lp_idx);
@@ -728,7 +729,7 @@ retry_with_new_node:
 							gdb_abort;
 						}
 #endif//DEBUG
-						reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+						reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
 #endif
 						return_evt_to_main_loop();
 					}
@@ -742,7 +743,7 @@ retry_with_new_node:
 						}
 #endif//DEBUG
                     remove_removed_if_current_node(curr_id,id_current_node,event,node);
-                    reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+                    reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
                     goto_next_information;
 #else//IPI
                     do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED
@@ -771,7 +772,7 @@ retry_with_new_node:
 					//cristian:new_evt it was changed to eliminated in the previous branch!!!so the event state is eliminated!!!!
 #if IPI==1
                     remove_removed_if_current_node(curr_id,id_current_node,event,node);
-                    reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+                    reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
                     goto_next_information;
 #else
                     do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);					//<<-ELIMINATED
@@ -789,8 +790,8 @@ retry_with_new_node:
 					///* DELETE BANANA NODE *///
 					if(event->monitor == (void*) 0xba4a4a){//cristian:anti_msg handled,remove it from calqueue
 #if IPI==1
-                        remove_if_current_node(curr_id,id_current_node,node)
-                        reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+                        remove_if_current_node(curr_id,id_current_node,node);
+                        reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
                         goto_next_information;
 #else
                         do_remove_inside_lock_and_goto_next(event,node,lp_idx);
@@ -801,7 +802,7 @@ retry_with_new_node:
 						//cristian:if it is anti_msg,then another thread
 						//cristian:in the past (in wall clock time) has changed its state to extracted and executed it!!!!
 #if IPI==1
-						reset_LP_info(curr_id,id_reliable,id_unreliable,event);
+						reset_LP_info(curr_id,id_reliable,id_unreliable,event,lp_idx);
 #endif
 						return_evt_to_main_loop();
 					}
@@ -880,9 +881,8 @@ get_next:
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
 #if IPI==1
-    current_lp=event->receiver_id;//update info on current_lp before execute swap_event
 #if IPI_STATISTICS==1
-    update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid);
+    update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid,lp_idx);
 #endif
     
 #endif
@@ -892,7 +892,6 @@ get_next:
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)c);
 #endif
-
     return 1;
 }
 
