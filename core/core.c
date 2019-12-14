@@ -106,6 +106,10 @@ bool sim_error = false;
 //void **states;
 LP_state **LPS = NULL;
 
+#ifdef IPI_SUPPORT
+char program_name[64];
+#endif
+
 //used to check termination conditions
 volatile bool stop = false;
 volatile bool stop_timer = false;
@@ -117,6 +121,47 @@ unsigned long long *sim_ended;
 size_t node_size_msg_t;
 size_t node_size_state_t;
 
+#ifdef IPI_SUPPORT
+long get_function_size(const char*function_name,char*path_program_name){
+    FILE *fp;
+    char command[100];
+    int index=0;
+
+    //return values
+    char func_target[50];
+    char type[3];
+    unsigned long addr;
+    long function_size;
+
+     //prepare command string
+    memset(command,'\0',100);
+    const char*basic_command="nm -S --size-sort -t d ";
+    int len_basic=strlen(basic_command);
+    memcpy(command,basic_command,len_basic);
+    index+=len_basic;
+    memcpy(command+index,path_program_name,strlen(path_program_name));
+    index+=strlen(path_program_name);
+    command[index]=' ';
+    index+=1;
+    memcpy(command+index,"| grep ",strlen("| grep "));
+    index+=strlen("| grep ");
+    memcpy(command+index,function_name,strlen(function_name));
+
+    fp = popen(command, "r");
+    if(fscanf(fp,"%lu %lu %s %s",&addr,&function_size,type,func_target)!=4){
+    	pclose(fp);
+    	printf("invalid parameter in function get_size_function\n");
+    	printf("%lu,%lu,%s,%s",addr,function_size,type,func_target);
+    	return -1;
+    }
+    if(strcmp(func_target,function_name)==0){
+    	pclose(fp);
+    	return function_size;
+    }
+    return -1;
+}
+
+#endif
 void * do_sleep(){
 	printf("The process will last %d seconds\n", sec_stop);
 	
@@ -486,8 +531,17 @@ stat64_t execute_time;
 #if REPORT == 1 
 		clock_timer_start(event_processing_timer);
 #endif
-
+#ifdef IPI_SUPPORT
+		if(LPS[LP]->state == LP_STATE_SILENT_EXEC){
+			ProcessEventSilent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+		}
+		else{
+			ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+		}
+#else
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+#endif
+
 
 #if REPORT == 1
 		execute_time = clock_timer_value(event_processing_timer);
@@ -518,7 +572,6 @@ stat64_t execute_time;
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
 
-
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state;
 
@@ -527,11 +580,25 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 	/* DEBUG_IPI */
-	interruptible_section_start = (unsigned long) dummy_start_foo;
-	interruptible_section_end = (unsigned long) dummy_end_foo;
+#ifdef IPI_SUPPORT
+	long process_event_size=get_function_size("ProcessEvent",program_name);
+	if(process_event_size<0){
+		printf("impossible retrieve function size\n");
+		gdb_abort;
+	}
+	else{
+		printf("ProcessEvent has size=%ld\n",process_event_size);
+	}
+	interruptible_section_start = (unsigned long) ProcessEvent;
+	interruptible_section_end = (unsigned long)ProcessEvent+process_event_size;
 
 	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
 		alternate_stack_area, interruptible_section_start, interruptible_section_end);
+	if(ipi_registration_error!=0){
+		printf("Impossible register_thread\n");
+		gdb_abort;
+	}
+#endif
 
 	init_simulation(thread_id);
 
@@ -552,6 +619,10 @@ void thread_loop(unsigned int thread_id) {
 		 * INCONSISTENT AFTER "longjmp" CALL. 
 		 */
 		printf("[IPI_4_USE] - We jumped back from an interrupted execution!!!\n");
+		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
+			printf("processEvent interrupted with LP in mode SILENT_EXECUTION\n");
+			gdb_abort;
+		}
 		if (!haveLock(current_lp))
 			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		else
@@ -725,6 +796,12 @@ void thread_loop(unsigned int thread_id) {
 			gdb_abort;				
 		}
 #endif
+
+#ifdef IPI_SUPPORT
+		current_msg->frame = LPS[current_lp]->num_executed_frames;
+		LPS[current_lp]->num_executed_frames++;
+#endif
+
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
@@ -741,8 +818,10 @@ void thread_loop(unsigned int thread_id) {
 
 		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
+#ifndef IPI_SUPPORT
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
+#endif
 		
 		///* ON_GVT *///
 		if(safe) {

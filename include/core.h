@@ -109,7 +109,10 @@ extern LP_state **LPS;
 extern volatile bool stop;
 extern unsigned int sec_stop;
 
-extern void cfv_trampoline(void);
+#ifdef IPI_SUPPORT
+extern char program_name[64];
+#endif
+
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
@@ -121,6 +124,10 @@ extern void _mkdir(const char *path);
 
 extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
+#ifdef IPI_SUPPORT
+extern void ProcessEventSilent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
+extern void cfv_trampoline(void);
+#endif
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void check_OnGVT(unsigned int lp_idx);
 

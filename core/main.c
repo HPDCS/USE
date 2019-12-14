@@ -20,6 +20,10 @@ unsigned long long tid_ticket = 1;
 //extern double delta_count;
 extern int reverse_execution_threshold;
 
+#if IPI_SUPPORT
+extern char program_name[64];
+#endif
+
 void *start_thread(){
 	
 	int tid = (int) __sync_fetch_and_add(&tid_ticket, 1);
@@ -94,7 +98,12 @@ int main(int argn, char *argv[]) {
         if(argn == 4)
             sec_stop = atoi(argv[3]);
     }
-  
+
+#if IPI_SUPPORT
+    memset(program_name,'\0',64);
+    memcpy(program_name,argv[0],strlen(argv[0]));
+#endif
+
     printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);

@@ -11,15 +11,7 @@
 
 //lp_state_type states[4] __attribute__((aligned (64)));
 
-/* DEBUG_IPI */
-void dummy_start_foo(void)
-{
-	return;
-}
-
-
-void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
-
+static inline void ProcEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state){
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
 	//event_content_type new_event;
@@ -135,6 +127,16 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	}
 }
 
+/* DEBUG_IPI */
+void dummy_start_foo(void)
+{
+	return;
+}
+void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
+
+	ProcEvent(me,  now,  event_type, event_content, size, state);
+}
+
 
 /* DEBUG_IPI */
 void dummy_end_foo(void)
@@ -142,6 +144,9 @@ void dummy_end_foo(void)
 	return;
 }
 	
+void ProcessEventSilent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state){
+	ProcEvent(me,  now,  event_type, event_content, size, state);
+}
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	(void) me;
