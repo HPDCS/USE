@@ -69,8 +69,8 @@ __thread int ipi_registration_error = 0;
 __thread void * alternate_stack = NULL;
 __thread unsigned long alternate_stack_area = 4096UL;
 
-__thread unsigned long interruptible_section_start = 0UL;
-__thread unsigned long interruptible_section_end = 0UL;
+__thread unsigned long interruptible_section_start[2] = {0UL};
+__thread unsigned long interruptible_section_end[2] = {0UL};
 
 //timer
 #if REPORT == 1
@@ -582,20 +582,23 @@ void thread_loop(unsigned int thread_id) {
 	/* DEBUG_IPI */
 #ifdef IPI_SUPPORT
 	long process_event_size=get_function_size("ProcessEvent",program_name);
-	if(process_event_size<0){
-		printf("impossible retrieve function size\n");
+	long process_event_silent_size=get_function_size("ProcessEventSilent",program_name);
+	if(process_event_size<0 || process_event_size!=process_event_silent_size){
+		printf("impossible to retrieve function size\n");
 		gdb_abort;
 	}
 	else{
-		printf("ProcessEvent has size=%ld\n",process_event_size);
+		printf("ProcessEvent has size=%ld,ProcessEventSilent has size=%ld\n",process_event_size,process_event_silent_size);
 	}
-	interruptible_section_start = (unsigned long) ProcessEvent;
-	interruptible_section_end = (unsigned long)ProcessEvent+process_event_size;
+	interruptible_section_start[0] = (unsigned long) ProcessEvent;
+	interruptible_section_end[0] = (unsigned long)ProcessEvent+process_event_size;
+	interruptible_section_start[1] = (unsigned long) ProcessEventSilent;
+	interruptible_section_end[1] = (unsigned long)ProcessEventSilent+process_event_silent_size;
 
 	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
-		alternate_stack_area, interruptible_section_start, interruptible_section_end);
+		alternate_stack_area, interruptible_section_start, interruptible_section_end,2);
 	if(ipi_registration_error!=0){
-		printf("Impossible register_thread\n");
+		printf("Impossible register_thread %d\n",tid);
 		gdb_abort;
 	}
 #endif

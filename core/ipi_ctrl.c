@@ -17,9 +17,9 @@
 #define IPI_REGISTER_SAFE_MEM_SIZE  (1U << 5)
 #define IPI_SET_TEXT_START          (1U << 6)
 #define IPI_SET_TEXT_END            (1U << 7)
+#define IPI_NUM_TEXTS               (1U << 8)
 
-
-int ipi_register_thread(int, unsigned long, void **, unsigned long, unsigned long, unsigned long);
+int ipi_register_thread(int, unsigned long, void **, unsigned long, unsigned long*, unsigned long*,unsigned int );
 int ipi_unregister_thread(void **, unsigned long);
 
 
@@ -93,7 +93,7 @@ static inline int remove_thread_pinning(void)
 }
 
 int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack,
-    unsigned long alternate_stack_size, unsigned long text_start, unsigned long text_end)
+    unsigned long alternate_stack_size, unsigned long *text_start, unsigned long *text_end,unsigned int num_texts)
 {
     if (tid < 0)
     {
@@ -108,13 +108,15 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
                 "Thread will work with no IPI support.\n");
         return 1;
     }
-
-    if (text_end < text_start)
-    {
-        printf("Invalid arguments \"text_start\" and \"text_end\". "
-                "Thread will work with no IPI support.\n");
-        return 1;
+    for(unsigned int i=0;i<num_texts;i++){
+        if ( (text_end[i] < text_start[i]) )
+        {
+            printf("Invalid arguments \"text_start\" and \"text_end\". "
+            "Thread will work with no IPI support.\n");
+            return 1;
+        }
     }
+    
 
     cpu = tid;
 
@@ -199,11 +201,26 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         return 1;
     }
+    if (ioctl(fd, IPI_NUM_TEXTS,num_texts) < 0)
+    {
+        printf("Unable to set thread num_texts."
+                "Thread will work with no IPI support.\n");
 
+        ioctl(fd, IPI_UNREGISTER_THREAD);
+        close(fd);
+
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
+            printf("Unable to free the \"alternate_stack\" memory area.\n");
+
+        if (remove_thread_pinning())
+            printf("Unable to remove thread pinning from core %d.\n", cpu);
+
+        return 1;
+    }
     if (ioctl(fd, IPI_SET_TEXT_START, text_start) < 0)
     {
         printf("Unable to set text_start with address 0x%lx. "
-                "Thread will work with no IPI support.\n", text_start);
+                "Thread will work with no IPI support.\n", (unsigned long)text_start);
 
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
@@ -220,7 +237,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
     if (ioctl(fd, IPI_SET_TEXT_END, text_end) < 0)
     {
         printf("Unable to set text_end with address 0x%lx. "
-                "Thread will work with no IPI support.\n", text_end);
+                "Thread will work with no IPI support.\n",(unsigned long) text_end);
 
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
