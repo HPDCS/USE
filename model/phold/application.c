@@ -143,8 +143,12 @@ void dummy_end_foo(void)
 {
 	return;
 }
-	
+
 void ProcessEventSilent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state){
+	ProcEvent(me,  now,  event_type, event_content, size, state);
+}
+
+void ProcessEventSilentSafe(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state){
 	ProcEvent(me,  now,  event_type, event_content, size, state);
 }
 

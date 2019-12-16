@@ -216,7 +216,39 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	// the simulation has been already executed at least once
 	
 	last_executed_event = evt;
-
+#ifdef IPI_SUPPORT
+	//first it executes safe event with ProcessEventSilentSafe(not interruptible) then execute unsafe event with ProcessEventSilent(interruptible)
+	local_next_evt = list_next(evt);
+	while(local_next_evt!=NULL && local_next_evt->monitor==(void*)0x5AFE){
+		evt = local_next_evt;
+		if(old_state != LP_STATE_ONGVT){
+			//if(evt == NULL | evt->node != 0x5A7E)
+			if(stop_silent || evt == NULL || 
+				evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
+				break;
+		}
+		else{
+			if(stop_silent || evt == NULL || 
+			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
+				break;
+		}
+		
+		events++;
+		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
+		last_executed_event = evt;
+		local_next_evt=list_next(evt);
+	}
+	if(old_state != LP_STATE_ONGVT){
+		LPS[lid]->bound = last_executed_event;
+	}
+#if DEBUG==1
+	if( (current_msg->timestamp <LPS[lid]->bound->timestamp)
+				|| ((current_msg->timestamp ==LPS[lid]->bound->timestamp)&& (current_msg->tie_breaker<=LPS[lid]->bound->tie_breaker) )){
+					printf("event not in future after rollback\n");
+					gdb_abort;
+	}
+#endif
+#endif
 	while(1){
 		local_next_evt = list_next(evt);
 
@@ -247,7 +279,6 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
 				break;
 		}
-		
 		
 		events++;
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
@@ -347,7 +378,6 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	// Restore the simulation state and correct the state base pointer
 	log_restore(lid, restore_state);
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
-	
 	last_restored_event = restore_state->last_event;
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION

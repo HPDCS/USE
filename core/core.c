@@ -61,7 +61,7 @@ __thread unsigned int check_ongvt_period = 0;
 
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
-
+#ifdef IPI_SUPPORT
 __thread cntx_buf cntx_loop;
 
 __thread int ipi_registration_error = 0;
@@ -71,7 +71,10 @@ __thread unsigned long alternate_stack_area = 4096UL;
 
 __thread unsigned long interruptible_section_start[2] = {0UL};
 __thread unsigned long interruptible_section_end[2] = {0UL};
-
+#if DEBUG==1
+__thread bool interruptible=true;
+#endif
+#endif
 //timer
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
@@ -148,10 +151,10 @@ long get_function_size(const char*function_name,char*path_program_name){
     memcpy(command+index,function_name,strlen(function_name));
 
     fp = popen(command, "r");
-    if(fscanf(fp,"%lu %lu %s %s",&addr,&function_size,type,func_target)!=4){
+    if(fscanf(fp,"%lu %lu %s %s\n",&addr,&function_size,type,func_target)!=4){
     	pclose(fp);
     	printf("invalid parameter in function get_size_function\n");
-    	printf("%lu,%lu,%s,%s",addr,function_size,type,func_target);
+    	printf("%lu,%lu,%s,%s\n",addr,function_size,type,func_target);
     	return -1;
     }
     if(strcmp(func_target,function_name)==0){
@@ -533,7 +536,17 @@ stat64_t execute_time;
 #endif
 #ifdef IPI_SUPPORT
 		if(LPS[LP]->state == LP_STATE_SILENT_EXEC){
-			ProcessEventSilent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+			if(event->monitor==(void*)0x5AFE){
+#if DEBUG==1
+				interruptible=false;
+#endif
+				ProcessEventSilentSafe(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+#if DEBUG==1
+				interruptible=true;
+#endif
+			}
+			else
+				ProcessEventSilent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		}
 		else{
 			ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
@@ -591,16 +604,18 @@ void thread_loop(unsigned int thread_id) {
 		printf("ProcessEvent has size=%ld,ProcessEventSilent has size=%ld\n",process_event_size,process_event_silent_size);
 	}
 	interruptible_section_start[0] = (unsigned long) ProcessEvent;
-	interruptible_section_end[0] = (unsigned long)ProcessEvent+process_event_size;
+	interruptible_section_end[0] = ((unsigned long)ProcessEvent)+process_event_size-1;
 	interruptible_section_start[1] = (unsigned long) ProcessEventSilent;
-	interruptible_section_end[1] = (unsigned long)ProcessEventSilent+process_event_silent_size;
-
+	interruptible_section_end[1] = ((unsigned long)ProcessEventSilent)+process_event_silent_size-1;
+	printf("register thread,start=%lu,end=%lu\n",interruptible_section_start[1],interruptible_section_end[1]);
+	printf("ProcessEvent=%lu,ProcessEventSilent=%lu,ProcessEventSilentSafe=%lu\n",(unsigned long) ProcessEvent,(unsigned long) ProcessEventSilent,(unsigned long) ProcessEventSilentSafe);
 	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
 		alternate_stack_area, interruptible_section_start, interruptible_section_end,2);
 	if(ipi_registration_error!=0){
 		printf("Impossible register_thread %d\n",tid);
 		gdb_abort;
 	}
+	printf("registration finished\n");
 #endif
 
 	init_simulation(thread_id);
@@ -621,15 +636,74 @@ void thread_loop(unsigned int thread_id) {
 		 * AND LOCAL VARIABLE THAT MAY RESULT
 		 * INCONSISTENT AFTER "longjmp" CALL. 
 		 */
-		printf("[IPI_4_USE] - We jumped back from an interrupted execution!!!\n");
-		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
-			printf("processEvent interrupted with LP in mode SILENT_EXECUTION\n");
+#if DEBUG==1
+		if (!haveLock(current_lp)){
+			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 			gdb_abort;
 		}
-		if (!haveLock(current_lp))
-			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
-		else
-			unlock(current_lp);
+#endif
+		printf("[IPI_4_USE] - Thread %d jumped back from an interrupted execution!!!\n",tid);
+		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
+			printf("processEvent interrupted with LP in mode SILENT_EXECUTION\n");
+#if DEBUG==1
+			if(interruptible==false){
+				printf("interrupt code not interruptible\n");
+				gdb_abort;
+			}
+			if( (current_msg->timestamp <LPS[current_lp]->bound->timestamp)
+				|| ((current_msg->timestamp ==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker) )){
+					printf("event not in future,%lx,%lx,tid=%d\n",(unsigned long)current_msg,(unsigned long)LPS[current_lp]->bound,tid);
+					printf("ts=%lf,tb=%d,ts=%lf,tb=%d\n", current_msg->timestamp,current_msg->tie_breaker,LPS[current_lp]->bound->timestamp,LPS[current_lp]->bound->tie_breaker);
+					gdb_abort;
+			}
+#endif
+			LPS[current_lp]->state=old_state;//restore old mode execution
+			if(current_msg->frame==0){
+				current_msg->frame = LPS[current_lp]->num_executed_frames;
+				LPS[current_lp]->num_executed_frames++;
+				if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
+					msg_t *bound_t, *next_t,*prev_t;
+					bound_t = LPS[current_lp]->bound;
+					prev_t=bound_t;
+					next_t = list_next(prev_t);//first event after bound
+					while (next_t!=NULL){
+#if DEBUG==1
+						if(next_t->monitor==(void*)0x5AFE){
+							printf("event in local_queue is safe after bound\n");
+							gdb_abort;
+						}
+						if( (prev_t->timestamp > next_t->timestamp)
+							|| ( (prev_t->timestamp==next_t->timestamp) && (prev_t->tie_breaker>next_t->tie_breaker)) ){
+							printf("event not in order in local_queue\n");
+							gdb_abort;
+						}
+#endif
+						if( (next_t->timestamp>current_msg->timestamp)
+							|| (next_t->timestamp==current_lvt && next_t->tie_breaker>current_msg->tie_breaker) ){
+							break;
+						}
+						else{
+							prev_t=next_t;
+							next_t=list_next(next_t);
+						}
+					}
+					list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg,prev_t);
+#if DEBUG == 1
+					if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
+					if(list_prev(current_msg) != prev_t){					printf("list_prev(current_msg) != prev_t\n");	gdb_abort;}
+					if(list_next(prev_t) != current_msg){					printf("list_next(prev_t) != current_msg\n");	gdb_abort;}
+					if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
+					if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+					if(prev_t !=NULL && prev_t->timestamp > current_lvt){	printf("prev_t->timestamp > current_lvt\n");	gdb_abort;}			
+					if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+#endif
+				}
+			}
+		}
+		else{
+			printf("processEvent interrupted with LP in mode %d\n",LPS[current_lp]->state);
+		}
+		unlock(current_lp);
 	}
 	else
 		printf("[IPI_4_USE] - First time we saved the execution context!!!\n");

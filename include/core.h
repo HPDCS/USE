@@ -111,6 +111,9 @@ extern unsigned int sec_stop;
 
 #ifdef IPI_SUPPORT
 extern char program_name[64];
+#if DEBUG==1
+extern __thread bool interruptible;
+#endif
 #endif
 
 
@@ -126,6 +129,7 @@ extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 #ifdef IPI_SUPPORT
 extern void ProcessEventSilent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
+extern void ProcessEventSilentSafe(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void cfv_trampoline(void);
 #endif
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
