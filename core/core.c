@@ -66,6 +66,8 @@ __thread cntx_buf cntx_loop;
 
 __thread int ipi_registration_error = 0;
 
+__thread unsigned long long * preempt_count_ptr = NULL;
+
 __thread void * alternate_stack = NULL;
 __thread unsigned long alternate_stack_area = 4096UL;
 
@@ -610,6 +612,7 @@ void thread_loop(unsigned int thread_id) {
 	printf("register thread,start=%lu,end=%lu\n",interruptible_section_start[1],interruptible_section_end[1]);
 	printf("ProcessEvent=%lu,ProcessEventSilent=%lu,ProcessEventSilentSafe=%lu\n",(unsigned long) ProcessEvent,(unsigned long) ProcessEventSilent,(unsigned long) ProcessEventSilentSafe);
 	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long) cfv_trampoline, &alternate_stack,
+<<<<<<< HEAD
 		alternate_stack_area, interruptible_section_start, interruptible_section_end,2);
 	if(ipi_registration_error!=0){
 		printf("Impossible register_thread %d\n",tid);
@@ -617,6 +620,9 @@ void thread_loop(unsigned int thread_id) {
 	}
 	printf("registration finished\n");
 #endif
+=======
+		&preempt_count_ptr, alternate_stack_area, interruptible_section_start, interruptible_section_end);
+>>>>>>> Registration of non_preemptable_counter variable
 
 	init_simulation(thread_id);
 

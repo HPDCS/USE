@@ -19,7 +19,13 @@
 #define IPI_SET_TEXT_END            (1U << 7)
 #define IPI_NUM_TEXTS               (1U << 8)
 
+<<<<<<< HEAD
 int ipi_register_thread(int, unsigned long, void **, unsigned long, unsigned long*, unsigned long*,unsigned int );
+=======
+
+int ipi_register_thread(int, unsigned long, void **, unsigned long long **,
+                            unsigned long, unsigned long, unsigned long);
+>>>>>>> Registration of non_preemptable_counter variable
 int ipi_unregister_thread(void **, unsigned long);
 
 
@@ -93,7 +99,12 @@ static inline int remove_thread_pinning(void)
 }
 
 int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack,
+<<<<<<< HEAD
     unsigned long alternate_stack_size, unsigned long *text_start, unsigned long *text_end,unsigned int num_texts)
+=======
+    unsigned long long ** preempt_count_ptr_addr, unsigned long alternate_stack_size,
+        unsigned long text_start, unsigned long text_end)
+>>>>>>> Registration of non_preemptable_counter variable
 {
     if (tid < 0)
     {
@@ -209,6 +220,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
 
+<<<<<<< HEAD
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
@@ -217,6 +229,10 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         return 1;
     }
+=======
+    (*preempt_count_ptr_addr) = *((unsigned long long **) (*alternate_stack));
+
+>>>>>>> Registration of non_preemptable_counter variable
     if (ioctl(fd, IPI_SET_TEXT_START, text_start) < 0)
     {
         printf("Unable to set text_start with address 0x%lx. "
