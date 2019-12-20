@@ -9,6 +9,11 @@
 #define ELIMINATED	0x2
 #define ANTI_MSG	0x3
 
+#if IPI_POSTING==1 //values of field posted in msg_t
+#define UNPOSTED 0x0
+#define POSTED 0x1
+
+#endif
 typedef struct __msg_t
 {
 	/* event's attributes */
@@ -69,7 +74,9 @@ typedef struct __msg_t
 	simtime_t gvt_on_commit;
 	struct __msg_t * event_on_gvt_on_commit;
 #endif
-
+#if IPI_POSTING==1
+	char posted;
+#endif
 } msg_t;
 
 

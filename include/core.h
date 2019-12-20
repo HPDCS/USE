@@ -15,7 +15,7 @@
 
 #define THR_POOL_SIZE		128
 
-#if IPI==1
+#if IPI_POSTING==1
 #define THR_HASH_TABLE_SIZE (THR_POOL_SIZE)
 #endif
 

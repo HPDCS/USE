@@ -114,14 +114,25 @@ typedef struct _LP_state {
 	
 	unsigned int until_clean_ckp;
 
-#if IPI==1
+#if IPI_POSTING==1
 	msg_t*best_evt_reliable;
-    msg_t*best_evt_unreliable;
-#if IPI_STATISTICS==1
+#if IPI_POSTING_SINGLE_INFO==1
+		#define best_evt_unreliable best_evt_reliable
+#else
+	msg_t*best_evt_unreliable;
+#endif
+
+#if IPI_POSTING_STATISTICS==1
     unsigned long num_times_modified_best_evt_reliable;
 	unsigned long num_times_choosen_best_evt_reliable;
-    unsigned long num_times_modified_best_evt_unreliable;
+#if IPI_POSTING_SINGLE_INFO==1
+	#define num_times_modified_best_evt_unreliable num_times_modified_best_evt_reliable
+	#define num_times_choosen_best_evt_unreliable num_times_choosen_best_evt_reliable
+#else
+	unsigned long num_times_modified_best_evt_unreliable;
     unsigned long num_times_choosen_best_evt_unreliable;
+#endif//IPI_POSTING_SINGLE_INFO
+
 #endif//IPI_STATISTICS
 #endif
 

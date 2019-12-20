@@ -263,15 +263,15 @@ void LPs_metada_init() {
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
 
-#if IPI==1
+#if IPI_POSTING==1
 		LPS[i]->best_evt_reliable=NULL;
-		LPS[i]->best_evt_unreliable=NULL;
-#if IPI_STATISTICS==1
+		LPS[i]->best_evt_unreliable =NULL;
+#if IPI_POSTING_STATISTICS==1
         LPS[i]->num_times_modified_best_evt_reliable=0;
         LPS[i]->num_times_choosen_best_evt_reliable=0;
         LPS[i]->num_times_modified_best_evt_unreliable=0;
         LPS[i]->num_times_choosen_best_evt_unreliable=0;
-#endif//IPI_STATISTICS
+#endif//IPI_POSTING_STATISTICS
 #endif
 
 
@@ -402,7 +402,7 @@ void init_simulation(unsigned int thread_id){
 	to_remove_local_evts_old = new_list(tid, msg_t);
 	freed_local_evts = new_list(tid, msg_t);
 
-#if IPI==1
+#if IPI_POSTING==1
     //initialize collision_list
     for (int i=0; i<THR_HASH_TABLE_SIZE; i++)
     {
@@ -446,8 +446,8 @@ void init_simulation(unsigned int thread_id){
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 
-#if IPI==1
-#if VERBOSE > 0 && COLLISION_LIST==1
+#if IPI_POSTING==1
+#if VERBOSE > 0 && IPI_COLLISION_LIST==1
 		printf("lp id in thread pool list\n");
         print_lp_id_in_thread_pool_list();
         printf("lp id in collision list\n");
@@ -585,7 +585,7 @@ void thread_loop(unsigned int thread_id) {
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
 
-#if IPI==1
+#if IPI_POSTING==1
 #if DEBUG==1
 		if( (current_evt_state!=ANTI_MSG) && (current_evt_state!= EXTRACTED) ){
 			printf("current_evt_state=%lld\n",current_evt_state);
@@ -626,8 +626,8 @@ void thread_loop(unsigned int thread_id) {
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
 
-#if IPI==1
-#if CHECK_ROLLBACK_AFTER_EXECUTION==1
+#if IPI_POSTING==1
+#if IPI_CHECK_ROLLBACK_AFTER_EXECUTION==1
 rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 #endif
 #endif
@@ -675,6 +675,9 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 			delete(nbcalqueue, current_node);
+#if IPI_POSTING==1
+			current_msg->posted=UNPOSTED;
+#endif
 			unlock(current_lp);
 			continue;
 		}
@@ -694,7 +697,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		// The current_msg should be allocated with list allocator
 		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
 
-#if IPI==1
+#if IPI_POSTING==1
 #if DEBUG==1
 			if(current_msg->frame!=0){
 				printf("event not connected to localqueue,but it was executed!!!\n");
@@ -737,7 +740,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		}
 #endif
 
-#if IPI==1
+#if IPI_POSTING==1
 #if DEBUG==1
     if(_thr_pool._thr_pool_count!=0){
         printf("not empty collision list\n");
@@ -751,18 +754,18 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
     }
 
 #endif//DEBUG
-#if VERBOSE > 0 && COLLISION_LIST==1
+#if VERBOSE > 0 && IPI_COLLISION_LIST==1
         printf("print thread pool and collision list before execute event\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
 #endif//VERBOSE
 
-#endif//IPI
+#endif//IPI_POSTING
 
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
-#if IPI==1
-#if CHECK_ROLLBACK_AFTER_EXECUTION==1
+#if IPI_POSTING==1
+#if IPI_CHECK_ROLLBACK_AFTER_EXECUTION==1
 		//TODO
 		if(current_msg->state==ANTI_MSG){//read again event state,if is changed it is ANTI_MSG(from EXTRACTED to ANTI_MSG)
 			printf("rollback in time tid %d\n",tid);
@@ -778,7 +781,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			LPS[current_lp]->num_executed_frames++;
 
 			//free collision_list
-			#if COLLISION_LIST==1
+			#if IPI_COLLISION_LIST==1
 			for(unsigned i = 0; i < THR_HASH_TABLE_SIZE; i++) {
 	        	if(_thr_pool.collision_list[i]!=NULL){
 	            	free_memory_list(_thr_pool.collision_list[i]);
@@ -797,11 +800,11 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			//ricontrollare...è possibile non aumentare l'epoca perché non vengono prodotti eventi figli, in realtà se viene aumentata non è un problema
 			//quindi posso chiamare la funzione di rollback cosi come è??????
 		}
-#endif//CHECK_ROLLBACK_AFTER_EXECUTION
-#endif//IPI
+#endif//IPI_CHECK_ROLLBACK_AFTER_EXECUTION
+#endif//IPI_POSTING
 
-#if IPI==1
-#if VERBOSE > 0 && COLLISION_LIST==1
+#if IPI_POSTING==1
+#if VERBOSE > 0 && IPI_COLLISION_LIST==1
         printf("print thread pool and collision list after execute event before queue_deliver_msgs\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
@@ -810,7 +813,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		///* FLUSH */// 
 		queue_deliver_msgs();
 
-#if IPI==1
+#if IPI_POSTING==1
 #if DEBUG==1
     if(_thr_pool._thr_pool_count!=0){
         printf("not empty collision list\n");
@@ -824,12 +827,12 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 
     }
 #endif//DEBUG
-#if VERBOSE > 0 && COLLISION_LIST==1
+#if VERBOSE > 0 && IPI_COLLISION_LIST==1
         printf("print thread pool and collision list after queue_deliver_msgs\n");
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
 #endif//VERBOSE
-#endif//IPI
+#endif//IPI_POSTING
 
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){
@@ -862,6 +865,10 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 				clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
+
+#if IPI_POSTING==1
+		current_msg->posted=UNPOSTED;
+#endif
 
 	#if DEBUG == 0
 		unlock(current_lp);
