@@ -3,6 +3,7 @@
 #include <string.h>
 #include <statistics.h>
 #include <timer.h>
+#include <unistd.h>
 
 #include "queue.h"
 #include "core.h"
@@ -64,6 +65,10 @@ void print_lp_id_in_thread_pool_list(){
     }
 }
 #endif//IPI_POSTING
+#if IPI_SUPPORT_STATISTICS==1
+extern unsigned long num_sended_ipi;
+extern unsigned long num_received_ipi;
+#endif
 
 void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
@@ -132,7 +137,14 @@ void queue_clean(){
             _thr_pool.messages[i].father = NULL;
 
         }
-
+#if IPI_POSTING==1
+#if IPI_COLLISION_LIST==1
+        if(_thr_pool.collision_list[i]!=NULL){
+            free_memory_list(_thr_pool.collision_list[i]);//release memory only when hashtable uses collision_list
+            _thr_pool.collision_list[i]=NULL;
+        }
+#endif
+#endif
     }
 	_thr_pool._thr_pool_count = 0;
 }
@@ -289,6 +301,18 @@ void queue_deliver_msgs(void) {
         new_hole = _thr_pool.messages[i].father;
         _thr_pool.messages[i].father = NULL;
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+#if IPI_SUPPORT==1
+        //n.b. con le interruzioni e collision list bisogna liberare la memoria di tutte le liste di collisione
+        //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
+        unsigned int lcl_tid=(lp_lock[(new_hole->receiver_id)*CACHE_LINE_SIZE/4]);
+        if(lcl_tid>0){
+            #if IPI_SUPPORT_STATISTICS==1
+            atomic_inc_x86((atomic_t *)&num_sended_ipi);
+            #endif
+            if (syscall(174, lcl_tid-1))
+                printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+        }
+#endif
     }
     _thr_pool._thr_pool_count=0;
 }
@@ -437,12 +461,22 @@ void queue_deliver_msgs(void) {
         }
         _thr_pool.collision_list[i]=NULL;
     }
-
     //flush all messagges in calendarqueue
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
         new_hole = _thr_pool.messages[i].father;
         _thr_pool.messages[i].father = NULL;
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+#if IPI_SUPPORT==1
+        //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
+        unsigned int lcl_tid=(lp_lock[(new_hole->receiver_id)*CACHE_LINE_SIZE/4]);
+        if(lcl_tid>0){
+            #if IPI_SUPPORT_STATISTICS==1
+            atomic_inc_x86((atomic_t *)&num_sended_ipi);
+            #endif
+            if (syscall(174, lcl_tid-1))
+                printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+        }
+#endif
     }
     _thr_pool._thr_pool_count=0;
 }
@@ -494,6 +528,17 @@ void queue_deliver_msgs(void) {
         clock_timer_start(queue_op);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+#if IPI_SUPPORT==1
+        //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
+        unsigned int lcl_tid=(lp_lock[(new_hole->receiver_id)*CACHE_LINE_SIZE/4]);
+        if(lcl_tid>0){
+            #if IPI_SUPPORT_STATISTICS==1
+            atomic_inc_x86((atomic_t *)&num_sended_ipi);
+            #endif
+            if (syscall(174, lcl_tid-1))
+                printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+        }
+#endif
 
 #if REPORT == 1
         statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));

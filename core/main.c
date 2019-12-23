@@ -13,6 +13,14 @@
 #include <reverse.h>
 #include <statistics.h>
 
+#if IPI_SUPPORT==1
+extern char program_name[64];
+#if IPI_SUPPORT_STATISTICS==1
+extern unsigned long num_sended_ipi;
+extern unsigned long num_received_ipi;
+#endif
+#endif
+
 __thread struct drand48_data seedT;
 
 unsigned long long tid_ticket = 1;
@@ -95,6 +103,10 @@ int main(int argn, char *argv[]) {
             sec_stop = atoi(argv[3]);
     }
   
+#if IPI_SUPPORT==1
+    memset(program_name,'\0',64);
+    memcpy(program_name,argv[0],strlen(argv[0]));
+#endif
     printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);
@@ -121,6 +133,12 @@ int main(int argn, char *argv[]) {
                 LPS[i]->num_times_modified_best_evt_reliable,LPS[i]->num_times_choosen_best_evt_reliable,
                 LPS[i]->num_times_modified_best_evt_unreliable,LPS[i]->num_times_choosen_best_evt_unreliable);
     }
+#endif
+#endif
+#if IPI_SUPPORT==1
+#if IPI_SUPPORT_STATISTICS==1
+    printf("number sended IPIs=%ld\n",num_sended_ipi);
+    printf("number received IPIs=%ld\n",num_received_ipi);
 #endif
 #endif
     return 0;

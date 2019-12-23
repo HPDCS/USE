@@ -500,7 +500,6 @@ unsigned int fetch_internal(){
 
 	//global_variables to update:nothing
 	//thread_local_storage_variables to update:current_lp,current_msg,current_node,safe
-
 	table *h;
 	nbc_bucket_node * node, *node_next, *min_node;
 	simtime_t ts, min = INFTY, lvt_ts;
@@ -557,7 +556,7 @@ unsigned int fetch_internal(){
         gdb_abort;
     }
 #endif
-		
+	
     while(node != NULL){
 		
 #if DEBUG == 1 || REPORT ==1

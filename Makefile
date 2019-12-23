@@ -52,6 +52,18 @@ else
 CFLAGS:=$(CFLAGS) -DIPI_CHECK_ROLLBACK_AFTER_EXECUTION=0
 endif
 
+ifdef IPI_SUPPORT
+CFLAGS:= $(CFLAGS) -DIPI_SUPPORT=$(IPI_SUPPORT)
+else
+CFLAGS:= $(CFLAGS) -DIPI_SUPPORT=0
+endif
+
+ifdef IPI_SUPPORT_STATISTICS
+CFLAGS:= $(CFLAGS) -DIPI_SUPPORT_STATISTICS=$(IPI_SUPPORT_STATISTICS)
+else
+CFLAGS:= $(CFLAGS) -DIPI_SUPPORT_STATISTICS=0
+endif
+
 ifdef OPTIMISTIC_LEVEL
 CFLAGS:=$(CFLAGS)  -DOPTIMISTIC_MODE=$(OPTIMISTIC_LEVEL)
 else
@@ -232,7 +244,18 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=phold
 
-CORE_SOURCES =  core/core.c\
+#ifdef IPI_SUPPORT
+#ASM_SOURCES=core/jmp.S\
+#		core/trampoline.S
+#endif
+
+ifeq ($(IPI_SUPPORT),1)
+ASM_SOURCES=core/jmp.S\
+		core/trampoline.S
+endif
+
+CORE_SOURCES =  core/ipi_ctrl.c\
+		core/core.c\
 		core/calqueue.c\
 		core/nb_calqueue.c\
 		core/x86.c\
@@ -260,6 +283,9 @@ REVERSE_SOURCES=	reverse/reverse.c\
 
 
 MM_OBJ=$(MM_SOURCES:.c=.o)
+ifeq ($(IPI_SUPPORT),1)
+ASM_OBJ=$(ASM_SOURCES:.S=.o)
+endif
 CORE_OBJ=$(CORE_SOURCES:.c=.o)
 REVERSE_OBJ=$(REVERSE_SOURCES:.c=.o)
 
@@ -303,8 +329,11 @@ robot_explore: clean _robot_explore executable
 hash: TARGET=hash 
 hash: clean _hash executable
 
+ifeq ($(IPI_SUPPORT),1)
+executable: mm asm core reverse link
+else
 executable: mm core reverse link
-
+endif
 
 link:
 ifeq ($(REVERSIBLE),1)
@@ -325,12 +354,20 @@ else
 #	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
 #	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__core.o $(LIBS)
 endif
-	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__core.o $(LIBS)
 
-
+ifeq ($(IPI_SUPPORT),1)
+	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__asm.o core/__core.o $(LIBS)
+else
+	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o  core/__core.o $(LIBS)
+endif
 
 mm: $(MM_OBJ)
 	@ld -r -g $(MM_OBJ) -o mm/__mm.o
+
+ifeq ($(IPI_SUPPORT),1)
+asm: $(ASM_OBJ)
+	@ld -r -g $(ASM_OBJ) -o core/__asm.o
+endif
 
 core: $(CORE_OBJ)
 	@ld -r -g $(CORE_OBJ) -o core/__core.o
@@ -383,5 +420,3 @@ clean:
 	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
-	
- 		 

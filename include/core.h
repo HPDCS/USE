@@ -121,6 +121,10 @@ extern void rootsim_error(bool fatal, const char *msg, ...);
 extern void _mkdir(const char *path);
 
 extern int OnGVT(unsigned int me, void *snapshot);
+
+#if IPI_SUPPORT==1
+extern void cfv_trampoline(void);
+#endif
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void check_OnGVT(unsigned int lp_idx);

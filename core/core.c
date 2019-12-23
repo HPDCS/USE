@@ -33,6 +33,11 @@
 #include <prints.h>
 
 
+#if IPI_SUPPORT==1
+#include "jmp.h"
+#include "ipi_ctrl.h"
+#endif
+
 //id del processo principale
 #define MAIN_PROCESS		0
 #define PRINT_REPORT_RATE	1000000000000000
@@ -105,6 +110,73 @@ unsigned long long *sim_ended;
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
+
+#if IPI_SUPPORT==1
+__thread cntx_buf cntx_loop;
+__thread int ipi_registration_error = 0;
+
+__thread unsigned long long * preempt_count_ptr = NULL;
+
+__thread void * alternate_stack = NULL;
+__thread unsigned long alternate_stack_area = 4096UL;
+
+__thread unsigned long interruptible_section_start = 0UL;
+__thread unsigned long interruptible_section_end = 0UL;
+char program_name[64];
+
+
+void decrement_preempt_counter(){
+	(*preempt_count_ptr)=(*preempt_count_ptr)-1;
+}
+void increment_preempt_counter(){
+	(*preempt_count_ptr)=(*preempt_count_ptr)+1;
+}
+
+#if IPI_SUPPORT_STATISTICS==1
+unsigned long num_sended_ipi=0;
+unsigned long num_received_ipi=0;
+#endif
+
+long get_sizeof_function(const char*function_name,char*path_program_name){
+    FILE *fp;
+    char command[100];
+    int index=0;
+
+    //return values
+    char func_target[50];
+    char type[3];
+    unsigned long addr;
+    long function_size;
+
+     //prepare command string
+    memset(command,'\0',100);
+    const char*basic_command="nm -S --size-sort -t d ";
+    int len_basic=strlen(basic_command);
+    memcpy(command,basic_command,len_basic);
+    index+=len_basic;
+    memcpy(command+index,path_program_name,strlen(path_program_name));
+    index+=strlen(path_program_name);
+    command[index]=' ';
+    index+=1;
+    memcpy(command+index,"| grep ",strlen("| grep "));
+    index+=strlen("| grep ");
+    memcpy(command+index,function_name,strlen(function_name));
+
+    fp = popen(command, "r");
+    if(fscanf(fp,"%lu %lu %s %s\n",&addr,&function_size,type,func_target)!=4){
+    	pclose(fp);
+    	printf("invalid parameter in function get_size_function\n");
+    	printf("%lu,%lu,%s,%s\n",addr,function_size,type,func_target);
+    	return -1;
+    }
+    if(strcmp(func_target,function_name)==0){
+    	pclose(fp);
+    	return function_size;
+    }
+    return -1;
+}
+
+#endif
 
 void * do_sleep(){
 	printf("The process will last %d seconds\n", sec_stop);
@@ -501,8 +573,23 @@ stat64_t execute_time;
 #if REPORT == 1 
 		clock_timer_start(event_processing_timer);
 #endif
-
+#if IPI_SUPPORT==1
+		if(LPS[LP]->state != LP_STATE_SILENT_EXEC){
+			decrement_preempt_counter();
+		}
+		else{
+			increment_preempt_counter();
+		}
+#endif
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+#if IPI_SUPPORT==1
+		if(LPS[LP]->state != LP_STATE_SILENT_EXEC){
+			increment_preempt_counter();
+		}
+		else{
+			decrement_preempt_counter();
+		}
+#endif
 
 #if REPORT == 1
 		execute_time = clock_timer_value(event_processing_timer);
@@ -535,17 +622,134 @@ stat64_t execute_time;
 
 
 void thread_loop(unsigned int thread_id) {
+	#if IPI_SUPPORT==1
+	unsigned int old_state=0;
+	#else
 	unsigned int old_state;
-	
+	#endif
 #if ONGVT_PERIOD != -1
 	unsigned int empty_fetch = 0;
 #endif
-	
+#if IPI_SUPPORT==1
+	long process_event_size=get_sizeof_function("ProcessEvent",program_name);
+	if(process_event_size<0){
+		printf("impossible to retrieve function size\n");
+		gdb_abort;
+	}
+	else{
+		printf("ProcessEvent has size=%ld\n",process_event_size);
+	}
+	interruptible_section_start = (unsigned long) ProcessEvent;
+	interruptible_section_end = ((unsigned long)ProcessEvent)+process_event_size-1;
+	printf("register thread,start=%lu,end=%lu\n",interruptible_section_start,interruptible_section_end);
+
+	//mettere cfv_trampoline al posto di ProcessEvent
+	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long)cfv_trampoline, &alternate_stack,
+		&preempt_count_ptr,alternate_stack_area, interruptible_section_start, interruptible_section_end);
+	if(ipi_registration_error!=0){
+		printf("Impossible register_thread %d\n",tid);
+		gdb_abort;
+	}
+	//init counter
+	*preempt_count_ptr=1;
+	printf("registration finished\n");
+#endif
+
 	init_simulation(thread_id);
 
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
+#if IPI_SUPPORT==1
+	if (set_jmp(&cntx_loop)==1)
+	{
+		/*
+		 * We will return to this point in the
+		 * execution upon a longjmp invocation
+		 * with same "jmp_buf" data.
+		 *
+		 * USE THIS BRANCH TO RESET ANY GLOBAL
+		 * AND LOCAL VARIABLE THAT MAY RESULT
+		 * INCONSISTENT AFTER "longjmp" CALL. 
+		 */
+#if IPI_SUPPORT_STATISTICS==1
+            atomic_inc_x86((atomic_t *)&num_received_ipi);
+#endif
+#if DEBUG==1
+		if (!haveLock(current_lp)){
+			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+			gdb_abort;
+		}
+		if(*preempt_count_ptr!=0){
+				printf("interrupt code not interruptible\n");
+				gdb_abort;
+		}
+		else{
+			increment_preempt_counter();
+		}
+#endif
+		printf("[IPI_4_USE] - Thread %d jumped back from an interrupted execution!!!\n",tid);
+		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
+			printf("processEvent interrupted with LP in mode SILENT_EXECUTION\n");
+#if DEBUG==1
+			if( (current_msg->timestamp <LPS[current_lp]->bound->timestamp)
+				|| ((current_msg->timestamp ==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker) )){
+					printf("event not in future,%lx,%lx,tid=%d\n",(unsigned long)current_msg,(unsigned long)LPS[current_lp]->bound,tid);
+					printf("ts=%lf,tb=%d,ts=%lf,tb=%d\n", current_msg->timestamp,current_msg->tie_breaker,LPS[current_lp]->bound->timestamp,LPS[current_lp]->bound->tie_breaker);
+					gdb_abort;
+			}
+#endif
+			LPS[current_lp]->state=old_state;//restore old mode execution
+			if(current_msg->frame==0){
+				current_msg->frame = LPS[current_lp]->num_executed_frames;
+				LPS[current_lp]->num_executed_frames++;
+				if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
+					msg_t *bound_t, *next_t,*prev_t;
+					bound_t = LPS[current_lp]->bound;
+					prev_t=bound_t;
+					next_t = list_next(prev_t);//first event after bound
+					while (next_t!=NULL){
+#if DEBUG==1
+						if(next_t->monitor==(void*)0x5AFE){
+							printf("event in local_queue is safe after bound\n");
+							gdb_abort;
+						}
+						if( (prev_t->timestamp > next_t->timestamp)
+							|| ( (prev_t->timestamp==next_t->timestamp) && (prev_t->tie_breaker>next_t->tie_breaker)) ){
+							printf("event not in order in local_queue\n");
+							gdb_abort;
+						}
+#endif
+						if( (next_t->timestamp>current_msg->timestamp)
+							|| (next_t->timestamp==current_lvt && next_t->tie_breaker>current_msg->tie_breaker) ){
+							break;
+						}
+						else{
+							prev_t=next_t;
+							next_t=list_next(next_t);
+						}
+					}
+					list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg,prev_t);
+#if DEBUG == 1
+					if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
+					if(list_prev(current_msg) != prev_t){					printf("list_prev(current_msg) != prev_t\n");	gdb_abort;}
+					if(list_next(prev_t) != current_msg){					printf("list_next(prev_t) != current_msg\n");	gdb_abort;}
+					if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
+					if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+					if(prev_t !=NULL && prev_t->timestamp > current_lvt){	printf("prev_t->timestamp > current_lvt\n");	gdb_abort;}			
+					if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+#endif
+				}
+			}
+		}
+		else{
+			printf("processEvent interrupted with LP in mode %d\n",LPS[current_lp]->state);
+		}
+		unlock(current_lp);
+	}
+	else
+		printf("[IPI_4_USE] - First time we saved the execution context!!!\n");
+#endif
 	///* START SIMULATION *///
 	while (  
 				(
@@ -575,7 +779,6 @@ void thread_loop(unsigned int thread_id) {
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
 #endif
-
 		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
 
@@ -607,7 +810,6 @@ void thread_loop(unsigned int thread_id) {
 		}
 	#endif
 
-
 	#if DEBUG == 1	
 		if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
 			printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
@@ -617,7 +819,7 @@ void thread_loop(unsigned int thread_id) {
 			continue; //TODO: verificare
 		}
 	#endif
-
+		
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
@@ -668,7 +870,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 			}
 		}
-
+		
 		if(current_evt_state == ANTI_MSG) {
 
 			current_msg->monitor = (void*) 0xba4a4a;
@@ -681,7 +883,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			unlock(current_lp);
 			continue;
 		}
-
+		
 	#if DEBUG==1
 		if((unsigned long long)current_msg->node & (unsigned long long)0x1){
 			printf(RED("Si sta eseguendo un nodo eliminato"));
@@ -731,7 +933,6 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 
 		// Take a simulation state snapshot, in some way
 		LogState(current_lp);
-		
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){
 			printf(RED("A - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
@@ -740,28 +941,10 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		}
 #endif
 
-#if IPI_POSTING==1
-#if DEBUG==1
-    if(_thr_pool._thr_pool_count!=0){
-        printf("not empty collision list\n");
-        gdb_abort;
-    }
-    for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
-        if(_thr_pool.collision_list[i]!=NULL){
-            printf("not empty collision list\n");
-            gdb_abort;
-        }
-    }
-
-#endif//DEBUG
-#if VERBOSE > 0 && IPI_COLLISION_LIST==1
-        printf("print thread pool and collision list before execute event\n");
-		print_lp_id_in_thread_pool_list();
-        print_lp_id_in_collision_list();
-#endif//VERBOSE
-
-#endif//IPI_POSTING
-
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+		current_msg->frame = LPS[current_lp]->num_executed_frames;
+		LPS[current_lp]->num_executed_frames++;
+#endif
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 #if IPI_POSTING==1
@@ -812,7 +995,6 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 #endif
 		///* FLUSH */// 
 		queue_deliver_msgs();
-
 #if IPI_POSTING==1
 #if DEBUG==1
     if(_thr_pool._thr_pool_count!=0){
@@ -841,11 +1023,12 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			gdb_abort;				
 		}
 #endif
-
 		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
+#if IPI_POSTING!=1 && IPI_SUPPORT!=1
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
+#endif
 		
 		///* ON_GVT *///
 		if(safe) {
@@ -929,7 +1112,10 @@ end_loop:
 	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
 
-
+#if IPI_SUPPORT==1
+	if (!(ipi_registration_error))
+		ipi_unregister_thread(&alternate_stack, alternate_stack_area);
+#endif
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();
