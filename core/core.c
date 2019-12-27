@@ -40,6 +40,7 @@
 #define MAX_PATHLEN			512
 
 
+
 __thread simtime_t local_gvt = 0;
 
 __thread simtime_t current_lvt = 0;
@@ -57,6 +58,7 @@ __thread unsigned int last_checked_lp = 0;
 unsigned int start_periodic_check_ongvt = 0;
 __thread unsigned int check_ongvt_period = 0;
 
+
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
@@ -73,6 +75,45 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 				,stm_safety_wait
 #endif
 				;
+#endif
+
+
+#define PERIODIC_STATS 1
+
+#if PERIODIC_STATS == 1
+#include <time.h>
+#define STATS_PERIOD_NS 4000000
+__thread struct timespec time_interval_for_stats_start;
+__thread struct timespec time_interval_for_stats_end;
+__thread double all_events = 0;
+__thread double committed_events = 0;
+
+static void periodic_stats(){
+	double a, b, tot_evts, com_evts;
+	unsigned int i;
+	
+	if(tid != 0) return;
+	
+	 
+	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_end);
+	long duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec;
+	if(duration > STATS_PERIOD_NS){
+		for(i = 0; i < n_prc_tot; i++) {
+			// stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot
+			tot_evts += lp_stats[i].events_total;
+			com_evts += LPS[i]->num_executed_frames;
+		}
+		a = tot_evts;
+		b = com_evts;
+		a -= all_events;
+		b -= committed_events;
+		printf("Len(ns):%ld Com:%f Tot:%f Eff:%f\n", duration, b, a, b/a);
+		time_interval_for_stats_start.tv_nsec = time_interval_for_stats_end.tv_nsec;
+		time_interval_for_stats_start.tv_sec = time_interval_for_stats_end.tv_sec;
+		all_events = tot_evts;
+		committed_events = com_evts;
+	}
+}
 #endif
 
 unsigned int ready_wt = 0;
@@ -521,6 +562,10 @@ void thread_loop(unsigned int thread_id) {
 	clock_timer_start(main_loop_time);
 #endif	
 
+#if PERIODIC_STATS == 1
+	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_start);
+#endif
+
 	///* START SIMULATION *///
 	while (  
 				(
@@ -528,7 +573,13 @@ void thread_loop(unsigned int thread_id) {
 				) 
 				&& !sim_error
 		) {
-		
+
+
+#if PERIODIC_STATS == 1
+	periodic_stats();
+#endif
+
+
 		///* FETCH *///
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
