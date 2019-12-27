@@ -82,7 +82,8 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 
 #if PERIODIC_STATS == 1
 #include <time.h>
-#define STATS_PERIOD_NS 4000000
+#define MILLION 1000000
+#define STATS_PERIOD_NS (400*MILLION)
 __thread struct timespec time_interval_for_stats_start;
 __thread struct timespec time_interval_for_stats_end;
 __thread double all_events = 0;
@@ -97,6 +98,7 @@ static void periodic_stats(){
 	 
 	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_end);
 	long duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec;
+	duration += 1000*MILLION*(time_interval_for_stats_end.tv_sec - time_interval_for_stats_start.tv_sec);
 	if(duration > STATS_PERIOD_NS){
 		for(i = 0; i < n_prc_tot; i++) {
 			// stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot
@@ -107,7 +109,7 @@ static void periodic_stats(){
 		b = com_evts;
 		a -= all_events;
 		b -= committed_events;
-		printf("Len(ns):%ld Com:%f Tot:%f Eff:%f\n", duration, b, a, b/a);
+		printf("Len(ms):%f Com:%f Tot:%f Eff:%f\n", duration/((double)MILLION), b, a, b/a);
 		time_interval_for_stats_start.tv_nsec = time_interval_for_stats_end.tv_nsec;
 		time_interval_for_stats_start.tv_sec = time_interval_for_stats_end.tv_sec;
 		all_events = tot_evts;
