@@ -88,9 +88,10 @@ __thread struct timespec time_interval_for_stats_start;
 __thread struct timespec time_interval_for_stats_end;
 __thread double all_events = 0;
 __thread double committed_events = 0;
+__thread double advanced_events = 0;
 
 static void periodic_stats(){
-	double a, b, tot_evts, com_evts;
+	double a=0, b=0, c=0, tot_evts=0, com_evts=0, adv_evts=0;
 	unsigned int i;
 	
 	if(tid != 0) return;
@@ -103,17 +104,23 @@ static void periodic_stats(){
 		for(i = 0; i < n_prc_tot; i++) {
 			// stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot
 			tot_evts += lp_stats[i].events_total;
-			com_evts += LPS[i]->num_executed_frames;
+			adv_evts += LPS[i]->num_executed_frames;
+		}
+		for(i = 0 ; i < n_cores; i++){
+			com_evts += thread_stats[i].events_committed;
 		}
 		a = tot_evts;
 		b = com_evts;
+		c = adv_evts;
 		a -= all_events;
 		b -= committed_events;
-		printf("Len(ms):%f Com:%f Tot:%f Eff:%f\n", duration/((double)MILLION), b, a, b/a);
+		c -= advanced_events;
+		printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f\n", duration/((double)MILLION), c, b, c-b, a, b/a, c/a);
 		time_interval_for_stats_start.tv_nsec = time_interval_for_stats_end.tv_nsec;
 		time_interval_for_stats_start.tv_sec = time_interval_for_stats_end.tv_sec;
 		all_events = tot_evts;
 		committed_events = com_evts;
+		advanced_events = adv_evts;
 	}
 }
 #endif
