@@ -244,11 +244,6 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=phold
 
-#ifdef IPI_SUPPORT
-#ASM_SOURCES=core/jmp.S\
-#		core/trampoline.S
-#endif
-
 ifeq ($(IPI_SUPPORT),1)
 ASM_SOURCES=core/jmp.S\
 		core/trampoline.S
@@ -269,6 +264,7 @@ CORE_SOURCES =  core/ipi_ctrl.c\
 		statistics/statistics.c\
 		core/simple_dynamic_list.c\
 		mm/garbagecollector.c
+		
 
 MM_SOURCES=mm/allocator.c\
 		mm/dymelor.c\
@@ -277,6 +273,7 @@ MM_SOURCES=mm/allocator.c\
 		mm/state.c\
 		datatypes/list.c\
 		mm/platform.c
+
 		
 REVERSE_SOURCES=	reverse/reverse.c\
 		reverse/slab.c

@@ -13,6 +13,10 @@
 #define UNPOSTED 0x0
 #define POSTED 0x1
 
+#define unpost_event_inside_lock(event) { \
+	if(event!=NULL && event->posted==POSTED){\
+        event->posted=UNPOSTED;\
+    	}; }
 #endif
 typedef struct __msg_t
 {

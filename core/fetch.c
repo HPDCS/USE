@@ -269,12 +269,6 @@ static void update_statistics(bool reliable,int lp_idx){
 }
 #endif
 
-static void unpost_event_inside_lock(msg_t*event){
-    if(event!=NULL)
-        event->posted=UNPOSTED;
-    return;
-}
-
 static void reset_LP_info_inside_lock(msg_t*event,bool reliable,int lp_idx){
     msg_t*evt;
     if(reliable){

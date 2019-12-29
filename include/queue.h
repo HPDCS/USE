@@ -34,9 +34,9 @@ typedef struct __temp_thread_pool {
 
 #if IPI_POSTING==1
 #if IPI_COLLISION_LIST==1
-    struct node* collision_list[THR_HASH_TABLE_SIZE]  __attribute__ ((aligned (64)));
+    struct node* collision_list[MAX_THR_HASH_TABLE_SIZE]  __attribute__ ((aligned (64)));
 #else
-    msg_t*collision_list[THR_HASH_TABLE_SIZE]  __attribute__ ((aligned (64)));
+    msg_t*collision_list[MAX_THR_HASH_TABLE_SIZE]  __attribute__ ((aligned (64)));
 #endif
 #endif
 

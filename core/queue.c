@@ -45,7 +45,7 @@ void print_lp_id_in_collision_list(){
     if(_thr_pool._thr_pool_count==0){
         printf("empty collision list\n");
     }
-    for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
+    for(unsigned int i=0;i<MAX_THR_HASH_TABLE_SIZE;i++){
         if(_thr_pool.collision_list[i]==NULL)
             continue;
         print_list(_thr_pool.collision_list[i],print_lp_id);
@@ -150,11 +150,56 @@ void queue_clean(){
 }
 
 #if IPI_POSTING==1
+unsigned int next_pow_of_2(unsigned int y){
+    //return y if y is a power of 2,else return minimum power of 2 greater than y
+    //y must be greater than 0
+    unsigned long x=y;
+#if DEBUG==1
+        if(x==0){
+            printf("invalid argument in next_pow_of_2\n");
+            gdb_abort;
+        }
+#endif
+    if((x & (x-1))==0)
+        return x;//x is a power of 2
+
+    x--;
+
+    if(sizeof(unsigned int)==4){
+        x |= x >>1;
+        x |= x >>2;
+        x |= x >>4;
+        x |= x >>8;
+        x |= x >>16;
+    }
+    else if(sizeof(unsigned int)==8){
+        x |= x >>1;
+        x |= x >>2;
+        x |= x >>4;
+        x |= x >>8;
+        x |= x >>16;
+        x |= x >>32;
+    }
+    else{
+        printf("invalid sizeof unsigned int\n");
+        gdb_abort;
+    }
+
+    x++;
+    return x;
+}
+
+unsigned int get_hash_table_size(unsigned int x){
+    if(x==0)
+        return x;
+    return next_pow_of_2(x);
+}
+
 #if IPI_COLLISION_LIST==1
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
-
+    unsigned int hash_table_size=get_hash_table_size(_thr_pool._thr_pool_count);
 #if REPORT == 1
     clock_timer queue_op;
 #endif
@@ -188,7 +233,7 @@ void queue_deliver_msgs(void) {
         clock_timer_start(queue_op);
 #endif
         //insert node with minimum timestamp in collision list(if not exist alloc node,if exist swap if it has smaller timestamp)
-        int index=new_hole->receiver_id%_thr_pool._thr_pool_count;//return index of hash table
+        int index=new_hole->receiver_id & (hash_table_size-1);//return index of hash table
         struct node**head=&(_thr_pool.collision_list[index]);//head of collision list
         struct node*p=*head;
         msg_t *event_in_list;//bucket in collision list
@@ -220,7 +265,7 @@ void queue_deliver_msgs(void) {
 #endif
     }
 //post per LP information if needed
-    for(i = 0; i < _thr_pool._thr_pool_count; i++) {
+    for(i = 0; i < hash_table_size; i++) {
         struct node**head=&(_thr_pool.collision_list[i]);//get collision_list[i]
         struct node*p=*head;
         msg_t *event_in_list,*event_dest_LP;
@@ -320,7 +365,7 @@ void queue_deliver_msgs(void) {
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
-
+    unsigned int hash_table_size=get_hash_table_size(_thr_pool._thr_pool_count);
 #if REPORT == 1
 		clock_timer queue_op;
 #endif
@@ -355,15 +400,15 @@ void queue_deliver_msgs(void) {
 #endif
 
 #if DEBUG==1
-        if(THR_HASH_TABLE_SIZE<THR_POOL_SIZE){
+        if(MAX_THR_HASH_TABLE_SIZE<THR_POOL_SIZE){
             printf("THR_HASH_TABLE_SIZE must be equals or greater than THR_POOL_SIZE in OPEN_ADDRESSING\n");
             gdb_abort;
         }
 #endif//DEBUG
         //insert node with minimum timestamp in collision list(if not exist alloc node,if exist swap if it has smaller timestamp)
-        int start_index=new_hole->receiver_id%_thr_pool._thr_pool_count;//return index of hash table
-        for(unsigned int i=start_index;i<_thr_pool._thr_pool_count+start_index;i++){
-            int new_index=i%_thr_pool._thr_pool_count;
+        int start_index=new_hole->receiver_id & (hash_table_size-1);//return index of hash table
+        for(unsigned int i=start_index;i<hash_table_size+start_index;i++){
+            int new_index=i & (hash_table_size-1);
             msg_t*event_in_list=_thr_pool.collision_list[new_index];
             if(event_in_list==NULL){//empty position,not exist any event with same LP id
                 _thr_pool.collision_list[new_index]=new_hole;
@@ -386,12 +431,12 @@ void queue_deliver_msgs(void) {
 #endif
     }
     //post per LP info
-    for(i = 0; i < _thr_pool._thr_pool_count; i++) {
+    for(i = 0; i < hash_table_size; i++) {
         msg_t *event_in_list,*event_dest_LP;
         event_in_list=_thr_pool.collision_list[i];
         simtime_t bound_ts=INFTY;
         if(event_in_list==NULL){
-            continue;
+            continue;//empty element,go to next element
         }
         unsigned int lp_id=event_in_list->receiver_id;
         if(LPS[lp_id]->bound!=NULL){

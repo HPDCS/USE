@@ -31,7 +31,7 @@
 #include "lookahead.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
-
+#include "events.h"
 
 #if IPI_SUPPORT==1
 #include "jmp.h"
@@ -110,7 +110,6 @@ unsigned long long *sim_ended;
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
-
 #if IPI_SUPPORT==1
 __thread cntx_buf cntx_loop;
 __thread int ipi_registration_error = 0;
@@ -124,10 +123,14 @@ __thread unsigned long interruptible_section_start = 0UL;
 __thread unsigned long interruptible_section_end = 0UL;
 char program_name[64];
 
+void initialize_preempt_counter(){
+	*preempt_count_ptr=1;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+}
 
 void decrement_preempt_counter(){
 	(*preempt_count_ptr)=(*preempt_count_ptr)-1;
 }
+
 void increment_preempt_counter(){
 	(*preempt_count_ptr)=(*preempt_count_ptr)+1;
 }
@@ -476,7 +479,7 @@ void init_simulation(unsigned int thread_id){
 
 #if IPI_POSTING==1
     //initialize collision_list
-    for (int i=0; i<THR_HASH_TABLE_SIZE; i++)
+    for (int i=0; i<MAX_THR_HASH_TABLE_SIZE; i++)
     {
         _thr_pool.collision_list[i]=NULL;
     }
@@ -581,7 +584,10 @@ stat64_t execute_time;
 			increment_preempt_counter();
 		}
 #endif
+		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
+		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
 #if IPI_SUPPORT==1
 		if(LPS[LP]->state != LP_STATE_SILENT_EXEC){
 			increment_preempt_counter();
@@ -651,7 +657,8 @@ void thread_loop(unsigned int thread_id) {
 		gdb_abort;
 	}
 	//init counter
-	*preempt_count_ptr=1;
+	initialize_preempt_counter();
+	
 	printf("registration finished\n");
 #endif
 
@@ -878,7 +885,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 			delete(nbcalqueue, current_node);
 #if IPI_POSTING==1
-			current_msg->posted=UNPOSTED;
+			unpost_event_inside_lock(current_msg);
 #endif
 			unlock(current_lp);
 			continue;
@@ -1001,7 +1008,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
         printf("not empty collision list\n");
         gdb_abort;
     }
-    for(unsigned int i=0;i<THR_HASH_TABLE_SIZE;i++){
+    for(unsigned int i=0;i<MAX_THR_HASH_TABLE_SIZE;i++){
         if(_thr_pool.collision_list[i]!=NULL){
             printf("not empty collision list\n");
             gdb_abort;
@@ -1050,7 +1057,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		
 
 #if IPI_POSTING==1
-		current_msg->posted=UNPOSTED;
+		unpost_event_inside_lock(current_msg);
 #endif
 
 	#if DEBUG == 0
