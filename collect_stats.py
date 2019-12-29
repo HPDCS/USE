@@ -33,6 +33,7 @@ output = stream.read().replace("  ", " ").split("\n")
 #Filter the interesting line from the input
 filtered = Filter(output,"Len(ms):")
 
+mappatura = {}
 adv = []
 com = []
 diff = []
@@ -42,15 +43,20 @@ eff2 = []
 
 for line in filtered:
 	line = line.split(" ")
-	adv.append(float(line[1].split(":")[1]))
-	com.append(float(line[2].split(":")[1]))
-	diff.append(float(line[3].split(":")[1]))
-	tot.append(float(line[4].split(":")[1]))
-	eff1.append(float(line[5].split(":")[1]))
-	eff2.append(float(line[6].split(":")[1]))
+	for elem in line:
+		atom = elem.split(":")
+		if mappatura.has_key(atom[0]):
+			stats = mappatura.get(atom[0])
+		else:
+			stats = []
+		stats.append(float(atom[1]))
+		mappatura[atom[0]] = stats
 
-PrintStats("adv",adv)
+for elem in mappatura.keys():
+	PrintStats(elem,mappatura.get(elem))
 
 
 exit()
+
+
 
