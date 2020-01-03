@@ -9,6 +9,10 @@
 #define ELIMINATED	0x2
 #define ANTI_MSG	0x3
 
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+#define ROLLBACK_ONLY 0x4//state reserved for dummy_bound
+#endif
+
 #if IPI_POSTING==1 //values of field posted in msg_t
 #define UNPOSTED 0x0
 #define POSTED 0x1
@@ -79,6 +83,7 @@ typedef struct __msg_t
 	struct __msg_t * event_on_gvt_on_commit;
 #endif
 #if IPI_POSTING==1
+	unsigned int id_in_thread_pool;
 	char posted;
 #endif
 } msg_t;

@@ -11,6 +11,10 @@
 #include <limits.h>
 #include <nb_calqueue.h>
 
+#if IPI_SUPPORT==1 || IPI_POSTING==1
+#include "jmp.h"
+#endif
+
 #define MAX_LPs	2048
 
 #define THR_POOL_SIZE		128
@@ -98,6 +102,10 @@ extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
 
+#if IPI_SUPPORT==1 || IPI_POSTING==1
+extern __thread cntx_buf cntx_loop;
+#endif
+
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
 
@@ -125,6 +133,9 @@ extern int OnGVT(unsigned int me, void *snapshot);
 
 #if IPI_SUPPORT==1
 extern void cfv_trampoline(void);
+#endif
+#if IPI_POSTING==1
+extern msg_t*get_best_LP_info_good(int lp_idx);
 #endif
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);

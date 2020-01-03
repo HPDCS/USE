@@ -40,16 +40,18 @@ else
 CFLAGS:=$(CFLAGS) -DIPI_POSTING_SINGLE_INFO=0
 endif
 
+ifdef IPI_POSTING_SYNC_CHECK
+CFLAGS:=$(CFLAGS) -DIPI_POSTING_SYNC_CHECK=$(IPI_POSTING_SYNC_CHECK)
+else
+CFLAGS:=$(CFLAGS) -DIPI_POSTING_SYNC_CHECK=0
+endif
+
+
+
 ifdef IPI_COLLISION_LIST
 CFLAGS:=$(CFLAGS) -DIPI_COLLISION_LIST=$(IPI_COLLISION_LIST)
 else
 CFLAGS:=$(CFLAGS) -DIPI_COLLISION_LIST=0
-endif
-
-ifdef IPI_CHECK_ROLLBACK_AFTER_EXECUTION
-CFLAGS:=$(CFLAGS) -DIPI_CHECK_ROLLBACK_AFTER_EXECUTION=$(IPI_CHECK_ROLLBACK_AFTER_EXECUTION)
-else
-CFLAGS:=$(CFLAGS) -DIPI_CHECK_ROLLBACK_AFTER_EXECUTION=0
 endif
 
 ifdef IPI_SUPPORT
@@ -244,7 +246,16 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=phold
 
+#calculate IPI_POSTING || IPI_SUPPORT
+ifeq ($(IPI_POSTING),1)
+IPI=1
+else
 ifeq ($(IPI_SUPPORT),1)
+IPI=1
+endif
+endif
+
+ifeq ($(IPI),1)
 ASM_SOURCES=core/jmp.S\
 		core/trampoline.S
 endif
@@ -280,7 +291,7 @@ REVERSE_SOURCES=	reverse/reverse.c\
 
 
 MM_OBJ=$(MM_SOURCES:.c=.o)
-ifeq ($(IPI_SUPPORT),1)
+ifeq ($(IPI),1)
 ASM_OBJ=$(ASM_SOURCES:.S=.o)
 endif
 CORE_OBJ=$(CORE_SOURCES:.c=.o)
@@ -326,7 +337,7 @@ robot_explore: clean _robot_explore executable
 hash: TARGET=hash 
 hash: clean _hash executable
 
-ifeq ($(IPI_SUPPORT),1)
+ifeq ($(IPI),1)
 executable: mm asm core reverse link
 else
 executable: mm core reverse link
@@ -352,7 +363,7 @@ else
 #	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__core.o $(LIBS)
 endif
 
-ifeq ($(IPI_SUPPORT),1)
+ifeq ($(IPI),1)
 	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__asm.o core/__core.o $(LIBS)
 else
 	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o  core/__core.o $(LIBS)
@@ -361,7 +372,7 @@ endif
 mm: $(MM_OBJ)
 	@ld -r -g $(MM_OBJ) -o mm/__mm.o
 
-ifeq ($(IPI_SUPPORT),1)
+ifeq ($(IPI),1)
 asm: $(ASM_OBJ)
 	@ld -r -g $(ASM_OBJ) -o core/__asm.o
 endif

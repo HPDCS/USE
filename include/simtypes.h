@@ -114,12 +114,17 @@ typedef struct _LP_state {
 	
 	unsigned int until_clean_ckp;
 
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+	msg_t* last_silent_exec_evt;
+	msg_t* dummy_bound;
+	bool LP_state_is_valid;
+#endif
 #if IPI_POSTING==1
-	msg_t*best_evt_reliable;
+	msg_t* best_evt_reliable;
 #if IPI_POSTING_SINGLE_INFO==1
 		#define best_evt_unreliable best_evt_reliable
 #else
-	msg_t*best_evt_unreliable;
+	msg_t* best_evt_unreliable;
 #endif
 
 #if IPI_POSTING_STATISTICS==1

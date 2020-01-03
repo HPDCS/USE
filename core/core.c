@@ -31,10 +31,11 @@
 #include "lookahead.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
-#include "events.h"
 
-#if IPI_SUPPORT==1
+#if IPI_SUPPORT==1 || IPI_POSTING==1
 #include "jmp.h"
+#endif
+#if IPI_SUPPORT==1
 #include "ipi_ctrl.h"
 #endif
 
@@ -110,8 +111,77 @@ unsigned long long *sim_ended;
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
-#if IPI_SUPPORT==1
+
+#if IPI_POSTING==1
+msg_t *LP_info_is_good(int lp_idx,bool reliable){
+	//return NULL if info is not usable,else return info usable
+	//TODO this function does not reset/unpost information because is not needed,write another function to reset/unpost info where is convenient
+	msg_t*LP_info;
+	if(reliable)
+		LP_info=LPS[lp_idx]->best_evt_reliable;
+	else
+		LP_info=LPS[lp_idx]->best_evt_unreliable;
+	if(LP_info==NULL)
+		return LP_info;
+	#if DEBUG==1
+		if((LP_info->state & EXTRACTED)==EXTRACTED){
+			printf("invalid event state in Lp info\n");
+			gdb_abort;
+		}
+	#endif
+	simtime_t bound_ts=0.0;
+    if(LPS[lp_idx]->bound!=NULL){
+        bound_ts=LPS[lp_idx]->bound->timestamp;
+    }
+	if (LP_info->timestamp >= bound_ts){
+		return NULL;
+	}
+	return LP_info;
+}
+
+msg_t*get_best_LP_info_good(int lp_idx){
+	#if IPI_POSTING_SINGLE_INFO==1
+		return LP_info_is_good(lp_idx,true);
+	#else
+		msg_t*LP_info_reliable=LP_info_is_good(lp_idx,true);
+		msg_t*LP_info_unreliable=LP_info_is_good(lp_idx,false);
+		if(LP_info_reliable==NULL)
+			return LP_info_unreliable;
+		else if(LP_info_unreliable==NULL)
+			return LP_info_reliable;
+		else{//both are not NULL
+			if(LP_info_reliable->timestamp <=LP_info_unreliable->timestamp)
+				return LP_info_reliable;
+			else
+				return LP_info_unreliable;
+		}
+	#endif
+}
+
+#endif
+
+#if IPI_SUPPORT==1 || IPI_POSTING==1
+msg_t*allocate_dummy_bound(int lp_idx){
+	msg_t*dummy_bound=list_allocate_node_buffer_from_list(lp_idx, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+	dummy_bound->sender_id 		= -1;
+	dummy_bound->receiver_id 	= lp_idx;
+	dummy_bound->timestamp 		= 0.0;
+	dummy_bound->tie_breaker	= 0.0;
+	dummy_bound->type 			= INIT;
+	dummy_bound->state 			= NEW_EVT;
+	dummy_bound->father 		= NULL;
+	dummy_bound->epoch 		= LPS[lp_idx]->epoch;
+	dummy_bound->monitor 		= 0x0;
+	return dummy_bound;
+}
 __thread cntx_buf cntx_loop;
+#endif
+
+#if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
+unsigned long num_cfv_already_handled=0;
+#endif
+
+#if IPI_SUPPORT==1
 __thread int ipi_registration_error = 0;
 
 __thread unsigned long long * preempt_count_ptr = NULL;
@@ -139,6 +209,7 @@ void increment_preempt_counter(){
 unsigned long num_sended_ipi=0;
 unsigned long num_received_ipi=0;
 #endif
+
 
 long get_sizeof_function(const char*function_name,char*path_program_name){
     FILE *fp;
@@ -338,6 +409,10 @@ void LPs_metada_init() {
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
 
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+		LPS[i]->dummy_bound=NULL;
+		LPS[i]->LP_state_is_valid=true;
+#endif
 #if IPI_POSTING==1
 		LPS[i]->best_evt_reliable=NULL;
 		LPS[i]->best_evt_unreliable =NULL;
@@ -376,8 +451,21 @@ bool check_termination(void) {
 // [D] no, non potrebbe più essere invocata lato modello altrimenti
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 	if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
+		#if IPI_POSTING==1
+		#if IPI_POSTING_SYNC_CHECK==1
+		msg_t*evt=get_best_LP_info_good(current_lp);
+        if(evt!=NULL){
+            //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+            LPS[current_lp]->LP_state_is_valid=false;
+            unlock(current_lp);
+            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+            //messagges already inserted in thread_pool will be cleaned with queue_clean
+        }
+        #endif
+        #endif
 		queue_insert(receiver, timestamp, event_type, event_content, event_size);
 	}
+	//else siamo in silent execution e il bound è già stato spostato,se c'è info prioritaria unlock e long_jmp invalidando lo stato,dovrebbe essere lo stesso ragionamento
 }
 
 
@@ -493,7 +581,7 @@ void init_simulation(unsigned int thread_id){
 		numerical_init();
 		nodes_init();
 		//process_init_event
-		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
+		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
        		current_msg->sender_id 		= -1;//
        		current_msg->receiver_id 	= current_lp;//
@@ -516,6 +604,9 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->until_ckpt_recalc = 0;
 			LPS[current_lp]->ckpt_period = 20;
 			//LPS[current_lp]->epoch = 1;
+			#if IPI_POSTING==1 || IPI_SUPPORT==1
+			LPS[current_lp]->dummy_bound=allocate_dummy_bound(current_lp);
+			#endif
 		}
 
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
@@ -625,14 +716,23 @@ stat64_t execute_time;
 		
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
-
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+#define do_rollback_only(){\
+	rollback_only=true;\
+	current_msg=LPS[current_lp]->bound;\
+	current_lvt=current_msg->timestamp;\
+	current_evt_state = current_msg->state;\
+	current_evt_monitor = current_msg->monitor;\
+	goto rollback;\
+	};
+#endif
 
 void thread_loop(unsigned int thread_id) {
-	#if IPI_SUPPORT==1
+#if IPI_SUPPORT==1 || IPI_POSTING==1
 	unsigned int old_state=0;
-	#else
+#else
 	unsigned int old_state;
-	#endif
+#endif
 #if ONGVT_PERIOD != -1
 	unsigned int empty_fetch = 0;
 #endif
@@ -661,15 +761,18 @@ void thread_loop(unsigned int thread_id) {
 	
 	printf("registration finished\n");
 #endif
-
 	init_simulation(thread_id);
-
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
+#if IPI_SUPPORT==1 || IPI_POSTING==1
+	int res=set_jmp(&cntx_loop);
+	switch (res){
+		case CFV_INIT :
+			printf("[IPI_4_USE] - First time we saved the execution context!!!\n");
+			break;
 #if IPI_SUPPORT==1
-	if (set_jmp(&cntx_loop)==1)
-	{
+		case CFV_TO_HANDLE :
 		/*
 		 * We will return to this point in the
 		 * execution upon a longjmp invocation
@@ -679,9 +782,6 @@ void thread_loop(unsigned int thread_id) {
 		 * AND LOCAL VARIABLE THAT MAY RESULT
 		 * INCONSISTENT AFTER "longjmp" CALL. 
 		 */
-#if IPI_SUPPORT_STATISTICS==1
-            atomic_inc_x86((atomic_t *)&num_received_ipi);
-#endif
 #if DEBUG==1
 		if (!haveLock(current_lp)){
 			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
@@ -691,11 +791,13 @@ void thread_loop(unsigned int thread_id) {
 				printf("interrupt code not interruptible\n");
 				gdb_abort;
 		}
-		else{
-			increment_preempt_counter();
-		}
 #endif
 		printf("[IPI_4_USE] - Thread %d jumped back from an interrupted execution!!!\n",tid);
+		increment_preempt_counter();
+
+#if IPI_SUPPORT_STATISTICS==1
+            atomic_inc_x86((atomic_t *)&num_received_ipi);
+#endif
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			printf("processEvent interrupted with LP in mode SILENT_EXECUTION\n");
 #if DEBUG==1
@@ -753,9 +855,25 @@ void thread_loop(unsigned int thread_id) {
 			printf("processEvent interrupted with LP in mode %d\n",LPS[current_lp]->state);
 		}
 		unlock(current_lp);
+		break;
+#endif//IPI_SUPPORT
+#if IPI_POSTING==1
+#if IPI_POSTING_SYNC_CHECK==1
+		case CFV_ALREADY_HANDLED ://nop to do
+			#if VERBOSE > 0
+			printf("cfv already handled,tid=%d\n",tid);
+			#endif
+#if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
+			atomic_inc_x86((atomic_t *)&num_cfv_already_handled);
+#endif
+#endif
+			break;
+#endif
+		default ://error
+			printf("invalid return value in set_jmp,long_jmp called with value %d\n",res);
+			gdb_abort;
+			break;
 	}
-	else
-		printf("[IPI_4_USE] - First time we saved the execution context!!!\n");
 #endif
 	///* START SIMULATION *///
 	while (  
@@ -786,16 +904,34 @@ void thread_loop(unsigned int thread_id) {
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
 #endif
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+		bool rollback_only;
+		//fetch_internal() can return msg as dummy bound with state ROLLBACK_ONLY and in order to rollback with information inside it 
+		if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){//rollback relative to bound
+			#if DEBUG==1
+			//dummy_bound and bound must be equals because we rollback relative to bound info, and here we want to rollback relative to dummy_bound info
+			//in alternativa possiamo modificare il bound qui e farlo puntare al dummy bound,quindi lo fa questa funzione e non la fetch_internal
+			if(LPS[current_lp]->dummy_bound!=LPS[current_lp]->bound || LPS[current_lp]->LP_state_is_valid==true){
+				printf("bound and dummy bound are different each other\n");
+				gdb_abort;
+			}
+			#endif
+			LPS[current_lp]->dummy_bound->state=NEW_EVT;//restore dummy_bound state
+			do_rollback_only();
+		}
+		else{
+			rollback_only=false;
+		}
+#endif
 		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
-
 		// Locally (within the thread) copy lp and ts to processing event
 		current_lp = current_msg->receiver_id;	// LP index
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
 
-#if IPI_POSTING==1
+#if IPI_POSTING==1 || IPI_SUPPORT==1
 #if DEBUG==1
 		if( (current_evt_state!=ANTI_MSG) && (current_evt_state!= EXTRACTED) ){
 			printf("current_evt_state=%lld\n",current_evt_state);
@@ -826,7 +962,6 @@ void thread_loop(unsigned int thread_id) {
 			continue; //TODO: verificare
 		}
 	#endif
-		
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
@@ -835,11 +970,7 @@ void thread_loop(unsigned int thread_id) {
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
 
-#if IPI_POSTING==1
-#if IPI_CHECK_ROLLBACK_AFTER_EXECUTION==1
-rollback://if current_msg became ANTI_MSG after execution then go to rollback!
-#endif
-#endif
+
 
 	#if DEBUG == 1
 			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG) {
@@ -851,6 +982,10 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 				//gdb_abort;
 			}
 	#endif
+
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+rollback://if current_msg became ANTI_MSG after execution then go to rollback!
+#endif
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
@@ -876,17 +1011,28 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			if(current_evt_state != ANTI_MSG) {
 				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 			}
+			#if IPI_POSTING==1 || IPI_SUPPORT==1
+			LPS[current_lp]->LP_state_is_valid=true;
+			if(rollback_only){
+				rollback_only=false;
+				unlock(current_lp);
+				long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+			}
+			#endif
 		}
-		
+		#if IPI_POSTING==1 || IPI_SUPPORT==1
+		else if(LPS[current_lp]->LP_state_is_valid==false){
+			//event in future with LP state invalid,restore state and fetch again
+			//make rollback relative to bound
+			do_rollback_only();
+		}
+		#endif
 		if(current_evt_state == ANTI_MSG) {
 
 			current_msg->monitor = (void*) 0xba4a4a;
 
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 			delete(nbcalqueue, current_node);
-#if IPI_POSTING==1
-			unpost_event_inside_lock(current_msg);
-#endif
 			unlock(current_lp);
 			continue;
 		}
@@ -902,11 +1048,10 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 	#if DEBUG == 1
 		current_msg->execution_time = CLOCK_READ();
 	#endif
-		
 		// The current_msg should be allocated with list allocator
 		if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
 
-#if IPI_POSTING==1
+#if IPI_POSTING==1 || IPI_SUPPORT==1
 #if DEBUG==1
 			if(current_msg->frame!=0){
 				printf("event not connected to localqueue,but it was executed!!!\n");
@@ -954,44 +1099,6 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 #endif
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
-#if IPI_POSTING==1
-#if IPI_CHECK_ROLLBACK_AFTER_EXECUTION==1
-		//TODO
-		if(current_msg->state==ANTI_MSG){//read again event state,if is changed it is ANTI_MSG(from EXTRACTED to ANTI_MSG)
-			printf("rollback in time tid %d\n",tid);
-			printf("%d\n",_thr_pool._thr_pool_count);
-			// re-update event information
-			current_lp = current_msg->receiver_id;	// LP index
-			current_lvt = current_msg->timestamp;	// Local Virtual Time
-			current_evt_state   = current_msg->state;//current_evt_state
-			current_evt_monitor = current_msg->monitor;
-
-			LPS[current_lp]->bound = current_msg;//now current_msg is ANTI_MSG in past
-			current_msg->frame = LPS[current_lp]->num_executed_frames;//now current_msg is ANTI_MSG in past EXECUTED
-			LPS[current_lp]->num_executed_frames++;
-
-			//free collision_list
-			#if IPI_COLLISION_LIST==1
-			for(unsigned i = 0; i < THR_HASH_TABLE_SIZE; i++) {
-	        	if(_thr_pool.collision_list[i]!=NULL){
-	            	free_memory_list(_thr_pool.collision_list[i]);
-	            	_thr_pool.collision_list[i]=NULL;
-	        	}
-	        }
-	        #else
-	        for(unsigned i = 0; i < THR_HASH_TABLE_SIZE; i++) {
-	            	_thr_pool.collision_list[i]=NULL;
-	        	}
-	        }
-	        #endif
-	        //free events in thread pool
-	        queue_clean();
-			goto rollback;
-			//ricontrollare...è possibile non aumentare l'epoca perché non vengono prodotti eventi figli, in realtà se viene aumentata non è un problema
-			//quindi posso chiamare la funzione di rollback cosi come è??????
-		}
-#endif//IPI_CHECK_ROLLBACK_AFTER_EXECUTION
-#endif//IPI_POSTING
 
 #if IPI_POSTING==1
 #if VERBOSE > 0 && IPI_COLLISION_LIST==1
@@ -1002,15 +1109,20 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 #endif
 		///* FLUSH */// 
 		queue_deliver_msgs();
-#if IPI_POSTING==1
+#if IPI_POSTING==1 || IPI_SUPPORT==1
 #if DEBUG==1
     if(_thr_pool._thr_pool_count!=0){
-        printf("not empty collision list\n");
+        printf("not empty pool count tid=%d\n",tid);
         gdb_abort;
     }
+#endif 
+#endif
+
+#if IPI_POSTING==1
+#if DEBUG==1
     for(unsigned int i=0;i<MAX_THR_HASH_TABLE_SIZE;i++){
         if(_thr_pool.collision_list[i]!=NULL){
-            printf("not empty collision list\n");
+            printf("not empty collision list tid=%d\n",tid);
             gdb_abort;
         }
 
@@ -1054,11 +1166,6 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		if(safe && (++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0) ){
 				clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
-		
-
-#if IPI_POSTING==1
-		unpost_event_inside_lock(current_msg);
-#endif
 
 	#if DEBUG == 0
 		unlock(current_lp);

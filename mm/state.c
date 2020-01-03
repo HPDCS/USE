@@ -214,7 +214,13 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
-	
+	#if IPI_POSTING==1 || IPI_SUPPORT==1
+	if(old_state != LP_STATE_ONGVT){
+		LPS[lid]->dummy_bound->timestamp=until_ts;
+		LPS[lid]->dummy_bound->tie_breaker=tie_breaker;
+		LPS[lid]->bound=LPS[lid]->dummy_bound;
+	}
+	#endif
 	last_executed_event = evt;
 
 	while(1){

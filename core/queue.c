@@ -10,6 +10,10 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+#include "jmp.h"
+extern __thread cntx_buf cntx_loop;
+#endif
 //used to take locks on LPs
 volatile unsigned int *lp_lock;
 
@@ -137,17 +141,22 @@ void queue_clean(){
             _thr_pool.messages[i].father = NULL;
 
         }
-#if IPI_POSTING==1
-#if IPI_COLLISION_LIST==1
-        if(_thr_pool.collision_list[i]!=NULL){
-            free_memory_list(_thr_pool.collision_list[i]);//release memory only when hashtable uses collision_list
-            _thr_pool.collision_list[i]=NULL;
-        }
-#endif
-#endif
     }
 	_thr_pool._thr_pool_count = 0;
 }
+#if IPI_SUPPORT==1
+void send_ipi_to_lp(int lp_idx){
+    //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
+    unsigned int lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
+    if(lck_tid>0){
+        #if IPI_SUPPORT_STATISTICS==1
+        atomic_inc_x86((atomic_t *)&num_sended_ipi);
+        #endif
+        if (syscall(174, lck_tid-1))
+            printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+    }
+}
+#endif
 
 #if IPI_POSTING==1
 unsigned int next_pow_of_2(unsigned int y){
@@ -221,6 +230,7 @@ void queue_deliver_msgs(void) {
         new_hole->tie_breaker = 0;
         new_hole->max_outgoing_ts = new_hole->timestamp;
         new_hole->posted=UNPOSTED;
+        new_hole->id_in_thread_pool=i;
 #if DEBUG==1
         if(new_hole->timestamp < current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
         if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
@@ -269,8 +279,26 @@ void queue_deliver_msgs(void) {
         struct node**head=&(_thr_pool.collision_list[i]);//get collision_list[i]
         struct node*p=*head;
         msg_t *event_in_list,*event_dest_LP;
-        simtime_t bound_ts=INFTY;
+        simtime_t bound_ts=0.0;
         while(p!=NULL){
+#if IPI_POSTING==1
+            #if IPI_POSTING_SYNC_CHECK==1
+            msg_t*evt=get_best_LP_info_good(current_lp);
+            if(evt!=NULL){
+                //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+                for(unsigned int j=i;j<hash_table_size;j++){//mark as null remaining element in hash_table
+                    //free collision_list info
+                    if(_thr_pool.collision_list[j]!=NULL){
+                        free_memory_list(_thr_pool.collision_list[j]);//release memory only when hashtable uses collision_list
+                        _thr_pool.collision_list[j]=NULL;
+                    }
+                }
+                LPS[current_lp]->LP_state_is_valid=false;
+                unlock(current_lp);
+                long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+            }
+            #endif
+#endif
             event_in_list=(msg_t *)p->data;//node inside collision list
             unsigned int lp_id=event_in_list->receiver_id;
             if(LPS[lp_id]->bound!=NULL){
@@ -332,7 +360,12 @@ void queue_deliver_msgs(void) {
                     break;//timestamp is greater,exit
                 }
             }
-            p=p->next;
+            _thr_pool.messages[event_in_list->id_in_thread_pool].father = NULL;//mark as flushed to calqueue
+            nbc_enqueue(nbcalqueue, event_in_list->timestamp, event_in_list, event_in_list->receiver_id);
+            #if IPI_SUPPORT==1
+                send_ipi_to_lp(new_hole->receiver_id);
+            #endif
+            p=p->next;//goto next
         }
 
         //free collision_list info
@@ -341,22 +374,27 @@ void queue_deliver_msgs(void) {
             _thr_pool.collision_list[i]=NULL;
         }
     }
-    //flush all messagges in calendarqueue
+    //flush remaining messagges in calendarqueue
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
         new_hole = _thr_pool.messages[i].father;
-        _thr_pool.messages[i].father = NULL;
+        if(new_hole == NULL){//messagges already flushed
+            continue;
+        }
+#if IPI_POSTING==1
+        #if IPI_POSTING_SYNC_CHECK==1
+        msg_t*evt=get_best_LP_info_good(current_lp);
+        if(evt!=NULL){
+            //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+            LPS[current_lp]->LP_state_is_valid=false;
+            unlock(current_lp);
+            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+        }
+        #endif
+#endif
+        _thr_pool.messages[i].father = NULL;//messagges enqueued cannot be cleaned with queue_clean
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 #if IPI_SUPPORT==1
-        //n.b. con le interruzioni e collision list bisogna liberare la memoria di tutte le liste di collisione
-        //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
-        unsigned int lcl_tid=(lp_lock[(new_hole->receiver_id)*CACHE_LINE_SIZE/4]);
-        if(lcl_tid>0){
-            #if IPI_SUPPORT_STATISTICS==1
-            atomic_inc_x86((atomic_t *)&num_sended_ipi);
-            #endif
-            if (syscall(174, lcl_tid-1))
-                printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
-        }
+        send_ipi_to_lp(new_hole->receiver_id);
 #endif
     }
     _thr_pool._thr_pool_count=0;
@@ -367,7 +405,7 @@ void queue_deliver_msgs(void) {
     unsigned int i;
     unsigned int hash_table_size=get_hash_table_size(_thr_pool._thr_pool_count);
 #if REPORT == 1
-		clock_timer queue_op;
+        clock_timer queue_op;
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
 
@@ -387,6 +425,7 @@ void queue_deliver_msgs(void) {
         new_hole->tie_breaker = 0;
         new_hole->max_outgoing_ts = new_hole->timestamp;
         new_hole->posted=UNPOSTED;
+        new_hole->id_in_thread_pool=i;
 #if DEBUG==1
         if(new_hole->timestamp < current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
         if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
@@ -434,14 +473,28 @@ void queue_deliver_msgs(void) {
     for(i = 0; i < hash_table_size; i++) {
         msg_t *event_in_list,*event_dest_LP;
         event_in_list=_thr_pool.collision_list[i];
-        simtime_t bound_ts=INFTY;
         if(event_in_list==NULL){
             continue;//empty element,go to next element
         }
+#if IPI_POSTING==1
+        #if IPI_POSTING_SYNC_CHECK==1
+        msg_t*evt=get_best_LP_info_good(current_lp);
+        if(evt!=NULL){
+            //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+            for(unsigned int j=i;j<hash_table_size;j++){//mark as null remaining element in hash_table
+                _thr_pool.collision_list[j]=NULL;
+            }
+            LPS[current_lp]->LP_state_is_valid=false;
+            unlock(current_lp);
+            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+        }
+        #endif
+#endif
+        simtime_t bound_ts=0.0;
         unsigned int lp_id=event_in_list->receiver_id;
         if(LPS[lp_id]->bound!=NULL){
                 bound_ts=LPS[lp_id]->bound->timestamp;
-            }
+        }
         while(1){
             //father event is safe?
             event_in_list->posted=POSTED;
@@ -503,24 +556,35 @@ void queue_deliver_msgs(void) {
                 event_in_list->posted=UNPOSTED;
                 break;//timestamp is greater,exit
             }
+            
         }
+        _thr_pool.messages[event_in_list->id_in_thread_pool].father=NULL;
+        nbc_enqueue(nbcalqueue, event_in_list->timestamp,event_in_list, event_in_list->receiver_id);
+        #if IPI_SUPPORT==1
+            send_ipi_to_lp(new_hole->receiver_id);
+        #endif
         _thr_pool.collision_list[i]=NULL;
     }
-    //flush all messagges in calendarqueue
+    //flush all remaining messagges in calendarqueue
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
         new_hole = _thr_pool.messages[i].father;
+        if(new_hole==NULL)
+            continue;
+#if IPI_POSTING==1
+        #if IPI_POSTING_SYNC_CHECK==1
+        msg_t*evt=get_best_LP_info_good(current_lp);
+        if(evt!=NULL){
+            //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+            LPS[current_lp]->LP_state_is_valid=false;
+            unlock(current_lp);
+            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+        }
+        #endif
+#endif
         _thr_pool.messages[i].father = NULL;
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 #if IPI_SUPPORT==1
-        //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
-        unsigned int lcl_tid=(lp_lock[(new_hole->receiver_id)*CACHE_LINE_SIZE/4]);
-        if(lcl_tid>0){
-            #if IPI_SUPPORT_STATISTICS==1
-            atomic_inc_x86((atomic_t *)&num_sended_ipi);
-            #endif
-            if (syscall(174, lcl_tid-1))
-                printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
-        }
+        send_ipi_to_lp(new_hole->receiver_id);
 #endif
     }
     _thr_pool._thr_pool_count=0;
@@ -573,16 +637,9 @@ void queue_deliver_msgs(void) {
         clock_timer_start(queue_op);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+
 #if IPI_SUPPORT==1
-        //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
-        unsigned int lcl_tid=(lp_lock[(new_hole->receiver_id)*CACHE_LINE_SIZE/4]);
-        if(lcl_tid>0){
-            #if IPI_SUPPORT_STATISTICS==1
-            atomic_inc_x86((atomic_t *)&num_sended_ipi);
-            #endif
-            if (syscall(174, lcl_tid-1))
-                printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
-        }
+        send_ipi_to_lp(new_hole->receiver_id);
 #endif
 
 #if REPORT == 1
@@ -610,4 +667,3 @@ bool is_valid(msg_t * event){
                     )       
             );
 }
-

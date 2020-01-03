@@ -20,7 +20,9 @@ extern unsigned long num_sended_ipi;
 extern unsigned long num_received_ipi;
 #endif
 #endif
-
+#if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
+extern unsigned long num_cfv_already_handled;
+#endif
 __thread struct drand48_data seedT;
 
 unsigned long long tid_ticket = 1;
@@ -133,8 +135,14 @@ int main(int argn, char *argv[]) {
                 LPS[i]->num_times_modified_best_evt_reliable,LPS[i]->num_times_choosen_best_evt_reliable,
                 LPS[i]->num_times_modified_best_evt_unreliable,LPS[i]->num_times_choosen_best_evt_unreliable);
     }
+
 #endif
 #endif
+
+#if IPI_SUPPORT_STATISTICS==1 || IPI_POSTING_STATISTICS==1
+    printf("number num_cfv_already_handled=%ld\n",num_cfv_already_handled);
+#endif
+
 #if IPI_SUPPORT==1
 #if IPI_SUPPORT_STATISTICS==1
     printf("number sended IPIs=%ld\n",num_sended_ipi);

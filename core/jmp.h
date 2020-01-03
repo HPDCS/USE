@@ -16,6 +16,10 @@
    purpose of being compliant to set_jmp. */
 #define long_jmp(cntx_ptr, val)	_long_jmp(cntx_ptr, val)
 
+#define CFV_INIT 0//must be zero,first time set_jmp returns 0
+#define CFV_TO_HANDLE 1
+#define CFV_ALREADY_HANDLED 2
+
 
 /* This structure maintains content of all the CPU registers.  */
 
