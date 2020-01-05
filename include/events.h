@@ -14,8 +14,8 @@
 #endif
 
 #if IPI_POSTING==1 //values of field posted in msg_t
-#define UNPOSTED 0x0
-#define POSTED 0x1
+#define UNPOSTED false
+#define POSTED true
 
 #define unpost_event_inside_lock(event) { \
 	if(event!=NULL && event->posted==POSTED){\
@@ -84,7 +84,12 @@ typedef struct __msg_t
 #endif
 #if IPI_POSTING==1
 	unsigned int id_in_thread_pool;
-	char posted;
+	bool posted;
+#endif
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+#if DEBUG==1
+	bool interrupted;
+#endif
 #endif
 } msg_t;
 

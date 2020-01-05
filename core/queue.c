@@ -285,7 +285,7 @@ void queue_deliver_msgs(void) {
             #if IPI_POSTING_SYNC_CHECK==1
             msg_t*evt=get_best_LP_info_good(current_lp);
             if(evt!=NULL){
-                //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+                //event in future to interrupt,event is already inserted in localqueue
                 for(unsigned int j=i;j<hash_table_size;j++){//mark as null remaining element in hash_table
                     //free collision_list info
                     if(_thr_pool.collision_list[j]!=NULL){
@@ -293,7 +293,16 @@ void queue_deliver_msgs(void) {
                         _thr_pool.collision_list[j]=NULL;
                     }
                 }
+                LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
+                LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
+                current_msg->frame=0;//frame can be >0 despite of event is in future
+                //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
+                //we don't want to commit interrupted event
                 LPS[current_lp]->LP_state_is_valid=false;
+                #if DEBUG==1
+                    current_msg->interrupted=true;
+                #endif
+                LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
                 unlock(current_lp);
                 long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
             }
@@ -384,8 +393,17 @@ void queue_deliver_msgs(void) {
         #if IPI_POSTING_SYNC_CHECK==1
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
-            //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+            //event in future to interrupt,event is already inserted in localqueue
+            LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
+            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
+            current_msg->frame=0;//frame can be >0 despite of event is in future
+            //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
+            //we don't want to commit interrupted event
             LPS[current_lp]->LP_state_is_valid=false;
+            #if DEBUG==1
+            current_msg->interrupted=true;
+            #endif
+            LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
             unlock(current_lp);
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
         }
@@ -484,7 +502,17 @@ void queue_deliver_msgs(void) {
             for(unsigned int j=i;j<hash_table_size;j++){//mark as null remaining element in hash_table
                 _thr_pool.collision_list[j]=NULL;
             }
+            //event in future to interrupt,event is already inserted in localqueue
+            LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
+            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
+            current_msg->frame=0;//frame can be >0 despite of event is in future
+                //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
+                //we don't want to commit interrupted event
             LPS[current_lp]->LP_state_is_valid=false;
+            #if DEBUG==1
+            current_msg->interrupted=true;
+            #endif
+            LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
             unlock(current_lp);
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
         }
@@ -574,8 +602,17 @@ void queue_deliver_msgs(void) {
         #if IPI_POSTING_SYNC_CHECK==1
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
-            //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+            //event in future to interrupt,event is already inserted in localqueue
+            LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
+            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
+            current_msg->frame=0;//frame can be >0 despite of event is in future
+                //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
+                //we don't want to commit interrupted event
             LPS[current_lp]->LP_state_is_valid=false;
+            #if DEBUG==1
+            current_msg->interrupted=true;
+            #endif
+            LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
             unlock(current_lp);
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
         }

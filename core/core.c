@@ -140,6 +140,8 @@ msg_t *LP_info_is_good(int lp_idx,bool reliable){
 }
 
 msg_t*get_best_LP_info_good(int lp_idx){
+	if(safe)//if current event is safe then there is not info good
+		return NULL;
 	#if IPI_POSTING_SINGLE_INFO==1
 		return LP_info_is_good(lp_idx,true);
 	#else
@@ -455,8 +457,25 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 		#if IPI_POSTING_SYNC_CHECK==1
 		msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
-            //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
+        	#if DEBUG==1
+        	if(current_msg->timestamp<LPS[current_lp]->bound->timestamp
+			|| ((current_msg->timestamp==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<LPS[current_lp]->bound->tie_breaker)) ){
+				printf("execution in progress of event in past in not mode SILENT_EXECUTION\n");
+				gdb_abort;
+			}
+        	#endif
+            //event in future to interrupt,event is already inserted in localqueue
+            LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
+            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
+            current_msg->frame=0;//frame can be >0 despite of event is in future
+            //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
+            //we don't want to commit interrupted event
             LPS[current_lp]->LP_state_is_valid=false;
+            #if DEBUG==1
+            current_msg->interrupted=true;
+            #endif
+            LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
+            
             unlock(current_lp);
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
             //messagges already inserted in thread_pool will be cleaned with queue_clean
@@ -717,6 +736,7 @@ stat64_t execute_time;
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
 #if IPI_POSTING==1 || IPI_SUPPORT==1
+//do rollback relative to bound
 #define do_rollback_only(){\
 	rollback_only=true;\
 	current_msg=LPS[current_lp]->bound;\
@@ -799,6 +819,8 @@ void thread_loop(unsigned int thread_id) {
             atomic_inc_x86((atomic_t *)&num_received_ipi);
 #endif
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
+			printf("branch in set jmp never executed\n");
+			gdb_abort;
 			printf("processEvent interrupted with LP in mode SILENT_EXECUTION\n");
 #if DEBUG==1
 			if( (current_msg->timestamp <LPS[current_lp]->bound->timestamp)
@@ -809,9 +831,10 @@ void thread_loop(unsigned int thread_id) {
 			}
 #endif
 			LPS[current_lp]->state=old_state;//restore old mode execution
+			//TODO rivedere questa parte
 			if(current_msg->frame==0){
-				current_msg->frame = LPS[current_lp]->num_executed_frames;
-				LPS[current_lp]->num_executed_frames++;
+				//current_msg->frame = LPS[current_lp]->num_executed_frames;
+				//LPS[current_lp]->num_executed_frames++;
 				if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
 					msg_t *bound_t, *next_t,*prev_t;
 					bound_t = LPS[current_lp]->bound;
@@ -852,20 +875,40 @@ void thread_loop(unsigned int thread_id) {
 			}
 		}
 		else{
+			#if DEBUG==1
+			if( (current_msg->timestamp <LPS[current_lp]->bound->timestamp)
+				|| ((current_msg->timestamp ==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker) )){
+					printf("event not in future,%lx,%lx,tid=%d\n",(unsigned long)current_msg,(unsigned long)LPS[current_lp]->bound,tid);
+					printf("ts=%lf,tb=%d,ts=%lf,tb=%d\n", current_msg->timestamp,current_msg->tie_breaker,LPS[current_lp]->bound->timestamp,LPS[current_lp]->bound->tie_breaker);
+					gdb_abort;
+			}
+			if(current_msg->monitor==(void*)0x5AFE){
+				printf("interrupted event already committed\n");
+				gdb_abort;
+			}
+			#endif
 			printf("processEvent interrupted with LP in mode %d\n",LPS[current_lp]->state);
+			LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
+            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
+            current_msg->frame=0;//frame can be >0 despite of event is in future
+            //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
+            //we don't want to commit interrupted event
+            #if DEBUG==1
+            current_msg->interrupted=true;
+            #endif
+            LPS[current_lp]->LP_state_is_valid=false;
+            LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
 		}
 		unlock(current_lp);
 		break;
 #endif//IPI_SUPPORT
-#if IPI_POSTING==1
-#if IPI_POSTING_SYNC_CHECK==1
+#if IPI_POSTING==1 || IPI_SUPPORT==1
 		case CFV_ALREADY_HANDLED ://nop to do
 			#if VERBOSE > 0
 			printf("cfv already handled,tid=%d\n",tid);
 			#endif
-#if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
+#if IPI_POSTING_STATISTICS==1
 			atomic_inc_x86((atomic_t *)&num_cfv_already_handled);
-#endif
 #endif
 			break;
 #endif
@@ -904,25 +947,6 @@ void thread_loop(unsigned int thread_id) {
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
 #endif
-#if IPI_POSTING==1 || IPI_SUPPORT==1
-		bool rollback_only;
-		//fetch_internal() can return msg as dummy bound with state ROLLBACK_ONLY and in order to rollback with information inside it 
-		if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){//rollback relative to bound
-			#if DEBUG==1
-			//dummy_bound and bound must be equals because we rollback relative to bound info, and here we want to rollback relative to dummy_bound info
-			//in alternativa possiamo modificare il bound qui e farlo puntare al dummy bound,quindi lo fa questa funzione e non la fetch_internal
-			if(LPS[current_lp]->dummy_bound!=LPS[current_lp]->bound || LPS[current_lp]->LP_state_is_valid==true){
-				printf("bound and dummy bound are different each other\n");
-				gdb_abort;
-			}
-			#endif
-			LPS[current_lp]->dummy_bound->state=NEW_EVT;//restore dummy_bound state
-			do_rollback_only();
-		}
-		else{
-			rollback_only=false;
-		}
-#endif
 		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
 		// Locally (within the thread) copy lp and ts to processing event
@@ -930,6 +954,34 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+#if IPI_POSTING==1 || IPI_SUPPORT==1
+		bool rollback_only;
+		//fetch_internal() can return msg as dummy bound with state ROLLBACK_ONLY in order to rollback with information inside it 
+		if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){//rollback relative to bound
+			#if DEBUG==1
+			if(LPS[current_lp]->LP_state_is_valid==true){
+				printf("dummy_bound is ROLLBACK_ONLY but LP state is valid\n");
+				gdb_abort;
+			}
+			if( (current_msg->timestamp <LPS[current_lp]->bound->timestamp)
+				|| ((current_msg->timestamp ==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker) )){
+					printf("event not in future,%lx,%lx,tid=%d\n",(unsigned long)current_msg,(unsigned long)LPS[current_lp]->bound,tid);
+					printf("ts=%lf,tb=%d,ts=%lf,tb=%d\n", current_msg->timestamp,current_msg->tie_breaker,LPS[current_lp]->bound->timestamp,LPS[current_lp]->bound->tie_breaker);
+					gdb_abort;
+			}
+			#endif
+			//current_msg può essere in future o past indistintamente??
+			LPS[current_lp]->dummy_bound->state=NEW_EVT;//restore dummy_bound state
+			#if DEBUG==1
+				current_msg->interrupted=true;
+			#endif
+			do_rollback_only();
+		}
+		else{
+			rollback_only=false;
+		}
+#endif
 
 #if IPI_POSTING==1 || IPI_SUPPORT==1
 #if DEBUG==1
@@ -965,12 +1017,9 @@ void thread_loop(unsigned int thread_id) {
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
-
 		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
 			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
-
-
 
 	#if DEBUG == 1
 			if(current_msg == LPS[current_lp]->bound && current_evt_state != ANTI_MSG) {
@@ -1006,7 +1055,6 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 			
 			LPS[current_lp]->state = old_state;
-
 			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
 			if(current_evt_state != ANTI_MSG) {
 				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
@@ -1021,11 +1069,15 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			#endif
 		}
 		#if IPI_POSTING==1 || IPI_SUPPORT==1
-		else if(LPS[current_lp]->LP_state_is_valid==false){
-			//event in future with LP state invalid,restore state and fetch again
-			//make rollback relative to bound
-			do_rollback_only();
+		#if DEBUG==1
+		if(LPS[current_lp]->LP_state_is_valid==false || current_msg->timestamp<LPS[current_lp]->bound->timestamp
+			|| ((current_msg->timestamp==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<LPS[current_lp]->bound->tie_breaker)) ){
+			printf("event in past or LP state invalid\n");
+			gdb_abort;
+			
 		}
+		#endif
+		//now LP state is valid and event is in future
 		#endif
 		if(current_evt_state == ANTI_MSG) {
 
@@ -1092,11 +1144,6 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 			gdb_abort;				
 		}
 #endif
-
-#if IPI_POSTING==1 || IPI_SUPPORT==1
-		current_msg->frame = LPS[current_lp]->num_executed_frames;
-		LPS[current_lp]->num_executed_frames++;
-#endif
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 
@@ -1106,7 +1153,7 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 		print_lp_id_in_thread_pool_list();
         print_lp_id_in_collision_list();
 #endif//VERBOSE
-#endif
+#endif//IPI_POSTING
 		///* FLUSH */// 
 		queue_deliver_msgs();
 #if IPI_POSTING==1 || IPI_SUPPORT==1
@@ -1144,10 +1191,8 @@ rollback://if current_msg became ANTI_MSG after execution then go to rollback!
 #endif
 		// Update event and LP control variables
 		LPS[current_lp]->bound = current_msg;
-#if IPI_POSTING!=1 && IPI_SUPPORT!=1
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
-#endif
 		
 		///* ON_GVT *///
 		if(safe) {
