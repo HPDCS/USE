@@ -404,7 +404,7 @@ void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_re
     }
     return;
 }
-/*#else
+#else
 void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_reliable,int*id_unreliable,int lp_idx){
     //indexes must be already initialized
 #if DEBUG==1
@@ -419,6 +419,13 @@ void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_re
         gdb_abort;
     }
 #endif
+    int initial_num_events=*num_elem;
+    for(int i=1;i<initial_num_events;i++){
+        if(array_events[i]!=NULL && (array_events[i]->tie_breaker==0)){
+            array_events[i]=NULL;
+            (*num_elem)--;
+        }
+    }
     //curr_evt !=NULL
     if(array_events[*id_current_node]== array_events[*id_reliable]){
         reset_LP_info_inside_lock(array_events[*id_reliable],true,lp_idx);
@@ -443,7 +450,7 @@ void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_re
         }
     }
     return;
-}*/
+}
 #endif//IPI_POSTING_SINGLE_INFO
 
 #if DEBUG==1

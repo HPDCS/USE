@@ -277,34 +277,27 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		
 		events++;
 		#if IPI_POSTING_SYNC_CHECK_PAST==1
+		#if IPI_POSTING_STATISTICS==1
 		atomic_inc_x86((atomic_t *)&counter_sync_check_past);
+		#endif
 		#if DEBUG==1
 		if((LPS[lid]->bound!=NULL) && (current_msg->timestamp<LPS[lid]->bound->timestamp
 			|| ((current_msg->timestamp==LPS[lid]->bound->timestamp) && (current_msg->tie_breaker<=LPS[lid]->bound->tie_breaker)))  ){
 				printf("execution in progress of event in past in mode SILENT_EXECUTION\n");
 				gdb_abort;
 		}
-		#endif
+		#endif//DEBUG
 		#if IPI_SUPPORT==1
     	#if DEBUG==1
-    	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-    		printf("preempt count is not interruptible in ScheduleNewEvent\n");
+    	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+    		printf("preempt count is not interruptible in SilentExecution\n");
     		gdb_abort;
     	}
-    	#endif
+    	#endif//DEBUG
     	#endif//IPI_SUPPORT
     	msg_t*best_evt=get_best_LP_info_good(lid);
     	if(best_evt!=NULL){
     		LPS[lid]->LP_state_is_valid=false;//invalid state
-    		#if IPI_SUPPORT==1
-        	increment_preempt_counter();
-        	#if DEBUG==1
-        	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-        		printf("preempt count is not INIT after increment in ScheduleNewEvent\n");
-        		gdb_abort;
-        	}
-        	#endif
-        #endif
             if(!list_is_connected(LPS[lid]->queue_in, current_msg)) {
 						msg_t *bound_t, *next_t,*prev_t;
 						bound_t = LPS[lid]->last_silent_exec_evt;
@@ -369,10 +362,10 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 					}
 					#endif
 				}
-				#endif
+				#endif//IPI_POSTING || IPI_SUPPORT
         	}
 		}
-		#endif
+		#endif//IPI_POSTING_SYNC_CHECK_PAST
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
 		last_executed_event = evt;
 		#if IPI_POSTING==1 || IPI_SUPPORT==1

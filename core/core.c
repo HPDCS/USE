@@ -113,8 +113,10 @@ size_t node_size_msg_t;
 size_t node_size_state_t;
 
 #if IPI_POSTING==1
+#if IPI_SUPPORT_STATISTICS==1
 unsigned int counter_sync_check_past=0;
 unsigned int counter_sync_check_future=0;
+#endif
 msg_t *LP_info_is_good(int lp_idx,bool reliable){
 	//return NULL if info is not usable,else return info usable
 	//TODO this function does not reset/unpost information because is not needed,write another function to reset/unpost info where is convenient
@@ -196,10 +198,6 @@ unsigned long num_cfv_already_handled=0;
 __thread int ipi_registration_error = 0;
 
 __thread unsigned long long * preempt_count_ptr = NULL;
-#define PREEMPT_COUNT_CODE_INTERRUPTIBLE 0
-#define PREEMPT_COUNT_CODE_NOT_INTERRUPTIBLE (*preempt_count_ptr>0)
-#define PREEMPT_COUNT_INIT 1
-
 
 __thread void * alternate_stack = NULL;
 __thread unsigned long alternate_stack_area = 4096UL;
@@ -487,7 +485,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
         #endif
 		#if IPI_POSTING==1
 		#if IPI_POSTING_SYNC_CHECK_FUTURE==1
+        #if IPI_POSTING_STATISTICS==1
         atomic_inc_x86((atomic_t *)&counter_sync_check_future);
+        #endif
 		msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             LPS[current_lp]->LP_state_is_valid=false;//invalid state
@@ -511,7 +511,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	#if IPI_POSTING==1
 	#if IPI_POSTING_SYNC_CHECK_PAST==1
 	else{
+		#if IPI_POSTING_STATISTICS==1
 		atomic_inc_x86((atomic_t *)&counter_sync_check_past);
+		#endif
 		#if DEBUG==1
 		if((LPS[current_lp]->bound!=NULL) && (current_msg->timestamp<LPS[current_lp]->bound->timestamp
 			|| ((current_msg->timestamp==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker)))  ){
@@ -801,24 +803,14 @@ stat64_t execute_time;
 			gdb_abort;
 		}
 		#endif
-		if(LPS[LP]->state != LP_STATE_SILENT_EXEC){
-			decrement_preempt_counter();
-		}
-		else{
-			increment_preempt_counter();
-		}
+		decrement_preempt_counter();
 #endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
 		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
 #if IPI_SUPPORT==1
-		if(LPS[LP]->state != LP_STATE_SILENT_EXEC){
-			increment_preempt_counter();
-		}
-		else{
-			decrement_preempt_counter();
-		}
+		increment_preempt_counter();
 		#if DEBUG==1
 		if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
 			printf("case2:preempt counter is not INIT after ProcessEvent\n");
@@ -944,9 +936,51 @@ void thread_loop(unsigned int thread_id) {
 		#if IPI_SUPPORT_STATISTICS==1
             atomic_inc_x86((atomic_t *)&num_received_ipi);
 		#endif
-			if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC || LPS[current_lp]->state!=1){
-				printf("branch in set jmp never executed\n");
-				gdb_abort;
+			if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
+				#if DEBUG==1
+				if((LPS[current_lp]->bound!=NULL) && (current_msg->timestamp<LPS[current_lp]->bound->timestamp
+					|| ((current_msg->timestamp==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker)))  ){
+						printf("execution in progress of event in past in mode SILENT_EXECUTION\n");
+						gdb_abort;
+				}
+				#endif//DEBUG
+				LPS[current_lp]->LP_state_is_valid=false;//invalid state
+	            if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
+							msg_t *bound_t, *next_t,*prev_t;
+							bound_t = LPS[current_lp]->last_silent_exec_evt;
+							prev_t=bound_t;
+							next_t = list_next(prev_t);//first event after bound
+							while (next_t!=NULL){
+							#if DEBUG==1
+								if( (prev_t->timestamp > next_t->timestamp)
+									|| ( (prev_t->timestamp==next_t->timestamp) && (prev_t->tie_breaker>next_t->tie_breaker)) ){
+									printf("event not in order in local_queue\n");
+									gdb_abort;
+								}
+							#endif
+								if( (next_t->timestamp>current_msg->timestamp)
+									|| (next_t->timestamp==current_lvt && next_t->tie_breaker>current_msg->tie_breaker) ){
+									break;
+								}
+								else{
+									prev_t=next_t;
+									next_t=list_next(next_t);
+								}
+							}
+							list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg,prev_t);
+							#if DEBUG == 1
+							if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
+							if(list_prev(current_msg) != prev_t){					printf("list_prev(current_msg) != prev_t\n");	gdb_abort;}
+							if(list_next(prev_t) != current_msg){					printf("list_next(prev_t) != current_msg\n");	gdb_abort;}
+							if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
+							if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+							if(prev_t !=NULL && prev_t->timestamp > current_lvt){	printf("prev_t->timestamp > current_lvt\n");	gdb_abort;}			
+							if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+							#endif
+				}
+				//adjust bound,before return to main loop bound pointer must be referenced an event not dummy
+				LPS[current_lp]->bound=list_prev(current_msg);
+				LPS[current_lp]->dummy_bound->state=NEW_EVT;
 			}
 			else{
 				//event interrupt in future

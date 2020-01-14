@@ -516,7 +516,9 @@ void queue_deliver_msgs(void) {
         }
 #if IPI_POSTING==1
         #if IPI_POSTING_SYNC_CHECK_FUTURE==1
+        #if IPI_POSTING_STATISTICS==1
         atomic_inc_x86((atomic_t *)&counter_sync_check_future);
+        #endif
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
@@ -526,7 +528,7 @@ void queue_deliver_msgs(void) {
             LPS[current_lp]->LP_state_is_valid=false;
             #if IPI_SUPPORT==1
                 #if DEBUG==1
-                if(*preempt_count_ptr!=PREEMPT_COUNTER_INIT){
+                if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
                     printf("preempt count is not INIT in queue_deliver_msgs\n");
                     gdb_abort;
                 }
@@ -624,13 +626,15 @@ void queue_deliver_msgs(void) {
             continue;
 #if IPI_POSTING==1
         #if IPI_POSTING_SYNC_CHECK_FUTURE==1
+        #if IPI_POSTING_STATISTICS==1
         atomic_inc_x86((atomic_t *)&counter_sync_check_future);
+        #endif
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             LPS[current_lp]->LP_state_is_valid=false;
             #if IPI_SUPPORT==1
                 #if DEBUG==1
-                if(*preempt_count_ptr!=PREEMPT_COUNTER_INIT){
+                if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
                     printf("preempt count is not INIT in queue_deliver_msgs\n");
                     gdb_abort;
                 }
@@ -723,12 +727,6 @@ void queue_deliver_msgs(void) {
 #endif
 
 bool is_valid(msg_t * event){
-    #if DEBUG==1
-    if(event==NULL){
-        printf("event is NULL in is_valid function\n");
-        gdb_abort;
-    }
-    #endif
 	return  
 			(event->monitor == (void *)0x5afe) 
 			||
