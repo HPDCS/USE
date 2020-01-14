@@ -12,7 +12,10 @@
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
-
+#if IPI_POSTING==1
+extern unsigned int counter_sync_check_past;
+extern unsigned int counter_sync_check_future;
+#endif
 #if IPI_SUPPORT==1
 extern char program_name[64];
 #if IPI_SUPPORT_STATISTICS==1
@@ -129,6 +132,7 @@ int main(int argn, char *argv[]) {
     //statistics_fini();
 
 #if IPI_POSTING==1
+    printf("posting_sync_check_past=%u, posting_sync_check_future=%u\n",counter_sync_check_past,counter_sync_check_future);
 #if IPI_POSTING_STATISTICS==1
     for(unsigned int i=0;i<n_prc_tot;i++){
         printf("modified reliable %ld choosen reliable %ld modified unreliable %ld choosen unreliable %ld\n",

@@ -14,6 +14,11 @@
 #include "jmp.h"
 extern __thread cntx_buf cntx_loop;
 #endif
+
+#if IPI_SUPPORT==1
+extern __thread unsigned long long * preempt_count_ptr;
+#endif
+
 //used to take locks on LPs
 volatile unsigned int *lp_lock;
 
@@ -39,6 +44,7 @@ __thread list(msg_t) to_remove_local_evts = NULL;
 __thread list(msg_t) freed_local_evts = NULL;
 
 #if IPI_POSTING==1
+extern unsigned int counter_sync_check_future;
 #if IPI_COLLISION_LIST==1
 
 void print_lp_id(void*data){
@@ -282,7 +288,7 @@ void queue_deliver_msgs(void) {
         simtime_t bound_ts=0.0;
         while(p!=NULL){
 #if IPI_POSTING==1
-            #if IPI_POSTING_SYNC_CHECK==1
+            #if IPI_POSTING_SYNC_CHECK_FUTURE_FUTURE==1
             msg_t*evt=get_best_LP_info_good(current_lp);
             if(evt!=NULL){
                 //event in future to interrupt,event is already inserted in localqueue
@@ -293,16 +299,23 @@ void queue_deliver_msgs(void) {
                         _thr_pool.collision_list[j]=NULL;
                     }
                 }
-                LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
-                LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
-                current_msg->frame=0;//frame can be >0 despite of event is in future
+                LPS[current_lp]->dummy_bound->timestamp=LPS[current_lp]->timestamp;
+            LPS[current_lp]->dummy_bound->tie_breaker=LPS[current_lp]->tie_breaker+1;
+                //current_msg->frame=0;//frame can be >0 despite of event is in future
+                current_msg->frame=LPS[current_lp]->num_executed_frames;
                 //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
                 //we don't want to commit interrupted event
                 LPS[current_lp]->LP_state_is_valid=false;
-                #if DEBUG==1
-                    current_msg->interrupted=true;
-                #endif
+                //current_msg->interrupted=true;
                 LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
+                #if IPI_SUPPORT==1
+                #if DEBUG==1
+                if(*preempt_count_ptr!=PREEMPT_COUNTER_INIT){
+                    printf("preempt count is not INIT in queue_deliver_msgs\n");
+                    gdb_abort;
+                }
+                #endif
+                #endif
                 unlock(current_lp);
                 long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
             }
@@ -390,20 +403,27 @@ void queue_deliver_msgs(void) {
             continue;
         }
 #if IPI_POSTING==1
-        #if IPI_POSTING_SYNC_CHECK==1
+        #if IPI_POSTING_SYNC_CHECK_FUTURE==1
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             //event in future to interrupt,event is already inserted in localqueue
-            LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
-            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
-            current_msg->frame=0;//frame can be >0 despite of event is in future
+            LPS[current_lp]->dummy_bound->timestamp=LPS[current_lp]->timestamp;
+            LPS[current_lp]->dummy_bound->tie_breaker=LPS[current_lp]->tie_breaker+1;
+            //current_msg->frame=0;//frame can be >0 despite of event is in future
+            current_msg->frame=LPS[current_lp]->num_executed_frames;
             //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
             //we don't want to commit interrupted event
             LPS[current_lp]->LP_state_is_valid=false;
-            #if DEBUG==1
-            current_msg->interrupted=true;
-            #endif
+            //current_msg->interrupted=true;
             LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
+            #if IPI_SUPPORT==1
+                #if DEBUG==1
+                if(*preempt_count_ptr!=PREEMPT_COUNTER_INIT){
+                    printf("preempt count is not INIT in queue_deliver_msgs\n");
+                    gdb_abort;
+                }
+                #endif
+            #endif
             unlock(current_lp);
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
         }
@@ -495,24 +515,23 @@ void queue_deliver_msgs(void) {
             continue;//empty element,go to next element
         }
 #if IPI_POSTING==1
-        #if IPI_POSTING_SYNC_CHECK==1
+        #if IPI_POSTING_SYNC_CHECK_FUTURE==1
+        atomic_inc_x86((atomic_t *)&counter_sync_check_future);
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             //event in future to interrupt,event has frame!=0 and is already inserted in localqueue
             for(unsigned int j=i;j<hash_table_size;j++){//mark as null remaining element in hash_table
                 _thr_pool.collision_list[j]=NULL;
             }
-            //event in future to interrupt,event is already inserted in localqueue
-            LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
-            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
-            current_msg->frame=0;//frame can be >0 despite of event is in future
-                //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
-                //we don't want to commit interrupted event
             LPS[current_lp]->LP_state_is_valid=false;
-            #if DEBUG==1
-            current_msg->interrupted=true;
+            #if IPI_SUPPORT==1
+                #if DEBUG==1
+                if(*preempt_count_ptr!=PREEMPT_COUNTER_INIT){
+                    printf("preempt count is not INIT in queue_deliver_msgs\n");
+                    gdb_abort;
+                }
+                #endif
             #endif
-            LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
             unlock(current_lp);
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
         }
@@ -588,6 +607,11 @@ void queue_deliver_msgs(void) {
         }
         _thr_pool.messages[event_in_list->id_in_thread_pool].father=NULL;
         nbc_enqueue(nbcalqueue, event_in_list->timestamp,event_in_list, event_in_list->receiver_id);
+        #if DEBUG==1//not present in original version
+        if(event_in_list->tie_breaker==0){
+            printf("flushed event with tie_breaker 0\n");
+        }
+        #endif
         #if IPI_SUPPORT==1
             send_ipi_to_lp(new_hole->receiver_id);
         #endif
@@ -599,20 +623,19 @@ void queue_deliver_msgs(void) {
         if(new_hole==NULL)
             continue;
 #if IPI_POSTING==1
-        #if IPI_POSTING_SYNC_CHECK==1
+        #if IPI_POSTING_SYNC_CHECK_FUTURE==1
+        atomic_inc_x86((atomic_t *)&counter_sync_check_future);
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
-            //event in future to interrupt,event is already inserted in localqueue
-            LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
-            LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker;
-            current_msg->frame=0;//frame can be >0 despite of event is in future
-                //TODO insert memory barrier here, frame must be zero before bound is changed,so other threads cannot commit this interrupted event!
-                //we don't want to commit interrupted event
             LPS[current_lp]->LP_state_is_valid=false;
-            #if DEBUG==1
-            current_msg->interrupted=true;
+            #if IPI_SUPPORT==1
+                #if DEBUG==1
+                if(*preempt_count_ptr!=PREEMPT_COUNTER_INIT){
+                    printf("preempt count is not INIT in queue_deliver_msgs\n");
+                    gdb_abort;
+                }
+                #endif
             #endif
-            LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
             unlock(current_lp);
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
         }
@@ -620,6 +643,12 @@ void queue_deliver_msgs(void) {
 #endif
         _thr_pool.messages[i].father = NULL;
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+#if DEBUG==1//not present in original version
+        if(new_hole->tie_breaker==0){
+            printf("flushed event with tie_breaker 0\n");
+            gdb_abort;
+        }
+        #endif
 #if IPI_SUPPORT==1
         send_ipi_to_lp(new_hole->receiver_id);
 #endif
@@ -674,7 +703,11 @@ void queue_deliver_msgs(void) {
         clock_timer_start(queue_op);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
-
+        #if DEBUG==1//not present in original version
+        if(new_hole->tie_breaker==0){
+            printf("flushed event with tie_breaker 0\n");
+        }
+        #endif
 #if IPI_SUPPORT==1
         send_ipi_to_lp(new_hole->receiver_id);
 #endif
@@ -690,6 +723,12 @@ void queue_deliver_msgs(void) {
 #endif
 
 bool is_valid(msg_t * event){
+    #if DEBUG==1
+    if(event==NULL){
+        printf("event is NULL in is_valid function\n");
+        gdb_abort;
+    }
+    #endif
 	return  
 			(event->monitor == (void *)0x5afe) 
 			||

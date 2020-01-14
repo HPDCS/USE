@@ -45,7 +45,9 @@
 #include <prints.h>
 
 
-
+#if IPI_SUPPORT==1
+extern __thread unsigned long long * preempt_count_ptr;
+#endif
 /// Function pointer to switch between the parallel and serial version of SetState
 //void (*SetState)(void *new_state);
 //
@@ -215,13 +217,28 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
 	#if IPI_POSTING==1 || IPI_SUPPORT==1
-	/*if(old_state != LP_STATE_ONGVT){
+	if(old_state!=LP_STATE_ONGVT){
+		#if DEBUG==1
+		if(tie_breaker==0){
+			printf("tie breaker is zero in silent execution\n");
+		}
+		#endif
 		LPS[lid]->dummy_bound->timestamp=until_ts;
-		LPS[lid]->dummy_bound->tie_breaker=tie_breaker;
+		LPS[lid]->dummy_bound->tie_breaker=tie_breaker-1;
 		LPS[lid]->bound=LPS[lid]->dummy_bound;
-	}*/
+		#if DEBUG==1
+		if((LPS[current_lp]->bound!=NULL) && (current_msg->timestamp<LPS[current_lp]->bound->timestamp
+			|| ((current_msg->timestamp==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker)))  ){
+				printf("execution in progress of event in past in mode SILENT_EXECUTION func\n");
+				gdb_abort;
+		}
+		#endif
+	}
 	#endif
 	last_executed_event = evt;
+	#if IPI_POSTING==1 || IPI_SUPPORT==1
+	LPS[lid]->last_silent_exec_evt = evt;
+	#endif
 
 	while(1){
 		local_next_evt = list_next(evt);
@@ -258,6 +275,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		events++;
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
 		last_executed_event = evt;
+		#if IPI_POSTING==1 || IPI_SUPPORT==1
+		LPS[lid]->last_silent_exec_evt = evt;
+		#endif
 	}
 
 #if DEBUG==1
@@ -278,6 +298,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	if(old_state != LP_STATE_ONGVT){
 		LPS[lid]->bound = last_executed_event;
 	}
+	#if IPI_POSTING==1 || IPI_SUPPORT==1
+	LPS[lid]->last_silent_exec_evt = last_executed_event;
+	#endif
 	
 	LPS[lid]->state = old_state;
 	return events;

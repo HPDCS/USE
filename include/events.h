@@ -11,6 +11,7 @@
 
 #if IPI_POSTING==1 || IPI_SUPPORT==1
 #define ROLLBACK_ONLY 0x4//state reserved for dummy_bound
+#define RESTORE_LP_STATE_WITH_BOUND 0x8 //state reserved for dummy_bound
 #endif
 
 #if IPI_POSTING==1 //values of field posted in msg_t
@@ -85,11 +86,6 @@ typedef struct __msg_t
 #if IPI_POSTING==1
 	unsigned int id_in_thread_pool;
 	bool posted;
-#endif
-#if IPI_POSTING==1 || IPI_SUPPORT==1
-#if DEBUG==1
-	bool interrupted;
-#endif
 #endif
 } msg_t;
 

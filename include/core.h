@@ -133,6 +133,7 @@ extern int OnGVT(unsigned int me, void *snapshot);
 
 #if IPI_SUPPORT==1
 extern void cfv_trampoline(void);
+extern void increment_preempt_counter();
 #endif
 #if IPI_POSTING==1
 extern msg_t*get_best_LP_info_good(int lp_idx);
