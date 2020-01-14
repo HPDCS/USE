@@ -12,17 +12,22 @@
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
+
 #if IPI_POSTING_STATISTICS==1
 extern unsigned int counter_sync_check_past;
 extern unsigned int counter_sync_check_future;
 #endif
+
 #if IPI_SUPPORT==1
 extern char program_name[64];
+
 #if IPI_SUPPORT_STATISTICS==1
 extern unsigned long num_sended_ipi;
 extern unsigned long num_received_ipi;
 #endif
+
 #endif
+
 #if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
 extern unsigned long num_cfv_already_handled;
 #endif

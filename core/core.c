@@ -113,10 +113,11 @@ size_t node_size_msg_t;
 size_t node_size_state_t;
 
 #if IPI_POSTING==1
-#if IPI_SUPPORT_STATISTICS==1
+#if IPI_POSTING_STATISTICS==1
 unsigned int counter_sync_check_past=0;
 unsigned int counter_sync_check_future=0;
 #endif
+
 msg_t *LP_info_is_good(int lp_idx,bool reliable){
 	//return NULL if info is not usable,else return info usable
 	//TODO this function does not reset/unpost information because is not needed,write another function to reset/unpost info where is convenient
@@ -741,15 +742,6 @@ void init_simulation(unsigned int thread_id){
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 
-#if IPI_POSTING==1
-#if VERBOSE > 0 && IPI_COLLISION_LIST==1
-		printf("lp id in thread pool list\n");
-        print_lp_id_in_thread_pool_list();
-        printf("lp id in collision list\n");
-        print_lp_id_in_collision_list();
-#endif//VERBOSE
-#endif
-
 	}
 
 
@@ -1308,14 +1300,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
-
-#if IPI_POSTING==1
-#if VERBOSE > 0 && IPI_COLLISION_LIST==1
-        printf("print thread pool and collision list after execute event before queue_deliver_msgs\n");
-		print_lp_id_in_thread_pool_list();
-        print_lp_id_in_collision_list();
-#endif//VERBOSE
-#endif//IPI_POSTING
 		///* FLUSH */// 
 		queue_deliver_msgs();
 #if DEBUG==1//not present in original version
@@ -1334,13 +1318,8 @@ void thread_loop(unsigned int thread_id) {
         }
 
     }
-#endif//DEBUG
-#if VERBOSE > 0 && IPI_COLLISION_LIST==1
-        printf("print thread pool and collision list after queue_deliver_msgs\n");
-		print_lp_id_in_thread_pool_list();
-        print_lp_id_in_collision_list();
-#endif//VERBOSE
-#endif//IPI_POSTING
+#endif
+#endif
 
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){

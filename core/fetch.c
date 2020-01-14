@@ -1121,6 +1121,13 @@ void prune_local_queue_with_ts(simtime_t ts){
 		tmp_node = list_next(current);
 		
 		if(current->max_outgoing_ts < ts){
+            #if DEBUG==1 && IPI_POSTING==1 
+            if(current->posted!=UNPOSTED){
+                printf("event POSTED cannot be garbage collectioned\n");
+                print_event(current);
+                gdb_abort;
+            }
+            #endif
 			from = current;
 			//trovato il primo nodo valido, continuo localmente la ricerca
 			while(current!=NULL && current->max_outgoing_ts < ts){

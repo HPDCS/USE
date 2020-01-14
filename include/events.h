@@ -83,7 +83,7 @@ typedef struct __msg_t
 	struct __msg_t * event_on_gvt_on_commit;
 #endif
 #if IPI_POSTING==1
-	unsigned int id_in_thread_pool;
+	int id_in_thread_pool_hash_table;
 	bool posted;
 #endif
 } msg_t;
