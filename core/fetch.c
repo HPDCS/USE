@@ -381,7 +381,6 @@ bool first_has_greater_ts(msg_t*event1,msg_t*event2){
 #if IPI_POSTING_SINGLE_INFO==1
 void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_reliable,int lp_idx){
     //indexes must be already initialized
-    //printf("num elem=%d\n",*num_elem);
 #if DEBUG==1
     if(array_events[*id_current_node]==NULL || array_events[*id_current_node]->tie_breaker==0){
         printf("curr_evt must be not NULL and with tie_breaker greater than 0\n");
@@ -813,9 +812,6 @@ retry_with_new_node:
                     //nodo non aggiornato,l'evento cambia ad anti_MSG,viene aggiornato current_state e viene rimosso dalla coda global,ma il nodo scorretto viene rimosso
                     curr_evt_state = event->state;
                 }
-#if IPI_POSTING==1 || IPI_SUPPORT==1
-end_of_get_next_and_valid:
-#endif
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {//cristian:state is new_evt,from_get_next_and_valid is false
 					#if DEBUG==1//not present in original version
@@ -867,12 +863,6 @@ end_of_get_next_and_valid:
 						
 					}
 					else{//cristian:this event valid+extracted+in future must be executed,return it to simulation loop
-/*#if DEBUG ==1
-						if(event->frame==0){
-							printf("event EXTRACTED in future never EXECUTED\n");
-							gdb_abort;
-						}
-#endif//DEBUG*/
                         #if IPI_POSTING==1
                         reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
                         #endif//IPI_POSTING

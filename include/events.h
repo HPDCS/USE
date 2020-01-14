@@ -11,7 +11,6 @@
 
 #if IPI_POSTING==1 || IPI_SUPPORT==1
 #define ROLLBACK_ONLY 0x4//state reserved for dummy_bound
-#define RESTORE_LP_STATE_WITH_BOUND 0x8 //state reserved for dummy_bound
 #endif
 
 #if IPI_POSTING==1 //values of field posted in msg_t

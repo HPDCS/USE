@@ -574,6 +574,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 			}
 			//adjust bound,before return to main loop bound pointer must be referenced an event not dummy
 			LPS[current_lp]->bound=list_prev(current_msg);
+			LPS[current_lp]->dummy_bound->state=NEW_EVT;
 			unlock(current_lp);//release lock and go to simulation loop
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
             //messagges already inserted in thread_pool will be cleaned with queue_clean
@@ -854,16 +855,6 @@ stat64_t execute_time;
 		
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
-#if IPI_POSTING==1 || IPI_SUPPORT==1
-//do rollback relative to bound
-#define do_rollback_only(){\
-	current_msg=LPS[current_lp]->bound;\
-	current_lvt=current_msg->timestamp;\
-	current_evt_state = current_msg->state;\
-	current_evt_monitor = current_msg->monitor;\
-	goto rollback;\
-	};
-#endif
 
 void thread_loop(unsigned int thread_id) {
 #if IPI_SUPPORT==1 || IPI_POSTING==1
@@ -1111,9 +1102,6 @@ void thread_loop(unsigned int thread_id) {
 			}
 	#endif
 
-#if IPI_POSTING==1 || IPI_SUPPORT==1
-rollback:
-#endif
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
@@ -1140,6 +1128,11 @@ rollback:
 			}
 			#if IPI_POSTING==1 || IPI_SUPPORT==1
 			LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
+			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
+				LPS[current_lp]->dummy_bound->state=NEW_EVT;
+				unlock(current_lp);
+				long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+			}
 			#endif
 		}
 		#if IPI_POSTING==1 || IPI_SUPPORT==1
@@ -1194,6 +1187,11 @@ rollback:
 			}
 			#if IPI_POSTING==1 || IPI_SUPPORT==1
 			LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
+			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
+				LPS[current_lp]->dummy_bound->state=NEW_EVT;
+				unlock(current_lp);
+				long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+			}
 			#endif
 		}
 		#endif
