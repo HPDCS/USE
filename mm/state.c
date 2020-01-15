@@ -277,77 +277,79 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		
 		events++;
 		#if IPI_POSTING_SYNC_CHECK_PAST==1
-		#if IPI_POSTING_STATISTICS==1
-		atomic_inc_x86((atomic_t *)&counter_sync_check_past);
-		#endif
-		#if DEBUG==1
-		if((LPS[lid]->bound!=NULL) && (current_msg->timestamp<LPS[lid]->bound->timestamp
-			|| ((current_msg->timestamp==LPS[lid]->bound->timestamp) && (current_msg->tie_breaker<=LPS[lid]->bound->tie_breaker)))  ){
-				printf("execution in progress of event in past in mode SILENT_EXECUTION\n");
-				gdb_abort;
-		}
-		#endif//DEBUG
-		#if IPI_SUPPORT==1
-    	#if DEBUG==1
-    	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-    		printf("preempt count is not interruptible in SilentExecution\n");
-    		gdb_abort;
-    	}
-    	#endif//DEBUG
-    	#endif//IPI_SUPPORT
-    	msg_t*best_evt=get_best_LP_info_good(lid);
-    	if(best_evt!=NULL){
-    		LPS[lid]->LP_state_is_valid=false;//invalid state
-            if(!list_is_connected(LPS[lid]->queue_in, current_msg)) {
-						msg_t *bound_t, *next_t,*prev_t;
-						bound_t = LPS[lid]->last_silent_exec_evt;
-						prev_t=bound_t;
-						next_t = list_next(prev_t);//first event after bound
-						while (next_t!=NULL){
-						#if DEBUG==1
-							if( (prev_t->timestamp > next_t->timestamp)
-								|| ( (prev_t->timestamp==next_t->timestamp) && (prev_t->tie_breaker>next_t->tie_breaker)) ){
-								printf("event not in order in local_queue\n");
-								gdb_abort;
-							}
-						#endif
-							if( (next_t->timestamp>current_msg->timestamp)
-								|| (next_t->timestamp==current_lvt && next_t->tie_breaker>current_msg->tie_breaker) ){
-								break;
-							}
-							else{
-								prev_t=next_t;
-								next_t=list_next(next_t);
-							}
-						}
-						list_place_after_given_node_by_content(lid, LPS[lid]->queue_in, current_msg,prev_t);
-						#if DEBUG == 1
-						if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
-						if(list_prev(current_msg) != prev_t){					printf("list_prev(current_msg) != prev_t\n");	gdb_abort;}
-						if(list_next(prev_t) != current_msg){					printf("list_next(prev_t) != current_msg\n");	gdb_abort;}
-						if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
-						if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
-						if(prev_t !=NULL && prev_t->timestamp > current_lvt){	printf("prev_t->timestamp > current_lvt\n");	gdb_abort;}			
-						if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
-						#endif
+		if(old_state!=LP_STATE_ONGVT){
+			#if IPI_POSTING_STATISTICS==1
+			atomic_inc_x86((atomic_t *)&counter_sync_check_past);
+			#endif
+			#if DEBUG==1
+			if((LPS[lid]->bound!=NULL) && (current_msg->timestamp<LPS[lid]->bound->timestamp
+				|| ((current_msg->timestamp==LPS[lid]->bound->timestamp) && (current_msg->tie_breaker<=LPS[lid]->bound->tie_breaker)))  ){
+					printf("execution in progress of event in past in mode SILENT_EXECUTION\n");
+					gdb_abort;
 			}
-    		if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
-    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) && (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
-				//adjust bound,before return to main loop bound pointer must references an event not dummy
-				LPS[lid]->bound=list_prev(current_msg);
-				unlock(lid);//release lock and go to simulation loop
-	            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
-	            //messagges already inserted in thread_pool will be cleaned with queue_clean
-        	}
-        	else{//priority message before dest_ts and after last_silent_exec
-        		LPS[current_lp]->dummy_bound->state=ROLLBACK_ONLY;
-        		#if IPI_POSTING==1 || IPI_SUPPORT==1
-				if(old_state!=LP_STATE_ONGVT){
+			#endif//DEBUG
+			#if IPI_SUPPORT==1
+	    	#if DEBUG==1
+	    	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+	    		printf("preempt count is not interruptible in SilentExecution\n");
+	    		gdb_abort;
+	    	}
+	    	#endif//DEBUG
+	    	#endif//IPI_SUPPORT
+	    	msg_t*best_evt=get_best_LP_info_good(lid);
+	    	if(best_evt!=NULL){
+	    		LPS[lid]->LP_state_is_valid=false;//invalid state
+	    		//current_msg->frame = LPS[lid]->num_executed_frames;
+	            if(!list_is_connected(LPS[lid]->queue_in, current_msg)) {
+							msg_t *bound_t, *next_t,*prev_t;
+							bound_t = LPS[lid]->last_silent_exec_evt;
+							prev_t=bound_t;
+							next_t = list_next(prev_t);//first event after bound
+							while (next_t!=NULL){
+							#if DEBUG==1
+								if( (prev_t->timestamp > next_t->timestamp)
+									|| ( (prev_t->timestamp==next_t->timestamp) && (prev_t->tie_breaker>next_t->tie_breaker)) ){
+									printf("event not in order in local_queue\n");
+									gdb_abort;
+								}
+							#endif
+								if( (next_t->timestamp>current_msg->timestamp)
+									|| (next_t->timestamp==current_lvt && next_t->tie_breaker>current_msg->tie_breaker) ){
+									break;
+								}
+								else{
+									prev_t=next_t;
+									next_t=list_next(next_t);
+								}
+							}
+							list_place_after_given_node_by_content(lid, LPS[lid]->queue_in, current_msg,prev_t);
+							#if DEBUG == 1
+							if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
+							if(list_prev(current_msg) != prev_t){					printf("list_prev(current_msg) != prev_t\n");	gdb_abort;}
+							if(list_next(prev_t) != current_msg){					printf("list_next(prev_t) != current_msg\n");	gdb_abort;}
+							if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
+							if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+							if(prev_t !=NULL && prev_t->timestamp > current_lvt){	printf("prev_t->timestamp > current_lvt\n");	gdb_abort;}			
+							if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+							#endif
+				}
+	    		if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
+	    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) && (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
+					//adjust bound,before return to main loop bound pointer must references an event not dummy
+					LPS[lid]->bound=list_prev(current_msg);
+					LPS[lid]->dummy_bound->state=NEW_EVT;
+					unlock(lid);//release lock and go to simulation loop
+		            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+		            //messagges already inserted in thread_pool will be cleaned with queue_clean
+	        	}
+	        	else{//priority message before dest_ts and after last_silent_exec
+	        		#if IPI_POSTING==1 || IPI_SUPPORT==1
 					#if DEBUG==1
 					if(tie_breaker==0){
 						printf("tie breaker is zero in silent execution\n");
 					}
 					#endif
+					LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
 					//modify until_ts and tie_breaker
 					until_ts=best_evt->timestamp;
 					tie_breaker=best_evt->tie_breaker;
@@ -361,9 +363,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 							gdb_abort;
 					}
 					#endif
-				}
-				#endif//IPI_POSTING || IPI_SUPPORT
-        	}
+					#endif//IPI_POSTING || IPI_SUPPORT
+	        	}
+	        }
 		}
 		#endif//IPI_POSTING_SYNC_CHECK_PAST
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);

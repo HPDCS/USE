@@ -234,6 +234,7 @@ void queue_deliver_msgs(void) {
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             LPS[current_lp]->LP_state_is_valid=false;
+            //current_msg->frame = LPS[current_lp]->num_executed_frames;
             #if IPI_SUPPORT==1
                 #if DEBUG==1
                 if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
@@ -431,7 +432,7 @@ void queue_deliver_msgs(void) {
 }
 #endif
 
-bool is_valid(msg_t * event){
+/*bool is_valid(msg_t * event){
 	return  
 			(event->monitor == (void *)0x5afe) 
 			||
@@ -442,6 +443,55 @@ bool is_valid(msg_t * event){
                         ||  (
                                 (event->father->state  & ELIMINATED) != ELIMINATED  
                                 &&   event->fatherEpoch == event->father->epoch 
+                            )
+                    )       
+            );
+}*/
+
+/*bool is_valid(msg_t * event){
+    msg_t*father_bound=NULL;
+    if(event->father!=NULL){
+        father_bound=LPS[event->father->receiver_id]->bound;
+    }
+    return  
+            (event->monitor == (void *)0x5afe) 
+            ||
+            (
+                (event->state & ELIMINATED) != ELIMINATED  
+                &&  (
+                        event->father == NULL 
+                        ||  (
+                                (event->father->state  & ELIMINATED) != ELIMINATED  
+                                &&   event->fatherEpoch == event->father->epoch
+                                &&   ( (father_bound->timestamp > event->father->timestamp) 
+                                    || ( (father_bound->timestamp == event->father->timestamp) && (father_bound->tie_breaker >= event->father->tie_breaker)) || (event->father->frame==0))
+                            )
+                    )       
+            );
+}*/
+
+bool is_valid(msg_t * event){
+    msg_t*father_bound_next=NULL;
+    simtime_t father_bound_next_ts=INFTY;
+    if(event->father!=NULL){
+        father_bound_next=list_next(LPS[event->father->receiver_id]->bound);
+    }
+    if(father_bound_next!=NULL){
+        father_bound_next_ts=father_bound_next->timestamp;
+    }
+    return  
+            (event->monitor == (void *)0x5afe) 
+            ||
+            (
+                (event->state & ELIMINATED) != ELIMINATED  
+                &&  (
+                        event->father == NULL 
+                        ||  (
+                                (event->father->state  & ELIMINATED) != ELIMINATED  
+                                &&   event->fatherEpoch == event->father->epoch
+                                &&   ( (father_bound_next == NULL) 
+                                    || (father_bound_next_ts >= event->father->timestamp) )
+                                    
                             )
                     )       
             );

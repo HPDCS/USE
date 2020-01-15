@@ -873,6 +873,13 @@ retry_with_new_node:
                         #if IPI_POSTING==1
                         reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
                         #endif//IPI_POSTING
+                        #if DEBUG==1
+                        /*if(event->frame==0){
+                            printf("event EXTRACTED in future not EXECUTED\n");
+                            print_event(event);
+                            gdb_abort;
+                        }*/
+                        #endif
 						return_evt_to_main_loop();
 						
 					}
