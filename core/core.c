@@ -175,7 +175,9 @@ msg_t*get_best_LP_info_good(int lp_idx){
 		}
 	#endif
 }
-
+msg_t*get_best_local_LP_info_good(){//called by trampoline in order to decide if to do or not to do control flow variation 
+	return get_best_LP_info_good(current_lp);
+}
 #endif
 
 #if IPI_SUPPORT==1 || IPI_POSTING==1
@@ -589,6 +591,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 			}
 			//adjust bound,before return to main loop bound pointer must be referenced an event not dummy
 			LPS[current_lp]->bound=list_prev(current_msg);
+			LPS[current_lp]->num_executed_frames=LPS[current_lp]->bound->frame+1;
 			LPS[current_lp]->dummy_bound->state=NEW_EVT;
 			unlock(current_lp);//release lock and go to simulation loop
             long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
@@ -1137,6 +1140,17 @@ void thread_loop(unsigned int thread_id) {
 			print_event(current_msg);
 			gdb_abort;
 		}
+		if(LPS[current_lp]->state != LP_STATE_READY){
+			printf("LP state is not ready\n");
+			gdb_abort;
+		}
+		#endif
+		#if DEBUG==1 && (IPI_SUPPORT==1 || IPI_POSTING==1)
+			if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
+				printf("dummy bound is not NEW_EVT\n");
+				gdb_abort;
+			}
+
 		#endif
 
 #if DEBUG==1//not present in original version
@@ -1399,6 +1413,12 @@ void thread_loop(unsigned int thread_id) {
 		}
 #endif
 		// Update event and LP control variables
+		#if DEBUG==1//not present in original version
+		if(LPS[current_lp]->bound->frame!=LPS[current_lp]->num_executed_frames-1){
+			printf("invalid frame number in event,frame_event=%d,frame_LP=%d\n",LPS[current_lp]->bound->frame,LPS[current_lp]->num_executed_frames);
+			gdb_abort;
+		}
+		#endif
 		LPS[current_lp]->bound = current_msg;
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;

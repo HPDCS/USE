@@ -215,7 +215,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	old_state = LPS[lid]->state;
 	LPS[lid]->state = LP_STATE_SILENT_EXEC;
 	bool stop_silent = false;
-
+	#if DEBUG==1//not present in original version
+	unsigned int last_frame_event,local_next_frame_event;
+	#endif
 
 	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
 	// the simulation has been already executed at least once
@@ -239,13 +241,22 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	}
 	#endif
 	last_executed_event = evt;
+	#if DEBUG==1//not present in original version
+	last_frame_event = evt->frame;
+	#endif
 	#if IPI_POSTING==1 || IPI_SUPPORT==1
 	LPS[lid]->last_silent_exec_evt = evt;
 	#endif
 
 	while(1){
 		local_next_evt = list_next(evt);
-
+		#if DEBUG==1//not present in original version
+		local_next_frame_event=local_next_evt->frame;
+		if(last_frame_event!=local_next_frame_event-1){
+			printf("not consecutive frames in silent_execution,frame_last_event=%d,frame_next_event=%d\n",last_frame_event,local_next_frame_event);
+			gdb_abort;
+		}
+		#endif
 
 		//while(local_next_evt != NULL && !is_valid(local_next_evt) && local_next_evt != LPS[lid]->bound){
 		//	list_extract_given_node(lid, lp_ptr->queue_in, local_next_evt);
@@ -276,7 +287,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		
 		
 		events++;
-		#if IPI_POSTING_SYNC_CHECK_PAST==1
+		/*#if IPI_POSTING_SYNC_CHECK_PAST==1
 		if(old_state!=LP_STATE_ONGVT){
 			#if IPI_POSTING_STATISTICS==1
 			atomic_inc_x86((atomic_t *)&counter_sync_check_past);
@@ -367,9 +378,12 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	        	}
 	        }
 		}
-		#endif//IPI_POSTING_SYNC_CHECK_PAST
+		#endif//IPI_POSTING_SYNC_CHECK_PAST*/
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
 		last_executed_event = evt;
+		#if DEBUG==1//not present in original version
+		last_frame_event = evt->frame;
+		#endif
 		#if IPI_POSTING==1 || IPI_SUPPORT==1
 		LPS[lid]->last_silent_exec_evt = evt;
 		#endif
@@ -473,6 +487,12 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
 	
 	last_restored_event = restore_state->last_event;
+	#if DEBUG==1//not present in original version
+	if(last_restored_event->frame!=restore_state->num_executed_frames-1){
+		printf("invalid frame number after restore state,frame_event=%d,frame_LP=%d\n",last_restored_event->frame,LPS[lid]->num_executed_frames);
+		gdb_abort;
+	}
+	#endif
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);
