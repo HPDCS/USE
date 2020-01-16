@@ -76,6 +76,12 @@ else
 CFLAGS:= $(CFLAGS) -DIPI_SUPPORT_STATISTICS=0
 endif
 
+ifdef CONSTANT_CHILD_INVALIDATION
+CFLAGS:= $(CFLAGS) -DCONSTANT_CHILD_INVALIDATION=$(CONSTANT_CHILD_INVALIDATION)
+else
+CFLAGS:= $(CFLAGS) -DCONSTANT_CHILD_INVALIDATION=0
+endif
+
 ifdef OPTIMISTIC_LEVEL
 CFLAGS:=$(CFLAGS)  -DOPTIMISTIC_MODE=$(OPTIMISTIC_LEVEL)
 else
@@ -284,6 +290,8 @@ CORE_SOURCES =  core/ipi_ctrl.c\
 		core/parseparam.c\
 		statistics/statistics.c\
 		core/simple_dynamic_list.c\
+		core/atomic_16byte.c\
+		core/atomic_epoch_and_ts.c\
 		mm/garbagecollector.c
 		
 

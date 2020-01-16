@@ -11,8 +11,17 @@
 #include <limits.h>
 #include <nb_calqueue.h>
 
+#if CONSTANT_CHILD_INVALIDATION==1
+#include <atomic_epoch_and_ts.h>
+#endif
+
 #if IPI_SUPPORT==1 || IPI_POSTING==1
 #include "jmp.h"
+#endif
+
+#if CONSTANT_CHILD_INVALIDATION==1
+#define get_epoch_of_LP(lp_idx) get_epoch(LPS[lp_idx]->atomic_epoch_and_ts)
+#define set_epoch_of_LP(lp_idx,value) set_epoch(&(LPS[lp_idx]->atomic_epoch_and_ts),value)
 #endif
 
 #define MAX_LPs	2048

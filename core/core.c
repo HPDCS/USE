@@ -188,7 +188,7 @@ msg_t*allocate_dummy_bound(int lp_idx){
 	dummy_bound->type 			= INIT;
 	dummy_bound->state 			= NEW_EVT;
 	dummy_bound->father 		= NULL;//don't care
-	dummy_bound->epoch 		= LPS[lp_idx]->epoch;//don't care
+	dummy_bound->epoch 		= 0;//don't care
 	dummy_bound->monitor 		= 0x0;//don't care
 	list_node_clean_by_content(dummy_bound);
 	return dummy_bound;
@@ -424,7 +424,11 @@ void LPs_metada_init() {
 		LPS[i]->bound 					= NULL;
 		LPS[i]->queue_states 			= new_list(i, state_t);
 		LPS[i]->mark 					= 0;
+		#if CONSTANT_CHILD_INVALIDATION==1
+		set_epoch_of_LP(i,1);
+		#else
 		LPS[i]->epoch 					= 1;
+		#endif
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
 
@@ -721,7 +725,11 @@ void init_simulation(unsigned int thread_id){
        		current_msg->type 			= INIT;//
        		current_msg->state 			= 0x0;//
        		current_msg->father 		= NULL;//
+       		#if CONSTANT_CHILD_INVALIDATION==1
+       		current_msg->epoch=get_epoch_of_LP(current_lp);
+			#else
        		current_msg->epoch 		= LPS[current_lp]->epoch;//
+       		#endif
        		current_msg->monitor 		= 0x0;//
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
 			#if IPI_SUPPORT==1
@@ -1187,7 +1195,11 @@ void thread_loop(unsigned int thread_id) {
 
 		#if DEBUG == 1
 			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
+			#if CONSTANT_CHILD_INVALIDATION==1
+			current_msg->roll_epoch= get_epoch_of_LP(current_lp);
+			#else
 			current_msg->roll_epoch = LPS[current_lp]->epoch;
+			#endif
 			current_msg->rollback_time = CLOCK_READ();
 		#endif
 #if VERBOSE > 0
@@ -1250,7 +1262,11 @@ void thread_loop(unsigned int thread_id) {
 
 		#if DEBUG == 1
 			LPS[current_lp]->last_rollback_event = LPS[current_lp]->bound;//DEBUG
+			#if CONSTANT_CHILD_INVALIDATION==1
+			LPS[current_lp]->bound->roll_epoch = get_epoch_of_LP(current_lp);
+			#else
 			LPS[current_lp]->bound->roll_epoch = LPS[current_lp]->epoch;
+			#endif
 			LPS[current_lp]->bound->rollback_time = CLOCK_READ();
 		#endif
 			//we want to restore LP state in bound,so we pass bound.ts and bound.tie_breaker+1,event with (ts,tb) strictly smaller is bound
@@ -1301,8 +1317,12 @@ void thread_loop(unsigned int thread_id) {
 		}
 	#endif
 
+		#if CONSTANT_CHILD_INVALIDATION==1
+		current_msg->epoch = get_epoch_of_LP(current_lp);
+		#else
 		// Update event and LP control variables
 		current_msg->epoch = LPS[current_lp]->epoch;
+		#endif
 	#if DEBUG == 1
 		current_msg->execution_time = CLOCK_READ();
 	#endif

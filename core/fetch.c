@@ -155,7 +155,11 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		//event->monitor = 0x5AFE;
 		event->local_next 		= bound_ptr;       //DEBUG
 		event->local_previous 	= (void*) node;        //DEBUG
+        #if CONSTANT_CHILD_INVALIDATION==1
+        event->previous_seed    = get_epoch_of_LP(lp_idx);
+        #else
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
+        #endif
 		event->deletion_time 	= CLOCK_READ();
 #endif
 

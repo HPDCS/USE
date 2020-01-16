@@ -10,6 +10,10 @@
 #include <numerical.h>
 #include <nb_calqueue.h>
 
+#if CONSTANT_CHILD_INVALIDATION==1
+#include <atomic_epoch_and_ts.h>
+#endif
+
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
 
@@ -21,7 +25,6 @@
 
 /// This defines the type with whom timestamps are represented
 typedef double simtime_t;
-
 
 typedef struct _LP_state {
 
@@ -98,9 +101,12 @@ typedef struct _LP_state {
 	unsigned long long	mark;
 
 	/* ADDED FOR PADS 2018 */
-
 	unsigned int num_executed_frames;
+	#if CONSTANT_CHILD_INVALIDATION==1
+	atomic_epoch_and_ts atomic_epoch_and_ts;
+	#else
 	/*volatile*/ unsigned int epoch;
+	#endif
 	
 	unsigned int until_ongvt;
 	unsigned int until_ckpt_recalc;

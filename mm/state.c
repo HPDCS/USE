@@ -485,7 +485,15 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		rollback_lenght = LPS[lid]->num_executed_frames; 
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		rollback_lenght -= LPS[lid]->num_executed_frames;
+		#if CONSTANT_CHILD_INVALIDATION==1
+		double new_epoch=get_epoch_of_LP(lid)+1;
+		atomic_epoch_and_ts temp;
+		set_epoch(&temp,new_epoch);
+		set_timestamp(&temp,destination_time);
+		atomic_store_epoch_and_ts(&(LPS[lid]->atomic_epoch_and_ts),temp);
+		#else
 		LPS[lid]->epoch++;
+		#endif
 		LPS[lid]->from_last_ckpt = reprocessed_events%CHECKPOINT_PERIOD; // TODO
 		// TODO
 		//LPS[lid]->from_last_ckpt = ??;

@@ -255,7 +255,11 @@ void queue_deliver_msgs(void) {
         }
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
+        #if CONSTANT_CHILD_INVALIDATION==1
+        new_hole->fatherEpoch = get_epoch_of_LP(current_lp);
+        #else
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
+        #endif
 
         new_hole->monitor = (void *)0x0;
         new_hole->state = 0;
@@ -391,7 +395,11 @@ void queue_deliver_msgs(void) {
         //memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
+        #if CONSTANT_CHILD_INVALIDATION==1
+        new_hole->fatherEpoch = get_epoch_of_LP(current_lp);
+        #else
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
+        #endif
 
         new_hole->monitor = (void *)0x0;
         new_hole->state = 0;
@@ -432,7 +440,39 @@ void queue_deliver_msgs(void) {
 }
 #endif
 
-/*bool is_valid(msg_t * event){
+#if CONSTANT_CHILD_INVALIDATION==1
+bool is_valid(msg_t * event){
+    bool validity;
+    validity=  
+            (event->monitor == (void *)0x5afe) 
+            ||
+            (
+                (event->state & ELIMINATED) != ELIMINATED  
+                &&  (
+                        event->father == NULL 
+                        ||  (
+                                (event->father->state  & ELIMINATED) != ELIMINATED  
+                                &&   event->fatherEpoch == event->father->epoch 
+                            )
+                    )       
+            );
+    if(!validity)
+        return validity;
+    if(event->father==NULL)
+        return validity;
+    unsigned int father_lp=event->father->receiver_id;
+    atomic_epoch_and_ts father_epoch_and_ts=atomic_load_epoch_and_ts(&(LPS[father_lp]->atomic_epoch_and_ts));
+    unsigned int father_LP_epoch=get_epoch(father_epoch_and_ts);
+    unsigned int father_epoch=event->father->epoch;
+    if(father_LP_epoch==father_epoch)
+        return validity;
+    simtime_t LP_rollback_ts=get_timestamp(father_epoch_and_ts);
+    if(LP_rollback_ts<event->father->timestamp) //father will be re-executed
+        return false;
+    return validity;
+}
+#else
+bool is_valid(msg_t * event){
 	return  
 			(event->monitor == (void *)0x5afe) 
 			||
@@ -446,53 +486,5 @@ void queue_deliver_msgs(void) {
                             )
                     )       
             );
-}*/
-
-/*bool is_valid(msg_t * event){
-    msg_t*father_bound=NULL;
-    if(event->father!=NULL){
-        father_bound=LPS[event->father->receiver_id]->bound;
-    }
-    return  
-            (event->monitor == (void *)0x5afe) 
-            ||
-            (
-                (event->state & ELIMINATED) != ELIMINATED  
-                &&  (
-                        event->father == NULL 
-                        ||  (
-                                (event->father->state  & ELIMINATED) != ELIMINATED  
-                                &&   event->fatherEpoch == event->father->epoch
-                                &&   ( (father_bound->timestamp > event->father->timestamp) 
-                                    || ( (father_bound->timestamp == event->father->timestamp) && (father_bound->tie_breaker >= event->father->tie_breaker)) || (event->father->frame==0))
-                            )
-                    )       
-            );
-}*/
-
-bool is_valid(msg_t * event){
-    msg_t*father_bound_next=NULL;
-    simtime_t father_bound_next_ts=INFTY;
-    if(event->father!=NULL){
-        father_bound_next=list_next(LPS[event->father->receiver_id]->bound);
-    }
-    if(father_bound_next!=NULL){
-        father_bound_next_ts=father_bound_next->timestamp;
-    }
-    return  
-            (event->monitor == (void *)0x5afe) 
-            ||
-            (
-                (event->state & ELIMINATED) != ELIMINATED  
-                &&  (
-                        event->father == NULL 
-                        ||  (
-                                (event->father->state  & ELIMINATED) != ELIMINATED  
-                                &&   event->fatherEpoch == event->father->epoch
-                                &&   ( (father_bound_next == NULL) 
-                                    || (father_bound_next_ts >= event->father->timestamp) )
-                                    
-                            )
-                    )       
-            );
 }
+#endif
