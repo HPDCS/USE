@@ -15,7 +15,7 @@
 extern __thread cntx_buf cntx_loop;
 #endif
 
-#if IPI_SUPPORT==1
+#if IPI_SUPPORT==1 || IPI_POSTING==1
 extern __thread unsigned long long * preempt_count_ptr;
 #endif
 
@@ -180,72 +180,39 @@ void send_ipi_to_lp(int lp_idx){
 #endif
 
 #if IPI_POSTING==1
-unsigned int next_pow_of_2(unsigned int y){
-    //return y if y is a power of 2,else return minimum power of 2 greater than y
-    //y must be greater than 0
-    unsigned long x=y;
-#if DEBUG==1
-        if(x==0){
-            printf("invalid argument in next_pow_of_2\n");
-            gdb_abort;
-        }
-#endif
-    if((x & (x-1))==0)
-        return x;//x is a power of 2
-
-    x--;
-
-    if(sizeof(unsigned int)==4){
-        x |= x >>1;
-        x |= x >>2;
-        x |= x >>4;
-        x |= x >>8;
-        x |= x >>16;
-    }
-    else if(sizeof(unsigned int)==8){
-        x |= x >>1;
-        x |= x >>2;
-        x |= x >>4;
-        x |= x >>8;
-        x |= x >>16;
-        x |= x >>32;
-    }
-    else{
-        printf("invalid sizeof unsigned int\n");
-        gdb_abort;
-    }
-
-    x++;
-    return x;
-}
-#endif
-#if IPI_POSTING==1
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
 #if REPORT == 1
         clock_timer queue_op;
 #endif
-    for(i = 0; i < _thr_pool._thr_pool_count; i++) {
-        #if IPI_POSTING_SYNC_CHECK_FUTURE==1
-        #if IPI_POSTING_STATISTICS==1
-        atomic_inc_x86((atomic_t *)&counter_sync_check_future);
-        #endif
-        msg_t*evt=get_best_LP_info_good(current_lp);
-        if(evt!=NULL){
-            LPS[current_lp]->LP_state_is_valid=false;
-            //current_msg->frame = LPS[current_lp]->num_executed_frames;
-            #if IPI_SUPPORT==1
-                #if DEBUG==1
-                if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-                    printf("preempt count is not INIT in queue_deliver_msgs\n");
-                    gdb_abort;
-                }
-                #endif//DEBUG
-            #endif//IPI_SUPPORT
-            unlock(current_lp);
-            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+#if DEBUG==1//not present in original version
+        if(LPS[current_lp]->state != LP_STATE_READY){
+            printf("LP state is not ready in queue_deliver_msgs\n");
+            gdb_abort;
         }
+#endif
+    for(i = 0; i < _thr_pool._thr_pool_count; i++) {
+        #if IPI_POSTING==1 && IPI_POSTING_SYNC_CHECK_FUTURE==1 && IPI_INTERRUPT_FUTURE==1
+            #if IPI_POSTING_STATISTICS==1
+            atomic_inc_x86((atomic_t *)&counter_sync_check_future);
+            #endif
+            if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
+                msg_t*evt=get_best_LP_info_good(current_lp);
+                if(evt!=NULL){
+                    LPS[current_lp]->LP_state_is_valid=false;
+                    LPS[current_lp]->dummy_bound->state=NEW_EVT;
+                    increment_preempt_counter();
+                    #if DEBUG==1
+                        if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+                            printf("preempt count is not INIT in queue_deliver_msgs\n");
+                            gdb_abort;
+                        }
+                    #endif//DEBUG
+                    unlock(current_lp);
+                    long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+                }
+            }
         #endif //IPI_POSTING_SYNC_CHECK_FUTURE
 
         new_hole = _thr_pool.messages[i].father;
@@ -379,7 +346,12 @@ void queue_deliver_msgs(void) {
 #if REPORT == 1
         clock_timer queue_op;
 #endif
-
+#if DEBUG==1//not present in original version
+        if(LPS[current_lp]->state != LP_STATE_READY){
+            printf("LP state is not ready in queue_deliver_msgs\n");
+            gdb_abort;
+        }
+#endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
 
         //new_hole = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
