@@ -10,12 +10,12 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
-#if IPI_POSTING==1 || IPI_SUPPORT==1
+#if IPI_LONG_JMP==1
 #include "jmp.h"
 extern __thread cntx_buf cntx_loop;
 #endif
 
-#if IPI_SUPPORT==1 || IPI_POSTING==1
+#if IPI_PREEMPT_COUNTER==1
 extern __thread unsigned long long * preempt_count_ptr;
 #endif
 
@@ -43,9 +43,11 @@ __thread list(msg_t) to_remove_local_evts_old = NULL;
 __thread list(msg_t) to_remove_local_evts = NULL;
 __thread list(msg_t) freed_local_evts = NULL;
 
-#if IPI_POSTING==1
+#if IPI_POSTING_STATISTICS==1
 extern unsigned int counter_sync_check_future;
+#endif
 
+#if POSTING==1
 void print_lp_id_in_thread_pool_list(){
     if(_thr_pool._thr_pool_count==0){
         printf("empty thread pool\n");
@@ -139,7 +141,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
             break;
         }
     }
-    #endif
+    #endif//IPI_POSTING
 }
 
 void queue_clean(){ 
@@ -193,23 +195,18 @@ void queue_deliver_msgs(void) {
         }
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
-        #if IPI_POSTING==1 && IPI_POSTING_SYNC_CHECK_FUTURE==1 && IPI_INTERRUPT_FUTURE==1
-            #if IPI_POSTING_STATISTICS==1
-            atomic_inc_x86((atomic_t *)&counter_sync_check_future);
-            #endif
+        #if IPI_POSTING_SYNC_CHECK_FUTURE==1 && IPI_INTERRUPT_FUTURE==1
             if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
+                #if IPI_POSTING_STATISTICS==1
+                atomic_inc_x86((atomic_t *)&counter_sync_check_future);
+                #endif
+                #if VERBOSE>0
+                printf("sync check future queue_deliver_msgs\n");
+                #endif
                 msg_t*evt=get_best_LP_info_good(current_lp);
                 if(evt!=NULL){
                     LPS[current_lp]->LP_state_is_valid=false;
                     LPS[current_lp]->dummy_bound->state=NEW_EVT;
-                    increment_preempt_counter();
-                    #if DEBUG==1
-                        if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-                            printf("preempt count is not INIT in queue_deliver_msgs\n");
-                            gdb_abort;
-                        }
-                    #endif//DEBUG
-                    unlock(current_lp);
                     long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
                 }
             }
@@ -222,7 +219,7 @@ void queue_deliver_msgs(void) {
         }
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
-        #if CONSTANT_CHILD_INVALIDATION==1
+        #if IPI_CONSTANT_CHILD_INVALIDATION==1
         new_hole->fatherEpoch = get_epoch_of_LP(current_lp);
         #else
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
@@ -367,7 +364,7 @@ void queue_deliver_msgs(void) {
         //memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
-        #if CONSTANT_CHILD_INVALIDATION==1
+        #if IPI_CONSTANT_CHILD_INVALIDATION==1
         new_hole->fatherEpoch = get_epoch_of_LP(current_lp);
         #else
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
@@ -412,7 +409,7 @@ void queue_deliver_msgs(void) {
 }
 #endif
 
-#if CONSTANT_CHILD_INVALIDATION==1
+#if IPI_CONSTANT_CHILD_INVALIDATION==1
 bool is_valid(msg_t * event){
     bool validity;
     validity=  

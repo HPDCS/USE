@@ -20,12 +20,10 @@ extern unsigned int counter_sync_check_future;
 
 #if IPI_SUPPORT==1
 extern char program_name[64];
-
+#endif
 #if IPI_SUPPORT_STATISTICS==1
 extern unsigned long num_sended_ipi;
 extern unsigned long num_received_ipi;
-#endif
-
 #endif
 
 #if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
@@ -151,11 +149,9 @@ int main(int argn, char *argv[]) {
     printf("number num_cfv_already_handled=%ld\n",num_cfv_already_handled);
 #endif
 
-#if IPI_SUPPORT==1
 #if IPI_SUPPORT_STATISTICS==1
     printf("number sended IPIs=%ld\n",num_sended_ipi);
     printf("number received IPIs=%ld\n",num_received_ipi);
-#endif
 #endif
     return 0;
 }

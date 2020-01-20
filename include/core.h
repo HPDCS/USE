@@ -11,15 +11,15 @@
 #include <limits.h>
 #include <nb_calqueue.h>
 
-#if CONSTANT_CHILD_INVALIDATION==1
+#if IPI_CONSTANT_CHILD_INVALIDATION==1
 #include <atomic_epoch_and_ts.h>
 #endif
 
-#if IPI_SUPPORT==1 || IPI_POSTING==1
+#if IPI_LONG_JMP==1
 #include "jmp.h"
 #endif
 
-#if CONSTANT_CHILD_INVALIDATION==1
+#if IPI_CONSTANT_CHILD_INVALIDATION==1
 #define get_epoch_of_LP(lp_idx) get_epoch(LPS[lp_idx]->atomic_epoch_and_ts)
 #define set_epoch_of_LP(lp_idx,value) set_epoch(&(LPS[lp_idx]->atomic_epoch_and_ts),value)
 #endif
@@ -37,10 +37,12 @@
 #endif
 #endif
 
-#if IPI_SUPPORT==1 || IPI_POSTING==1 || IPI_INTERRUPT_PAST==1 || IPI_INTERRUPT_FUTURE==1
+#if IPI_PREEMPT_COUNTER
 #define PREEMPT_COUNT_CODE_INTERRUPTIBLE 0
 #define PREEMPT_COUNT_CODE_NOT_INTERRUPTIBLE (*preempt_count_ptr>0)
-#define PREEMPT_COUNT_INIT 1
+#define PREEMPT_COUNT_INIT 0
+#define MAX_NESTING_PREEMPT_COUNTER 1
+#define INVALID_PREEMPT_COUNTER (-1)
 #endif
 
 #define MODE_SAF	1
@@ -121,7 +123,7 @@ extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
 
-#if IPI_SUPPORT==1 || IPI_POSTING==1
+#if IPI_LONG_JMP==1
 extern __thread cntx_buf cntx_loop;
 #endif
 
@@ -150,13 +152,18 @@ extern void _mkdir(const char *path);
 
 extern int OnGVT(unsigned int me, void *snapshot);
 
-#if IPI_SUPPORT==1
+#if IPI_LONG_JMP==1
 extern void cfv_trampoline(void);
+#endif
+
+#if IPI_PREEMPT_COUNTER==1
 extern void increment_preempt_counter();
 #endif
+
 #if IPI_POSTING==1
 extern msg_t*get_best_LP_info_good(int lp_idx);
 #endif
+
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void check_OnGVT(unsigned int lp_idx);

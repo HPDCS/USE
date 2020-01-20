@@ -155,7 +155,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		//event->monitor = 0x5AFE;
 		event->local_next 		= bound_ptr;       //DEBUG
 		event->local_previous 	= (void*) node;        //DEBUG
-        #if CONSTANT_CHILD_INVALIDATION==1
+        #if IPI_CONSTANT_CHILD_INVALIDATION==1
         event->previous_seed    = get_epoch_of_LP(lp_idx);
         #else
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
@@ -617,7 +617,7 @@ unsigned int fetch_internal(){
 		///* VALID *///
 		if(validity){
 			if(curr_evt_state == EXTRACTED && in_past){
-                #if DEBUG==1//inserted to debug IPI_POSTING and IPI_SUPPORT,but is useful also in original version
+                #if DEBUG==1//not present in original version
                 if( (checkLock(lp_idx)==0) && event->frame==0){
                     printf("this event won't be never fetched\n");
                     print_event(event);
@@ -730,10 +730,8 @@ unsigned int fetch_internal(){
                     gdb_abort;
                 }
             }
-            #endif
-#if DEBUG==1
             check_LP_id_info(array_events, num_events, lp_idx, id_current_node, id_reliable, id_unreliable);
-#endif//DEBUG
+            #endif//DEBUG
             
             curr_id=0;
 retry_with_new_node:
@@ -761,11 +759,11 @@ retry_with_new_node:
 				lvt_tb = bound_ptr->tie_breaker;
 				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
 			}
-#if IPI_POSTING==1 || IPI_SUPPORT==1
+#if IPI_POSTING==1
             in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));//calculate in_past for each events
             safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//calculate safe for each events
 
-#endif//IPI_POSTING || IPI_SUPPORT
+#endif//IPI_POSTING
             curr_evt_state = event->state;
 		
 			if(validity) {
@@ -1059,12 +1057,9 @@ get_next:
 #endif
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
-#if IPI_POSTING==1
 #if IPI_POSTING_STATISTICS==1
     update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid,lp_idx);
 #endif
-    
-#endif//IPI_POSTING
     current_msg = event;//(msg_t *) node->payload;
     current_node = node;//reset this information,current_node must be not used in simulation_loop
 

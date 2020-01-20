@@ -9,7 +9,7 @@
 #define ELIMINATED	0x2
 #define ANTI_MSG	0x3
 
-#if IPI_POSTING==1 || IPI_SUPPORT==1
+#if IPI_HANDLE_INTERRUPT==1
 #define ROLLBACK_ONLY 0x4//state reserved for dummy_bound
 #endif
 

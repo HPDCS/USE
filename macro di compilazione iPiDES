@@ -1,0 +1,79 @@
+IPI_POSTING:posta informazioni prioritarie per LP quando esegue queue_insert e legge nella fetch le info per fetchare evento migliore
+
+IPI_POSTING_STATISTICS:richiede IPI_POSTING,abilita calcolo e stampa delle statistiche riguardanti informazioni prioritarie
+
+IPI_POSTING_SINGLE_INFO:richiede IPI_POSTING,se attiva un solo tipo di informazione è possibile leggere per LP,se non attiva sono presenti 2 tipi di informazioni:informazione reliable e informazione unreliable
+
+IPI_POSTING_SYNC_CHECK_FUTURE:richiede IPI_POSTING e IPI_INTERRUPT_FUTURE,abilita il check sincrono delle info postate nell'esecuzione di eventi in future,nel caso ci siano info prioritarie e preemption counter 0,allora si abbandona l'evento e si riesegue la fetch.
+
+IPI_POSTING_SYNC_CHECK_PAST:richiede IPI_POSTING e IPI_INTERRUPT_PAST,abilita il check sincrono delle info postate nell'esecuzione di eventi in past,nel caso ci siano info prioritarie e preemption counter 0,allora si abbandona l'evento e si riesegue la fetch.
+
+IPI_SUPPORT:abilita il meccanismo delle interruzioni asincrone tramite IPI,una ProcessEvent può essere interrotta solo se preemption counter è 0
+
+IPI_SUPPORT_STATISTICS:richiede IPI_SUPPORT,calcola e stampa statistiche riguardanti gli IPI
+
+IPI_INTERRUPT_PAST:se abilitato è possibile interrompere in modo sincrono o asincrono un evento in PAST,se disabilitato non è possibile interrompere eventi in modo sincrono o asincrono in PAST,nemmeno se IPI_SUPPORT abilitato e IPI_POSTING_SYNC_CHECK_PAST abilitato.
+
+IPI_INTERRUPT_FUTURE:se abilitato è possibile interrompere in modo sincrono o asincrono un evento in FUTURE quando preemption counter è 0,se disabilitato non è possibile interrompere eventi in modo sincrono o asincrono in FUTURE,nemmeno se IPI_SUPPORT abilitato e IPI_POSTING_SYNC_CHECK_FUTURE abilitato.
+
+CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo tale da aggiungere il predicato "il padre dovrà eventually essere rieseguito?" che quindi permette l'invalidazione degli eventi figli sia nel caso in cui il padre è già stato ri-eseguito e sia nel caso in cui il padre dovrà essere rieseguito.
+
+
+TODO:
+-rimettere max nesting a 1 oppure capire perché deve essere 2
+-sistemare validazione/invalidazione dello stato con le macro(nuove o vecchie)
+-a volte macro innestate sono necessarie se la macro inner ha un else
+-fixare bug su check_past che stampa che il dummy_bound non è NEW_EVT
+-assicurarsi che dopo queue_deliver_msgs fa tutte operazioni rispetto current_msg e che quindi non devono essere rifatte se accade una interruzione
+-cfv su interruzione solo se info postata è buona(mettere dentro il trampolino questa logica con chiamata diretta alla funzione, e poi successivamente pensare all'assembly)
+-modificare silent_execution in modo tale che si fermi al primo evento non valido se presente(break quando lo trova e impostare rollback only)
+-spostare le varie funzioni dopo la execute se è safe farlo
+-studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
+-mettere stampe di debug su ongvt
+-vedere se durante l'interruzione qualcosa è rimasto inconsistente
+-rimuovere stop silent e tutto ciò che dipende da essa in silent exec
+-modello decisionale per capire quando lanciare IPI
+-pensare a nuove statistiche di qualsiasi tipo da aggiungere e aggiungerle
+-rimuovere father frame,attualmente non utilizzato e se si utilizza la CONSTANT_CHILD_INVALIDATION non serve più
+-prune localqueue with ts old è dead code,mai chiamato da nessuno.
+-checkpoint recalculation capace che funziona male perché il rollback lenght è lungo attualmente,siccome arriva sempre al destination ts e non si ferma al primo evento invalido.(inoltre non è necessario ricalcolarlo se è stata attivata la modalità LP_STATE_ON_GVT è un rollback spontaneo)
+
+Osservazioni:
+-counter inizialmente è 0,se voglio essere interrompibile non faccio niente,se non voglio essere interrompibile aumento il counter eseguo e poi decremento.
+-hash su LP_state
+-restore state non viene chiamata da nessuno.
+-l'indirizzo current_base_pointer è sempre lo stesso e non serve riaggiornalo(confusione,diminuisce la leggibilità del codice)
+-check di integrità su LP_state e checkpoint per essere sicuri che non siano corrotti e che siano coerenti
+-current_base_pointer è null,viene allocato una sola volta con l'evento INIT nella ProcessEvent
+-checkpoint recalculation non è attivo.
+-i checkpoint vengono buttati durante il rollback
+-quando si interrompe un evento bisogna fare in modo che tutto ciò che doveva essere completato o viene ripristinato o viene completato comunque,inoltre deve accadere che in seguito all'interruzione bisogna far credere al simulation kernel che è come se l'evento ignorato non fosse mai stato fetchato e che quindi può fetcharlo normalmente.
+-l'evento init viene allocato normalmente,inizializzato e passato alla processEvent con init come parametro,l'evento init non viene mai committato ma non è un problema perché non appare in coda globale,inoltre successivamente alla sua esecuzione e incremento dei frame dell'LP viene forzato un checkpoint,quindi è sempre possibile ritornare ad un punto iniziale con evento init eseguito.Questo fa pensare che è safe spostare il log_state dopo l'incremento dei frame dell'LP
+
+Osservazioni su fine simulazione/onGVT
+-non generare più eventi se la simulazione è finita per un LP,se un altro LP non può finire la simulazione in questo modo, la simulazione dovrebbe finire per quell'LP se non trova più eventi in coda??Ipotizzare in questo caso che LP che finisce generi degli eventi prodotti con ts molto grande e successivo all'istante di completamento dell'altro LP,in questo modo LP o non ha eventi entro la sua condizione di fine oppure esegue un evento con ts infinito per finirla,e prima o poi andrà in rollback
+-inserire un nodo in coda locale con ts infinito per ogni LP, in questo modo la simulazione può finire per ogni LP,perché se non si riescono a fetchare eventi nel futuro è possibile eseguire gli eventi nella coda locale con ts infinito per farla finire.
+-dividere gli LP tra quelli che hanno realmente finito e quelli che dovranno finire, se un LP finisce in modo commit ok,se finisce in modo speculativo ok,si ferma o fetcherà un evento anti/new_evt oppure tenderà ad andare in commit anche lui, se per un certo LP non ci sono più eventi la sua simulazione si sospende e quando tra i restanti LP ci si accorge che tutti devono finire allora la simulazione termina come se avessero eseguito l'evento con ts infinito.
+-se simulazione finita in commit o modo speculativo non si fetchano più eventi nel futuro nemmeno evento FINAL con ts infinito
+-se simulazione non è terminata,si fetcherà prima o poi l'evento con ts INFINITO che andrà in commit,se l'evento con ts infinito va in commit allora la simulazione è finita in modo commit.
+sui nodi con ts infinito si potrebbe decidere di usare tb per differenziarli e avere sempre nodi con ts diverso!!!
+-eventi con ts infinito non diventeranno mai invalidi,ma possono essere rieseguiti,vengono rimossi dalla coda globale solo quando vengono committati.
+
+PROGRAMMA ORIGINALE: Il programma non prevede meccanismi per interrompere un thread dal suo lavoro, ne in modo sincrono ne in modo asincrono.
+
+IPI_PREEMPT_COUNTER: macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo, può accadere. L'interruzione può avvenire solo quando il preemption_counter è 0.Aumentare il preemption counter assicura che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
+Il programma non è ancora in grado di interrompersi.
+
+
+IPI_LONG_JMP: macro che dà la possibilità al programma di fare delle long_jmp in qualsiasi scenario,ma solo quando il preempt_counter è 0.In alcuni punti critici del codice,fare long_jmp non è safe.Di fatto con questa macro abilitata il programma supporta il meccanismo delle interruzioni sincrone.
+Lasciare il counter a 0 se si vuole chiamare la long_jmp come se fosse una normale funzione.
+
+IPI_HANDLE_INTERRUPT: macro che implementa il supporto per settare un LP come valido/invalido,utile per permettere l'interruzione asincrona/sincrona in scenari critici,quando il preemption counter è 0.
+Grazie a questa macro è possibile in seguito all'interruzione settare un LP come invalido per poterlo ripristinare correttamente appena possibile.
+Si preoccupa di invalidare e ripristinare lo stato dell'LP in seguito a qualsiasi interruzione asincrona/sincrona.
+Non si preoccupa di gestire l'evento current_msg interrotto(aumentare numero frame,inserirlo in coda locale,settarlo come interrotto,farlo apparire nel futuro ecc),deve essere fatto esplicitamente da altre macro.
+
+IPI_SUPPORT: macro che dà la possibilità al programma di inviare e ricevere interruzioni asincrone, in modo safe.
+Le interruzioni possono essere inviate da un thread ad un altro in qualsiasi scenario. Le interruzioni vengono effettivamente catturate quando il thread destinatario ha preemption counter pari a 0 e sta eseguendo una ProcessEvent.
+
+IPI_SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se risultano veri, fanno eseguire una interruzione sincrona.Prima di eseguire l'interruzione sincrona è necessario settare l'LP come invalido e gestire correttamente current_msg interrotto.

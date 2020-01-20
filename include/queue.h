@@ -77,9 +77,8 @@ extern __thread list(msg_t) to_remove_local_evts;
 extern __thread list(msg_t) to_remove_local_evts_old;
 extern __thread list(msg_t) freed_local_evts;
 
-#if IPI_POSTING==1 || IPI_SUPPORT==1
+#if IPI_PREEMPT_COUNTER==1
 extern void decrement_preempt_counter();
-
 extern void increment_preempt_counter();
 #endif
 
