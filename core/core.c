@@ -545,8 +545,8 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
             printf("LP state is not ready ScheduleNewEvent\n");
             gdb_abort;
         }
-        if(current_msg==NULL){
-        	printf("current msg is NULL in ScheduleNewEvent,LP_STATE_READY\n");
+        if(current_msg==NULL || LPS[current_lp]->bound_pre_rollback!=NULL){
+        	printf("current msg is NULL or bound_pre_rollback not NULL in ScheduleNewEvent,LP_STATE_READY\n");
         	gdb_abort;
         }
     	if((LPS[current_lp]->bound!=NULL) && (current_msg->timestamp<LPS[current_lp]->bound->timestamp
@@ -571,7 +571,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	        if(evt!=NULL){
 	            LPS[current_lp]->LP_state_is_valid=false;//invalid state
 	            LPS[current_lp]->dummy_bound->state=NEW_EVT;
-	            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+	            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 	            //messagges already inserted in thread_pool will be cleaned with queue_clean
 	        }
     	}
@@ -613,7 +613,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 					LPS[current_lp]->state=LP_STATE_READY;
 					LPS[current_lp]->bound=LPS[current_lp]->bound_pre_rollback;
 					LPS[current_lp]->bound_pre_rollback=NULL;
-		            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+		            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 	    		}
 	    		else{
 		            if(!list_is_connected(LPS[current_lp]->queue_in, current_msg)) {
@@ -654,7 +654,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 					LPS[current_lp]->dummy_bound->state=NEW_EVT;
 					LPS[current_lp]->state=LP_STATE_READY;
 					LPS[current_lp]->bound=list_prev(current_msg);
-		            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+		            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 		            //messagges already inserted in thread_pool will be cleaned with queue_clean
 	    		}
 			}
@@ -708,13 +708,6 @@ void check_OnGVT(unsigned int lp_idx){
 		LPS[current_lp]->bound_pre_rollback=LPS[current_lp]->bound;
 		#endif
 		#if IPI_PREEMPT_COUNTER==1
-		#if DEBUG==1
-		if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-			printf("preempt counter is not init in check_OnGVT\n");
-			gdb_abort;
-		}
-		#endif
-		printf("on_gvt,tid=%d\n",tid);
 		increment_preempt_counter();
 		#endif
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
@@ -1060,7 +1053,7 @@ void thread_loop(unsigned int thread_id) {
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
             	if(LPS[current_lp]->bound_pre_rollback==NULL){
-            		printf("bound_pre_rollback is NULL,CFV_TO_HANDLE\n");
+            		printf("bound_pre_rollback is NULL and current_msg NULL in CFV_TO_HANDLE\n");
             		gdb_abort;
             	}
             	if(LPS[current_lp]->state!=LP_STATE_SILENT_EXEC){
@@ -1084,7 +1077,7 @@ void thread_loop(unsigned int thread_id) {
 						gdb_abort;
 				}
 				if(LPS[current_lp]->bound_pre_rollback!=NULL){
-					printf("bound_pre_rollback is not NULL with current_msg NULL CFV_TO_HANDLE\n");
+					printf("bound_pre_rollback is not NULL with current_msg not NULL CFV_TO_HANDLE\n");
 					gdb_abort;
 				}
 				#endif//DEBUG
@@ -1144,6 +1137,10 @@ void thread_loop(unsigned int thread_id) {
 					printf("event in future is not connected to localqueue\n");
 					gdb_abort;
 				}
+				if(LPS[current_lp]->bound_pre_rollback!=NULL || current_msg==NULL){
+					printf("bound_pre_rollback is not NULL or current_msg NULL CFV_TO_HANDLE\n");
+					gdb_abort;
+				}
 				#endif
 	            LPS[current_lp]->LP_state_is_valid=false;
 	            LPS[current_lp]->dummy_bound->state=NEW_EVT;
@@ -1176,8 +1173,8 @@ void thread_loop(unsigned int thread_id) {
 				printf("dummy bound is not NEW_EVT CFV_ALREADY_HANDLED\n");
 				gdb_abort;
 			}
-			if(LPS[current_lp]->bound_pre_rollback!=NULL){
-				printf("bound_pre_rollback is not NULL CFV_ALREADY_HANDLED\n");
+			if((LPS[current_lp]->bound_pre_rollback!=NULL)){
+				printf("bound_pre_rollback is not NULL in CFV_ALREADY_HANDLED\n");
 					gdb_abort;
 			}
 			#endif
@@ -1354,7 +1351,7 @@ void thread_loop(unsigned int thread_id) {
 			LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 				LPS[current_lp]->dummy_bound->state=NEW_EVT;
-				long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+				wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 			}
 			#endif
 		}
@@ -1416,7 +1413,7 @@ void thread_loop(unsigned int thread_id) {
 			LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 				LPS[current_lp]->dummy_bound->state=NEW_EVT;
-				long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+				wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 			}
 			#endif
 		}

@@ -14,7 +14,20 @@
 
 /* Preamble for the *longjmp* function with the only
    purpose of being compliant to set_jmp. */
-#define long_jmp(cntx_ptr, val)	_long_jmp(cntx_ptr, val)
+//#define long_jmp(cntx_ptr, val)	_long_jmp(cntx_ptr, val)
+#if DEBUG==1
+#define wrap_long_jmp(cntx_ptr, val) ({\
+              if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){\
+                printf("invalid preempt_counter value in long_jmp\n");\
+                gdb_abort;\
+              }\
+              _long_jmp(cntx_ptr, val);\
+              })
+#else
+#define wrap_long_jmp(cntx_ptr, val) ({\
+              _long_jmp(cntx_ptr, val);\
+              })
+#endif
 
 #define CFV_INIT 0//must be zero,first time set_jmp returns 0
 #define CFV_TO_HANDLE 1

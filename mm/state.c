@@ -271,7 +271,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		//	stop_silent = true;
 		//	break;
 		//}
-
+		
 		evt = local_next_evt;
 		if(old_state != LP_STATE_ONGVT){
 			//if(evt == NULL | evt->node != 0x5A7E)
@@ -284,6 +284,67 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
 				break;
 		}
+		#if IPI_HANDLE_INTERRUPT==1
+		if( (local_next_evt != NULL) && !is_valid(local_next_evt)){
+			#if DEBUG==1
+			if(old_state == LP_STATE_ONGVT){
+				printf("event will be executed because we are in LP_STATE_ON_GVT but is not valid\n");
+				gdb_abort;
+			}
+			#endif
+			if(current_msg==NULL){
+				#if DEBUG==1
+				if(LPS[lid]->bound_pre_rollback==NULL){
+					printf("bound_pre_rollback is NULL in silent_execution with current_msg NULL\n");
+					gdb_abort;
+				}
+				#endif
+			}
+            else{
+            	#if DEBUG==1
+				if(LPS[lid]->bound_pre_rollback!=NULL){
+					printf("bound_pre_rollback is not NULL in silent_execution with current_msg not NULL\n");
+					gdb_abort;
+				}
+				#endif
+            	if(!list_is_connected(LPS[lid]->queue_in, current_msg)) {
+					msg_t *bound_t, *next_t,*prev_t;
+					bound_t = LPS[lid]->last_silent_exec_evt;
+					prev_t=bound_t;
+					next_t = list_next(prev_t);//first event after bound
+					while (next_t!=NULL){
+					#if DEBUG==1
+						if( (prev_t->timestamp > next_t->timestamp)
+							|| ( (prev_t->timestamp==next_t->timestamp) && (prev_t->tie_breaker>next_t->tie_breaker)) ){
+							printf("event not in order in local_queue\n");
+							gdb_abort;
+						}
+					#endif
+						if( (next_t->timestamp>current_msg->timestamp)
+							|| (next_t->timestamp==current_lvt && next_t->tie_breaker>current_msg->tie_breaker) ){
+							break;
+						}
+						else{
+							prev_t=next_t;
+							next_t=list_next(next_t);
+						}
+					}
+					list_place_after_given_node_by_content(lid, LPS[lid]->queue_in, current_msg,prev_t);
+					#if DEBUG == 1
+					if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
+					if(list_prev(current_msg) != prev_t){					printf("list_prev(current_msg) != prev_t\n");	gdb_abort;}
+					if(list_next(prev_t) != current_msg){					printf("list_next(prev_t) != current_msg\n");	gdb_abort;}
+					if(next_t!= NULL && list_prev(next_t) != current_msg){	printf("list_prev(next_t) != current_msg\n");	gdb_abort;}
+					if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+					if(prev_t !=NULL && prev_t->timestamp > current_lvt){	printf("prev_t->timestamp > current_lvt\n");	gdb_abort;}			
+					if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
+					#endif
+				}
+			}
+			LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
+			break;
+		}
+		#endif
 		#if DEBUG==1//not present in original version
 		local_next_frame_event=local_next_evt->frame;
 		local_next_epoch_event=local_next_evt->epoch;
@@ -299,6 +360,10 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			printf("event in silent_execution is not EXTRACTED or ANTI_MSG\n");
 			print_event(local_next_evt);
 			print_event(evt);
+			gdb_abort;
+		}
+		if( (old_state==LP_STATE_ONGVT) && local_next_evt->monitor!=(void*)0x5AFE){
+			printf("LP_STATE_ONGVT but event is not been committed\n");
 			gdb_abort;
 		}
 		#endif
@@ -323,7 +388,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		    	if(best_evt!=NULL){
 		    		if(current_msg==NULL){
 		    			#if DEBUG==1
-		    			if(LPS[current_lp]->bound_pre_rollback==NULL){
+		    			if(LPS[lid]->bound_pre_rollback==NULL){
 		    				printf("bound_pre_rollback is NULL in silent_execution with current_msg NULL\n");
 		    				gdb_abort;
 		    			}
@@ -334,9 +399,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 							LPS[lid]->LP_state_is_valid=false;
 							LPS[lid]->dummy_bound->state=NEW_EVT;
 							LPS[lid]->state=LP_STATE_READY;
-							LPS[lid]->bound=LPS[current_lp]->bound_pre_rollback;
+							LPS[lid]->bound=LPS[lid]->bound_pre_rollback;
 							LPS[lid]->bound_pre_rollback=NULL;
-				            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+				            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 				            //messagges already inserted in thread_pool will be cleaned with queue_clean
 			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
@@ -356,7 +421,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		    		}
 		    		else{
 		    			#if DEBUG==1
-		    			if(LPS[current_lp]->bound_pre_rollback!=NULL){
+		    			if(LPS[lid]->bound_pre_rollback!=NULL){
 		    				printf("bound_pre_rollback is not NULL in silent_execution with current_msg not NULL\n");
 		    				gdb_abort;
 		    			}
@@ -401,7 +466,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 							LPS[lid]->dummy_bound->state=NEW_EVT;
 							LPS[lid]->state=LP_STATE_READY;
 							LPS[lid]->bound=list_prev(current_msg);
-				            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+				            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 				            //messagges already inserted in thread_pool will be cleaned with queue_clean
 			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
@@ -435,6 +500,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		last_executed_event = evt;
 		#if DEBUG==1//not present in original version
 		last_frame_event = evt->frame;
+		last_epoch_event = evt->epoch;
 		#endif
 		#if IPI_HANDLE_INTERRUPT==1
 		LPS[lid]->last_silent_exec_evt = evt;
@@ -551,9 +617,6 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	#if IPI_PREEMPT_COUNTER==1
 	#if IPI_INTERRUPT_PAST==1
 	#else
-	if(LPS[lid]->state == LP_STATE_ONGVT){
-		printf("increment counter\n");
-	}
 	increment_preempt_counter();
 	#endif
 	#endif

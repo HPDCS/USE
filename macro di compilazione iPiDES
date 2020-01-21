@@ -20,16 +20,13 @@ CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo t
 
 
 TODO:
--wrap long_jmp inserendo i controlli di debug
--testare ipi support da solo e con check sincroni
--perché max nesting è 1 con ongvt period?? è troppo basso,incrementa contatore più volte!! vedere effettivamente che chiama quella funzione
+-micro bug in ONGVT_PERIOD legato all'aggiornamento del commit_ts e commit_tb horizon è possibile impostare il tb non correlato con il timestamp e per questo si vede la fine simulazione su un evento non safe!!
 -spostare le varie funzioni dopo la execute se è safe farlo
 -studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
 -vedere se durante l'interruzione qualcosa è rimasto inconsistente
 -assicurarsi che dopo queue_deliver_msgs fa tutte operazioni rispetto current_msg e che quindi non devono essere rifatte se accade una interruzione
--modificare silent_execution in modo tale che si fermi al primo evento non valido se presente(break quando lo trova e impostare rollback only)
 
--idea:postare info su anti_msg in past quando non è possibile eseguire try_lock
+-idea:postare info su anti_msg in past quando non è possibile eseguire try_lock(solo ts o pointer ad evento,ma è più complicato e inefficiente)
 -cfv su interruzione solo se info postata è buona(mettere dentro il trampolino questa logica con chiamata diretta alla funzione, e poi successivamente pensare all'assembly)
 -modello decisionale per capire quando lanciare IPI
 -pensare a nuove statistiche di qualsiasi tipo da aggiungere e aggiungerle
