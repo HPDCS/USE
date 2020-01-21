@@ -551,6 +551,9 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	#if IPI_PREEMPT_COUNTER==1
 	#if IPI_INTERRUPT_PAST==1
 	#else
+	if(LPS[lid]->state == LP_STATE_ONGVT){
+		printf("increment counter\n");
+	}
 	increment_preempt_counter();
 	#endif
 	#endif

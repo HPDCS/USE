@@ -264,7 +264,7 @@ void decrement_preempt_counter(){
 
 void increment_preempt_counter(){
 	#if DEBUG==1
-	if((*preempt_count_ptr)==MAX_NESTING_PREEMPT_COUNTER){
+	if((*preempt_count_ptr)>=MAX_NESTING_PREEMPT_COUNTER){
 		printf("preempt_count is equals to MAX_NESTING %d in increment_preempt_counter\n",MAX_NESTING_PREEMPT_COUNTER);
 		gdb_abort;
 	}
@@ -708,6 +708,13 @@ void check_OnGVT(unsigned int lp_idx){
 		LPS[current_lp]->bound_pre_rollback=LPS[current_lp]->bound;
 		#endif
 		#if IPI_PREEMPT_COUNTER==1
+		#if DEBUG==1
+		if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+			printf("preempt counter is not init in check_OnGVT\n");
+			gdb_abort;
+		}
+		#endif
+		printf("on_gvt,tid=%d\n",tid);
 		increment_preempt_counter();
 		#endif
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
