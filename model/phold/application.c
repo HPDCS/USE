@@ -27,7 +27,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
-		
 	//printf("EVENT INIT: %d\n", INIT);	
 	//printf("EVENT TYPE: %d\n", event_type);
 
@@ -52,7 +51,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		//		printf("LP state allocation failed: (%s)\n", strerror(errno));
 		//		exit(-1);
         //    }
-            
             state_ptr = malloc(sizeof(lp_state_type));
 			if(state_ptr == NULL) {
 				printf("malloc failed\n");

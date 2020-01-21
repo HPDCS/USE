@@ -20,25 +20,30 @@ CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo t
 
 
 TODO:
--rimettere max nesting a 1 oppure capire perché deve essere 2
--sistemare validazione/invalidazione dello stato con le macro(nuove o vecchie)
--a volte macro innestate sono necessarie se la macro inner ha un else
--fixare bug su check_past che stampa che il dummy_bound non è NEW_EVT
--assicurarsi che dopo queue_deliver_msgs fa tutte operazioni rispetto current_msg e che quindi non devono essere rifatte se accade una interruzione
--cfv su interruzione solo se info postata è buona(mettere dentro il trampolino questa logica con chiamata diretta alla funzione, e poi successivamente pensare all'assembly)
--modificare silent_execution in modo tale che si fermi al primo evento non valido se presente(break quando lo trova e impostare rollback only)
+-wrap long_jmp inserendo i controlli di debug
+-testare ipi support da solo e con check sincroni
+-perché max nesting è 1 con ongvt period?? è troppo basso,incrementa contatore più volte!! vedere effettivamente che chiama quella funzione
 -spostare le varie funzioni dopo la execute se è safe farlo
 -studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
--mettere stampe di debug su ongvt
 -vedere se durante l'interruzione qualcosa è rimasto inconsistente
--rimuovere stop silent e tutto ciò che dipende da essa in silent exec
+-assicurarsi che dopo queue_deliver_msgs fa tutte operazioni rispetto current_msg e che quindi non devono essere rifatte se accade una interruzione
+-modificare silent_execution in modo tale che si fermi al primo evento non valido se presente(break quando lo trova e impostare rollback only)
+
+-idea:postare info su anti_msg in past quando non è possibile eseguire try_lock
+-cfv su interruzione solo se info postata è buona(mettere dentro il trampolino questa logica con chiamata diretta alla funzione, e poi successivamente pensare all'assembly)
 -modello decisionale per capire quando lanciare IPI
 -pensare a nuove statistiche di qualsiasi tipo da aggiungere e aggiungerle
--rimuovere father frame,attualmente non utilizzato e se si utilizza la CONSTANT_CHILD_INVALIDATION non serve più
--prune localqueue with ts old è dead code,mai chiamato da nessuno.
--checkpoint recalculation capace che funziona male perché il rollback lenght è lungo attualmente,siccome arriva sempre al destination ts e non si ferma al primo evento invalido.(inoltre non è necessario ricalcolarlo se è stata attivata la modalità LP_STATE_ON_GVT è un rollback spontaneo)
+-rimuovere father frame,attualmente non utilizzato e se si utilizza la IPI_CONSTANT_CHILD_INVALIDATION non serve più
+
+
+
 
 Osservazioni:
+-checkpoint recalculation capace che funziona male perché il rollback lenght è lungo attualmente,siccome arriva sempre al destination ts e non si ferma al primo evento invalido.(inoltre non è necessario ricalcolarlo se è stata attivata la modalità LP_STATE_ON_GVT è un rollback spontaneo)
+-operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice.
+-prune localqueue with ts old è dead code,mai chiamato da nessuno.
+-rimuovere stop silent e tutto ciò che dipende da essa in silent exec
+-a volte macro innestate sono necessarie se la macro inner ha un else
 -counter inizialmente è 0,se voglio essere interrompibile non faccio niente,se non voglio essere interrompibile aumento il counter eseguo e poi decremento.
 -hash su LP_state
 -restore state non viene chiamata da nessuno.

@@ -237,7 +237,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		LPS[lid]->dummy_bound->tie_breaker=tie_breaker-1;
 		LPS[lid]->bound=LPS[lid]->dummy_bound;
 		#if DEBUG==1
-		if((LPS[lid]->bound!=NULL) && (current_msg!=NULL )&& (current_msg->timestamp<LPS[lid]->bound->timestamp
+		if((LPS[lid]->bound!=NULL) && (current_msg->timestamp<LPS[lid]->bound->timestamp
 			|| ((current_msg->timestamp==LPS[lid]->bound->timestamp) && (current_msg->tie_breaker<=LPS[lid]->bound->tie_breaker)))  ){
 				printf("execution in progress of event in past in mode SILENT_EXECUTION func,tid=%d\n",tid);
 				printf("ts=%lf,tb=%u\n",until_ts,tie_breaker);
@@ -322,13 +322,20 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		    	msg_t*best_evt=get_best_LP_info_good(lid);
 		    	if(best_evt!=NULL){
 		    		if(current_msg==NULL){
-		    			LPS[lid]->LP_state_is_valid=false;
+		    			#if DEBUG==1
+		    			if(LPS[current_lp]->bound_pre_rollback==NULL){
+		    				printf("bound_pre_rollback is NULL in silent_execution with current_msg NULL\n");
+		    				gdb_abort;
+		    			}
+		    			#endif
 		    			if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
 			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) && (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
 							//adjust bound,before return to main loop, bound pointer must references an event not dummy
-							LPS[lid]->bound=LPS[current_lp]->bound_pre_rollback;
+							LPS[lid]->LP_state_is_valid=false;
 							LPS[lid]->dummy_bound->state=NEW_EVT;
 							LPS[lid]->state=LP_STATE_READY;
+							LPS[lid]->bound=LPS[current_lp]->bound_pre_rollback;
+							LPS[lid]->bound_pre_rollback=NULL;
 				            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 				            //messagges already inserted in thread_pool will be cleaned with queue_clean
 			        	}
@@ -338,6 +345,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 								printf("tie breaker is zero in silent execution\n");
 							}
 							#endif
+							LPS[lid]->LP_state_is_valid=false;
 							//modify until_ts and tie_breaker
 							until_ts=best_evt->timestamp;
 							tie_breaker=best_evt->tie_breaker;
@@ -347,7 +355,12 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			        	}
 		    		}
 		    		else{
-		    			LPS[lid]->LP_state_is_valid=false;//invalid state
+		    			#if DEBUG==1
+		    			if(LPS[current_lp]->bound_pre_rollback!=NULL){
+		    				printf("bound_pre_rollback is not NULL in silent_execution with current_msg not NULL\n");
+		    				gdb_abort;
+		    			}
+		    			#endif
 			            if(!list_is_connected(LPS[lid]->queue_in, current_msg)) {
 									msg_t *bound_t, *next_t,*prev_t;
 									bound_t = LPS[lid]->last_silent_exec_evt;
@@ -384,9 +397,10 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			    		if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
 			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) && (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
 							//adjust bound,before return to main loop, bound pointer must references an event not dummy
-							LPS[lid]->bound=list_prev(current_msg);
+							LPS[lid]->LP_state_is_valid=false;//invalid state
 							LPS[lid]->dummy_bound->state=NEW_EVT;
 							LPS[lid]->state=LP_STATE_READY;
+							LPS[lid]->bound=list_prev(current_msg);
 				            long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 				            //messagges already inserted in thread_pool will be cleaned with queue_clean
 			        	}
@@ -396,6 +410,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 								printf("tie breaker is zero in silent execution\n");
 							}
 							#endif
+							LPS[lid]->LP_state_is_valid=false;//invalid state
 							LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
 							//modify until_ts and tie_breaker
 							until_ts=best_evt->timestamp;
