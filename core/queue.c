@@ -352,10 +352,12 @@ void queue_deliver_msgs(void) {
             printf("LP state is not ready in queue_deliver_msgs\n");
             gdb_abort;
         }
+        #if IPI_HANDLE_INTERRUPT==1
         if(LPS[current_lp]->bound_pre_rollback!=NULL || current_msg==NULL){
                     printf("bound_pre_rollback is not NULL or current_msg NULL queuedeliver_msgs\n");
                     gdb_abort;
         }
+        #endif
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
 

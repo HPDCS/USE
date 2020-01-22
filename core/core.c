@@ -545,10 +545,12 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
             printf("LP state is not ready ScheduleNewEvent\n");
             gdb_abort;
         }
+        #if IPI_HANDLE_INTERRUPT==1
         if(current_msg==NULL || LPS[current_lp]->bound_pre_rollback!=NULL){
         	printf("current msg is NULL or bound_pre_rollback not NULL in ScheduleNewEvent,LP_STATE_READY\n");
         	gdb_abort;
         }
+        #endif
     	if((LPS[current_lp]->bound!=NULL) && (current_msg->timestamp<LPS[current_lp]->bound->timestamp
 		|| ((current_msg->timestamp==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker)))  ){
 			printf("execution in progress of event in past in not mode SILENT_EXECUTION in ScheduleNewEvent function\n");
