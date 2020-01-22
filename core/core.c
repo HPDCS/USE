@@ -81,7 +81,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 				;
 #endif
 
-unsigned int ready_wt = 0;
+volatile unsigned int ready_wt = 0;
 
 simulation_configuration rootsim_config;
 
@@ -229,21 +229,21 @@ unsigned long num_cfv_already_handled=0;
 #endif
 
 #if IPI_PREEMPT_COUNTER==1
-#define	print_preemption_counter() printf("preempt_counter=%llu\n",*preempt_count_ptr)
+#define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",*preempt_count_ptr,thread_id)
 #if IPI_SUPPORT==1
 __thread unsigned long long * preempt_count_ptr = NULL;
-	void initialize_preempt_counter(){
+	void initialize_preempt_counter(int thread_id){
 		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
-		print_preemption_counter();
+		print_preemption_counter(thread_id);
 	}
 #else
 	__thread unsigned long long preempt_count = INVALID_PREEMPT_COUNTER;
 	__thread unsigned long long * preempt_count_ptr = NULL;
 
-	void initialize_preempt_counter(){
+	void initialize_preempt_counter(int thread_id){
 		preempt_count_ptr=&preempt_count;
 		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
-		print_preemption_counter();
+		print_preemption_counter(thread_id);
 	}
 #endif
 
@@ -871,9 +871,7 @@ void init_simulation(unsigned int thread_id){
 	    }
 	}
 
-
-
-	printf("wait on barrier,tid=%d\n",tid);
+	printf("wait on barrier,tid=%d,n_cores=%d\n",tid,n_cores);
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -1004,7 +1002,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 #if IPI_PREEMPT_COUNTER==1
 	//init counter
-	initialize_preempt_counter();
+	initialize_preempt_counter(thread_id);
 #endif
 	printf("init simulation...,tid=%d\n",thread_id);
 	init_simulation(thread_id);

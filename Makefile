@@ -3,7 +3,7 @@
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 
-FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0 
+FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O3 
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"

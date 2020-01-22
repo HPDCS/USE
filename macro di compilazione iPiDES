@@ -22,6 +22,7 @@ IPI_SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se 
 IPI_POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP
 
 TODO:
+-vedere che tipo di statistiche sono già presenti nel codice, integrarle con il nuovo supporto e iniziare a pensare quali sfruttare per mandare ipi
 -inserire barriera leggera di memoria a tutti gli aggiornamenti del counter(+1 -1). Altrimenti un riordino delle istruzioni crea problemi!!
 -micro bug in ONGVT_PERIOD legato all'aggiornamento del commit_ts e commit_tb horizon è possibile impostare il tb non correlato con il timestamp e per questo si vede la fine simulazione su un evento non safe!!
 -studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
