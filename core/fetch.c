@@ -618,10 +618,18 @@ unsigned int fetch_internal(){
 		if(validity){
 			if(curr_evt_state == EXTRACTED && in_past){
                 #if DEBUG==1//not present in original version
-                if( (checkLock(lp_idx)==0) && event->frame==0){
-                    printf("this event won't be never fetched\n");
-                    print_event(event);
-                    gdb_abort;
+                if(tryLock(lp_idx)>0){
+                    //recalculate in past and event->frame
+                    msg_t*temp_bound_ptr = lp_ptr->bound;
+                    simtime_t temp_lvt_ts = temp_bound_ptr->timestamp; 
+                    unsigned int temp_lvt_tb = temp_bound_ptr->tie_breaker; 
+                    bool temp_in_past = (ts < temp_lvt_ts || (ts == temp_lvt_ts && tb <= temp_lvt_tb));
+                    if(temp_in_past && event->frame==0){
+                        printf("this event won't be never fetched\n");
+                        print_event(event);
+                        gdb_abort;
+                    }
+                    unlock(lp_idx);
                 }
                 #endif
 			//cristian:valid event extracted and in past,or now it is in "executed" state or eventually will be executed from another thread
