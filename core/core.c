@@ -1491,9 +1491,11 @@ void thread_loop(unsigned int thread_id) {
 			checkpoint_interval_recalculate(current_lp);
 		}
 #endif
-
+		#if IPI_HANDLE_INTERRUPT!=1
 		// Take a simulation state snapshot, in some way
 		LogState(current_lp);
+		#endif
+		
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){
 			printf(RED("A - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
@@ -1558,6 +1560,10 @@ void thread_loop(unsigned int thread_id) {
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
 		
+		#if IPI_HANDLE_INTERRUPT==1
+		// Take a simulation state snapshot, in some way
+		LogState(current_lp);
+		#endif
 		///* ON_GVT *///
 		if(safe) {
 			if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){

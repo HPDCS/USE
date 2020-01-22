@@ -20,6 +20,7 @@ CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo t
 
 
 TODO:
+-inserire barriera leggera di memoria a tutti gli aggiornamenti del counter(+1 -1). Altrimenti un riordino delle istruzioni crea problemi!!
 -micro bug in ONGVT_PERIOD legato all'aggiornamento del commit_ts e commit_tb horizon è possibile impostare il tb non correlato con il timestamp e per questo si vede la fine simulazione su un evento non safe!!
 -spostare le varie funzioni dopo la execute se è safe farlo
 -studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
