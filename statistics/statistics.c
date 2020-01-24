@@ -224,8 +224,44 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_CLOCK_FETCH_UNSUCC:
 			stats[idx].clock_fetch_unsucc += value;
 			break;
-		
+		#if IPI_POSTING==1 && REPORT==1
+		case STAT_EVENT_FLUSHED:
+			stats[idx].event_flushed +=value;
+			break;
+		case STAT_EVENT_NOT_FLUSHED:
+			stats[idx].event_not_flushed +=value;
+			break;
+		case STAT_INFOS_POSTED:
+			stats[idx].infos_posted +=value;
+			break;
+		case STAT_INFOS_POSTED_USEFUL:
+			stats[idx].infos_posted_useful +=value;
+			break;
+		case STAT_SYNC_CHECK_IN_PAST:
+			stats[idx].sync_check_in_past +=value;
+			break;
+		case STAT_SYNC_CHECK_IN_FUTURE:
+			stats[idx].sync_check_in_future +=value;
+			break;
+		case STAT_SYNC_CHECK_USEFUL:
+			stats[idx].sync_check_useful +=value;
+			break;
+		case STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC:
+			stats[idx].clock_exec_evt_inter_forward_exec +=value;
+			break;
+		case STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC:
+			stats[idx].clock_exec_evt_inter_silent_exec +=value;
+			break;
+		#endif
 
+		#if IPI_SUPPORT==1 && REPORT==1
+		case STAT_IPI_SENDED:
+			stats[idx].ipi_sended+=value;
+			break;
+		case STAT_IPI_RECEIVED:
+			stats[idx].ipi_received+=value;
+			break;
+		#endif
 		default:
 			printf("Unrecognized stat type (%d)\n", type);
 	}
@@ -263,12 +299,26 @@ void gather_statistics() {
 		system_stats->events_fetched_unsucc+= thread_stats[i].events_fetched_unsucc;
 		system_stats->clock_fetch_unsucc   += thread_stats[i].clock_fetch_unsucc;
 		system_stats->events_get_next_fetch+= thread_stats[i].events_get_next_fetch;
+		
+		#if IPI_SUPPORT && REPORT==1
+		system_stats->ipi_sended += thread_stats[i].ipi_sended;
+		system_stats->ipi_received += thread_stats[i].ipi_received;
+		#endif
 	}
 
 	system_stats->clock_prune /= system_stats->counter_prune;
 	system_stats->clock_loop_tot = system_stats->clock_loop;
 	system_stats->clock_loop /= n_cores;
 	
+	#if IPI_SUPPORT==1 && REPORT==1
+	system_stats->ipi_sended_tot = system_stats->ipi_sended;
+	system_stats->ipi_received_tot = system_stats->ipi_received;
+
+	system_stats->ipi_sended /= n_cores;
+	system_stats->ipi_received /= n_cores;
+
+	#endif
+
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
 		system_stats->events_total         += lp_stats[i].events_total;
@@ -315,8 +365,23 @@ void gather_statistics() {
 		system_stats->checkpoint_period    += lp_stats[i].checkpoint_period;
 		
 		system_stats->total_frames         += LPS[i]->num_executed_frames;
+
+	#if IPI_POSTING==1 && REPORT==1
+    system_stats->event_not_flushed  += lp_stats[i].event_not_flushed;//per lp event that lp father doesn't flush
+    system_stats->event_flushed += lp_stats[i].event_flushed;//per lp father event that lp father flushs
+    system_stats->infos_posted += lp_stats[i].infos_posted;//per lp num info posted by lp
+    system_stats->infos_posted_useful += lp_stats[i].infos_posted_useful;//per lp num info useful for lp
+    system_stats->sync_check_in_past += lp_stats[i].sync_check_in_past;//per lp num sync_check in past maded by lp
+    system_stats->sync_check_in_future += lp_stats[i].sync_check_in_future;//per lp num sync_check in future maded by lp
+    system_stats->sync_check_useful += lp_stats[i].sync_check_useful;//per lp num sync_check useful maded by lp
+    system_stats->clock_exec_evt_inter_forward_exec += lp_stats[i].clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
+    system_stats->clock_exec_evt_inter_silent_exec += lp_stats[i].clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    #endif
+
 	}
 	
+	
+
 	system_stats->clock_safe          = system_stats->clock_event - system_stats->clock_silent;
 	system_stats->clock_fetch         = system_stats->clock_fetch_succ + system_stats->clock_fetch_unsucc;
 	system_stats->events_fetched      = system_stats->events_fetched_succ + system_stats->events_fetched_unsucc;
@@ -348,6 +413,37 @@ void gather_statistics() {
 
 	system_stats->mem_checkpoint /= system_stats->counter_checkpoints;
 	system_stats->checkpoint_period /= n_prc_tot;
+
+	#if IPI_POSTING==1 && REPORT==1
+	//calculate in gather_statistics()
+    system_stats->event_not_flushed_tot = system_stats->event_not_flushed;//per lp event that lp father doesn't flush
+    system_stats->event_not_flushed/= n_prc_tot;
+
+    system_stats->event_flushed_tot = system_stats->event_flushed;//per lp father event that lp father flushs
+    system_stats->event_flushed/= n_prc_tot;
+
+    system_stats->infos_posted_tot = system_stats->infos_posted;//per lp num info posted by lp
+    system_stats->infos_posted/= n_prc_tot;
+
+    system_stats->infos_posted_useful_tot = system_stats->infos_posted_useful;//per lp num info useful for lp
+    system_stats->infos_posted_useful/= n_prc_tot;
+
+    system_stats->sync_check_in_past_tot  =  system_stats->sync_check_in_past;//per lp num sync_check in past maded by lp
+    system_stats->sync_check_in_past/= n_prc_tot;
+
+    system_stats->sync_check_in_future_tot  =  system_stats->sync_check_in_future;//per lp num sync_check in future maded by lp
+    system_stats->sync_check_in_future/= n_prc_tot;
+
+    system_stats->sync_check_useful_tot  =  system_stats->sync_check_useful;//per lp num sync_check useful maded by lp
+    system_stats->sync_check_useful/= n_prc_tot;
+
+    system_stats->clock_exec_evt_inter_forward_exec_tot  =  system_stats->clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
+    system_stats->clock_exec_evt_inter_forward_exec/= n_prc_tot;
+
+    system_stats->clock_exec_evt_inter_silent_exec_tot  =  system_stats->clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    system_stats->clock_exec_evt_inter_silent_exec /= n_prc_tot;
+    #endif
+
 }
 
 static void _print_statistics(struct stats_t *stats) {
@@ -419,8 +515,18 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Checkpoint period...............................: %12llu\n", (unsigned long long)stats->checkpoint_period);
 	
 	printf("\n\n");
-	
-	
+	#if IPI_SUPPORT==1 && REPORT==1
+	printf("IPI sended tot..................................: %12lu\n",
+		(unsigned long)stats->ipi_sended_tot);
+	printf("IPI sended per thread...........................: %12.2f\n",
+		stats->ipi_sended);
+	printf("IPI received tot................................: %12lu\n",
+		(unsigned long)stats->ipi_received_tot);
+	printf("IPI received per thread.........................: %12.2f\n",
+		stats->ipi_received);
+	printf("\n\n");
+	#endif
+
 	printf("Total Clock...............................: %12llu clocks\n", 
 		(unsigned long long)stats->clock_loop_tot);
 	printf("Event Processing..........................: %12llu clocks (%4.2f%%)\n", 

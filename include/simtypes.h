@@ -134,18 +134,6 @@ typedef struct _LP_state {
 	msg_t* best_evt_unreliable;
 #endif
 
-#if IPI_POSTING_STATISTICS==1
-    unsigned long num_times_modified_best_evt_reliable;
-	unsigned long num_times_choosen_best_evt_reliable;
-#if IPI_POSTING_SINGLE_INFO==1
-	#define num_times_modified_best_evt_unreliable num_times_modified_best_evt_reliable
-	#define num_times_choosen_best_evt_unreliable num_times_choosen_best_evt_reliable
-#else
-	unsigned long num_times_modified_best_evt_unreliable;
-    unsigned long num_times_choosen_best_evt_unreliable;
-#endif//IPI_POSTING_SINGLE_INFO
-
-#endif//IPI_STATISTICS
 #endif
 
 } LP_state;

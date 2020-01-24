@@ -78,6 +78,25 @@
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
 
+#if IPI_POSTING==1 && REPORT==1
+#define STAT_EVENT_FLUSHED                  500
+#define STAT_EVENT_NOT_FLUSHED              501
+#define STAT_INFOS_POSTED                   502
+#define STAT_INFOS_POSTED_USEFUL            503
+#define STAT_SYNC_CHECK_IN_PAST             504
+#define STAT_SYNC_CHECK_IN_FUTURE           505
+#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 507
+#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 508
+#endif
+
+#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
+#define STAT_SYNC_CHECK_USEFUL              506
+#endif
+
+#if IPI_SUPPORT && REPORT==1
+#define STAT_IPI_SENDED             600
+#define STAT_IPI_RECEIVED           601
+#endif
 
 typedef double stat64_t;
 
@@ -135,6 +154,37 @@ struct stats_t {
     stat64_t clock_event_tot;
     stat64_t clock_safe_tot;
     stat64_t clock_frame_tot;
+
+    #if IPI_POSTING==1 && REPORT==1
+    stat64_t event_not_flushed;//per lp event that lp father doesn't flush
+    stat64_t event_flushed;//per lp father event that lp father flushs
+    stat64_t infos_posted;//per lp num info posted by lp
+    stat64_t infos_posted_useful;//per lp num info useful for lp
+    stat64_t sync_check_in_past;//per lp num sync_check in past maded by lp
+    stat64_t sync_check_in_future;//per lp num sync_check in future maded by lp
+    stat64_t sync_check_useful;//per lp num sync_check useful maded by lp
+    stat64_t clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
+    stat64_t clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    
+    //calculate in gather_statistics()
+    stat64_t event_not_flushed_tot;//per lp event that lp father doesn't flush
+    stat64_t event_flushed_tot;//per lp father event that lp father flushs
+    stat64_t infos_posted_tot;//per lp num info posted by lp
+    stat64_t infos_posted_useful_tot;//per lp num info useful for lp
+    stat64_t sync_check_in_past_tot;//per lp num sync_check in past maded by lp
+    stat64_t sync_check_in_future_tot;//per lp num sync_check in future maded by lp
+    stat64_t sync_check_useful_tot;//per lp num sync_check useful maded by lp
+    stat64_t clock_exec_evt_inter_forward_exec_tot;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
+    stat64_t clock_exec_evt_inter_silent_exec_tot;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    #endif
+    #if IPI_SUPPORT==1 && REPORT==1
+    stat64_t ipi_sended;//per thread num of ipis sended by target thread
+    stat64_t ipi_received;//per thread num of ipis received by target thread
+
+    //calculate in gather statistics
+    stat64_t ipi_sended_tot;
+    stat64_t ipi_received_tot;
+    #endif
     
     
 } __attribute__((aligned (64)));

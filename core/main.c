@@ -13,22 +13,11 @@
 #include <reverse.h>
 #include <statistics.h>
 
-#if IPI_POSTING_STATISTICS==1
-extern unsigned int counter_sync_check_past;
-extern unsigned int counter_sync_check_future;
-#endif
-
 #if IPI_SUPPORT==1
-extern char program_name[64];
-#endif
-#if IPI_SUPPORT_STATISTICS==1
-extern unsigned long num_sended_ipi;
-extern unsigned long num_received_ipi;
+#define MAX_LEN_PROGRAM_NAME 64 //this len includes string terminator
+extern char program_name[MAX_LEN_PROGRAM_NAME];
 #endif
 
-#if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
-extern unsigned long num_cfv_already_handled;
-#endif
 __thread struct drand48_data seedT;
 
 unsigned long long tid_ticket = 1;
@@ -74,6 +63,31 @@ void start_simulation() {
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif
+
+#if IPI_CONSTANT_CHILD_INVALIDATION==1
+    printf("\t- IPI_CONSTANT_CHILD_INVALIDATION enabled.\n");
+#endif
+#if IPI_PREEMPT_COUNTER==1
+    printf("\t- IPI_PREEMPT_COUNTER enabled.\n");
+#endif
+#if IPI_INTERRUPT_PAST==1
+    printf("\t- IPI_INTERRUPT_PAST enabled.\n");
+#endif
+#if IPI_INTERRUPT_FUTURE==1
+    printf("\t- IPI_INTERRUPT_FUTURE enabled.\n");
+#endif
+#if IPI_LONG_JMP==1
+    printf("\t- IPI_LONG_JMP enabled.\n");
+#endif
+#if IPI_HANDLE_INTERRUPT==1
+    printf("\t- IPI_HANDLE_INTERRUPT enabled.\n");
+#endif
+#if IPI_POSTING==1
+    printf("\t- IPI_POSTING enabled.\n");
+#endif
+#if IPI_SUPPORT==1
+    printf("\t- IPI_SUPPORT enabled.\n");
+#endif
 //#if REVERSIBLE == 1
 //    printf("\t- SPECULATIVE SIMULATION\n");
 //#else
@@ -112,8 +126,14 @@ int main(int argn, char *argv[]) {
     }
   
 #if IPI_SUPPORT==1
-    memset(program_name,'\0',64);
-    memcpy(program_name,argv[0],strlen(argv[0]));
+    //copy program_name in variable program_name
+    unsigned int len_string_arg0=strlen(argv[0]);
+    if(len_string_arg0 >= MAX_LEN_PROGRAM_NAME){
+        fprintf(stderr, "Program_name %s has more characters than %d\n", argv[0],MAX_LEN_PROGRAM_NAME);
+        exit(EXIT_FAILURE);
+    }
+    memset(program_name,'\0',MAX_LEN_PROGRAM_NAME);
+    memcpy(program_name,argv[0],len_string_arg0);
 #endif
     printf("***START SIMULATION***\n\n");
 
@@ -127,6 +147,25 @@ int main(int argn, char *argv[]) {
 
     print_statistics();
 
+#if IPI_POSTING_STATISTICS==1
+    for(unsigned int i=0;i<n_prc_tot;i++){
+        printf("Modified reliable %ld choosen reliable %ld modified unreliable %ld choosen unreliable %ld\n",
+                LPS[i]->num_times_modified_best_evt_reliable,LPS[i]->num_times_choosen_best_evt_reliable,
+                LPS[i]->num_times_modified_best_evt_unreliable,LPS[i]->num_times_choosen_best_evt_unreliable);
+    }
+    printf("Posting_sync_check_past=%u, posting_sync_check_future=%u\n",counter_sync_check_past,counter_sync_check_future);
+
+#endif
+
+#if IPI_SUPPORT_STATISTICS==1 || IPI_POSTING_STATISTICS==1
+    printf("Number num_cfv_already_handled=%ld\n",num_cfv_already_handled);
+#endif
+
+#if IPI_SUPPORT_STATISTICS==1
+    printf("Number sended IPIs=%ld\n",num_sended_ipi);
+    printf("Number received IPIs=%ld\n",num_received_ipi);
+#endif
+
     printf("Simulation ended (seconds): %12.2f\n", simduration);
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
     printf("Last gvt: %f\n", current_lvt);
@@ -134,25 +173,6 @@ int main(int argn, char *argv[]) {
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
     //statistics_fini();
 
-    
-#if IPI_POSTING_STATISTICS==1
-    for(unsigned int i=0;i<n_prc_tot;i++){
-        printf("modified reliable %ld choosen reliable %ld modified unreliable %ld choosen unreliable %ld\n",
-                LPS[i]->num_times_modified_best_evt_reliable,LPS[i]->num_times_choosen_best_evt_reliable,
-                LPS[i]->num_times_modified_best_evt_unreliable,LPS[i]->num_times_choosen_best_evt_unreliable);
-    }
-    printf("posting_sync_check_past=%u, posting_sync_check_future=%u\n",counter_sync_check_past,counter_sync_check_future);
-
-#endif
-
-#if IPI_SUPPORT_STATISTICS==1 || IPI_POSTING_STATISTICS==1
-    printf("number num_cfv_already_handled=%ld\n",num_cfv_already_handled);
-#endif
-
-#if IPI_SUPPORT_STATISTICS==1
-    printf("number sended IPIs=%ld\n",num_sended_ipi);
-    printf("number received IPIs=%ld\n",num_received_ipi);
-#endif
     return 0;
 }
 

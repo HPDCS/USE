@@ -231,7 +231,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                             delete(nbcalqueue, node);\
                         }; }
 
-#if IPI_POSTING_STATISTICS==1
+#if REPORT==1
 #define update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid,lp_idx) {\
                     if(curr_id==id_reliable && from_get_next_and_valid==false){\
                         update_statistics(true,lp_idx);\
@@ -264,14 +264,10 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                             reset_LP_info_inside_lock(event,false,lp_idx);\
                         }; }
 
-#if IPI_POSTING_STATISTICS==1
+#if REPORT==1
 static void update_statistics(bool reliable,int lp_idx){
-    if(reliable){
-        LPS[lp_idx]->num_times_choosen_best_evt_reliable++;
-    }
-    else{
-        LPS[lp_idx]->num_times_choosen_best_evt_unreliable++;
-    }
+    (void)reliable;
+    statistics_post_lp_data(lp_idx,STAT_INFOS_POSTED_USEFUL,1);
     return;
 }
 #endif
@@ -1065,7 +1061,7 @@ get_next:
 #endif
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
-#if IPI_POSTING_STATISTICS==1
+#if IPI_POSTING==1 && REPORT==1
     update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid,lp_idx);
 #endif
     current_msg = event;//(msg_t *) node->payload;

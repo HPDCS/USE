@@ -48,9 +48,6 @@
 extern __thread unsigned long long * preempt_count_ptr;
 #endif
 
-#if IPI_POSTING_STATISTICS==1
-extern unsigned int counter_sync_check_past;
-#endif
 /// Function pointer to switch between the parallel and serial version of SetState
 //void (*SetState)(void *new_state);
 //
@@ -378,8 +375,8 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			}
 	    	#endif//DEBUG
 	    	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-	    		#if IPI_POSTING_STATISTICS==1
-				atomic_inc_x86((atomic_t *)&counter_sync_check_past);
+	    		#if REPORT==1
+    			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_IN_PAST,1);
 				#endif
 				#if VERBOSE >0
 				printf("sync check past in silent_execution\n");

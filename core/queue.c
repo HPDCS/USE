@@ -43,10 +43,6 @@ __thread list(msg_t) to_remove_local_evts_old = NULL;
 __thread list(msg_t) to_remove_local_evts = NULL;
 __thread list(msg_t) freed_local_evts = NULL;
 
-#if IPI_POSTING_STATISTICS==1
-extern unsigned int counter_sync_check_future;
-#endif
-
 #if POSTING==1
 void print_lp_id_in_thread_pool_list(){
     if(_thr_pool._thr_pool_count==0){
@@ -57,11 +53,6 @@ void print_lp_id_in_thread_pool_list(){
     }
 }
 #endif//IPI_POSTING
-
-#if IPI_SUPPORT_STATISTICS==1
-extern unsigned long num_sended_ipi;
-extern unsigned long num_received_ipi;
-#endif
 
 void queue_init(void) {
     nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
@@ -147,11 +138,25 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 void queue_clean(){ 
     unsigned int i = 0;
     msg_t* current;
+    #if IPI_POSTING==1 || DEBUG==1
+    unsigned int father_lp_idx=n_prc_tot;
+    #endif
     for (; i<_thr_pool._thr_pool_count; i++)
     {
         current = _thr_pool.messages[i].father;
         if(current != NULL)
         {
+            #if IPI_POSTING==1 || DEBUG==1
+            if(father_lp_idx==n_prc_tot){
+                father_lp_idx=current->sender_id;
+            }
+            #endif
+            #if DEBUG==1
+            if(father_lp_idx!=current->sender_id){
+                printf("cleaning queue containing events with different lp_idx\n");
+                gdb_abort;
+            }
+            #endif
             list_node_clean_by_content(current); 
             current->state = -1;
             current->data_size = tid+1;
@@ -161,6 +166,9 @@ void queue_clean(){
             #if IPI_POSTING==1
             int index_in_hash_table=current->id_in_thread_pool_hash_table;
             _thr_pool.collision_list[index_in_hash_table]=NULL;
+            #if REPORT==1
+            statistics_post_lp_data(father_lp_idx,STAT_EVENT_NOT_FLUSHED,1);
+            #endif
             #endif
 
         }
@@ -172,8 +180,8 @@ void send_ipi_to_lp(int lp_idx){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
     unsigned int lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
     if(lck_tid>0){
-        #if IPI_SUPPORT_STATISTICS==1
-        atomic_inc_x86((atomic_t *)&num_sended_ipi);
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif
         if (syscall(174, lck_tid-1))
             printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
@@ -193,16 +201,18 @@ void queue_deliver_msgs(void) {
             printf("LP state is not ready in queue_deliver_msgs\n");
             gdb_abort;
         }
+        #if IPI_HANDLE_INTERRUPT==1
         if(LPS[current_lp]->bound_pre_rollback!=NULL || current_msg==NULL){
                     printf("bound_pre_rollback is not NULL or current_msg NULL queuedeliver_msgs\n");
                     gdb_abort;
         }
+        #endif
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
         #if IPI_POSTING_SYNC_CHECK_FUTURE==1 && IPI_INTERRUPT_FUTURE==1
             if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-                #if IPI_POSTING_STATISTICS==1
-                atomic_inc_x86((atomic_t *)&counter_sync_check_future);
+                #if REPORT==1
+                statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_IN_FUTURE,1);
                 #endif
                 #if VERBOSE>0
                 printf("sync check future queue_deliver_msgs\n");
@@ -244,14 +254,6 @@ void queue_deliver_msgs(void) {
         if(current_msg->max_outgoing_ts < new_hole->timestamp)
             current_msg->max_outgoing_ts = new_hole->timestamp;
 
-#if REPORT == 1
-        clock_timer_start(queue_op);
-#endif
-
-#if REPORT == 1
-        statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
-        statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
-#endif
         int index_in_hash_table=new_hole->id_in_thread_pool_hash_table;
         msg_t*event_in_list=_thr_pool.collision_list[index_in_hash_table];
         if(event_in_list!=NULL && event_in_list==new_hole){
@@ -271,9 +273,9 @@ void queue_deliver_msgs(void) {
                             (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //information modified
-    #if IPI_POSTING_STATISTICS==1
-                        atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
-    #endif
+                        #if REPORT==1
+                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
+                        #endif
                         break;//break with posted=POSTED
                     }
                     else if( event_in_list->timestamp<bound_ts && event_in_list->timestamp < event_dest_LP->timestamp)
@@ -282,9 +284,9 @@ void queue_deliver_msgs(void) {
                                 (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //information modified
-    #if IPI_POSTING_STATISTICS==1
-                        atomic_inc_x86 ((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_reliable));
-    #endif
+                        #if REPORT==1
+                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
+                        #endif
                         break;//break with posted=POSTED
                     }
                     event_in_list->posted=UNPOSTED;
@@ -303,8 +305,8 @@ void queue_deliver_msgs(void) {
                             (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //information modified
-    #if IPI_POSTING_STATISTICS==1
-                        atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));
+    #if REPORT==1
+                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
     #endif
                         break;//break with posted=POSTED
                     }
@@ -314,8 +316,8 @@ void queue_deliver_msgs(void) {
                                 (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
                             continue;
                         //information modified
-    #if IPI_POSTING_STATISTICS==1
-                        atomic_inc_x86((atomic_t *)&(LPS[lp_id]->num_times_modified_best_evt_unreliable));
+    #if REPORT==1
+                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
     #endif
                         break;//break with posted=POSTED
                     }
@@ -326,7 +328,18 @@ void queue_deliver_msgs(void) {
             _thr_pool.collision_list[index_in_hash_table]=NULL;
         }
         _thr_pool.messages[i].father = NULL;
+        #if REPORT == 1
+        clock_timer_start(queue_op);
+        #endif
+
         nbc_enqueue(nbcalqueue, new_hole->timestamp,new_hole, new_hole->receiver_id);
+        
+        #if REPORT == 1
+        statistics_post_lp_data(current_lp,STAT_EVENT_FLUSHED,1);
+        statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
+        statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
+        #endif
+
         #if DEBUG==1//not present in original version
         if(new_hole->tie_breaker==0){
             printf("flushed event with tie_breaker 0\n");
@@ -405,13 +418,13 @@ void queue_deliver_msgs(void) {
             printf("flushed event with tie_breaker 0\n");
         }
         #endif
-#if IPI_SUPPORT==1
-        send_ipi_to_lp(new_hole->receiver_id);
-#endif
 
 #if REPORT == 1
         statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
+#endif
+#if IPI_SUPPORT==1
+        send_ipi_to_lp(new_hole->receiver_id);
 #endif
     }
 

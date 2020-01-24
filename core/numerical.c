@@ -364,7 +364,7 @@ static void load_seed(void) {
 
 	// Check if the file exists. If not, we have to create configuration
 	if ((fp = fopen(conf_file, "r+")) == NULL) {
-
+		printf("%s not exist,creating config file\n",conf_file);
 		// Try to build the path to the configuration folder.
 		sprintf(conf_file, "%s/.htmpdes", getenv("HOME"));
 		_mkdir(conf_file);
@@ -374,7 +374,7 @@ static void load_seed(void) {
 		if ((fp = fopen(conf_file, "w")) == NULL) {
 			rootsim_error(true, "Unable to create the numerical library configuration file %s. Aborting...", conf_file);
 		}
-
+		printf("created config file %s\n",conf_file);
 		// We now initialize the first long random number. Thanks Unix!
 		// TODO: THIS IS NOT PORTABLE!
 		int fd;
@@ -382,7 +382,9 @@ static void load_seed(void) {
 			rootsim_error(true, "Unable to initialize the numerical library configuration file %s. Aborting...", conf_file);
 
 		}
+		printf("opened random number device from path /dev/random\n");
 		read(fd, &new_seed, sizeof(seed_type));
+		printf("readed random number from path /dev/random\n");
 		close(fd);
 		fprintf(fp, "%llu\n", (unsigned long long)new_seed); // We cast, so that we get an integer representing just a bit sequence
 		fclose(fp);

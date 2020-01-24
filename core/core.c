@@ -113,10 +113,6 @@ size_t node_size_msg_t;
 size_t node_size_state_t;
 
 #if IPI_POSTING==1
-#if IPI_POSTING_STATISTICS==1
-unsigned int counter_sync_check_past=0;
-unsigned int counter_sync_check_future=0;
-#endif
 
 msg_t *LP_info_is_good(int lp_idx,bool reliable){
 	//return NULL if info is not usable,else return info usable
@@ -224,26 +220,20 @@ bool bound_is_corrupted(int lp_idx){
 __thread cntx_buf cntx_loop;
 #endif
 
-#if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
-unsigned long num_cfv_already_handled=0;
-#endif
-
 #if IPI_PREEMPT_COUNTER==1
 #define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",*preempt_count_ptr,thread_id)
 #if IPI_SUPPORT==1
 __thread unsigned long long * preempt_count_ptr = NULL;
-	void initialize_preempt_counter(int thread_id){
+	void initialize_preempt_counter(){
 		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
-		print_preemption_counter(thread_id);
 	}
 #else
 	__thread unsigned long long preempt_count = INVALID_PREEMPT_COUNTER;
 	__thread unsigned long long * preempt_count_ptr = NULL;
 
-	void initialize_preempt_counter(int thread_id){
+	void initialize_preempt_counter(){
 		preempt_count_ptr=&preempt_count;
 		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
-		print_preemption_counter(thread_id);
 	}
 #endif
 
@@ -286,15 +276,6 @@ __thread unsigned long alternate_stack_area = 4096UL;
 __thread unsigned long interruptible_section_start = 0UL;
 __thread unsigned long interruptible_section_end = 0UL;
 char program_name[64];
-
-
-
-#if IPI_SUPPORT_STATISTICS==1
-unsigned long num_sended_ipi=0;
-unsigned long num_received_ipi=0;
-#endif
-
-
 
 long get_sizeof_function(const char*function_name,char*path_program_name){
     FILE *fp;
@@ -505,12 +486,6 @@ void LPs_metada_init() {
 #if IPI_POSTING==1
 		LPS[i]->best_evt_reliable=NULL;
 		LPS[i]->best_evt_unreliable =NULL;
-#if IPI_POSTING_STATISTICS==1
-        LPS[i]->num_times_modified_best_evt_reliable=0;
-        LPS[i]->num_times_choosen_best_evt_reliable=0;
-        LPS[i]->num_times_modified_best_evt_unreliable=0;
-        LPS[i]->num_times_choosen_best_evt_unreliable=0;
-#endif//IPI_POSTING_STATISTICS
 #endif
 
 
@@ -563,9 +538,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
     #endif
 	#if IPI_POSTING_SYNC_CHECK_FUTURE==1 && IPI_INTERRUPT_FUTURE==1
         if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-        	#if IPI_POSTING_STATISTICS==1
-        	atomic_inc_x86((atomic_t *)&counter_sync_check_future);
-        	#endif
+        	#if REPORT==1
+    		statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_IN_FUTURE,1);
+			#endif
         	#if VERBOSE >0
         	printf("sync_check_future ScheduleNewEvent\n");
         	#endif
@@ -595,8 +570,8 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 		}
 		#endif
     	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-    		#if IPI_POSTING_STATISTICS==1
-			atomic_inc_x86((atomic_t *)&counter_sync_check_past);
+    		#if REPORT==1
+    		statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_IN_PAST,1);
 			#endif
 			#if VERBOSE >0
         	printf("sync_check_past ScheduleNewEvent\n");
@@ -805,15 +780,15 @@ void init_simulation(unsigned int thread_id){
 		LPs_metada_init();
 		printf("LP_metada init finished\n");
 		dymelor_init();
-		printf("dymelor_init finished\n");
+		printf("Dymelor_init finished\n");
 		statistics_init();
-		printf("statistics_init finished\n");
+		printf("Statistics_init finished\n");
 		queue_init();
-		printf("queue_init finished\n");
+		printf("Queue_init finished\n");
 		numerical_init();
-		printf("numerical_init finished\n");
+		printf("Numerical_init finished\n");
 		nodes_init();
-		printf("nodes_init finished\n");
+		printf("Nodes_init finished\n");
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
@@ -871,7 +846,6 @@ void init_simulation(unsigned int thread_id){
 	    }
 	}
 
-	printf("wait on barrier,tid=%d,n_cores=%d\n",tid,n_cores);
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -981,15 +955,16 @@ void thread_loop(unsigned int thread_id) {
 #if IPI_SUPPORT==1
 	long process_event_size=get_sizeof_function("ProcessEvent",program_name);
 	if(process_event_size<0){
-		printf("impossible to retrieve function size\n");
+		printf("Impossible to retrieve function size\n");
 		gdb_abort;
 	}
-	else{
+	else if(thread_id==0){
 		printf("ProcessEvent has size=%ld\n",process_event_size);
 	}
 	interruptible_section_start = (unsigned long) ProcessEvent;
 	interruptible_section_end = ((unsigned long)ProcessEvent)+process_event_size-1;
-	printf("register thread,start=%lu,end=%lu\n",interruptible_section_start,interruptible_section_end);
+	if(thread_id==0)
+		printf("Register thread,code_interruptible_start=%lu,code_interruptible_end=%lu\n",interruptible_section_start,interruptible_section_end);
 
 	//mettere cfv_trampoline al posto di ProcessEvent
 	ipi_registration_error = ipi_register_thread(thread_id, (unsigned long)cfv_trampoline, &alternate_stack,
@@ -998,15 +973,13 @@ void thread_loop(unsigned int thread_id) {
 		printf("Impossible register_thread %d\n",thread_id);
 		gdb_abort;
 	}
-	printf("thread %d finish registration\n",thread_id);
+	printf("Thread %d finish registration to IPI module\n",thread_id);
 #endif
 #if IPI_PREEMPT_COUNTER==1
 	//init counter
 	initialize_preempt_counter(thread_id);
 #endif
-	printf("init simulation...,tid=%d\n",thread_id);
 	init_simulation(thread_id);
-	printf("init simulation completed,tid=%d\n",thread_id);
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif
@@ -1023,7 +996,7 @@ void thread_loop(unsigned int thread_id) {
 			#endif
 			printf("[IPI_4_USE] - First time we saved the execution context!!!\n");
 			break;//CFV_INIT
-		#if IPI_HANDLE_INTERRUPT==1
+		#if IPI_SUPPORT==1
 		case CFV_TO_HANDLE :
 			/*
 			 * We will return to this point in the
@@ -1047,9 +1020,9 @@ void thread_loop(unsigned int thread_id) {
 			#if VERBOSE>0
 			printf("[IPI_4_USE] - Thread %d jumped back from an interrupted execution!!!\n",tid);
 			#endif
-		#if IPI_SUPPORT_STATISTICS==1
-            atomic_inc_x86((atomic_t *)&num_received_ipi);
-		#endif
+		#if REPORT==1
+        	statistics_post_th_data(tid,STAT_IPI_RECEIVED,1);
+        #endif
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
             	if(LPS[current_lp]->bound_pre_rollback==NULL){
@@ -1165,8 +1138,8 @@ void thread_loop(unsigned int thread_id) {
 			#if VERBOSE > 0
 			printf("cfv already handled,tid=%d\n",tid);
 			#endif
-#if IPI_POSTING_STATISTICS==1 || IPI_SUPPORT_STATISTICS==1
-			atomic_inc_x86((atomic_t *)&num_cfv_already_handled);
+#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
+			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_USEFUL,1);
 #endif
 			#if DEBUG==1 && IPI_HANDLE_INTERRUPT==1
 			if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
