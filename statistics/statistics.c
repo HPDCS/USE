@@ -428,20 +428,22 @@ void gather_statistics() {
     system_stats->infos_posted_useful_tot = system_stats->infos_posted_useful;//per lp num info useful for lp
     system_stats->infos_posted_useful/= n_prc_tot;
 
-    system_stats->sync_check_in_past_tot  =  system_stats->sync_check_in_past;//per lp num sync_check in past maded by lp
-    system_stats->sync_check_in_past/= n_prc_tot;
-
-    system_stats->sync_check_in_future_tot  =  system_stats->sync_check_in_future;//per lp num sync_check in future maded by lp
-    system_stats->sync_check_in_future/= n_prc_tot;
-
-    system_stats->sync_check_useful_tot  =  system_stats->sync_check_useful;//per lp num sync_check useful maded by lp
-    system_stats->sync_check_useful/= n_prc_tot;
-
     system_stats->clock_exec_evt_inter_forward_exec_tot  =  system_stats->clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
     system_stats->clock_exec_evt_inter_forward_exec/= n_prc_tot;
 
     system_stats->clock_exec_evt_inter_silent_exec_tot  =  system_stats->clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
     system_stats->clock_exec_evt_inter_silent_exec /= n_prc_tot;
+
+    system_stats->sync_check_in_past_tot  =  system_stats->sync_check_in_past;//per lp num sync_check in past maded by lp
+    system_stats->sync_check_in_past/= n_prc_tot;
+
+    system_stats->sync_check_in_future_tot  =  system_stats->sync_check_in_future;//per lp num sync_check in future maded by lp
+    system_stats->sync_check_in_future/= n_prc_tot;
+    #endif
+
+    #if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
+    system_stats->sync_check_useful_tot  =  system_stats->sync_check_useful;//per lp num sync_check useful maded by lp
+    system_stats->sync_check_useful/= n_prc_tot;
     #endif
 
 }
@@ -515,10 +517,11 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Checkpoint period...............................: %12llu\n", (unsigned long long)stats->checkpoint_period);
 	
 	printf("\n\n");
+
 	#if IPI_SUPPORT==1 && REPORT==1
-	printf("IPI sended tot..................................: %12lu\n",
+	printf("IPI sent tot....................................: %12lu\n",
 		(unsigned long)stats->ipi_sended_tot);
-	printf("IPI sended per thread...........................: %12.2f\n",
+	printf("IPI sent per thread.............................: %12.2f\n",
 		stats->ipi_sended);
 	printf("IPI received tot................................: %12lu\n",
 		(unsigned long)stats->ipi_received_tot);
@@ -527,13 +530,64 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n\n");
 	#endif
 
-	printf("Total Clock...............................: %12llu clocks\n", 
+	#if IPI_POSTING==1 && REPORT==1
+	printf("event not flushed tot...........................: %12lu\n",
+		(unsigned long)stats->event_not_flushed_tot);
+	printf("event not flushed per LP........................: %12.2f\n",
+		stats->event_not_flushed);
+	
+	printf("event flushed tot...............................: %12lu\n",
+		(unsigned long)stats->event_flushed_tot);
+	printf("event flushed per LP............................: %12.2f\n",
+		stats->event_flushed);
+    
+	printf("Info posted tot.................................: %12lu\n",
+		(unsigned long)stats->infos_posted_tot);
+	printf("Info posted per LP..............................: %12.2f\n",
+		stats->infos_posted);
+    
+	printf("Info posted useful tot..........................: %12lu\n",
+		(unsigned long)stats->infos_posted_useful_tot);
+	printf("Info posted useful per LP.......................: %12.2f\n",
+		stats->infos_posted_useful);
+
+	printf("clock_exec_evt_inter_forward_exec tot...........: %12lu\n",
+		(unsigned long)stats->clock_exec_evt_inter_forward_exec_tot);
+	printf("clock_exec_evt_inter_forward_exec per LP........: %12.2f\n",
+		stats->clock_exec_evt_inter_forward_exec);
+
+	printf("clock_exec_evt_inter_silent_exec tot............: %12lu\n",
+		(unsigned long)stats->clock_exec_evt_inter_silent_exec_tot);
+	printf("clock_exec_evt_inter_silent_exec per LP.........: %12.2f\n",
+		stats->clock_exec_evt_inter_silent_exec);
+
+	printf("Sync check in past tot..........................: %12lu\n",
+		(unsigned long)stats->sync_check_in_past_tot);
+	printf("Sync check in past per LP.......................: %12.2f\n",
+		stats->sync_check_in_past);
+
+	printf("Sync check in future tot........................: %12lu\n",
+		(unsigned long)stats->sync_check_in_past_tot);
+	printf("Sync check in future per LP.....................: %12.2f\n",
+		stats->sync_check_in_past);
+	#endif
+
+	#if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
+	printf("Sync check useful tot...........................: %12lu\n",
+		(unsigned long)stats->sync_check_useful_tot);
+	printf("Sync check useful per LP........................: %12.2f\n",
+		stats->sync_check_useful);
+
+	printf("\n\n");
+	#endif
+
+	printf("Total Clock.....................................: %12llu clocks\n", 
 		(unsigned long long)stats->clock_loop_tot);
-	printf("Event Processing..........................: %12llu clocks (%4.2f%%)\n", 
+	printf("Event Processing................................: %12llu clocks (%4.2f%%)\n", 
 		(unsigned long long)stats->clock_event_tot, percentage(stats->clock_event_tot,stats->clock_loop_tot));
-	printf("Safe Processing...........................: %12llu clocks (%4.2f%%)\n", 
+	printf("Safe Processing.................................: %12llu clocks (%4.2f%%)\n", 
 		(unsigned long long)stats->clock_safe_tot, percentage(stats->clock_safe_tot,stats->clock_loop_tot));
-	printf("Frame Processing..........................: %12llu clocks (%4.2f%%)\n", 
+	printf("Frame Processing................................: %12llu clocks (%4.2f%%)\n", 
 		(unsigned long long)stats->clock_frame_tot, percentage(stats->clock_frame_tot,stats->clock_loop_tot));
 
 	printf(COLOR_RESET"\n");

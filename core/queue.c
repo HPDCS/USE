@@ -260,12 +260,13 @@ void queue_deliver_msgs(void) {
             //post information
             simtime_t bound_ts=0.0;
             unsigned int lp_id=event_in_list->receiver_id;
-            if(LPS[lp_id]->bound!=NULL){
-                    bound_ts=LPS[lp_id]->bound->timestamp;
-            }
+            
             while(1){
                 //father event is safe?
                 event_in_list->posted=POSTED;
+                if(LPS[lp_id]->bound!=NULL){
+                    bound_ts=LPS[lp_id]->bound->timestamp;
+                }
                 if(safe){//safe info is overwrited only in fetch_internal() function
                     msg_t*event_dest_LP=(msg_t *)LPS[lp_id]->best_evt_reliable;
                     if(event_dest_LP==NULL || event_dest_LP->posted==UNPOSTED || event_dest_LP->receiver_id!=lp_id){
