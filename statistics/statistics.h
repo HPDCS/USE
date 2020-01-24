@@ -168,7 +168,6 @@ struct stats_t {
 
     #if IPI_POSTING==1 && REPORT==1
     stat64_t event_not_flushed;//per lp event that lp father doesn't flush
-    stat64_t event_flushed;//per lp father event that lp father flushs
     stat64_t infos_posted;//per lp num info posted by lp
     stat64_t infos_posted_useful;//per lp num info useful for lp
     stat64_t sync_check_in_past;//per lp num sync_check in past maded by lp
@@ -179,7 +178,6 @@ struct stats_t {
     
     //calculated in gather_statistics()
     stat64_t event_not_flushed_tot;//per lp event that lp father doesn't flush
-    stat64_t event_flushed_tot;//per lp father event that lp father flushs
     stat64_t infos_posted_tot;//per lp num info posted by lp
     stat64_t infos_posted_useful_tot;//per lp num info useful for lp
     stat64_t sync_check_in_past_tot;//per lp num sync_check in past maded by lp

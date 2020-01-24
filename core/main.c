@@ -6,7 +6,6 @@
 #include <string.h>
 #include <errno.h>
 
-
 #include <core.h>
 #include <timer.h>
 #include <hpdcs_utils.h>
@@ -146,25 +145,6 @@ int main(int argn, char *argv[]) {
     double simduration = (double)timer_value_seconds(exec_time);
 
     print_statistics();
-
-#if IPI_POSTING_STATISTICS==1
-    for(unsigned int i=0;i<n_prc_tot;i++){
-        printf("Modified reliable %ld choosen reliable %ld modified unreliable %ld choosen unreliable %ld\n",
-                LPS[i]->num_times_modified_best_evt_reliable,LPS[i]->num_times_choosen_best_evt_reliable,
-                LPS[i]->num_times_modified_best_evt_unreliable,LPS[i]->num_times_choosen_best_evt_unreliable);
-    }
-    printf("Posting_sync_check_past=%u, posting_sync_check_future=%u\n",counter_sync_check_past,counter_sync_check_future);
-
-#endif
-
-#if IPI_SUPPORT_STATISTICS==1 || IPI_POSTING_STATISTICS==1
-    printf("Number num_cfv_already_handled=%ld\n",num_cfv_already_handled);
-#endif
-
-#if IPI_SUPPORT_STATISTICS==1
-    printf("Number sended IPIs=%ld\n",num_sended_ipi);
-    printf("Number received IPIs=%ld\n",num_received_ipi);
-#endif
 
     printf("Simulation ended (seconds): %12.2f\n", simduration);
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));

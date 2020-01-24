@@ -235,9 +235,6 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		#endif
 
 		#if IPI_POSTING==1 && REPORT==1
-		case STAT_EVENT_FLUSHED:
-			stats[idx].event_flushed +=value;
-			break;
 		case STAT_EVENT_NOT_FLUSHED:
 			stats[idx].event_not_flushed +=value;
 			break;
@@ -373,7 +370,6 @@ void gather_statistics() {
 
 	#if IPI_POSTING==1 && REPORT==1
     system_stats->event_not_flushed  += lp_stats[i].event_not_flushed;//per lp event that lp father doesn't flush
-    system_stats->event_flushed += lp_stats[i].event_flushed;//per lp father event that lp father flushs
     system_stats->infos_posted += lp_stats[i].infos_posted;//per lp num info posted by lp
     system_stats->infos_posted_useful += lp_stats[i].infos_posted_useful;//per lp num info useful for lp
     system_stats->sync_check_in_past += lp_stats[i].sync_check_in_past;//per lp num sync_check in past maded by lp
@@ -423,9 +419,6 @@ void gather_statistics() {
 	//calculate in gather_statistics()
     system_stats->event_not_flushed_tot = system_stats->event_not_flushed;//per lp event that lp father doesn't flush
     system_stats->event_not_flushed/= n_prc_tot;
-
-    system_stats->event_flushed_tot = system_stats->event_flushed;//per lp father event that lp father flushs
-    system_stats->event_flushed/= n_prc_tot;
 
     system_stats->infos_posted_tot = system_stats->infos_posted;//per lp num info posted by lp
     system_stats->infos_posted/= n_prc_tot;
@@ -536,15 +529,10 @@ static void _print_statistics(struct stats_t *stats) {
 	#endif
 
 	#if IPI_POSTING==1 && REPORT==1
-	printf("event not flushed tot...........................: %12lu\n",
+	printf("Event not flushed tot...........................: %12lu\n",
 		(unsigned long)stats->event_not_flushed_tot);
-	printf("event not flushed per LP........................: %12.2f\n",
+	printf("Event not flushed per LP........................: %12.2f\n",
 		stats->event_not_flushed);
-	
-	printf("event flushed tot...............................: %12lu\n",
-		(unsigned long)stats->event_flushed_tot);
-	printf("event flushed per LP............................: %12.2f\n",
-		stats->event_flushed);
     
 	printf("Info posted tot.................................: %12lu\n",
 		(unsigned long)stats->infos_posted_tot);
@@ -556,14 +544,14 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Info posted useful per LP.......................: %12.2f\n",
 		stats->infos_posted_useful);
 
-	printf("clock_exec_evt_inter_forward_exec tot...........: %12lu\n",
+	printf("Evt_interrupted_forward_exec Time tot...........: %12lu\n",
 		(unsigned long)stats->clock_exec_evt_inter_forward_exec_tot);
-	printf("clock_exec_evt_inter_forward_exec per LP........: %12.2f\n",
+	printf("Evt_interrupted_forward_exec Time per LP........: %12.2f\n",
 		stats->clock_exec_evt_inter_forward_exec);
 
-	printf("clock_exec_evt_inter_silent_exec tot............: %12lu\n",
+	printf("Evt_interrupted_silent_exec Time tot............: %12lu\n",
 		(unsigned long)stats->clock_exec_evt_inter_silent_exec_tot);
-	printf("clock_exec_evt_inter_silent_exec per LP.........: %12.2f\n",
+	printf("Evt_interrupted_silent_exec Time per LP.........: %12.2f\n",
 		stats->clock_exec_evt_inter_silent_exec);
 
 	printf("Sync check in past tot..........................: %12lu\n",

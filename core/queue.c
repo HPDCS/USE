@@ -337,7 +337,6 @@ void queue_deliver_msgs(void) {
         nbc_enqueue(nbcalqueue, new_hole->timestamp,new_hole, new_hole->receiver_id);
         
         #if REPORT == 1
-        statistics_post_lp_data(current_lp,STAT_EVENT_FLUSHED,1);
         statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
         #endif
