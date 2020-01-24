@@ -224,6 +224,16 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_CLOCK_FETCH_UNSUCC:
 			stats[idx].clock_fetch_unsucc += value;
 			break;
+
+		#if IPI_SUPPORT==1 && REPORT==1
+		case STAT_IPI_SENDED:
+			stats[idx].ipi_sended+=value;
+			break;
+		case STAT_IPI_RECEIVED:
+			stats[idx].ipi_received+=value;
+			break;
+		#endif
+
 		#if IPI_POSTING==1 && REPORT==1
 		case STAT_EVENT_FLUSHED:
 			stats[idx].event_flushed +=value;
@@ -237,31 +247,26 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_INFOS_POSTED_USEFUL:
 			stats[idx].infos_posted_useful +=value;
 			break;
-		case STAT_SYNC_CHECK_IN_PAST:
-			stats[idx].sync_check_in_past +=value;
-			break;
-		case STAT_SYNC_CHECK_IN_FUTURE:
-			stats[idx].sync_check_in_future +=value;
-			break;
-		case STAT_SYNC_CHECK_USEFUL:
-			stats[idx].sync_check_useful +=value;
-			break;
 		case STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC:
 			stats[idx].clock_exec_evt_inter_forward_exec +=value;
 			break;
 		case STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC:
 			stats[idx].clock_exec_evt_inter_silent_exec +=value;
 			break;
+		case STAT_SYNC_CHECK_IN_PAST:
+			stats[idx].sync_check_in_past +=value;
+			break;
+		case STAT_SYNC_CHECK_IN_FUTURE:
+			stats[idx].sync_check_in_future +=value;
+			break;
+		#endif
+		
+		#if IPI_POSTING==1 || IPI_SUPPORT==1
+		case STAT_SYNC_CHECK_USEFUL:
+			stats[idx].sync_check_useful +=value;
+			break;
 		#endif
 
-		#if IPI_SUPPORT==1 && REPORT==1
-		case STAT_IPI_SENDED:
-			stats[idx].ipi_sended+=value;
-			break;
-		case STAT_IPI_RECEIVED:
-			stats[idx].ipi_received+=value;
-			break;
-		#endif
 		default:
 			printf("Unrecognized stat type (%d)\n", type);
 	}

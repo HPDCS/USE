@@ -78,25 +78,27 @@
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
 
+#if IPI_SUPPORT && REPORT==1
+#define STAT_IPI_SENDED             500
+#define STAT_IPI_RECEIVED           501
+#endif
+
 #if IPI_POSTING==1 && REPORT==1
-#define STAT_EVENT_FLUSHED                  500
-#define STAT_EVENT_NOT_FLUSHED              501
-#define STAT_INFOS_POSTED                   502
-#define STAT_INFOS_POSTED_USEFUL            503
-#define STAT_SYNC_CHECK_IN_PAST             504
-#define STAT_SYNC_CHECK_IN_FUTURE           505
-#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 506
-#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 507
+#define STAT_EVENT_FLUSHED                  600
+#define STAT_EVENT_NOT_FLUSHED              601
+#define STAT_INFOS_POSTED                   602
+#define STAT_INFOS_POSTED_USEFUL            603
+#define STAT_SYNC_CHECK_IN_PAST             604
+#define STAT_SYNC_CHECK_IN_FUTURE           605
+#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 606
+#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 607
 #endif
 
 #if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
-#define STAT_SYNC_CHECK_USEFUL              508
+#define STAT_SYNC_CHECK_USEFUL              608
 #endif
 
-#if IPI_SUPPORT && REPORT==1
-#define STAT_IPI_SENDED             600
-#define STAT_IPI_RECEIVED           601
-#endif
+
 
 typedef double stat64_t;
 

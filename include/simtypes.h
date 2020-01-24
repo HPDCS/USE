@@ -125,6 +125,7 @@ typedef struct _LP_state {
 	msg_t* bound_pre_rollback;
 	msg_t* dummy_bound;
 	bool LP_state_is_valid;
+	simtime_t ts_current_msg_in_execution;//this is 0.0 if there is no event in execution 
 #endif
 #if IPI_POSTING==1
 	msg_t* best_evt_reliable;

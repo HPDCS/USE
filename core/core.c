@@ -237,7 +237,7 @@ __thread unsigned long long * preempt_count_ptr = NULL;
 	}
 #endif
 
-void decrement_preempt_counter(){
+inline void decrement_preempt_counter(){
 	#if DEBUG==1
 	if((*preempt_count_ptr)==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
 		printf("impossible decrement preempt_counter,it is already zero\n");
@@ -252,7 +252,7 @@ void decrement_preempt_counter(){
 	(*preempt_count_ptr)=(*preempt_count_ptr)-1;
 }
 
-void increment_preempt_counter(){
+inline void increment_preempt_counter(){
 	#if DEBUG==1
 	if((*preempt_count_ptr)>=MAX_NESTING_PREEMPT_COUNTER){
 		printf("preempt_count is equals to MAX_NESTING %d in increment_preempt_counter\n",MAX_NESTING_PREEMPT_COUNTER);
@@ -546,6 +546,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
         	#endif
 			msg_t*evt=get_best_LP_info_good(current_lp);
 	        if(evt!=NULL){
+	        	LPS[current_lp]->ts_current_msg_in_execution=0.0;
 	            LPS[current_lp]->LP_state_is_valid=false;//invalid state
 	            LPS[current_lp]->dummy_bound->state=NEW_EVT;
 	            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
@@ -585,6 +586,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	    				gdb_abort;
 	    			}
 	    			#endif
+	    			LPS[current_lp]->ts_current_msg_in_execution=0.0;
 	    			LPS[current_lp]->LP_state_is_valid=false;//invalid state
 	    			LPS[current_lp]->dummy_bound->state=NEW_EVT;
 					LPS[current_lp]->state=LP_STATE_READY;
@@ -626,6 +628,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 								if(next_t!=NULL && next_t->timestamp < current_lvt){	printf("next_t->timestamp < current_lvt\n");	gdb_abort;}
 								#endif
 					}
+					LPS[current_lp]->ts_current_msg_in_execution=0.0;
 					//adjust bound,before return to main loop bound pointer must be referenced an event not dummy
 					LPS[current_lp]->LP_state_is_valid=false;//invalid state
 					LPS[current_lp]->dummy_bound->state=NEW_EVT;
@@ -827,6 +830,7 @@ void init_simulation(unsigned int thread_id){
 			#if IPI_HANDLE_INTERRUPT==1
 			//after execution of INIT_EVENTS alloc dummy_bound
 			LPS[current_lp]->dummy_bound=allocate_dummy_bound(current_lp);
+			LPS[current_lp]->ts_current_msg_in_execution=0.0;
 			#endif
 		}
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
@@ -897,6 +901,9 @@ stat64_t execute_time;
 			#endif
 			#endif
 		}
+		#if IPI_HANDLE_INTERRUPT==1
+		LPS[current_lp]->ts_current_msg_in_execution=event_ts;
+		#endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
@@ -917,6 +924,10 @@ stat64_t execute_time;
 			#endif
 			#endif
 		}
+
+		#if IPI_HANDLE_INTERRUPT==1
+		LPS[current_lp]->ts_current_msg_in_execution=0.0;
+		#endif
 
 #if REPORT == 1
 		execute_time = clock_timer_value(event_processing_timer);
@@ -1017,6 +1028,7 @@ void thread_loop(unsigned int thread_id) {
 					gdb_abort;
 			}
 		#endif
+			LPS[current_lp]->ts_current_msg_in_execution=0.0;
 			#if VERBOSE>0
 			printf("[IPI_4_USE] - Thread %d jumped back from an interrupted execution!!!\n",tid);
 			#endif
@@ -1134,6 +1146,7 @@ void thread_loop(unsigned int thread_id) {
 				printf("preempt counter is not INIT in CFV_ALREADY_HANDLED\n");
 				gdb_abort;
 			}
+
 			#endif
 			#if VERBOSE > 0
 			printf("cfv already handled,tid=%d\n",tid);
@@ -1149,6 +1162,10 @@ void thread_loop(unsigned int thread_id) {
 			if((LPS[current_lp]->bound_pre_rollback!=NULL)){
 				printf("bound_pre_rollback is not NULL in CFV_ALREADY_HANDLED\n");
 					gdb_abort;
+			}
+			if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
+				printf("ts_current_msg_in_execution different than 0 in CFV_ALREADY_HANDLED\n");
+				gdb_abort;
 			}
 			#endif
 			unlock(current_lp);
@@ -1222,9 +1239,7 @@ void thread_loop(unsigned int thread_id) {
 			printf("LP state is not ready\n");
 			gdb_abort;
 		}
-		#endif
 		#if IPI_HANDLE_INTERRUPT==1
-		#if DEBUG==1
 			if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
 				printf("dummy bound is not NEW_EVT\n");
 				gdb_abort;
@@ -1242,6 +1257,11 @@ void thread_loop(unsigned int thread_id) {
 				printf("bound_pre_rollback is not NULL thread_loop\n");
 					gdb_abort;
 			}
+			if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
+				printf("ts_current_msg_in_execution different than 0 thread_loop\n");
+				gdb_abort;
+			}
+
 		#endif
 		#endif
 

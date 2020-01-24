@@ -176,10 +176,11 @@ void queue_clean(){
 	_thr_pool._thr_pool_count = 0;
 }
 #if IPI_SUPPORT==1
-void send_ipi_to_lp(int lp_idx){
+void send_ipi_to_lp(int lp_idx,simtime_t ts_event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
+    simtime_t ts_evt_exec_dest = LPS[lp_idx]->ts_current_msg_in_execution;
     unsigned int lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
-    if(lck_tid>0){
+    if(lck_tid>0 && ts_event<ts_evt_exec_dest){
         #if REPORT==1
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif
@@ -347,7 +348,7 @@ void queue_deliver_msgs(void) {
         }
         #endif
         #if IPI_SUPPORT==1
-            send_ipi_to_lp(new_hole->receiver_id);
+            send_ipi_to_lp(new_hole->receiver_id,new_hole->timestamp);
         #endif
     }
     _thr_pool._thr_pool_count=0;
@@ -425,7 +426,7 @@ void queue_deliver_msgs(void) {
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
 #endif
 #if IPI_SUPPORT==1
-        send_ipi_to_lp(new_hole->receiver_id);
+        send_ipi_to_lp(new_hole->receiver_id,new_hole->timestamp);
 #endif
     }
 
