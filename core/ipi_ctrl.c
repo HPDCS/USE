@@ -19,7 +19,7 @@
 #define IPI_SET_TEXT_END            (1U << 7)
 
 int ipi_register_thread(int, unsigned long, void **, unsigned long long **,
-                            unsigned long, unsigned long, unsigned long);
+        unsigned long long **, unsigned long, unsigned long, unsigned long);
 int ipi_unregister_thread(void **, unsigned long);
 
 
@@ -93,10 +93,11 @@ static inline int remove_thread_pinning(void)
 }
 
 int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack,
-
-    unsigned long long ** preempt_count_ptr_addr, unsigned long alternate_stack_size,
-        unsigned long text_start, unsigned long text_end)
+    unsigned long long ** preempt_count_ptr_addr, unsigned long long ** standing_ipi_ptr_addr,
+        unsigned long alternate_stack_size, unsigned long text_start, unsigned long text_end)
 {
+    long l1_dcache_linesize;
+
     if (tid < 0)
     {
     	printf("The argument \"tid\" is a negative value. "
@@ -202,6 +203,11 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         return 1;
     }
     (*preempt_count_ptr_addr) = *((unsigned long long **) (*alternate_stack));
+
+    if ((l1_dcache_linesize = sysconf(_SC_LEVEL1_DCACHE_LINESIZE)) < 0)
+        (*standing_ipi_ptr_addr) = (*preempt_count_ptr_addr) + (size_t) 64;
+    else
+        (*standing_ipi_ptr_addr) = (*preempt_count_ptr_addr) + (size_t) l1_dcache_linesize;
 
     if (ioctl(fd, IPI_SET_TEXT_START, text_start) < 0)
     {
