@@ -83,7 +83,8 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 #if PERIODIC_STATS == 1
 #include <time.h>
 #define MILLION 1000000
-#define STATS_PERIOD_NS (400*MILLION)
+#define STATS_PERIOD_NS (50*MILLION)
+#define EVENTS_BEFORE_STATS_PERIOD_NS (100)
 __thread struct timespec time_interval_for_stats_start;
 __thread struct timespec time_interval_for_stats_end;
 __thread double all_events = 0;
@@ -93,9 +94,6 @@ __thread double advanced_events = 0;
 static void periodic_stats(){
 	double a=0, b=0, c=0, tot_evts=0, com_evts=0, adv_evts=0;
 	unsigned int i;
-	
-	if(tid != 0) return;
-	
 	 
 	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_end);
 	long duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec;
@@ -585,7 +583,8 @@ void thread_loop(unsigned int thread_id) {
 
 
 #if PERIODIC_STATS == 1
-	periodic_stats();
+	if (tid == 0 && evt_count%EVENTS_BEFORE_STATS_PERIOD_NS == 0)
+		periodic_stats();
 #endif
 
 

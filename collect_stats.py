@@ -17,29 +17,22 @@ def PrintStats(name, array):
 	print "\tDevStd(" + name + ") " + str(statistics.pstdev(array)) + " ("+str(100*statistics.pstdev(array)/avg)+"%)"
 	print "\tVar(" + name + ")    " + str(statistics.pvariance(array)) + " ("+str(100*statistics.pvariance(array)/avg)+"%)"
  
-
-
 #controllo input comando
 if len(sys.argv) < 2:
 	print "Modalita' di utilizzo:"
 	print "\tpython collect_stats.py execytable param1 param2"
 	exit()
 
-
 #Execute statically an executable with two input parameter
 stream = os.popen('./'+sys.argv[1]+' '+sys.argv[2]+' '+sys.argv[3])
-output = stream.read().replace("  ", " ").split("\n")
+output = stream.read()
+print output
+output = output.replace("  ", " ").split("\n")
 
 #Filter the interesting line from the input
 filtered = Filter(output,"Len(ms):")
 
 mappatura = {}
-adv = []
-com = []
-diff = []
-tot = []
-eff1 = []
-eff2 = []
 
 for line in filtered:
 	line = line.split(" ")
