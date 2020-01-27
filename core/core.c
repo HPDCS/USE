@@ -83,42 +83,79 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 #if PERIODIC_STATS == 1
 #include <time.h>
 #define MILLION 1000000
+#define BILLION 1000000000
 #define STATS_PERIOD_NS (50*MILLION)
 #define EVENTS_BEFORE_STATS_PERIOD_NS (100)
+#define WINDOW_SIZE (10)
+__thread double window_adv[WINDOW_SIZE];
+__thread double window_com[WINDOW_SIZE];
+__thread double window_tot[WINDOW_SIZE];
+__thread double window_len[WINDOW_SIZE];
+__thread int window_phase = 0;
 __thread struct timespec time_interval_for_stats_start;
 __thread struct timespec time_interval_for_stats_end;
-__thread double all_events = 0;
-__thread double committed_events = 0;
-__thread double advanced_events = 0;
+__thread double last_total_events = 0;
+__thread double last_committed_events = 0;
+__thread double last_advanced_events = 0;
+__thread double previous_total_events = 0;
+__thread double previous_committed_events = 0;
+__thread double previous_advanced_events = 0;
 
 static void periodic_stats(){
-	double a=0, b=0, c=0, tot_evts=0, com_evts=0, adv_evts=0;
+	double tot=0, adv=0, com=0, total_events=0, committed_events=0, advanced_events=0;
 	unsigned int i;
-	 
+
+	//Check if is elapsed enough time from the last collection
 	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_end);
-	long duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec;
-	duration += 1000*MILLION*(time_interval_for_stats_end.tv_sec - time_interval_for_stats_start.tv_sec);
+	long duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec +
+	                    BILLION * (time_interval_for_stats_end.tv_sec - time_interval_for_stats_start.tv_sec);
+
 	if(duration > STATS_PERIOD_NS){
+	    //Collect stats
 		for(i = 0; i < n_prc_tot; i++) {
-			// stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot
-			tot_evts += lp_stats[i].events_total;
-			adv_evts += LPS[i]->num_executed_frames;
+			total_events += lp_stats[i].events_total;
+			advanced_events += LPS[i]->num_executed_frames;
 		}
 		for(i = 0 ; i < n_cores; i++){
-			com_evts += thread_stats[i].events_committed;
+			committed_events += thread_stats[i].events_committed;
 		}
-		a = tot_evts;
-		b = com_evts;
-		c = adv_evts;
-		a -= all_events;
-		b -= committed_events;
-		c -= advanced_events;
-		printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f\n", duration/((double)MILLION), c, b, c-b, a, b/a, c/a);
+
+		//Print collected information
+		tot = total_events - last_total_events;
+		com = committed_events - last_committed_events;
+		adv = advanced_events - last_advanced_events;
+		//printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot);
+
+		//Update fields required for the next computation
 		time_interval_for_stats_start.tv_nsec = time_interval_for_stats_end.tv_nsec;
 		time_interval_for_stats_start.tv_sec = time_interval_for_stats_end.tv_sec;
-		all_events = tot_evts;
-		committed_events = com_evts;
-		advanced_events = adv_evts;
+
+        window_tot[window_phase % WINDOW_SIZE] = tot;
+        window_com[window_phase % WINDOW_SIZE] = com;
+        window_adv[window_phase % WINDOW_SIZE] = adv;
+        window_len[window_phase % WINDOW_SIZE] = duration;
+        window_phase++;
+
+        //Task to be executed at the end of the window
+        if(window_phase % WINDOW_SIZE == 0) {
+            adv = com = tot = duration = 0;
+            for (i = 0; i < WINDOW_SIZE; i++) {
+                adv += window_adv[i];
+                com += window_com[i];
+                tot += window_tot[i];
+                duration += window_len[i];
+            }
+            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot);
+            previous_advanced_events = adv;
+            previous_committed_events = com;
+            previous_total_events = tot;
+        }
+
+		last_total_events = total_events;
+		last_committed_events = committed_events;
+		last_advanced_events = advanced_events;
+
+
 	}
 }
 #endif
@@ -345,10 +382,10 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////			 _	 _	 _	 _	      _   __      __		/////////////////////////////////////
-///////////			| \	| |	| \	/ \      / \ |  | /| |  |		/////////////////////////////////////
-///////////			|_/	|_|	| | '-.  __   _/ |  |  |  ><		/////////////////////////////////////
-///////////			|	| |	|_/	\_/      /__ |__|  | |__|		/////////////////////////////////////
+///////////			 _	 _	 _	 _	      _   __   _   __		/////////////////////////////////////
+///////////			| \	| |	| \	/ \      / \ |  | / \ |  |		/////////////////////////////////////
+///////////			|_/	|_|	| | '-.  __   _/ |  |  _/ |  |		/////////////////////////////////////
+///////////			|	| |	|_/	\_/      /__ |__| /__ |__|		/////////////////////////////////////
 ///////////														/////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
