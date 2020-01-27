@@ -123,6 +123,7 @@ typedef struct _LP_state {
 #if IPI_HANDLE_INTERRUPT==1
 	msg_t* last_silent_exec_evt;
 	msg_t* bound_pre_rollback;
+	msg_t* old_valid_bound;
 	msg_t* dummy_bound;
 	bool LP_state_is_valid;
 	simtime_t ts_current_msg_in_execution;//this is 0.0 if there is no event in execution 

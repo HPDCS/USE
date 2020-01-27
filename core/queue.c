@@ -176,11 +176,21 @@ void queue_clean(){
 	_thr_pool._thr_pool_count = 0;
 }
 #if IPI_SUPPORT==1
-void send_ipi_to_lp(int lp_idx,simtime_t ts_event){
+void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
-    simtime_t ts_evt_exec_dest = LPS[lp_idx]->ts_current_msg_in_execution;
-    unsigned int lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
-    if(lck_tid>0 && ts_event<ts_evt_exec_dest){
+    unsigned int lck_tid;
+    simtime_t ts_evt_exec_dest;
+    unsigned int lp_idx;
+    #if IPI_POSTING==1
+    if(event->posted!=POSTED)
+        return;
+    #endif
+    lp_idx=event->receiver_id;
+    lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
+    if(lck_tid==0)
+        return;
+    ts_evt_exec_dest = LPS[lp_idx]->ts_current_msg_in_execution;
+    if(event-event->timestamp < ts_evt_exec_dest){
         #if REPORT==1
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif
@@ -222,6 +232,8 @@ void queue_deliver_msgs(void) {
                 if(evt!=NULL){
                     LPS[current_lp]->LP_state_is_valid=false;
                     LPS[current_lp]->dummy_bound->state=NEW_EVT;
+                    LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
+                    LPS[current_lp]->old_valid_bound=NULL;
                     wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
                 }
             }
@@ -347,7 +359,7 @@ void queue_deliver_msgs(void) {
         }
         #endif
         #if IPI_SUPPORT==1
-            send_ipi_to_lp(new_hole->receiver_id,new_hole->timestamp);
+            send_ipi_to_lp(new_hole);
         #endif
     }
     _thr_pool._thr_pool_count=0;
@@ -425,7 +437,7 @@ void queue_deliver_msgs(void) {
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
 #endif
 #if IPI_SUPPORT==1
-        send_ipi_to_lp(new_hole->receiver_id,new_hole->timestamp);
+        send_ipi_to_lp(new_hole);
 #endif
     }
 

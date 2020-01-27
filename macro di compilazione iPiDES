@@ -1,13 +1,13 @@
 PROGRAMMA ORIGINALE: Il programma non prevede meccanismi per interrompere un thread dal suo lavoro, ne in modo sincrono ne in modo asincrono.
 
-CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo tale da aggiungere il predicato "il padre dovrà eventually essere rieseguito?" che quindi permette l'invalidazione degli eventi figli sia nel caso in cui il padre è già stato ri-eseguito e sia nel caso in cui il padre dovrà essere rieseguito.
+CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo tale da aggiungere il predicato "il padre dovrà eventually essere rieseguito?" che quindi permette l'invalidazione degli eventi figli sia nel caso in cui il padre è già stato ri-eseguito(la sua epoca è aumentata rispetto alla precedente esecuzione) e sia nel caso in cui il padre dovrà essere rieseguito.
 
-IPI_PREEMPT_COUNTER: macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo, può accadere. L'interruzione può avvenire solo quando il preemption_counter è 0.Aumentare il preemption counter assicura che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
+IPI_PREEMPT_COUNTER: macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo(sincrona/asincrona), può accadere. L'interruzione può avvenire solo quando il preemption_counter è 0.Aumentare il preemption counter assicura che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
 Il programma non è ancora in grado di interrompersi.
 
 
 IPI_LONG_JMP: macro che dà la possibilità al programma di fare delle long_jmp in qualsiasi scenario,ma solo quando il preempt_counter è 0.In alcuni punti critici del codice,fare long_jmp non è safe.Di fatto con questa macro abilitata il programma supporta il meccanismo delle interruzioni sincrone.
-Lasciare il counter a 0 se si vuole chiamare la long_jmp come se fosse una normale funzione.
+Lasciare il valore di counter a 0 se si vuole chiamare la long_jmp come se fosse una normale funzione.
 
 IPI_HANDLE_INTERRUPT: macro che implementa il supporto per settare un LP come valido/invalido,utile per permettere l'interruzione asincrona/sincrona in scenari critici,quando il preemption counter è 0.
 Grazie a questa macro è possibile in seguito all'interruzione settare un LP come invalido per poterlo ripristinare correttamente appena possibile.
@@ -22,24 +22,43 @@ IPI_SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se 
 IPI_POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP
 
 TODO:
+-valutare se inserire riaggiornamento di until_ts con valore globale ad ogni silent_execution
+-valutare check sincroni prima di invalidare lo stato con l'esecuzione di un evento
+-ipi che interrompe execution in past,ma si potrebbe evitare l'interruzione e fermarsi prima nella s.e.,vedere come risolvere
+-raggruppare il codice in funzioni
+-raggruppare i debug in funzioni check
+-aggiustare debug con old_valid_bound e bound_pre_rollback
+-verificare che modifiche non impattano LP_STATE_ONGVT
+-è possibile far coincidere old_valid_bound con bound_pre_rollback per quanto riguarda LP_STATE_ONGVT?
+
+-postare info su anti_msg in past quando non è possibile eseguire try_lock(solo ts o pointer ad evento,ma è più complicato e inefficiente)
+-inserire statistiche basate su grana degli eventi in base al type
+-modello decisionale:livello speculatività,stato simulazione lp dest(stateready,staterollback,bound,evento in esecuzione ecc),lp in processevent,residual time ecc
+-print_statistics stampa solo i valori non fa nessun calcolo,nemmeno sottrazioni
+-studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
+
+
+-operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice es rollback_length.
+-varie statistiche non vengono calcolate adeguatamente anche nel caso in cui non ci siano interruzioni
+-MAX_LP 2048 non viene gestito correttamente,se viene passato un numero più grande il programma non termina con errore,as expected!!
+-se si vedono i riferimenti alla macro MAX_LPS si vede che non viene utilizzata adeguatamente, per la macro MAX_SOBJS viene allocata troppa memoria,basterebbe n_prc_tot?(force full mai utilizzata,allocazione globale statica)
+-rivedere il calcolo delle statistiche,rinominare alcuni campi della struct in modo tale da suddividerle per thread per LP e da calcolare in modo ordinato rispetto alla struct stat64_t il tempo medio o numero medio deve avere mean nel nome.
+-counter_rollbacks_length viene sommata 2 volte in gather_statistics
+-la probabilità che su interruzione venga interrotto un altro thread dell'applicazione in un sistema scarico è bassa,in ogni caso se succede possiamo sempre sfruttare lo standing_ipi
 -la read dal device dev/random può essere bloccante e fa si che il programma impieghi molto tempo per finire di completare,tutto il tempo è dedicato a leggere dal dev/random,utilizzare dev/urandom che non è bloccante,ma restituisce una sequenza di byte randomici di minore qualità rispetto alla dev/random, in alternativa creare a mano il file di configurazione in modo tale che legga sempre lo stesso numero
 -righe 403,404 non necessarie in numerical.c
 -nel programma originale mettere volatile alla variabile ready_wt
 -nel programma originale modificare il node->counter(preso dall'evento precedente) nella fetch con event->tiebreaker(preso dall'evento corrente)
 -postare info in base al livello di speculatività
 
--vedere che tipo di statistiche sono già presenti nel codice, integrarle con il nuovo supporto e iniziare a pensare quali sfruttare per mandare ipi
 -inserire barriera leggera di memoria a tutti gli aggiornamenti del counter(+1 -1). Altrimenti un riordino delle istruzioni crea problemi!!
 -inserire barriera di memoria tra scrittura unposted e flush sulla coda globale,per garantire che ogni evento inserito in coda globale non postato non sia mai flaggato come Posted
--hash_table open addressing con num elementi maggiore del numero di eventi per capire quanti eventi con lo stesso ts vengono generati.
 -micro bug in ONGVT_PERIOD legato all'aggiornamento del commit_ts e commit_tb horizon è possibile impostare il tb non correlato con il timestamp e per questo si vede la fine simulazione su un evento non safe!!
--studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
 
--idea:postare info su anti_msg in past quando non è possibile eseguire try_lock(solo ts o pointer ad evento,ma è più complicato e inefficiente)
+
+-idea:
 -cfv su interruzione solo se info postata è buona(mettere dentro il trampolino questa logica con chiamata diretta alla funzione, e poi successivamente pensare all'assembly)
--modello decisionale per capire quando lanciare IPI
--pensare a nuove statistiche di qualsiasi tipo da aggiungere e aggiungerle
--rimuovere father frame,attualmente non utilizzato e se si utilizza la IPI_CONSTANT_CHILD_INVALIDATION non serve più
+-rimuovere father frame,attualmente non utilizzato e se si utilizza la IPI_CONSTANT_CHILD_INVALIDATION non serve più father frame
 
 Osservazioni:
 -se nella simulazione il master seed è sempre lo stesso e tutti gli eventi hanno ts diverso(tb=1) la simulazione termina sempre con lo stesso stato finale e stato transitorio?
@@ -49,7 +68,7 @@ Osservazioni:
 -tra 2 nbc_prune gli eventi non vengono collezionati
 -la variabile safe può avere valori diversi tra i thread(il thread che esegue un evento e ha il lock potrebbe vedere quell'evento come non safe)
 -checkpoint recalculation capace che funziona male perché il rollback lenght è lungo attualmente,siccome arriva sempre al destination ts e non si ferma al primo evento invalido.(inoltre non è necessario ricalcolarlo se è stata attivata la modalità LP_STATE_ON_GVT è un rollback spontaneo)
--operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice.
+
 -prune localqueue with ts old è dead code,mai chiamato da nessuno.
 -rimuovere stop silent e tutto ciò che dipende da essa in silent exec
 -a volte macro innestate sono necessarie se la macro inner ha un else
