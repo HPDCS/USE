@@ -92,10 +92,11 @@
 #define STAT_SYNC_CHECK_IN_FUTURE           605
 #define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 606
 #define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 607
+#define STAT_INFOS_POSTED_ANTI_MSG 608
 #endif
 
 #if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
-#define STAT_SYNC_CHECK_USEFUL              608
+#define STAT_SYNC_CHECK_USEFUL              609
 #endif
 
 
@@ -169,6 +170,7 @@ struct stats_t {
     #if IPI_POSTING==1 && REPORT==1
     stat64_t event_not_flushed;//per lp event that lp father doesn't flush
     stat64_t infos_posted;//per lp num info posted by lp
+    stat64_t infos_posted_anti_msg;
     stat64_t infos_posted_useful;//per lp num info useful for lp
     stat64_t sync_check_in_past;//per lp num sync_check in past maded by lp
     stat64_t sync_check_in_future;//per lp num sync_check in future maded by lp
@@ -179,6 +181,7 @@ struct stats_t {
     //calculated in gather_statistics()
     stat64_t event_not_flushed_tot;//per lp event that lp father doesn't flush
     stat64_t infos_posted_tot;//per lp num info posted by lp
+    stat64_t infos_posted_anti_msg_tot;
     stat64_t infos_posted_useful_tot;//per lp num info useful for lp
     stat64_t sync_check_in_past_tot;//per lp num sync_check in past maded by lp
     stat64_t sync_check_in_future_tot;//per lp num sync_check in future maded by lp

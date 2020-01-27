@@ -125,11 +125,11 @@ msg_t *LP_info_is_good(int lp_idx,bool reliable){
 	if(LP_info==NULL)
 		return LP_info;
 	#if DEBUG==1
-		if((LP_info->state & EXTRACTED)==EXTRACTED){
+		/*if((LP_info->state & EXTRACTED)==EXTRACTED){
 			//event must be NEW_EVT or ELIMINATED
 			printf("invalid event state in Lp info\n");
 			gdb_abort;
-		}
+		}*/
 		if(LP_info->receiver_id!=lp_idx){
 			printf("invalid lp id in LP_info\n");
 			gdb_abort;
@@ -138,7 +138,21 @@ msg_t *LP_info_is_good(int lp_idx,bool reliable){
 			printf("invalid monitor value in LP_info\n");
 			gdb_abort;
 		}
+		if((LP_info->posted==UNPOSTED) && (LP_info->state!=ELIMINATED) && (LP_info->state!=ANTI_MSG)){
+			printf("info is UNPOSTED and event_state is not ELIMINATED or ANTI_MSG\n");
+			gdb_abort;
+		}
+		if( (LP_info->state==NEW_EVT) && (LP_info->posted==UNPOSTED)){
+			printf("info is NEW_EVT && UNPOSTED\n");
+			gdb_abort;
+		}
+		if( (LP_info->state==ANTI_MSG) && (LP_info->posted==POSTED)){
+			printf("info is NEW_EVT && UNPOSTED\n");
+			gdb_abort;
+		}
 	#endif
+	if(LP_info->state==ELIMINATED)
+		return NULL;
 	simtime_t bound_ts=0.0;
 	if(LP_info->tie_breaker==0)
 		return NULL;

@@ -181,10 +181,6 @@ void send_ipi_to_lp(msg_t*event){
     unsigned int lck_tid;
     simtime_t ts_evt_exec_dest;
     unsigned int lp_idx;
-    #if IPI_POSTING==1
-    if(event->posted!=POSTED)
-        return;
-    #endif
     lp_idx=event->receiver_id;
     lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
     if(lck_tid==0)
@@ -359,7 +355,8 @@ void queue_deliver_msgs(void) {
         }
         #endif
         #if IPI_SUPPORT==1
-            send_ipi_to_lp(new_hole);
+            if(new_hole->posted==POSTED)
+                send_ipi_to_lp(new_hole);
         #endif
     }
     _thr_pool._thr_pool_count=0;

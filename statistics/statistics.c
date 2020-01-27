@@ -241,6 +241,9 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_INFOS_POSTED:
 			stats[idx].infos_posted += value;
 			break;
+		case STAT_INFOS_POSTED_ANTI_MSG:
+			stats[idx].infos_posted_anti_msg += value;
+			break;
 		case STAT_INFOS_POSTED_USEFUL:
 			stats[idx].infos_posted_useful += value;
 			break;
@@ -306,6 +309,9 @@ void gather_statistics() {
 		system_stats->ipi_sended += thread_stats[i].ipi_sended;
 		system_stats->ipi_received += thread_stats[i].ipi_received;
 		#endif
+		#if IPI_POSTING==1
+		system_stats->infos_posted_anti_msg += thread_stats[i].infos_posted_anti_msg;
+		#endif
 	}
 
 	system_stats->clock_prune /= system_stats->counter_prune;
@@ -319,6 +325,11 @@ void gather_statistics() {
 	system_stats->ipi_sended /= n_cores;
 	system_stats->ipi_received /= n_cores;
 
+	#endif
+
+	#if IPI_POSTING==1
+	system_stats->infos_posted_anti_msg_tot = system_stats->infos_posted_anti_msg;
+	system_stats->infos_posted_anti_msg /= n_cores;
 	#endif
 
 	// Aggregate per LP
@@ -538,6 +549,11 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->infos_posted_tot);
 	printf("Info posted per LP..............................: %12.2f\n",
 		stats->infos_posted);
+
+	printf("Info posted anti_msg tot........................: %12lu\n",
+		(unsigned long)stats->infos_posted_anti_msg_tot);
+	printf("Info posted anti_msg per thread.................: %12.2f\n",
+		stats->infos_posted_anti_msg);
     
 	printf("Info posted useful tot..........................: %12lu\n",
 		(unsigned long)stats->infos_posted_useful_tot);

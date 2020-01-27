@@ -455,7 +455,7 @@ void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_re
 
 #if DEBUG==1
 
-void check_LP_id_info(msg_t **array_events,int num_events,int lp_idx,int id_current_node,int id_reliable,int id_unreliable){
+void check_LP_info(msg_t **array_events,int num_events,int lp_idx,int id_current_node,int id_reliable,int id_unreliable){
     #if IPI_POSTING_SINGLE_INFO==1
         (void)id_unreliable;
     #endif
@@ -465,13 +465,13 @@ void check_LP_id_info(msg_t **array_events,int num_events,int lp_idx,int id_curr
         {
             #if IPI_POSTING_SINGLE_INFO!=1
             if(array_events[i]->receiver_id!=lp_idx 
-                || (( (array_events[i]->state & EXTRACTED) ==EXTRACTED) && (i==id_reliable || i==id_unreliable)) //only state new_evt and extracted are allowed if node is not curent_node
-                ||(array_events[i]->posted==UNPOSTED && (i==id_reliable || i==id_unreliable) )
+                //|| (( (array_events[i]->state & EXTRACTED) ==EXTRACTED) && (i==id_reliable || i==id_unreliable)) //only state new_evt and extracted are allowed if node is not curent_node
+                ||(array_events[i]->posted==UNPOSTED && (i==id_reliable || i==id_unreliable) && (array_events[i]->state!=ELIMINATED) && (array_events[i]->state!=ANTI_MSG))
                 || (array_events[i]->tie_breaker==0))
             #else
             if(array_events[i]->receiver_id!=lp_idx 
-                || (( (array_events[i]->state & EXTRACTED) ==EXTRACTED) && (i==id_reliable))
-                ||(array_events[i]->posted==UNPOSTED && (i==id_reliable) )
+                //|| (( (array_events[i]->state & EXTRACTED) ==EXTRACTED) && (i==id_reliable))
+                ||(array_events[i]->posted==UNPOSTED && (i==id_reliable) && (array_events[i]->state!=ELIMINATED) && (array_events[i]->state!=ANTI_MSG))
                 || (array_events[i]->tie_breaker==0))
             #endif   
                 {
@@ -496,7 +496,6 @@ void check_LP_id_info(msg_t **array_events,int num_events,int lp_idx,int id_curr
                     printf("invalid id i=%d\n",i);
                 }
                 gdb_abort;
-
             }
         }
     }
@@ -643,12 +642,7 @@ unsigned int fetch_internal(){
                     }
                     #endif
                     //event is UNPOSTED when committed
-                    if(event->posted==UNPOSTED){
-                        do_commit_outside_lock_and_goto_next(event, node, lp_idx);
-                    }
-                    else{
-                        do_skip_outside_lock_and_goto_next(lp_idx);
-                    }  
+                    do_commit_outside_lock_and_goto_next(event, node, lp_idx);
                 #else
 					do_commit_outside_lock_and_goto_next(event, node, lp_idx);
                 #endif
@@ -671,25 +665,138 @@ unsigned int fetch_internal(){
 			///* DELETE ELIMINATED *///
 			if(curr_evt_state == ELIMINATED){//cristian:state is eliminated, remove it from calqueue
 #if IPI_POSTING==1
-                if(event->posted==UNPOSTED){
-                    do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);
-                }
+                reset_all_LP_info(event, lp_idx);
+                unpost_event(event);
+                do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);
 #else
                 do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED	
 #endif
             }
 			///* DELETE BANANA NODE *///
 			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){//cristian:state is anti_msg and it is handled, remove it from calqueue
-#if IPI_POSTING==1
-                if(event->posted==UNPOSTED){
-                    do_remove_outside_lock_and_goto_next(event,node,lp_idx);
+#if IPI_POSTING==1 && DEBUG==1
+                if(event->posted==POSTED){
+                    printf("posted event with state ANTI\n");
+                    gdb_abort;
                 }
-#else
+#endif
+                #if IPI_POSTING==1
+                reset_all_LP_info(event, lp_idx);
+                #endif
                 //remove only in case event->monitor==banana because concurrently another thread is executing this node and we cannot remove it
 				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
-#endif
 			}
-			
+            #if IPI_POSTING==1
+            else if(curr_evt_state==ANTI_MSG && in_past){//ANTI_MSG in past with monitor!=banana
+                if(
+                #if OPTIMISTIC_MODE != FULL_SPECULATIVE
+                #if OPTIMISTIC_MODE == ONE_EVT_PER_LP
+                !is_in_lp_unsafe_set(lp_idx) &&
+                #else
+                !is_in_lp_locked_set(lp_idx) &&
+                #endif
+                #endif
+                tryLock(lp_idx))
+                {
+                    goto lock_LP_taken;
+                }
+                else{
+                    //post information
+                    #if IPI_SUPPORT==1
+                    bool posted=false;
+                    #endif
+                    simtime_t bound_ts=0.0;
+                    
+                    while(1){
+                        //father event is safe?
+                        if(LPS[lp_idx]->bound!=NULL){
+                            bound_ts=LPS[lp_idx]->bound->timestamp;
+                        }
+                        if(safe){//safe info is overwrited only in fetch_internal() function
+                            msg_t*event_dest_LP=(msg_t *)LPS[lp_idx]->best_evt_reliable;
+                            if(event_dest_LP==NULL || event_dest_LP->posted==UNPOSTED || event_dest_LP->receiver_id!=lp_idx){
+                                if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->best_evt_reliable),
+                                    (unsigned long)event_dest_LP,(unsigned long)event)==0)//CAS failed
+                                    continue;
+                                //information modified
+                                #if IPI_SUPPORT==1
+                                posted=true;
+                                #endif
+                                #if REPORT==1
+                                statistics_post_th_data(tid,STAT_INFOS_POSTED_ANTI_MSG,1);
+                                #endif
+                                break;//break with posted=POSTED
+                            }
+                            else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+                            {//msg_dest_LP!=NULL
+                                if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->best_evt_reliable),
+                                        (unsigned long)event_dest_LP,(unsigned long)event)==0)//CAS failed
+                                    continue;
+                                //information modified
+                                #if IPI_SUPPORT==1
+                                posted=true;
+                                #endif
+                                #if REPORT==1
+                                statistics_post_th_data(tid,STAT_INFOS_POSTED_ANTI_MSG,1);
+                                #endif
+                                break;//break with posted=POSTED
+                            }
+                            break;//timestamp is greater,exit
+                        }
+                        else{//not safe
+                            msg_t*event_dest_LP=(msg_t *)LPS[lp_idx]->best_evt_unreliable;
+                            #if DEBUG==1
+                                if(event_dest_LP!=NULL && event_dest_LP->receiver_id!=lp_idx){
+                                    printf("invalid tag and LP id in flush thread_pool_hash_table unreliable node\n");
+                                    gdb_abort;
+                                }
+                            #endif
+                            if(event_dest_LP==NULL || event_dest_LP->posted==UNPOSTED || event_dest_LP->receiver_id!=lp_idx){
+                                if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->best_evt_unreliable),
+                                    (unsigned long)event_dest_LP,(unsigned long)event)==0)//CAS failed
+                                    continue;
+                                //information modified
+                                #if IPI_SUPPORT==1
+                                posted=true;
+                                #endif
+                                #if REPORT==1
+                                statistics_post_th_data(tid,STAT_INFOS_POSTED_ANTI_MSG,1);
+                                #endif
+                                break;//break with posted=POSTED
+                            }
+                            else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+                            {//msg_dest_LP!=NULL
+                                if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->best_evt_unreliable),
+                                        (unsigned long)event_dest_LP,(unsigned long)event)==0)//CAS failed
+                                    continue;
+                                //information modified
+                                #if IPI_SUPPORT==1
+                                posted=true;
+                                #endif
+                                #if REPORT==1
+                                statistics_post_th_data(tid,STAT_INFOS_POSTED_ANTI_MSG,1);
+                                #endif
+                                break;//break with posted=POSTED
+                            }
+                            break;//timestamp is greater,exit
+                        } 
+                    }
+                    #if IPI_SUPPORT==1
+                    #if POSTING==1
+                    if(posted)
+                    #endif
+                        send_ipi_to_lp(event);
+                    #endif
+                    read_new_min = false;
+                    add_lp_unsafe_set(lp_idx);
+
+                    #if OPTIMISTIC_MODE == ST_BINDING_LP
+                        add_lp_locked_set(lp_idx);
+                    #endif
+                    goto get_next;
+                }
+            }
+            #endif	
 		}
 		
 		//read_new_min = false;
@@ -704,6 +811,7 @@ unsigned int fetch_internal(){
 		tryLock(lp_idx)
 		) {
 #if IPI_POSTING==1
+lock_LP_taken:
 #if IPI_POSTING_SINGLE_INFO==1
             id_current_node=0;
             id_reliable=1;
@@ -734,7 +842,7 @@ unsigned int fetch_internal(){
                     gdb_abort;
                 }
             }
-            check_LP_id_info(array_events, num_events, lp_idx, id_current_node, id_reliable, id_unreliable);
+            check_LP_info(array_events, num_events, lp_idx, id_current_node, id_reliable, id_unreliable);
             #endif//DEBUG
             
             curr_id=0;
@@ -776,7 +884,13 @@ retry_with_new_node:
 				local_next_evt = list_next(lp_ptr->bound);
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
-					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
+					#if IPI_POSTING==1 && DEBUG==1
+                    if(local_next_evt->posted==POSTED){
+                        printf("event posted in localqueue after bound\n");
+                        gdb_abort;
+                    }
+                    #endif
+                    list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					local_next_evt->frame = tid+1;
 					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
 					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
