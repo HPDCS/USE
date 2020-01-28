@@ -177,6 +177,7 @@ extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, voi
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void check_OnGVT(unsigned int lp_idx);
 
+extern void insert_ordered_in_list(unsigned int lid,struct rootsim_list_node* queue_in,msg_t*starting_event,msg_t*event_to_insert);
 //DEBUG
 extern bool ctrl_commit;	
 extern bool ctrl_unsafe;

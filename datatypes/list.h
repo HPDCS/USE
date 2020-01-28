@@ -298,6 +298,5 @@ extern void * list_prev_f(void * ptr);//DEBUG
 extern void * list_next_f(void * ptr);//DEBUG
 extern unsigned int print_list_fw(void * ptr);//DEBUG
 
-
 #endif /* __LIST_DATATYPE_H */
 

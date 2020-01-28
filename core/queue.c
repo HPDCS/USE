@@ -77,34 +77,8 @@ void unsafe_set_init(){
     clear_lp_locked_set;
 }
 
-void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
-
-    msg_t *msg_ptr;
-    if(_thr_pool._thr_pool_count == THR_POOL_SIZE) {
-        printf("queue overflow for thread %u at time %f: inserting event %d over %d\n", tid, current_lvt, _thr_pool._thr_pool_count, THR_POOL_SIZE);
-        abort();
-    }
-    if(event_size > MAX_DATA_SIZE) {
-        printf("Error: requested a message of size %d, max allowed is %d\n", event_size, MAX_DATA_SIZE);
-        abort();
-    }
-
-
-    msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-    list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
-
-	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
-	_thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
-
-    msg_ptr->sender_id = current_lp;
-    msg_ptr->receiver_id = receiver;
-    msg_ptr->timestamp = timestamp;
-    msg_ptr->data_size = event_size;
-    msg_ptr->type = event_type;
-
-    memcpy(msg_ptr->data, event_content, event_size);
-
-    #if IPI_POSTING==1
+#if IPI_POSTING==1
+void insert_msg_in_hash_table(msg_t*msg_ptr){//open addressing
     unsigned int hash_table_size=MAX_THR_HASH_TABLE_SIZE;
     #if DEBUG==1
     if((MAX_THR_HASH_TABLE_SIZE & (MAX_THR_HASH_TABLE_SIZE-1))!=0){
@@ -132,6 +106,37 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
             break;
         }
     }
+}
+#endif
+
+void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
+
+    msg_t *msg_ptr;
+    if(_thr_pool._thr_pool_count == THR_POOL_SIZE) {
+        printf("queue overflow for thread %u at time %f: inserting event %d over %d\n", tid, current_lvt, _thr_pool._thr_pool_count, THR_POOL_SIZE);
+        abort();
+    }
+    if(event_size > MAX_DATA_SIZE) {
+        printf("Error: requested a message of size %d, max allowed is %d\n", event_size, MAX_DATA_SIZE);
+        abort();
+    }
+
+
+    msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+    list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
+
+	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
+	_thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
+
+    msg_ptr->sender_id = current_lp;
+    msg_ptr->receiver_id = receiver;
+    msg_ptr->timestamp = timestamp;
+    msg_ptr->data_size = event_size;
+    msg_ptr->type = event_type;
+
+    memcpy(msg_ptr->data, event_content, event_size);
+    #if IPI_POSTING==1
+    insert_msg_in_hash_table(msg_ptr);
     #endif//IPI_POSTING
 }
 
@@ -139,7 +144,7 @@ void queue_clean(){
     unsigned int i = 0;
     msg_t* current;
     #if IPI_POSTING==1 || DEBUG==1
-    unsigned int father_lp_idx=n_prc_tot;
+    unsigned int father_lp_idx=n_prc_tot;//invalid lp_idx
     #endif
     for (; i<_thr_pool._thr_pool_count; i++)
     {
@@ -147,12 +152,12 @@ void queue_clean(){
         if(current != NULL)
         {
             #if IPI_POSTING==1 || DEBUG==1
-            if(father_lp_idx==n_prc_tot){
+            if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
                 father_lp_idx=current->sender_id;
             }
             #endif
             #if DEBUG==1
-            if(father_lp_idx!=current->sender_id){
+            if(father_lp_idx!=current->sender_id){//check if father_lp_idx is the same for each child
                 printf("cleaning queue containing events with different lp_idx\n");
                 gdb_abort;
             }
@@ -166,9 +171,11 @@ void queue_clean(){
             #if IPI_POSTING==1
             int index_in_hash_table=current->id_in_thread_pool_hash_table;
             _thr_pool.collision_list[index_in_hash_table]=NULL;
+            
             #if REPORT==1
             statistics_post_lp_data(father_lp_idx,STAT_EVENT_NOT_FLUSHED,1);
             #endif
+
             #endif
 
         }
@@ -196,7 +203,101 @@ void send_ipi_to_lp(msg_t*event){
 }
 #endif
 
+#if DEBUG==1
+void check_queue_deliver_msgs(){
+    if(LPS[current_lp]->state != LP_STATE_READY){
+            printf("LP state is not ready in queue_deliver_msgs\n");
+            gdb_abort;
+    }
+    #if IPI_HANDLE_INTERRUPT==1
+    if(LPS[current_lp]->bound_pre_rollback!=NULL || current_msg==NULL){
+                printf("bound_pre_rollback is not NULL or current_msg NULL queuedeliver_msgs\n");
+                gdb_abort;
+    }
+    #endif
+}
+#endif
+
+
 #if IPI_POSTING==1
+
+void post_information_with_straggler(msg_t*new_hole){
+    int index_in_hash_table=new_hole->id_in_thread_pool_hash_table;
+    msg_t*event_in_list=_thr_pool.collision_list[index_in_hash_table];
+    if(event_in_list!=NULL && event_in_list==new_hole){
+        //post information
+        simtime_t bound_ts=0.0;
+        unsigned int lp_id=event_in_list->receiver_id;
+        
+        while(1){
+            //father event is safe?
+            event_in_list->posted=POSTED;
+            if(LPS[lp_id]->bound!=NULL){
+                bound_ts=LPS[lp_id]->bound->timestamp;
+            }
+            if(safe){//safe info is overwrited only in fetch_internal() function
+                msg_t*event_dest_LP=(msg_t *)LPS[lp_id]->best_evt_reliable;
+                if(event_dest_LP==NULL || event_dest_LP->posted==UNPOSTED || event_dest_LP->receiver_id!=lp_id){
+                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                        (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
+                        continue;
+                    //information modified
+                    #if REPORT==1
+                    statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
+                    #endif
+                    break;//break with posted=POSTED
+                }
+                else if( event_in_list->timestamp<bound_ts && event_in_list->timestamp < event_dest_LP->timestamp)
+                {//msg_dest_LP!=NULL
+                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
+                            (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
+                        continue;
+                    //information modified
+                    #if REPORT==1
+                    statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
+                    #endif
+                    break;//break with posted=POSTED
+                }
+                event_in_list->posted=UNPOSTED;
+                break;//timestamp is greater,exit
+            }
+            else{//not safe
+                msg_t*event_dest_LP=(msg_t *)LPS[lp_id]->best_evt_unreliable;
+                #if DEBUG==1
+                    if(event_dest_LP!=NULL && event_dest_LP->receiver_id!=lp_id){
+                        printf("invalid tag and LP id in flush thread_pool_hash_table unreliable node\n");
+                        gdb_abort;
+                    }
+                #endif
+                if(event_dest_LP==NULL || event_dest_LP->posted==UNPOSTED || event_dest_LP->receiver_id!=lp_id){
+                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
+                        (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
+                        continue;
+                    //information modified
+#if REPORT==1
+                    statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
+#endif
+                    break;//break with posted=POSTED
+                }
+                else if( event_in_list->timestamp<bound_ts && event_in_list->timestamp < event_dest_LP->timestamp)
+                {//msg_dest_LP!=NULL
+                    if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
+                            (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
+                        continue;
+                    //information modified
+#if REPORT==1
+                    statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
+#endif
+                    break;//break with posted=POSTED
+                }
+                event_in_list->posted=UNPOSTED;
+                break;//timestamp is greater,exit
+            } 
+        }
+        _thr_pool.collision_list[index_in_hash_table]=NULL;
+    }
+}
+
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
@@ -204,16 +305,7 @@ void queue_deliver_msgs(void) {
         clock_timer queue_op;
 #endif
 #if DEBUG==1//not present in original version
-        if(LPS[current_lp]->state != LP_STATE_READY){
-            printf("LP state is not ready in queue_deliver_msgs\n");
-            gdb_abort;
-        }
-        #if IPI_HANDLE_INTERRUPT==1
-        if(LPS[current_lp]->bound_pre_rollback!=NULL || current_msg==NULL){
-                    printf("bound_pre_rollback is not NULL or current_msg NULL queuedeliver_msgs\n");
-                    gdb_abort;
-        }
-        #endif
+        check_queue_deliver_msgs();
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
         #if IPI_POSTING_SYNC_CHECK_FUTURE==1 && IPI_INTERRUPT_FUTURE==1
@@ -263,81 +355,10 @@ void queue_deliver_msgs(void) {
         if(current_msg->max_outgoing_ts < new_hole->timestamp)
             current_msg->max_outgoing_ts = new_hole->timestamp;
 
-        int index_in_hash_table=new_hole->id_in_thread_pool_hash_table;
-        msg_t*event_in_list=_thr_pool.collision_list[index_in_hash_table];
-        if(event_in_list!=NULL && event_in_list==new_hole){
-            //post information
-            simtime_t bound_ts=0.0;
-            unsigned int lp_id=event_in_list->receiver_id;
-            
-            while(1){
-                //father event is safe?
-                event_in_list->posted=POSTED;
-                if(LPS[lp_id]->bound!=NULL){
-                    bound_ts=LPS[lp_id]->bound->timestamp;
-                }
-                if(safe){//safe info is overwrited only in fetch_internal() function
-                    msg_t*event_dest_LP=(msg_t *)LPS[lp_id]->best_evt_reliable;
-                    if(event_dest_LP==NULL || event_dest_LP->posted==UNPOSTED || event_dest_LP->receiver_id!=lp_id){
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
-                            (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
-                            continue;
-                        //information modified
-                        #if REPORT==1
-                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
-                        #endif
-                        break;//break with posted=POSTED
-                    }
-                    else if( event_in_list->timestamp<bound_ts && event_in_list->timestamp < event_dest_LP->timestamp)
-                    {//msg_dest_LP!=NULL
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_reliable),
-                                (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
-                            continue;
-                        //information modified
-                        #if REPORT==1
-                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
-                        #endif
-                        break;//break with posted=POSTED
-                    }
-                    event_in_list->posted=UNPOSTED;
-                    break;//timestamp is greater,exit
-                }
-                else{//not safe
-                    msg_t*event_dest_LP=(msg_t *)LPS[lp_id]->best_evt_unreliable;
-                    #if DEBUG==1
-                        if(event_dest_LP!=NULL && event_dest_LP->receiver_id!=lp_id){
-                            printf("invalid tag and LP id in flush thread_pool_hash_table unreliable node\n");
-                            gdb_abort;
-                        }
-                    #endif
-                    if(event_dest_LP==NULL || event_dest_LP->posted==UNPOSTED || event_dest_LP->receiver_id!=lp_id){
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
-                            (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
-                            continue;
-                        //information modified
-    #if REPORT==1
-                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
-    #endif
-                        break;//break with posted=POSTED
-                    }
-                    else if( event_in_list->timestamp<bound_ts && event_in_list->timestamp < event_dest_LP->timestamp)
-                    {//msg_dest_LP!=NULL
-                        if(CAS_x86((unsigned long long*)&(LPS[lp_id]->best_evt_unreliable),
-                                (unsigned long)event_dest_LP,(unsigned long)event_in_list)==0)//CAS failed
-                            continue;
-                        //information modified
-    #if REPORT==1
-                        statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
-    #endif
-                        break;//break with posted=POSTED
-                    }
-                    event_in_list->posted=UNPOSTED;
-                    break;//timestamp is greater,exit
-                } 
-            }
-            _thr_pool.collision_list[index_in_hash_table]=NULL;
-        }
+        post_information_with_straggler(new_hole);
+
         _thr_pool.messages[i].father = NULL;
+
         #if REPORT == 1
         clock_timer_start(queue_op);
         #endif
@@ -361,6 +382,7 @@ void queue_deliver_msgs(void) {
     }
     _thr_pool._thr_pool_count=0;
 }
+
 #else//IPI_POSTING
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
@@ -458,21 +480,27 @@ bool is_valid(msg_t * event){
                             )
                     )       
             );
+
     if(!validity)
         return validity;
+
     if(event->father==NULL)
         return validity;
+
     unsigned int father_lp=event->father->receiver_id;
     atomic_epoch_and_ts father_epoch_and_ts=atomic_load_epoch_and_ts(&(LPS[father_lp]->atomic_epoch_and_ts));
     unsigned int father_LP_epoch=get_epoch(father_epoch_and_ts);
     unsigned int father_epoch=event->father->epoch;
     if(father_LP_epoch==father_epoch)
         return validity;
+
     simtime_t LP_rollback_ts=get_timestamp(father_epoch_and_ts);
     if(LP_rollback_ts<event->father->timestamp) //father will be re-executed
         return false;
+    
     return validity;
 }
+
 #else
 bool is_valid(msg_t * event){
 	return  

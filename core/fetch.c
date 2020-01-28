@@ -665,28 +665,29 @@ unsigned int fetch_internal(){
 			///* DELETE ELIMINATED *///
 			if(curr_evt_state == ELIMINATED){//cristian:state is eliminated, remove it from calqueue
 #if IPI_POSTING==1
-                reset_all_LP_info(event, lp_idx);
-                unpost_event(event);
-                do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);
+                //reset_all_LP_info(event, lp_idx);
+                //unpost_event(event);
+                if(event->posted==UNPOSTED)
+                    do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);
 #else
                 do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED	
 #endif
             }
 			///* DELETE BANANA NODE *///
 			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){//cristian:state is anti_msg and it is handled, remove it from calqueue
-#if IPI_POSTING==1 && DEBUG==1
+                #if IPI_POSTING==1
+                #if DEBUG==1
                 if(event->posted==POSTED){
                     printf("posted event with state ANTI\n");
                     gdb_abort;
                 }
-#endif
-                #if IPI_POSTING==1
+                #endif
                 reset_all_LP_info(event, lp_idx);
                 #endif
                 //remove only in case event->monitor==banana because concurrently another thread is executing this node and we cannot remove it
 				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
 			}
-            #if IPI_POSTING==1
+            /*#if IPI_POSTING==1
             else if(curr_evt_state==ANTI_MSG && in_past){//ANTI_MSG in past with monitor!=banana
                 if(
                 #if OPTIMISTIC_MODE != FULL_SPECULATIVE
@@ -796,7 +797,7 @@ unsigned int fetch_internal(){
                     goto get_next;
                 }
             }
-            #endif	
+            #endif*/	
 		}
 		
 		//read_new_min = false;
