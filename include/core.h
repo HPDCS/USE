@@ -175,6 +175,9 @@ extern msg_t*get_best_LP_info_good(int lp_idx);
 
 #if IPI_HANDLE_INTERRUPT==1
 extern void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound);
+extern void reset_info_and_change_bound(unsigned int lid,msg_t*event);
+extern void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker);
+extern void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event);
 #endif
 
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);

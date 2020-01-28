@@ -31,6 +31,7 @@
 #include "lookahead.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
+#include <posting.h>
 
 #if IPI_LONG_JMP==1
 #include "jmp.h"
@@ -605,6 +606,38 @@ void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound){
     wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 }
 
+void reset_info_and_change_bound(unsigned int lid,msg_t*event){
+	#if DEBUG==1
+	if(event->tie_breaker==0){
+		printf("tie breaker is zero in silent execution\n");
+	}
+	#endif
+	reset_all_LP_info(event,lid);
+	unpost_event_inside_lock(event);
+
+	//print_event(event);
+	LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
+	LPS[lid]->dummy_bound->timestamp=event->timestamp;
+	LPS[lid]->dummy_bound->tie_breaker=event->tie_breaker-1;
+	LPS[lid]->bound=LPS[lid]->dummy_bound;//modify bound,now priority message must be smaller than this bound
+}
+
+void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker){
+	#if DEBUG==1
+	if(*tie_breaker==0){
+		printf("tie breaker is zero in silent execution\n");
+	}
+	#endif
+	*until_ts=LPS[lid]->dummy_bound->timestamp;
+	*tie_breaker=LPS[lid]->dummy_bound->tie_breaker+1;
+}
+
+void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event){
+	//modify until_ts and tie_breaker
+	reset_info_and_change_bound(lid,event);
+	change_dest_ts(lid,until_ts,tie_breaker);
+	
+}
 #endif
 // può diventare una macro?
 // [D] no, non potrebbe più essere invocata lato modello altrimenti
@@ -652,6 +685,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	    				make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
 		            }
 		            //here priority message is after last_silent_exec,we don't need to do a rollback
+		            else{
+		            	//reset_info_and_change_bound(current_lp,evt);
+		            }
 	    		}
 	    		else{//current_msg not null
 	    			if( (evt->timestamp<LPS[current_lp]->last_silent_exec_evt->timestamp)
@@ -660,6 +696,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	    				insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
 						make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
 			            //messagges already inserted in thread_pool will be cleaned with queue_clean
+			        }
+			        else{
+			        	//reset_info_and_change_bound(current_lp,evt);
 			        }
 	    		}
 			}
@@ -1155,7 +1194,6 @@ void check_thread_loop_after_executeEvent(){
             printf("not empty collision list,tid=%d\n",tid);
             gdb_abort;
         }
-
     }
 #endif
 	if((unsigned long long)current_msg->node & 0x1){

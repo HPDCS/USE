@@ -43,6 +43,7 @@
 #include <queue.h>
 #include <hpdcs_utils.h>
 #include <prints.h>
+#include <posting.h>
 
 #if IPI_PREEMPT_COUNTER==1
 extern __thread unsigned long long * preempt_count_ptr;
@@ -309,7 +310,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 				break;
 		}
 		#if IPI_HANDLE_INTERRUPT==1
-		if( (local_next_evt != NULL) && !is_valid(local_next_evt)){
+		if( (evt != NULL) && !is_valid(evt)){
 			//stop rollback!!
 			#if DEBUG==1
 			check_stop_rollback(old_state,lid);
@@ -323,12 +324,15 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		}
 		#endif
 
+		//evt is the next event to Process
+
 		#if DEBUG==1//not present in original version
 		local_next_frame_event=local_next_evt->frame;
 		local_next_epoch_event=local_next_evt->epoch;
 		check_epoch_and_frame(last_frame_event,local_next_frame_event,last_epoch_event,local_next_epoch_event);
 		check_events_state(old_state,evt,local_next_evt);
 		#endif
+		
 		events++;
 		#if IPI_POSTING_SYNC_CHECK_PAST==1 && IPI_INTERRUPT_PAST==1
 		if(old_state!=LP_STATE_ONGVT){
@@ -350,18 +354,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 				            make_LP_state_invalid_and_long_jmp(LPS[lid]->old_valid_bound);
 			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
-							#if DEBUG==1
-							if(tie_breaker==0){
-								printf("tie breaker is zero in silent execution\n");
-							}
-							#endif
-							LPS[lid]->LP_state_is_valid=false;
-							//modify until_ts and tie_breaker
-							until_ts=best_evt->timestamp;
-							tie_breaker=best_evt->tie_breaker;
-							LPS[lid]->dummy_bound->timestamp=until_ts;
-							LPS[lid]->dummy_bound->tie_breaker=tie_breaker-1;
-							LPS[lid]->bound=LPS[lid]->dummy_bound;//modify bound,now priority message must be smaller than this bound
+							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
 			        	}
 		    		}
 		    		else{//current_msg not null
@@ -373,19 +366,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 							make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
 			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
-							#if DEBUG==1
-							if(tie_breaker==0){
-								printf("tie breaker is zero in silent execution\n");
-							}
-							#endif
-							LPS[lid]->LP_state_is_valid=false;//invalid state
-							LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
-							//modify until_ts and tie_breaker
-							until_ts=best_evt->timestamp;
-							tie_breaker=best_evt->tie_breaker;
-							LPS[lid]->dummy_bound->timestamp=until_ts;
-							LPS[lid]->dummy_bound->tie_breaker=tie_breaker-1;
-							LPS[lid]->bound=LPS[lid]->dummy_bound;//modify bound,now priority message must be smaller than this bound
+							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
 							#if DEBUG==1
 							check_current_msg_is_in_future(lid);
 							#endif
@@ -397,6 +378,10 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		#endif//IPI_POSTING_SYNC_CHECK_PAST
 
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
+		#if IPI_HANDLE_INTERRUPT==1
+		//maybe bound is changed in executeEvent if we have priority message before dest_ts and after last_silent_exec
+		change_dest_ts(lid,&until_ts,&tie_breaker);
+		#endif
 		last_executed_event = evt;
 
 		#if DEBUG==1//not present in original version
@@ -407,8 +392,11 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		#if IPI_HANDLE_INTERRUPT==1
 		LPS[lid]->last_silent_exec_evt = evt;
 		#endif
+
 	}
 	
+
+
 	#if IPI_HANDLE_INTERRUPT==1
 	if(insert_current_msg_in_localqueue){
 		insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);

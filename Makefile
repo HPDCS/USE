@@ -354,6 +354,7 @@ CORE_SOURCES =  core/ipi_ctrl.c\
 		core/simple_dynamic_list.c\
 		core/atomic_16byte.c\
 		core/atomic_epoch_and_ts.c\
+		core/posting.c\
 		mm/garbagecollector.c
 		
 
