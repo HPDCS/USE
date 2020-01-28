@@ -205,19 +205,6 @@ void check_stop_rollback(unsigned short int old_state,unsigned int lid){
 		printf("old_valid_bound is NULL in silent execution\n");
 		gdb_abort;
 	}
-	if(current_msg==NULL){
-		if(LPS[lid]->bound_pre_rollback==NULL){
-			printf("bound_pre_rollback is NULL in silent_execution with current_msg NULL\n");
-			gdb_abort;
-		}
-	}
-    else{
-    	//current_msg not null
-		if(LPS[lid]->bound_pre_rollback!=NULL){
-			printf("bound_pre_rollback is not NULL in silent_execution with current_msg not NULL\n");
-			gdb_abort;
-		}
-	}
 }
 void check_epoch_and_frame(unsigned int last_frame_event,unsigned int local_next_frame_event,unsigned int last_epoch_event,unsigned int local_next_epoch_event){
 	if(last_frame_event!=local_next_frame_event-1){
@@ -358,22 +345,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		    	msg_t*best_evt=get_best_LP_info_good(lid);
 		    	if(best_evt!=NULL){
 		    		if(current_msg==NULL){
-		    			#if DEBUG==1
-		    			if(LPS[lid]->bound_pre_rollback==NULL){
-		    				printf("bound_pre_rollback is NULL in silent_execution with current_msg NULL\n");
-		    				gdb_abort;
-		    			}
-		    			#endif
 		    			if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
 			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) && (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
-							//adjust bound,before return to main loop, bound pointer must references an event not dummy
-							LPS[lid]->LP_state_is_valid=false;
-							LPS[lid]->dummy_bound->state=NEW_EVT;
-							LPS[lid]->state=LP_STATE_READY;
-							LPS[lid]->bound=LPS[lid]->bound_pre_rollback;
-							LPS[lid]->bound_pre_rollback=NULL;
-				            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
-				            //messagges already inserted in thread_pool will be cleaned with queue_clean
+				            make_LP_state_invalid_and_long_jmp(LPS[lid]->old_valid_bound);
 			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
 							#if DEBUG==1
@@ -392,24 +366,11 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		    		}
 		    		else{//current_msg not null
 		    			insert_current_msg_in_localqueue=true;
-		    			#if DEBUG==1
-		    			if(LPS[lid]->bound_pre_rollback!=NULL){
-		    				printf("bound_pre_rollback is not NULL in silent_execution with current_msg not NULL\n");
-		    				gdb_abort;
-		    			}
-		    			#endif
 			    		if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
 			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) 
 			    			&& (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
 			    			insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);
-							//adjust bound,before return to main loop, bound pointer must references an event not dummy
-							LPS[lid]->LP_state_is_valid=false;//invalid state
-							LPS[lid]->dummy_bound->state=NEW_EVT;
-							LPS[lid]->state=LP_STATE_READY;
-							LPS[lid]->bound=list_prev(current_msg);
-							LPS[lid]->old_valid_bound=NULL;
-				            wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
-				            //messagges already inserted in thread_pool will be cleaned with queue_clean
+							make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
 			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
 							#if DEBUG==1

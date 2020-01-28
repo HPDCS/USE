@@ -24,12 +24,7 @@ IPI_POSTING:posta informazioni prioritarie per LP che possono essere lette in mo
 TODO:
 -valutare se inserire riaggiornamento di until_ts con valore globale ad ogni silent_execution
 -valutare check sincroni prima di invalidare lo stato con l'esecuzione di un evento
--ipi che interrompe execution in past,ma si potrebbe evitare l'interruzione e fermarsi prima nella s.e.,vedere come risolvere
--raggruppare il codice in funzioni
--raggruppare i debug in funzioni check
--aggiustare debug con old_valid_bound e bound_pre_rollback
--verificare che modifiche non impattano LP_STATE_ONGVT
--è possibile far coincidere old_valid_bound con bound_pre_rollback per quanto riguarda LP_STATE_ONGVT?
+
 
 -postare info su anti_msg in past quando non è possibile eseguire try_lock(solo ts o pointer ad evento,ma è più complicato e inefficiente)
 -inserire statistiche basate su grana degli eventi in base al type

@@ -173,6 +173,10 @@ extern void increment_preempt_counter();
 extern msg_t*get_best_LP_info_good(int lp_idx);
 #endif
 
+#if IPI_HANDLE_INTERRUPT==1
+extern void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound);
+#endif
+
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void check_OnGVT(unsigned int lp_idx);

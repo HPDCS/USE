@@ -210,8 +210,8 @@ void check_queue_deliver_msgs(){
             gdb_abort;
     }
     #if IPI_HANDLE_INTERRUPT==1
-    if(LPS[current_lp]->bound_pre_rollback!=NULL || current_msg==NULL){
-                printf("bound_pre_rollback is not NULL or current_msg NULL queuedeliver_msgs\n");
+    if(current_msg==NULL){
+                printf("current_msg NULL queuedeliver_msgs\n");
                 gdb_abort;
     }
     #endif
@@ -318,11 +318,7 @@ void queue_deliver_msgs(void) {
                 #endif
                 msg_t*evt=get_best_LP_info_good(current_lp);
                 if(evt!=NULL){
-                    LPS[current_lp]->LP_state_is_valid=false;
-                    LPS[current_lp]->dummy_bound->state=NEW_EVT;
-                    LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
-                    LPS[current_lp]->old_valid_bound=NULL;
-                    wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
+                    make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
                 }
             }
         #endif //IPI_POSTING_SYNC_CHECK_FUTURE
@@ -397,12 +393,10 @@ void queue_deliver_msgs(void) {
             printf("LP state is not ready in queue_deliver_msgs\n");
             gdb_abort;
         }
-        #if IPI_HANDLE_INTERRUPT==1
-        if(LPS[current_lp]->bound_pre_rollback!=NULL || current_msg==NULL){
-                    printf("bound_pre_rollback is not NULL or current_msg NULL queuedeliver_msgs\n");
-                    gdb_abort;
+        if(current_msg==NULL){
+            printf("current_msg NULL queuedeliver_msgs\n");
+            gdb_abort;
         }
-        #endif
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
 
