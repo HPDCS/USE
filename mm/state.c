@@ -316,9 +316,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			check_stop_rollback(old_state,lid);
 			#endif
 			
-            if(current_msg!=NULL){
-				insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);
-			}
+			insert_current_msg_in_localqueue=true;
 			LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
 			break;
 		}
@@ -332,8 +330,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		check_epoch_and_frame(last_frame_event,local_next_frame_event,last_epoch_event,local_next_epoch_event);
 		check_events_state(old_state,evt,local_next_evt);
 		#endif
-		
-		events++;
+
 		#if IPI_POSTING_SYNC_CHECK_PAST==1 && IPI_INTERRUPT_PAST==1
 		if(old_state!=LP_STATE_ONGVT){
 			#if DEBUG==1
@@ -353,6 +350,13 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) && (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
 				            make_LP_state_invalid_and_long_jmp(LPS[lid]->old_valid_bound);
 			        	}
+			        	else if((best_evt->timestamp<evt->timestamp)
+			    		|| ( (best_evt->timestamp==evt->timestamp) 
+			    			&& (best_evt->tie_breaker<evt->tie_breaker) )){
+			        		//priority message is between last_silent_exec and next_event,stop rollback
+							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
+							break;
+			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
 							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
 			        	}
@@ -364,6 +368,13 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			    			&& (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
 			    			insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);
 							make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
+			        	}
+			        	else if((best_evt->timestamp<evt->timestamp)
+			    		|| ( (best_evt->timestamp==evt->timestamp) 
+			    			&& (best_evt->tie_breaker<evt->tie_breaker) )){
+			        		//priority message is between last_silent_exec and next_event,stop rollback
+							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
+							break;
 			        	}
 			        	else{//priority message before dest_ts and after last_silent_exec
 							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
@@ -378,10 +389,8 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		#endif//IPI_POSTING_SYNC_CHECK_PAST
 
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
-		#if IPI_HANDLE_INTERRUPT==1
-		//maybe bound is changed in executeEvent if we have priority message before dest_ts and after last_silent_exec
-		change_dest_ts(lid,&until_ts,&tie_breaker);
-		#endif
+		events++;
+
 		last_executed_event = evt;
 
 		#if DEBUG==1//not present in original version
