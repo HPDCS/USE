@@ -40,7 +40,9 @@
 #include "queue.h"
 #include "prints.h"
 #include "timer.h"
-#include "posting.h"
+#if IPI_POSTING==1
+#include <posting.h>
+#endif
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0

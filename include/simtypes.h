@@ -102,6 +102,7 @@ typedef struct _LP_state {
 
 	/* ADDED FOR PADS 2018 */
 	unsigned int num_executed_frames;
+
 	#if IPI_CONSTANT_CHILD_INVALIDATION==1
 	atomic_epoch_and_ts atomic_epoch_and_ts;
 	#else
@@ -127,10 +128,11 @@ typedef struct _LP_state {
 	bool LP_state_is_valid;
 	simtime_t ts_current_msg_in_execution;//this is 0.0 if there is no event in execution 
 #endif
+
 #if IPI_POSTING==1
 	msg_t* best_evt_reliable;
 #if IPI_POSTING_SINGLE_INFO==1
-		#define best_evt_unreliable best_evt_reliable
+	#define best_evt_unreliable best_evt_reliable
 #else
 	msg_t* best_evt_unreliable;
 #endif

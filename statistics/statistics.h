@@ -189,8 +189,6 @@ struct stats_t {
     stat64_t clock_exec_evt_inter_silent_exec_tot;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
     #endif
 
-    
-
     #if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
     stat64_t sync_check_useful;//per lp num sync_check useful maded by lp
 

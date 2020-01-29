@@ -43,12 +43,27 @@
 #include <queue.h>
 #include <hpdcs_utils.h>
 #include <prints.h>
+
+#if IPI_POSTING==1
 #include <posting.h>
+#endif
+
+#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#include <atomic_epoch_and_ts.h>
+#endif
+
+#if DEBUG==1
+#include <checks.h>
+#endif
 
 #if IPI_PREEMPT_COUNTER==1
+#include <preempt_counter.h>
 extern __thread unsigned long long * preempt_count_ptr;
 #endif
 
+#if IPI_HANDLE_INTERRUPT==1
+#include <handle_interrupt.h>
+#endif
 /// Function pointer to switch between the parallel and serial version of SetState
 //void (*SetState)(void *new_state);
 //
@@ -190,53 +205,6 @@ unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 	return restore_state->num_executed_frames	;
 }
 
-#if DEBUG==1
-void check_silent_execution(unsigned short int old_state){
-	if(old_state!=LP_STATE_ONGVT && old_state!=LP_STATE_ROLLBACK){
-		printf("invalid execution mode of LP in silent_execution function,execution_mode=%d,tid=%d\n",old_state,tid);
-		gdb_abort;
-	}
-}
-void check_stop_rollback(unsigned short int old_state,unsigned int lid){
-	if(old_state == LP_STATE_ONGVT){
-		printf("event will be executed because we are in LP_STATE_ON_GVT but is not valid\n");
-		gdb_abort;
-	}
-	if(LPS[lid]->old_valid_bound==NULL){
-		printf("old_valid_bound is NULL in silent execution\n");
-		gdb_abort;
-	}
-}
-void check_epoch_and_frame(unsigned int last_frame_event,unsigned int local_next_frame_event,unsigned int last_epoch_event,unsigned int local_next_epoch_event){
-	if(last_frame_event!=local_next_frame_event-1){
-		printf("not consecutive frames in silent_execution,frame_last_event=%d,frame_next_event=%d\n",last_frame_event,local_next_frame_event);
-		gdb_abort;
-	}
-	if(last_epoch_event>local_next_epoch_event){
-		printf("epoch number not strictly greater in silent_execution,epoch_last_event=%d,epoch_next_event=%d\n",last_epoch_event,local_next_epoch_event);
-		gdb_abort;
-	}
-}
-void check_events_state(unsigned short int old_state,msg_t*evt,msg_t*local_next_evt){
-	if( ((local_next_evt->state & EXTRACTED)!=EXTRACTED) || ((evt->state & EXTRACTED)!=EXTRACTED)){
-		printf("event in silent_execution is not EXTRACTED or ANTI_MSG\n");
-		print_event(local_next_evt);
-		print_event(evt);
-		gdb_abort;
-	}
-	if( (old_state==LP_STATE_ONGVT) && local_next_evt->monitor!=(void*)0x5AFE){
-		printf("LP_STATE_ONGVT but event is not been committed\n");
-		gdb_abort;
-	}
-}
-void check_current_msg_is_in_future(unsigned int lid){
-	if((LPS[lid]->bound!=NULL) && (current_msg!=NULL) && (current_msg->timestamp<LPS[lid]->bound->timestamp
-		|| ((current_msg->timestamp==LPS[lid]->bound->timestamp) && (current_msg->tie_breaker<=LPS[lid]->bound->tie_breaker)))  ){
-		printf("execution in progress of event in past in mode SILENT_EXECUTION\n");
-		gdb_abort;
-	}
-}
-#endif
 /**
 * This function bring the state pointed by "state" to "final time" by re-executing all the events without sending any messages
 *
@@ -404,8 +372,6 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 
 	}
 	
-
-
 	#if IPI_HANDLE_INTERRUPT==1
 	if(insert_current_msg_in_localqueue){
 		insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);

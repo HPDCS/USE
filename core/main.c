@@ -13,7 +13,7 @@
 #include <statistics.h>
 
 #if IPI_SUPPORT==1
-#define MAX_LEN_PROGRAM_NAME 64 //this len includes string terminator
+#include <ipi.h>
 extern char program_name[MAX_LEN_PROGRAM_NAME];
 #endif
 
@@ -83,6 +83,12 @@ void start_simulation() {
 #endif
 #if IPI_POSTING==1
     printf("\t- IPI_POSTING enabled.\n");
+#endif
+#if IPI_POSTING_SYNC_CHECK_PAST==1
+    printf("\t- IPI_POSTING_SYNC_CHECK_PAST enabled.\n");
+#endif
+#if IPI_POSTING_SYNC_CHECK_FUTURE==1
+    printf("\t- IPI_POSTING_SYNC_CHECK_FUTURE enabled.\n");
 #endif
 #if IPI_SUPPORT==1
     printf("\t- IPI_SUPPORT enabled.\n");

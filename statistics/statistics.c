@@ -226,15 +226,18 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			break;
 
 		#if IPI_SUPPORT==1 && REPORT==1
+
 		case STAT_IPI_SENDED:
 			stats[idx].ipi_sended += value;
 			break;
 		case STAT_IPI_RECEIVED:
 			stats[idx].ipi_received += value;
 			break;
+
 		#endif
 
 		#if IPI_POSTING==1 && REPORT==1
+
 		case STAT_EVENT_NOT_FLUSHED:
 			stats[idx].event_not_flushed += value;
 			break;
@@ -259,12 +262,15 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_SYNC_CHECK_IN_FUTURE:
 			stats[idx].sync_check_in_future += value;
 			break;
+
 		#endif
 		
 		#if IPI_POSTING==1 || IPI_SUPPORT==1
+
 		case STAT_SYNC_CHECK_USEFUL:
 			stats[idx].sync_check_useful += value;
 			break;
+
 		#endif
 
 		default:
@@ -309,7 +315,8 @@ void gather_statistics() {
 		system_stats->ipi_sended += thread_stats[i].ipi_sended;
 		system_stats->ipi_received += thread_stats[i].ipi_received;
 		#endif
-		#if IPI_POSTING==1
+
+		#if IPI_POSTING==1 && REPORT==1
 		system_stats->infos_posted_anti_msg += thread_stats[i].infos_posted_anti_msg;
 		#endif
 	}
@@ -327,7 +334,7 @@ void gather_statistics() {
 
 	#endif
 
-	#if IPI_POSTING==1
+	#if IPI_POSTING==1 && REPORT==1
 	system_stats->infos_posted_anti_msg_tot = system_stats->infos_posted_anti_msg;
 	system_stats->infos_posted_anti_msg /= n_cores;
 	#endif

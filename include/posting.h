@@ -1,4 +1,20 @@
+#ifndef IPI_POSTING_H
+#define IPI_POSTING_H
+
 #if IPI_POSTING==1
+#include <events.h>
+
+#define UNPOSTED false
+#define POSTED true
+
+#define unpost_event(event) { \
+    if(event!=NULL && event->posted==POSTED){\
+        event->posted=UNPOSTED;\
+        }; }
+
+#define unpost_event_inside_lock(event) { \
+        unpost_event(event);\
+     }
 
 #define remove_removed_if_current_node(curr_id,id_current_node,event,node) {\
                     if(curr_id==id_current_node){\
@@ -66,4 +82,15 @@ void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_re
 void sort_events(msg_t**array_events,int *num_elem,int*id_current_node,int*id_reliable,int*id_unreliable,int lp_idx);
 #endif
 
+void print_lp_id_in_thread_pool_list();
+void post_information_with_straggler(msg_t*new_hole);
+void insert_msg_in_hash_table(msg_t*msg_ptr);
+
+msg_t* LP_info_is_good(int lp_idx,bool reliable);
+
+msg_t* get_best_LP_info_good(int lp_idx);
+
+msg_t* get_best_local_LP_info_good();
 #endif//IPI_POSTING
+
+#endif

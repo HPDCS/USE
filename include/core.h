@@ -16,12 +16,7 @@
 #endif
 
 #if IPI_LONG_JMP==1
-#include "jmp.h"
-#endif
-
-#if IPI_CONSTANT_CHILD_INVALIDATION==1
-#define get_epoch_of_LP(lp_idx) get_epoch(LPS[lp_idx]->atomic_epoch_and_ts)
-#define set_epoch_of_LP(lp_idx,value) set_epoch(&(LPS[lp_idx]->atomic_epoch_and_ts),value)
+#include <jmp.h>
 #endif
 
 #define MAX_LPs	2048
@@ -34,23 +29,6 @@
 	#define MAX_THR_HASH_TABLE_SIZE (THR_POOL_SIZE)
 #else
 	#define MAX_THR_HASH_TABLE_SIZE (MAX_LPs)
-#endif
-#endif
-
-#if IPI_PREEMPT_COUNTER==1
-#define PREEMPT_COUNT_CODE_INTERRUPTIBLE 0
-#define PREEMPT_COUNT_CODE_NOT_INTERRUPTIBLE (*preempt_count_ptr>PREEMPT_COUNT_CODE_INTERRUPTIBLE)
-#define PREEMPT_COUNT_INIT PREEMPT_COUNT_CODE_INTERRUPTIBLE
-#define INVALID_PREEMPT_COUNTER (-1)
-#if IPI_INTERRUPT_PAST!=1
-	#define MAX_NESTING_DEFAULT_PREEMPT_COUNTER 2
-#else
-	#define MAX_NESTING_DEFAULT_PREEMPT_COUNTER 1
-#endif
-#if ONGVT_PERIOD!=-1
-	#define MAX_NESTING_PREEMPT_COUNTER (MAX_NESTING_DEFAULT_PREEMPT_COUNTER+1)
-#else
-	#define MAX_NESTING_PREEMPT_COUNTER (MAX_NESTING_DEFAULT_PREEMPT_COUNTER)
 #endif
 #endif
 
@@ -132,10 +110,6 @@ extern __thread simtime_t commit_horizon_ts;
 extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
 
-#if IPI_LONG_JMP==1
-extern __thread cntx_buf cntx_loop;
-#endif
-
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
 
@@ -161,24 +135,7 @@ extern void _mkdir(const char *path);
 
 extern int OnGVT(unsigned int me, void *snapshot);
 
-#if IPI_LONG_JMP==1
-extern void cfv_trampoline(void);
-#endif
 
-#if IPI_PREEMPT_COUNTER==1
-extern void increment_preempt_counter();
-#endif
-
-#if IPI_POSTING==1
-extern msg_t*get_best_LP_info_good(int lp_idx);
-#endif
-
-#if IPI_HANDLE_INTERRUPT==1
-extern void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound);
-extern void reset_info_and_change_bound(unsigned int lid,msg_t*event);
-extern void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker);
-extern void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event);
-#endif
 
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
 extern void ProcessEvent_reverse(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
@@ -192,6 +149,11 @@ extern bool ctrl_mark_elim;
 extern bool ctrl_del_elim;
 extern bool ctrl_del_banana;
 		
-
+#if IPI_HANDLE_INTERRUPT==1
+extern void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound);
+extern void reset_info_and_change_bound(unsigned int lid,msg_t*event);
+extern void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker);
+extern void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event);
+#endif
 
 #endif

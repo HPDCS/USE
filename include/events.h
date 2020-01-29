@@ -9,23 +9,10 @@
 #define ELIMINATED	0x2
 #define ANTI_MSG	0x3
 
-#if IPI_HANDLE_INTERRUPT==1
-#define ROLLBACK_ONLY 0x4//state reserved for dummy_bound
-#endif
+/*#if IPI_HANDLE_INTERRUPT==1
+#include <handle_interrupt.h>
+#endif*/
 
-#if IPI_POSTING==1 //values of field posted in msg_t
-#define UNPOSTED false
-#define POSTED true
-
-#define unpost_event(event) { \
-	if(event!=NULL && event->posted==POSTED){\
-        event->posted=UNPOSTED;\
-    	}; }
-
-#define unpost_event_inside_lock(event) { \
-		unpost_event(event);\
-	 }
-#endif
 typedef struct __msg_t
 {
 	/* event's attributes */
