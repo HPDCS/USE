@@ -172,7 +172,7 @@ static void periodic_stats(){
                 tot += window_tot[i];
                 duration += window_dur[i];
             }
-            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f Obs:%f Tot_obs:%f\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, sum_obs,WINDOW_SIZE);
+            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f Obs:%f Tot_obs:%d\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, sum_obs,WINDOW_SIZE);
             previous_advanced_events = adv;
             previous_committed_events = com;
             previous_total_events = tot;
@@ -647,12 +647,14 @@ void thread_loop(unsigned int thread_id) {
 #if POWERCAP == 1
 	//The main thread, the one with tid=0, is used to control other threads
 	//This means that the main thread is the one that cannot go to sleep
-	if (tid == 0)
+	if (tid == 0){
 	    if (evt_count%EVENTS_BEFORE_STATS_PERIOD_NS == 0)
 		    periodic_stats();
+    }
 	//The other thread can be put to sleep at this point of the execution since here they have nothing to be executed
-	else
+	else{
         check_running_array(tid);
+	}
 #endif
 
 		///* FETCH *///
