@@ -12,6 +12,7 @@
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
+#include <powercap.h>
 
 __thread struct drand48_data seedT;
 
@@ -25,6 +26,11 @@ void *start_thread(){
 	int tid = (int) __sync_fetch_and_add(&tid_ticket, 1);
 	
     srand48_r(tid+254, &seedT);
+
+#if POWERCAP == 1
+    //init the power subsystem for each thread
+    init_powercap_thread(tid);
+#endif
 
 	//START THREAD (definita in core.c)
 	thread_loop(tid);
@@ -64,6 +70,9 @@ void start_simulation() {
 //    printf("\t- CONSERVATIVE SIMULATION\n");
 //#endif
     printf("\n" COLOR_RESET);
+#if POWERCAP == 1
+    init_powercap_mainthread(n_cores);
+#endif
 
     //Child thread
     for(i = 0; i < n_cores - 1; i++) {

@@ -31,6 +31,7 @@
 #include "lookahead.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
+#include <powercap.h>
 
 
 //id del processo principale
@@ -481,7 +482,6 @@ void init_simulation(unsigned int thread_id){
 	tid = thread_id;
 	int i = 0;
 
-	
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
 #endif
@@ -630,9 +630,9 @@ void thread_loop(unsigned int thread_id) {
 	
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
-#endif	
+#endif
 
-#if PERIODIC_STATS == 1
+#if POWERCAP == 1
 	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_start);
 #endif
 
@@ -644,8 +644,7 @@ void thread_loop(unsigned int thread_id) {
 				&& !sim_error
 		) {
 
-
-#if PERIODIC_STATS == 1
+#if POWERCAP == 1
 	//The main thread, the one with tid=0, is used to control other threads
 	//This means that the main thread is the one that cannot go to sleep
 	if (tid == 0)
@@ -653,10 +652,8 @@ void thread_loop(unsigned int thread_id) {
 		    periodic_stats();
 	//The other thread can be put to sleep at this point of the execution since here they have nothing to be executed
 	else
-	    if(1==2) //vuole che dormo
-	        ;//dormo
+        check_running_array(tid);
 #endif
-
 
 		///* FETCH *///
 #if REPORT == 1
@@ -923,6 +920,9 @@ end_loop:
 		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
+#if POWERCAP == 1
+            end_powercap_mainthread();//TODO: check if it is the right place
+#endif
 			pthread_join(sleeper, NULL);
 
 		}
