@@ -44,9 +44,8 @@
 #include <checks.h>
 #endif
 
-
 #if IPI_LONG_JMP==1
-#include "jmp.h"
+#include <jmp.h>
 #endif
 
 #if IPI_SUPPORT==1
@@ -56,6 +55,7 @@
 #if IPI_HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
 #endif
+
 //id del processo principale
 #define MAIN_PROCESS		0
 #define PRINT_REPORT_RATE	1000000000000000
@@ -130,256 +130,6 @@ size_t node_size_state_t;
 
 #if IPI_LONG_JMP==1
 __thread cntx_buf cntx_loop;
-#endif
-
-extern __thread unsigned long long * standing_ipi_ptr;
-extern 	__thread unsigned long long * preempt_count_ptr;
-
-#if IPI_HANDLE_INTERRUPT==1
-msg_t* allocate_dummy_bound(int lp_idx){
-	//alloc an event dummy. it won't be never connected to calqueue or localqueue,so it's possible change its state and it's possible set bound to dummy_bound with care.
-	msg_t*dummy_bound=list_allocate_node_buffer_from_list(lp_idx, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-	dummy_bound->sender_id 		= -1;//don't care
-	dummy_bound->receiver_id 	= lp_idx;
-	dummy_bound->timestamp 		= 0.0;
-	dummy_bound->tie_breaker	= 1;
-	dummy_bound->type 			= INIT;//don't care
-	dummy_bound->state 			= NEW_EVT;
-	dummy_bound->father 		= NULL;//don't care
-	dummy_bound->epoch 		= 0;//don't care
-	dummy_bound->monitor 		= 0x0;//don't care
-	list_node_clean_by_content(dummy_bound);
-	return dummy_bound;
-}
-
-bool dummy_bound_is_corrupted(int lp_idx){
-	//return true if dummy_bound is invalid,false otherwise
-	//dummy bound is invalid if contains fileds'values different from its initialization
-	//expect filed timestamp,tie_breaker and state
-	msg_t*dummy_bound=LPS[lp_idx]->dummy_bound;
-
-	return(
-		(dummy_bound==NULL)
-	|| (dummy_bound->receiver_id != lp_idx)
-	|| (dummy_bound->type != INIT)
-	|| ( (dummy_bound->state != NEW_EVT) && (dummy_bound->state != ROLLBACK_ONLY))
-	|| (dummy_bound->father != NULL)
-	|| (dummy_bound->epoch != 0)
-	|| (dummy_bound->monitor != 0x0)
-	);
-}
-
-bool bound_is_corrupted(int lp_idx){
-	//bound is corrupted if bound==dummy_bound,because in this case bound is not last event executed
-	if(LPS[lp_idx]->bound==LPS[lp_idx]->dummy_bound)
-		return true;
-	return false;
-}
-
-void make_LP_state_invalid(msg_t*restore_bound){
-	LPS[current_lp]->ts_current_msg_in_execution=0.0;
-    LPS[current_lp]->LP_state_is_valid=false;//invalid state
-    LPS[current_lp]->dummy_bound->state=NEW_EVT;
-    LPS[current_lp]->state=LP_STATE_READY;//restore LP_state
-    LPS[current_lp]->bound=restore_bound;
-    LPS[current_lp]->old_valid_bound=NULL;
-}
-
-void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound){
-	make_LP_state_invalid(restore_bound);
-    wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
-}
-
-void reset_info_and_change_bound(unsigned int lid,msg_t*event){
-	#if DEBUG==1
-	if(event->tie_breaker==0){
-		printf("tie breaker is zero in silent execution\n");
-	}
-	#endif
-	
-	#if IPI_POSTING==1
-	reset_all_LP_info(event,lid);
-	unpost_event_inside_lock(event);
-	#endif
-
-	LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
-	LPS[lid]->dummy_bound->timestamp=event->timestamp;
-	LPS[lid]->dummy_bound->tie_breaker=event->tie_breaker-1;
-	LPS[lid]->bound=LPS[lid]->dummy_bound;//modify bound,now priority message must be smaller than this bound
-}
-
-void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker){
-	#if DEBUG==1
-	if(*tie_breaker==0){
-		printf("tie breaker is zero in silent execution\n");
-	}
-	#endif
-	*until_ts=LPS[lid]->dummy_bound->timestamp;
-	*tie_breaker=LPS[lid]->dummy_bound->tie_breaker+1;
-}
-
-void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event){
-	//modify until_ts and tie_breaker
-	reset_info_and_change_bound(lid,event);
-	change_dest_ts(lid,until_ts,tie_breaker);
-}
-
-void change_bound_with_current_msg(){
-	LPS[current_lp]->old_valid_bound=LPS[current_lp]->bound;
-	LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
-	LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker-1;
-	LPS[current_lp]->bound=LPS[current_lp]->dummy_bound;
-	#if DEBUG==1
-	if((LPS[current_lp]->bound!=NULL) && (current_msg->timestamp<LPS[current_lp]->bound->timestamp
-		|| ((current_msg->timestamp==LPS[current_lp]->bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->bound->tie_breaker)))  ){
-		printf("execution in progress of event in past in mode FORWARD_EXECUTION,tid=%d\n",tid);
-		print_event(current_msg);
-		gdb_abort;
-	}
-	#endif
-}
-
-#if DEBUG==1
-void check_thread_loop_after_fetch(){
-	if (current_msg->tie_breaker==0){
-		printf("fetched event with tie_breaker zero\n");
-		print_event(current_msg);
-		gdb_abort;
-	}
-	if(LPS[current_lp]->state != LP_STATE_READY){
-		printf("LP state is not ready\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
-		printf("dummy bound is not NEW_EVT\n");
-		gdb_abort;
-	}
-	if(dummy_bound_is_corrupted(current_lp)){
-		printf("dummy_bound is corrupted\n");
-		print_event(LPS[current_lp]->dummy_bound);
-		gdb_abort;
-	}
-	if(bound_is_corrupted(current_lp)){
-		printf("bound is corrupted\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
-		printf("ts_current_msg_in_execution different than 0 thread_loop\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->old_valid_bound!=NULL){
-			printf("old valid bound not NULL thread loop\n");
-			gdb_abort;
-	}
-	if( (current_evt_state!=ANTI_MSG) && (current_evt_state!= EXTRACTED) ){
-		printf("current_evt_state=%lld\n",current_evt_state);
-		gdb_abort;
-	}
-	if(!haveLock(current_lp)){//DEBUG
-		printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
-	}
-	if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
-		printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
-		gdb_abort;
-	}
-}
-void check_CFV_INIT(){
-	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-				printf("preempt counter is not INIT in CFV_INIT\n");
-				gdb_abort;
-	}
-}
-void check_CFV_TO_HANDLE(){
-	if (!haveLock(current_lp)){
-				printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
-				gdb_abort;
-	}
-	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-			printf("interrupt code not interruptible\n");
-			gdb_abort;
-	}
-	if(LPS[current_lp]->old_valid_bound==NULL){
-		printf("old_valid_bound is NULL CFV_TO_HANDLE\n");
-		gdb_abort;
-	}
-}
-void check_CFV_ALREADY_HANDLED(){
-	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-				printf("preempt counter is not INIT in CFV_ALREADY_HANDLED\n");
-				gdb_abort;
-	}
-	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
-		printf("dummy bound is not NEW_EVT CFV_ALREADY_HANDLED\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
-		printf("ts_current_msg_in_execution different than 0 in CFV_ALREADY_HANDLED\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->state != LP_STATE_READY){
-		printf("LP state is not ready\n");
-		gdb_abort;
-	}
-	if(dummy_bound_is_corrupted(current_lp)){
-		printf("dummy_bound is corrupted\n");
-		print_event(LPS[current_lp]->dummy_bound);
-		gdb_abort;
-	}
-	if(bound_is_corrupted(current_lp)){
-		printf("bound is corrupted\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->old_valid_bound!=NULL){
-		printf("old valid bound not NULL CFV_ALREADY_HANDLED\n");
-		gdb_abort;
-	}
-}
-void check_thread_loop_before_fetch(){
-	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
-		printf("preempt counter is not INIT before simulation loop\n");
-		gdb_abort;
-	}
-	for(unsigned int lp_idx=0;lp_idx<n_prc_tot;lp_idx++){
-		if (haveLock(lp_idx)){
-			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
-			gdb_abort;
-		}
-	}
-}
-void check_after_rollback(){
-	if(current_msg->timestamp<LPS[current_lp]->old_valid_bound->timestamp
-	|| ((current_msg->timestamp==LPS[current_lp]->old_valid_bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->old_valid_bound->tie_breaker)) ){
-		printf("event in past\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->LP_state_is_valid==false){
-		printf("LP state invalid\n");
-		gdb_abort;
-	}
-	if(!bound_is_corrupted(current_lp)){
-		printf("bound not corrupted thread loop\n");
-		gdb_abort;
-	}
-	if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
-		printf("dummy bound is ROLLBACK_ONLY thread loop\n");
-		gdb_abort;
-	}
-}
-#endif
-#endif
-
-
-#if IPI_SUPPORT==1
-
-extern __thread int ipi_registration_error;
-
-extern __thread void * alternate_stack;
-extern __thread unsigned long alternate_stack_area;
-
-extern __thread unsigned long interruptible_section_start;
-extern __thread unsigned long interruptible_section_end;
-extern char program_name[MAX_LEN_PROGRAM_NAME];
-
 #endif
 
 void * do_sleep(){
@@ -1027,7 +777,7 @@ void thread_loop(unsigned int thread_id) {
 	//register thread in order to send and to receive IPI
 	register_thread_to_ipi_module(thread_id,"ProcessEvent",(unsigned long)ProcessEvent);
 #endif
-	
+
 	initialize_preempt_counter(thread_id);//init counter
 	init_simulation(thread_id);
 
@@ -1365,7 +1115,8 @@ end_loop:
 #endif
 
 #if IPI_SUPPORT==1
-	ipi_unregister_thread(&alternate_stack, alternate_stack_area);
+	ipi_unregister();
+	//ipi_unregister_thread(&alternate_stack, alternate_stack_area);
 #endif
 	// Unmount statistical data
 	// FIXME

@@ -1,11 +1,6 @@
 #ifndef PREEMPT_COUNTER_H
 #define PREEMPT_COUNTER_H
 
-void initialize_preempt_counter();
-void initialize_standing_ipi();
-void increment_preempt_counter();
-void decrement_preempt_counter();
-
 #if IPI_PREEMPT_COUNTER==1
 #define PREEMPT_COUNT_CODE_INTERRUPTIBLE 0
 #define PREEMPT_COUNT_CODE_NOT_INTERRUPTIBLE (*preempt_count_ptr>PREEMPT_COUNT_CODE_INTERRUPTIBLE)
@@ -27,5 +22,13 @@ void decrement_preempt_counter();
 #define STANDING_IPI_INIT STANDING_IPI_ZERO
 #define INVALID_STANDING_IPI (-1)
 #endif
+
+void initialize_preempt_counter();
+void initialize_standing_ipi();
+void increment_preempt_counter();
+void decrement_preempt_counter();
+
+extern __thread unsigned long long * preempt_count_ptr;
+extern __thread unsigned long long * standing_ipi_ptr;
 
 #endif

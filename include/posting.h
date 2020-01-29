@@ -1,7 +1,6 @@
 #ifndef IPI_POSTING_H
 #define IPI_POSTING_H
 
-#if IPI_POSTING==1
 #include <events.h>
 
 #define UNPOSTED false
@@ -91,6 +90,5 @@ msg_t* LP_info_is_good(int lp_idx,bool reliable);
 msg_t* get_best_LP_info_good(int lp_idx);
 
 msg_t* get_best_local_LP_info_good();
-#endif//IPI_POSTING
 
 #endif

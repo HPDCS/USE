@@ -1,3 +1,5 @@
+#if IPI_SUPPORT==1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,16 +7,13 @@
 #include <timer.h>
 #include <unistd.h>
 
-#include "queue.h"
-#include "core.h"
-#include "lookahead.h"
-#include "hpdcs_utils.h"
-
+#include <core.h>
 #include <ipi.h>
-#include "ipi_ctrl.h"
+#include <ipi_ctrl.h>
 #include <preempt_counter.h>
+#include <hpdcs_utils.h>
+#include <queue.h>
 
-#if IPI_SUPPORT==1
 __thread int ipi_registration_error = 0;
 
 __thread void * alternate_stack = NULL;
@@ -23,9 +22,6 @@ __thread unsigned long alternate_stack_area = 4096UL;
 __thread unsigned long interruptible_section_start = 0UL;
 __thread unsigned long interruptible_section_end = 0UL;
 char program_name[MAX_LEN_PROGRAM_NAME];
-
-extern __thread unsigned long long * preempt_count_ptr;
-extern  __thread unsigned long long * standing_ipi_ptr;
 
 void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
@@ -113,5 +109,8 @@ void register_thread_to_ipi_module(unsigned int thread_id,const char* function_n
     else
         printf("Thread %d finish registration to IPI module\n",thread_id);
     #endif
+}
+void ipi_unregister(){
+    ipi_unregister_thread(&alternate_stack, alternate_stack_area);
 }
 #endif

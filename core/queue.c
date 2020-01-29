@@ -10,24 +10,34 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
+#if DEBUG==1
 #include <checks.h>
+#endif
+
+#if IPI_POSTING==1
 #include <posting.h>
+#endif
+
+#if IPI_SUPPORT==1
 #include <ipi.h>
-#include <preempt_counter.h>
+#endif
 
 #if IPI_CONSTANT_CHILD_INVALIDATION==1
 #include <atomic_epoch_and_ts.h>
 #endif
 
 #if IPI_LONG_JMP==1
-#include "jmp.h"
+#include <jmp.h>
 extern __thread cntx_buf cntx_loop;
 #endif
 
 #if IPI_PREEMPT_COUNTER==1
-extern __thread unsigned long long * preempt_count_ptr;
+#include <preempt_counter.h>
 #endif
 
+#if IPI_HANDLE_INTERRUPT==1
+#include <handle_interrupt.h>
+#endif
 //used to take locks on LPs
 volatile unsigned int *lp_lock;
 

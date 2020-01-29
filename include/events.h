@@ -9,10 +9,6 @@
 #define ELIMINATED	0x2
 #define ANTI_MSG	0x3
 
-/*#if IPI_HANDLE_INTERRUPT==1
-#include <handle_interrupt.h>
-#endif*/
-
 typedef struct __msg_t
 {
 	/* event's attributes */

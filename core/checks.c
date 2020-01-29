@@ -1,3 +1,5 @@
+#if DEBUG==1
+
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
@@ -5,18 +7,178 @@
 #include <core.h>
 #include <timer.h>
 #include <list.h>
-//#include <scheduler/process.h>
-//#include <scheduler/scheduler.h>
 #include <state.h>
-//#include <communication/communication.h>
 #include <dymelor.h>
 #include <statistics.h>
 #include <queue.h>
 #include <hpdcs_utils.h>
 #include <prints.h>
-#include <posting.h>
 
-#if DEBUG==1
+#if IPI_POSTING==1
+#include <posting.h>
+#endif
+
+#if IPI_HANDLE_INTERRUPT==1
+#include <handle_interrupt.h>
+#endif
+
+#if IPI_PREEMPT_COUNTER==1
+#include <preempt_counter.h>
+#endif
+extern __thread unsigned long long current_evt_state;
+extern __thread void* current_evt_monitor;
+
+#if IPI_HANDLE_INTERRUPT==1
+void check_after_rollback(){
+	if(current_msg->timestamp<LPS[current_lp]->old_valid_bound->timestamp
+	|| ((current_msg->timestamp==LPS[current_lp]->old_valid_bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->old_valid_bound->tie_breaker)) ){
+		printf("event in past\n");
+		gdb_abort;
+	}
+	if(LPS[current_lp]->LP_state_is_valid==false){
+		printf("LP state invalid\n");
+		gdb_abort;
+	}
+	if(!bound_is_corrupted(current_lp)){
+		printf("bound not corrupted thread loop\n");
+		gdb_abort;
+	}
+	if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
+		printf("dummy bound is ROLLBACK_ONLY thread loop\n");
+		gdb_abort;
+	}
+}
+#endif
+
+void check_CFV_ALREADY_HANDLED(){
+	if(LPS[current_lp]->state != LP_STATE_READY){
+		printf("LP state is not ready\n");
+		gdb_abort;
+	}
+	#if IPI_PREEMPT_COUNTER==1
+	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+				printf("preempt counter is not INIT in CFV_ALREADY_HANDLED\n");
+				gdb_abort;
+	}
+	#endif
+
+	#if IPI_HANDLE_INTERRUPT==1
+	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
+		printf("dummy bound is not NEW_EVT CFV_ALREADY_HANDLED\n");
+		gdb_abort;
+	}
+	if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
+		printf("ts_current_msg_in_execution different than 0 in CFV_ALREADY_HANDLED\n");
+		gdb_abort;
+	}
+	
+	if(dummy_bound_is_corrupted(current_lp)){
+		printf("dummy_bound is corrupted\n");
+		print_event(LPS[current_lp]->dummy_bound);
+		gdb_abort;
+	}
+	if(bound_is_corrupted(current_lp)){
+		printf("bound is corrupted\n");
+		gdb_abort;
+	}
+	if(LPS[current_lp]->old_valid_bound!=NULL){
+		printf("old valid bound not NULL CFV_ALREADY_HANDLED\n");
+		gdb_abort;
+	}
+	#endif
+}
+void check_thread_loop_before_fetch(){
+	#if IPI_PREEMPT_COUNTER==1
+	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+		printf("preempt counter is not INIT before simulation loop\n");
+		gdb_abort;
+	}
+	#endif
+	for(unsigned int lp_idx=0;lp_idx<n_prc_tot;lp_idx++){
+		if (haveLock(lp_idx)){
+			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+			gdb_abort;
+		}
+	}
+}
+void check_CFV_INIT(){
+	#if IPI_PREEMPT_COUNTER==1
+	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+				printf("preempt counter is not INIT in CFV_INIT\n");
+				gdb_abort;
+	}
+	#endif
+}
+void check_CFV_TO_HANDLE(){
+	if (!haveLock(current_lp)){
+				printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+				gdb_abort;
+	}
+	#if IPI_PREEMPT_COUNTER==1
+	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
+			printf("interrupt code not interruptible\n");
+			gdb_abort;
+	}
+	#endif
+	#if IPI_HANDLE_INTERRUPT==1
+	if(LPS[current_lp]->old_valid_bound==NULL){
+		printf("old_valid_bound is NULL CFV_TO_HANDLE\n");
+		gdb_abort;
+	}
+	#endif
+}
+
+void check_thread_loop_after_fetch(){
+	if (current_msg->tie_breaker==0){
+		printf("fetched event with tie_breaker zero\n");
+		print_event(current_msg);
+		gdb_abort;
+	}
+	if(LPS[current_lp]->state != LP_STATE_READY){
+		printf("LP state is not ready\n");
+		gdb_abort;
+	}
+	#if IPI_HANDLE_INTERRUPT==1
+	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
+		printf("dummy bound is not NEW_EVT\n");
+		gdb_abort;
+	}
+	if(dummy_bound_is_corrupted(current_lp)){
+		printf("dummy_bound is corrupted\n");
+		print_event(LPS[current_lp]->dummy_bound);
+		gdb_abort;
+	}
+	if(bound_is_corrupted(current_lp)){
+		printf("bound is corrupted\n");
+		gdb_abort;
+	}
+	if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
+		printf("ts_current_msg_in_execution different than 0 thread_loop\n");
+		gdb_abort;
+	}
+	if(LPS[current_lp]->old_valid_bound!=NULL){
+			printf("old valid bound not NULL thread loop\n");
+			gdb_abort;
+	}
+	#endif
+	if( (current_evt_state!=ANTI_MSG) && (current_evt_state!= EXTRACTED) ){
+		printf("current_evt_state=%lld\n",current_evt_state);
+		gdb_abort;
+	}
+	if(!haveLock(current_lp)){//DEBUG
+		printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
+	}
+	if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
+		printf(RED("TL: ho trovato una banana!\n")); print_event(current_msg);
+		gdb_abort;
+	}
+}
+void check_tie_breaker_not_zero(unsigned int tie_breaker){
+	if(tie_breaker==0){
+		printf("tie breaker is zero in silent execution\n");
+		gdb_abort;
+	}
+}
 void check_current_msg_is_in_future(unsigned int lid){
 	if((LPS[lid]->bound!=NULL) && (current_msg!=NULL) && (current_msg->timestamp<LPS[lid]->bound->timestamp
 		|| ((current_msg->timestamp==LPS[lid]->bound->timestamp) && (current_msg->tie_breaker<=LPS[lid]->bound->tie_breaker)))  ){
@@ -180,4 +342,5 @@ void check_thread_loop_after_executeEvent(){
 	}
 	#endif
 }
+
 #endif

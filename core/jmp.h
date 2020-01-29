@@ -60,7 +60,6 @@ typedef struct __context_buffer {
   unsigned char others[512] __attribute__((aligned(16)));
 } cntx_buf;
 
-
 extern long long _set_jmp(cntx_buf *);
 extern void _long_jmp(cntx_buf *, long long) __attribute__ ((__noreturn__));
 

@@ -358,6 +358,7 @@ CORE_SOURCES =  core/ipi_ctrl.c\
 		core/checks.c\
 		core/ipi.c\
 		core/preempt_counter.c\
+		core/handle_interrupt.c\
 		mm/garbagecollector.c
 		
 

@@ -15,10 +15,6 @@
 #include <atomic_epoch_and_ts.h>
 #endif
 
-#if IPI_LONG_JMP==1
-#include <jmp.h>
-#endif
-
 #define MAX_LPs	2048
 
 #define THR_POOL_SIZE		128
@@ -148,12 +144,5 @@ extern bool ctrl_unsafe;
 extern bool ctrl_mark_elim;
 extern bool ctrl_del_elim;
 extern bool ctrl_del_banana;
-		
-#if IPI_HANDLE_INTERRUPT==1
-extern void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound);
-extern void reset_info_and_change_bound(unsigned int lid,msg_t*event);
-extern void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker);
-extern void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event);
-#endif
 
 #endif
