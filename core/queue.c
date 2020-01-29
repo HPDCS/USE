@@ -228,9 +228,7 @@ void queue_deliver_msgs(void) {
         #endif
 
         #if DEBUG==1//not present in original version
-        if(new_hole->tie_breaker==0){
-            printf("flushed event with tie_breaker 0\n");
-        }
+        check_tie_breaker_not_zero(new_hole->tie_breaker);
         #endif
         #if IPI_SUPPORT==1
             if(new_hole->posted==POSTED)

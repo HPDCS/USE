@@ -22,15 +22,11 @@ IPI_SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se 
 IPI_POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP
 
 TODO:
--valutare se inserire riaggiornamento di until_ts con valore globale ad ogni silent_execution
--valutare check sincroni prima di invalidare lo stato con l'esecuzione di un evento
-
 
 -postare info su anti_msg in past quando non è possibile eseguire try_lock(solo ts o pointer ad evento,ma è più complicato e inefficiente)
 -inserire statistiche basate su grana degli eventi in base al type
 -modello decisionale:livello speculatività,stato simulazione lp dest(stateready,staterollback,bound,evento in esecuzione ecc),lp in processevent,residual time ecc
 -print_statistics stampa solo i valori non fa nessun calcolo,nemmeno sottrazioni
--studiare statistics post lp data e fare in modo che non si sfalsano le statistiche con l'interruzione
 
 
 -operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice es rollback_length.

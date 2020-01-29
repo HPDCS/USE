@@ -270,9 +270,20 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_SYNC_CHECK_USEFUL:
 			stats[idx].sync_check_useful += value;
 			break;
-
+		case STAT_EVENT_FORWARD_INTERRUPTED:
+			stats[idx].event_forward_interrupted += value;
+			break;
+		case STAT_EVENT_SILENT_INTERRUPTED:
+			stats[idx].event_silent_interrupted += value;
+			break;
 		#endif
 
+		case STAT_EVENTS_EXEC_AND_COMMITED:
+			stats[idx].events_exec_and_committed += value;//per LP
+			break;
+		case STAT_CLOCK_FORWARD:
+			stats[idx].clock_forward_exec += value;
+			break;
 		default:
 			printf("Unrecognized stat type (%d)\n", type);
 	}
@@ -396,7 +407,13 @@ void gather_statistics() {
     	system_stats->clock_exec_evt_inter_forward_exec += lp_stats[i].clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
     	system_stats->clock_exec_evt_inter_silent_exec += lp_stats[i].clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
     #endif
+    	system_stats->events_exec_and_committed += lp_stats[i].events_exec_and_committed;
+    	system_stats->clock_forward_exec += lp_stats[i].clock_forward_exec;
 
+    	#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
+    	system_stats->event_forward_interrupted += lp_stats[i].event_forward_interrupted;
+    	system_stats->event_silent_interrupted += lp_stats[i].event_silent_interrupted;
+    	#endif
 	}
 	
 	
@@ -460,8 +477,19 @@ void gather_statistics() {
     #if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
     system_stats->sync_check_useful_tot  =  system_stats->sync_check_useful;//per lp num sync_check useful maded by lp
     system_stats->sync_check_useful/= n_prc_tot;
+
+    system_stats->event_forward_interrupted_tot= system_stats->event_forward_interrupted;
+     system_stats->event_forward_interrupted /= n_prc_tot;
+     system_stats->event_silent_interrupted_tot= system_stats->event_silent_interrupted;
+     system_stats->event_silent_interrupted /= n_prc_tot;
     #endif
 
+    system_stats->events_exec_and_committed_tot= system_stats->events_exec_and_committed;
+    system_stats->events_exec_and_committed /= n_prc_tot;
+
+    system_stats->clock_forward_exec_tot= system_stats->clock_forward_exec;
+    system_stats->clock_forward_exec /= n_prc_tot;
+    system_stats->clock_forward_exec_per_event = system_stats->clock_forward_exec_tot /(system_stats->events_total - system_stats->events_silent);
 }
 
 static void _print_statistics(struct stats_t *stats) {
@@ -471,6 +499,10 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Total events....................................: %12llu\n", (unsigned long long)stats->events_total);
 	printf("Committed events................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_committed, percentage(stats->events_committed, stats->events_total));
+	printf("Events executed and committed tot...............: %12lu\n",
+		(unsigned long)stats->events_exec_and_committed_tot);
+	printf("Events executed and committed per LP............: %12.2f\n",
+		stats->events_exec_and_committed);
 	printf("Straggler events................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_straggler, percentage(stats->events_straggler, stats->events_total));
 	printf("Anti events.....................................: %12llu (%4.2f%%)\n",
@@ -487,7 +519,14 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long long)stats->events_silent, percentage(stats->events_silent, stats->events_total));
 	printf("Silent events for GVT...........................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_silent_for_gvt, percentage(stats->events_silent_for_gvt, stats->events_silent));
-		
+	
+	printf("Forward execution Time tot......................: %12lu clocks\n",
+		(unsigned long)stats->clock_forward_exec_tot);
+	printf("Forward execution Time per LP...................: %12.2f clocks\n",
+		stats->clock_forward_exec);
+	printf("Forward execution Time per event................: %12.2f clocks\n",
+		stats->clock_forward_exec_per_event);
+
 	printf("\n");
 	
 	printf("Flushed events..................................: %12llu (%4.2f%%)\n",
@@ -593,6 +632,16 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->sync_check_useful_tot);
 	printf("Sync check useful per LP........................: %12.2f\n",
 		stats->sync_check_useful);
+
+	printf("Events forward interrupted tot..................: %12lu\n",
+		(unsigned long)stats->event_forward_interrupted_tot);
+	printf("Events forward interrupted per LP...............: %12.2f\n",
+		stats->event_forward_interrupted);
+
+	printf("Events silent interrupted tot...................: %12lu\n",
+		(unsigned long)stats->event_silent_interrupted_tot);
+	printf("Events silent interrupted per LP................: %12.2f\n",
+		stats->event_silent_interrupted);
 
 	printf("\n\n");
 	#endif

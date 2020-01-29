@@ -97,9 +97,12 @@
 
 #if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
 #define STAT_SYNC_CHECK_USEFUL              609
+#define STAT_EVENT_FORWARD_INTERRUPTED 610
+#define STAT_EVENT_SILENT_INTERRUPTED 611
 #endif
 
-
+#define STAT_EVENTS_EXEC_AND_COMMITED 700
+#define STAT_CLOCK_FORWARD 701
 
 typedef double stat64_t;
 
@@ -194,8 +197,20 @@ struct stats_t {
 
     //calculated in gather statistics()
     stat64_t sync_check_useful_tot;//per lp num sync_check useful maded by lp
-    
+
+    stat64_t event_forward_interrupted;//per LP
+    stat64_t event_silent_interrupted;//per LP
+
+    stat64_t event_forward_interrupted_tot;
+    stat64_t event_silent_interrupted_tot;
     #endif
+
+    stat64_t events_exec_and_committed;//per LP
+    stat64_t events_exec_and_committed_tot;//tot
+
+    stat64_t clock_forward_exec;//per LP
+    stat64_t clock_forward_exec_tot;
+    stat64_t clock_forward_exec_per_event;//per event
     
 } __attribute__((aligned (64)));
 

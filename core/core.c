@@ -746,6 +746,9 @@ stat64_t execute_time;
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
 		}
+		else{
+			statistics_post_lp_data(LP, STAT_CLOCK_FORWARD, execute_time);
+		}
 #endif
 
 #if REVERSIBLE == 1
@@ -816,7 +819,12 @@ void thread_loop(unsigned int thread_id) {
 		#if REPORT==1
         	statistics_post_th_data(tid,STAT_IPI_RECEIVED,1);
         #endif
-
+        	if(LPS[curent_lp]->state==LP_STATE_READY){
+        		statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
+        	}
+        	else{
+        		statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
+        	}
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
             	check_CFV_TO_HANDLE_current_msg_null();
@@ -932,7 +940,7 @@ void thread_loop(unsigned int thread_id) {
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
 #if REPORT == 1 
-			clock_timer_start(rollback_timer);
+			//clock_timer_start(rollback_timer);
 #endif
 
 		#if DEBUG == 1
@@ -956,6 +964,9 @@ void thread_loop(unsigned int thread_id) {
 			if(current_evt_state != ANTI_MSG) {
 				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 			}
+			else{
+				statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
+			}
 			LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 				LPS[current_lp]->dummy_bound->state=NEW_EVT;
@@ -974,7 +985,6 @@ void thread_loop(unsigned int thread_id) {
 		if(current_evt_state == ANTI_MSG) {
 			current_msg->monitor = (void*) 0xba4a4a;
 			current_msg->frame= tid+1;//not present in original version
-			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 			delete(nbcalqueue, current_node);
 			LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
 			LPS[current_lp]->old_valid_bound=NULL;
@@ -1066,11 +1076,14 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 
 #if REPORT == 1
-		clock_timer_start(queue_op);
+		//clock_timer_start(queue_op);
 #endif
 
 		//COMMIT SAFE EVENT
 		if(safe) {
+			#if REPORT==1
+			statistics_post_lp_data(current_lp,STAT_EVENTS_EXEC_AND_COMMITED,1);
+			#endif
 			commit_event(current_msg, current_node, current_lp);
 		}
 
@@ -1116,7 +1129,6 @@ end_loop:
 
 #if IPI_SUPPORT==1
 	ipi_unregister();
-	//ipi_unregister_thread(&alternate_stack, alternate_stack_area);
 #endif
 	// Unmount statistical data
 	// FIXME

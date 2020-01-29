@@ -94,6 +94,16 @@ void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker
 }
 
 void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound){
+	#if REPORT==1
+	if(LPS[current_lp]->state==LP_STATE_READY){
+        statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
+    }
+    else{
+    	//printf("never executed\n");
+    	//gdb_abort;
+       	statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
+    }
+	#endif
 	make_LP_state_invalid(restore_bound);
     wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 }
