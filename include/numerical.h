@@ -37,6 +37,8 @@
 typedef uint64_t seed_type;
 
 void numerical_init(void);
+float standard_deviation(float data[], int size, double * mean_ret);
+double quick_select_median(double arr[], uint16_t n);
 
 #endif /* #ifndef __NUMERICAL_H */
 

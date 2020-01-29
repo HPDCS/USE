@@ -12,10 +12,10 @@ def PrintStats(name, array):
 	avg = sum(array) / len(array)
 	print name
 	print "\tAvg(" + name + ")    " + str(avg)
-	print "\tMax(" + name + ")    " + str(max(array)) + " ("+str(100*(max(array)-avg)/avg)+"%)"
-	print "\tMin(" + name + ")    " + str(min(array)) + " ("+str(100*(min(array)-avg)/avg)+"%)"
-	print "\tDevStd(" + name + ") " + str(statistics.pstdev(array)) + " ("+str(100*statistics.pstdev(array)/avg)+"%)"
-	print "\tVar(" + name + ")    " + str(statistics.pvariance(array)) + " ("+str(100*statistics.pvariance(array)/avg)+"%)"
+	print "\tMax(" + name + ")    " + str(max(array)) + " ("+str(100*(max(array)-avg)/(avg+0.01))+"%)"
+	print "\tMin(" + name + ")    " + str(min(array)) + " ("+str(100*(min(array)-avg)/(avg+0.01))+"%)"
+	print "\tDevStd(" + name + ") " + str(statistics.pstdev(array)) + " ("+str(100*statistics.pstdev(array)/(avg+0.01))+"%)"
+	print "\tVar(" + name + ")    " + str(statistics.pvariance(array)) + " ("+str(100*statistics.pvariance(array)/(avg+0.01))+"%)"
  
 #controllo input comando
 if len(sys.argv) < 2:

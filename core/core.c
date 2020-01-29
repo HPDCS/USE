@@ -87,10 +87,12 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 #define STATS_PERIOD_NS (50*MILLION)
 #define EVENTS_BEFORE_STATS_PERIOD_NS (100)
 #define WINDOW_SIZE (10)
+#define PCAP_TOLLERANCE (0.10)
+
 __thread double window_adv[WINDOW_SIZE];
 __thread double window_com[WINDOW_SIZE];
 __thread double window_tot[WINDOW_SIZE];
-__thread double window_len[WINDOW_SIZE];
+__thread double window_dur[WINDOW_SIZE];
 __thread int window_phase = 0;
 __thread struct timespec time_interval_for_stats_start;
 __thread struct timespec time_interval_for_stats_end;
@@ -103,6 +105,7 @@ __thread double previous_advanced_events = 0;
 
 static void periodic_stats(){
 	double tot=0, adv=0, com=0, total_events=0, committed_events=0, advanced_events=0;
+	double median, max_from_median, min_from_median, sum_adv=0, sum_dur=0, sum_obs=0;
 	unsigned int i;
 
 	//Check if is elapsed enough time from the last collection
@@ -133,19 +136,42 @@ static void periodic_stats(){
         window_tot[window_phase % WINDOW_SIZE] = tot;
         window_com[window_phase % WINDOW_SIZE] = com;
         window_adv[window_phase % WINDOW_SIZE] = adv;
-        window_len[window_phase % WINDOW_SIZE] = duration;
+        window_dur[window_phase % WINDOW_SIZE] = duration;
         window_phase++;
 
         //Task to be executed at the end of the window
         if(window_phase % WINDOW_SIZE == 0) {
+            //Computing the median in order to filter result
+            //We have to work directly on the throughput?
+            median = quick_select_median(window_adv, WINDOW_SIZE);
+            max_from_median = median * (1 + PCAP_TOLLERANCE);
+            min_from_median = median * (1 - PCAP_TOLLERANCE);
+
+            //TODO: if we shift from time to evt, we have to consider the time passed as reference
+            for(i = 0; i < WINDOW_SIZE; i++){
+                //If the median is far away from the max, this means that this run is corrupted
+                if(window_adv[i] > max_from_median)
+                    printf("Something is gone in the wrong way\n");//goto WTF;
+                //The results too low respect the median cannot be considered because affected by some housekeeping task
+                if(window_adv[i] > min_from_median){
+                    sum_adv += window_adv[i];
+                    sum_dur += window_dur[i];
+                    sum_obs++;
+                }
+            }
+
+                //Se la mediana dista dal massimo più del 10% riparto da capo
+                //Taglio via tutto ciò che è sotto il 10% rispetto alla mediana
+
+
             adv = com = tot = duration = 0;
             for (i = 0; i < WINDOW_SIZE; i++) {
                 adv += window_adv[i];
                 com += window_com[i];
                 tot += window_tot[i];
-                duration += window_len[i];
+                duration += window_dur[i];
             }
-            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot);
+            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f Obs:%f Tot_obs:%f\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, sum_obs,WINDOW_SIZE);
             previous_advanced_events = adv;
             previous_committed_events = com;
             previous_total_events = tot;
@@ -620,8 +646,15 @@ void thread_loop(unsigned int thread_id) {
 
 
 #if PERIODIC_STATS == 1
-	if (tid == 0 && evt_count%EVENTS_BEFORE_STATS_PERIOD_NS == 0)
-		periodic_stats();
+	//The main thread, the one with tid=0, is used to control other threads
+	//This means that the main thread is the one that cannot go to sleep
+	if (tid == 0)
+	    if (evt_count%EVENTS_BEFORE_STATS_PERIOD_NS == 0)
+		    periodic_stats();
+	//The other thread can be put to sleep at this point of the execution since here they have nothing to be executed
+	else
+	    if(1==2) //vuole che dormo
+	        ;//dormo
 #endif
 
 
