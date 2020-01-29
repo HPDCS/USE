@@ -165,7 +165,9 @@
 	// Used by the heuristic 
 	int set_pstate(int input_pstate){
 
-	    return 0;//TODO
+#if NO_POWER_MANAGEMENT == 1
+	    return 0;
+#endif
 
 		int i;
 		char fname[64];
@@ -212,7 +214,6 @@
 	// Executed inside stm_init: sets the governor to userspace and sets the highest frequency
 	int init_DVFS_management(){
 
-	    return 0; //TODO
 		
 		char fname[64];
 		char* freq_available;
@@ -221,6 +222,10 @@
 
 		//Set governor to userspace
 		nb_cores = sysconf(_SC_NPROCESSORS_ONLN);
+#ifdef NO_POWER_MANAGEMENT == 1
+	    return 0;
+#endif
+
 		for(i=0; i<nb_cores;i++){
 			sprintf(fname, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor", i);
 			governor_file = fopen(fname,"w+");
@@ -301,7 +306,7 @@
 		signal(SIGUSR1, sig_func);
 
 		//init number of packages
-		filename = malloc(sizeof(char)*64); 
+		filename = malloc(sizeof(char)*64);
 		sprintf(filename,"/sys/devices/system/cpu/cpu%d/topology/physical_package_id", nb_cores-1);
 		numafile = fopen(filename,"r");
 		if (numafile == NULL){
@@ -710,7 +715,11 @@
 	// Used to either enable or disable boosting facilities such as TurboBoost. Boost is disabled whenever the current config goes out of the powercap 
 	void set_boost(int value){
 
-		//char fname[64];
+#if NO_POWER_MANAGEMENT == 1
+	    return;
+#endif
+
+		char fname[64];
 		FILE* boost_file;
 
 		#ifdef DEBUG_OVERHEAD
@@ -725,7 +734,7 @@
 			printf("Set_boost parameter invalid. Shutting down application\n");
 			exit(1);
 		}
-		
+
 		boost_file = fopen("/sys/devices/system/cpu/cpufreq/boost", "w+");
 		fprintf(boost_file, "%d", value);
 		fflush(boost_file);
