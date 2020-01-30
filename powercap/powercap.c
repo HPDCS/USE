@@ -534,6 +534,9 @@
 	// Returns energy consumption of package 0 cores in micro Joule
 	long get_energy(){
 
+#if NO_POWER_MANAGEMENT == 1
+	    return 1;
+#endif
 
 		#ifdef DEBUG_OVERHEAD
 			long time_heuristic_start;
@@ -885,7 +888,7 @@
         power = ((double) energy_interval) / (((double) time_interval)/ 1000);
 
         // We don't call the heuristic if the energy results are out or range due to an overflow
-		if(power > 0){
+		if(power >= 0){
 		    net_time_sum += time_interval;
 		    net_energy_sum += energy_interval;
 
