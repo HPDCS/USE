@@ -134,10 +134,6 @@ static void powercap_gathering_stats(){
 			committed_events += thread_stats[i].events_committed;
 		}
 
-		//Update fields required for the next computation
-		time_interval_for_stats_start.tv_nsec = time_interval_for_stats_end.tv_nsec;
-		time_interval_for_stats_start.tv_sec = time_interval_for_stats_end.tv_sec;
-
         window_tot[window_phase % WINDOW_SIZE] = total_events - last_total_events;
         window_com[window_phase % WINDOW_SIZE] = committed_events - last_committed_events;
         window_adv[window_phase % WINDOW_SIZE] = advanced_events - last_advanced_events;
@@ -146,7 +142,6 @@ static void powercap_gathering_stats(){
         window_phase++;
 
         printf("RTA: %f\n",window_adv[(window_phase-1) % WINDOW_SIZE]);
-        fflush(stdout);
 
         //Task to be executed at the end of the window
         if(window_phase % WINDOW_SIZE == 0) {
@@ -161,12 +156,23 @@ static void powercap_gathering_stats(){
             for(i = 0; i < WINDOW_SIZE; i++){
                 printf("ADV: %f",window_adv[i]);
 
+#if POWERCAP_SAMPLE_FILTERING < 2 //0 or 1
+                if(window_adv[i] > sum_adv){
+                    sum_adv = window_adv[i];
+                    sum_dur = window_dur[i];
+                }
+#endif
+
+#if POWERCAP_SAMPLE_FILTERING > 0  //1 or 2
+
                 //If the median is far away from the max, this means that this run is corrupted
                 if(window_adv[i] > max_from_median){
                     skip_heuristic = 1;
-
                     printf(" *  KILL RUN");
                 }
+#endif
+
+#if POWERCAP_SAMPLE_FILTERING == 2 // 2
                 //The results too low respect the median cannot be considered because affected by some housekeeping task
                 if(window_adv[i] > min_from_median){
                     sum_adv += window_adv[i];
@@ -178,8 +184,8 @@ static void powercap_gathering_stats(){
                 } else {
                     printf(" -  REMOVED");
                 }
+#endif
                 printf("\n");
-                fflush(stdout);
             }
 
             if(skip_heuristic == 0){
@@ -196,19 +202,23 @@ static void powercap_gathering_stats(){
                 rol += window_rol[i];
                 duration += window_dur[i];
             }
+
             if (skip_heuristic == 1)
                 printf("\033[0;31m");
             else if ((double)sum_obs/(double)WINDOW_SIZE < 0.8)
                 printf("\033[0;33m");
             printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f Eff1:%f Eff2:%f Roll:%f Obs:%f Tot_obs:%d\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, rol, sum_obs, WINDOW_SIZE);
             printf("\033[0m");
-            fflush(stdout);
+
             previous_advanced_events = adv;
             previous_committed_events = com;
             previous_rollback_events = rol;
             previous_total_events = tot;
         }
 
+		//Update fields required for the next computation
+		time_interval_for_stats_start.tv_nsec = time_interval_for_stats_end.tv_nsec;
+		time_interval_for_stats_start.tv_sec = time_interval_for_stats_end.tv_sec;
 		last_total_events = total_events;
 		last_committed_events = committed_events;
 		last_advanced_events = advanced_events;
