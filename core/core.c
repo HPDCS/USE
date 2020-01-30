@@ -107,8 +107,6 @@ static void powercap_gathering_stats(){
 	int skip_heuristic = 0;
 	unsigned int i;
 
-
-
 	//Check if is elapsed enough time from the last collection
 	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_end);
 	long duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec +
@@ -153,7 +151,6 @@ static void powercap_gathering_stats(){
                 //If the median is far away from the max, this means that this run is corrupted
                 if(window_adv[i] > max_from_median){
                     skip_heuristic = 1;
-                    // printf("Something is gone in the wrong way\n");//goto WTF;
                 }
                 //The results too low respect the median cannot be considered because affected by some housekeeping task
                 if(window_adv[i] > min_from_median){
@@ -176,7 +173,12 @@ static void powercap_gathering_stats(){
                 tot += window_tot[i];
                 duration += window_dur[i];
             }
+            if (skip_heuristic == 1)
+                printf("\033[0;31m");
+            else if ((double)sum_obs/(double)WINDOW_SIZE < 0.8)
+                printf("\033[0;33m");
             printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f Obs:%f Tot_obs:%d\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, sum_obs,WINDOW_SIZE);
+            printf("\033[0m");
             previous_advanced_events = adv;
             previous_committed_events = com;
             previous_total_events = tot;
