@@ -160,10 +160,18 @@
     // Variable necessary to validate the effectiveness of the models
     int validation_pstate;
 
+    //Introduced to support heuristic on USE
+	long start_time_slot, start_energy_slot;
+	long heuristic_start_time_slot, heuristic_start_energy_slot;
+
+
     void set_threads(int to_threads);
+    void heuristic(double throughput, double power, long time);
+    void set_boost(int value);
 
 	// Used by the heuristic 
 	int set_pstate(int input_pstate){
+
 
 #if NO_POWER_MANAGEMENT == 1
 	    return 0;
@@ -222,7 +230,7 @@
 
 		//Set governor to userspace
 		nb_cores = sysconf(_SC_NPROCESSORS_ONLN);
-#ifdef NO_POWER_MANAGEMENT == 1
+#if NO_POWER_MANAGEMENT == 1
 	    return 0;
 #endif
 
@@ -719,7 +727,7 @@
 	    return;
 #endif
 
-		char fname[64];
+		//char fname[64];
 		FILE* boost_file;
 
 		#ifdef DEBUG_OVERHEAD
@@ -812,6 +820,11 @@
 
         pthread_ids[id]=pthread_self();
 
+        if(tid == 0){
+            start_time_slot = heuristic_start_time_slot = get_time();
+	        start_energy_slot = heuristic_start_energy_slot = get_energy();
+        }
+
     }
 
 	//INCLUDED IN core.c in main_loop
@@ -825,6 +838,68 @@
 	    for(i=active_threads; i< total_threads; i++){
   			wake_up_thread(i);
   		}
+	}
+
+
+	//Used to comput the power consumption on a long time period
+	void sample_average_powercap_violation(){
+	    long end_time_slot, end_energy_slot, time_interval, energy_interval;
+        double power, error_signed, error;
+
+		end_time_slot = get_time();
+		end_energy_slot = get_energy();
+
+
+		time_interval = end_time_slot - start_time_slot; //Expressed in nano seconds
+
+		if(time_interval > 1000000000){ //If higher than 1 second update the accumulator with the value of error compared to power_limit
+       		energy_interval = end_energy_slot - start_energy_slot; // Expressed in micro Joule
+    		power = ((double) energy_interval) / (((double) time_interval)/ 1000);
+
+            error_signed = power - power_limit;
+            error = 0;
+            if(error_signed > 0)
+                error = error_signed/power_limit*100;
+
+            net_error_accumulator = (net_error_accumulator*((double)net_time_accumulator)+error*((double)time_interval))/( ((double)net_time_accumulator)+( (double) time_interval));
+            net_time_accumulator += time_interval;
+
+			//Reset start counters
+			start_time_slot = end_time_slot;
+			start_energy_slot = end_energy_slot;
+		}
+	}
+
+
+	void start_euristic(double throughput){
+	    long end_time_slot, end_energy_slot, time_interval, energy_interval;
+        double power;
+
+	    //Possiamo applicare un approccio un cui se nn è passato abbastazna tempo,
+	    //rimandiamo questa fase?
+
+		end_time_slot = get_time();
+		end_energy_slot = get_energy();
+    	time_interval = end_time_slot - heuristic_start_time_slot; //Expressed in nano seconds
+        energy_interval = end_energy_slot - heuristic_start_energy_slot; // Expressed in micro Joule
+        power = ((double) energy_interval) / (((double) time_interval)/ 1000);
+
+        // We don't call the heuristic if the energy results are out or range due to an overflow
+		if(power > 0){
+		    net_time_sum += time_interval;
+		    net_energy_sum += energy_interval;
+
+		    heuristic(throughput, power, time_interval);
+		}
+
+        heuristic_start_time_slot = end_time_slot;
+        heuristic_start_energy_slot = end_energy_slot;
+	}
+
+	//Used to skip observation periods at the scope of the power management heuristic
+	void reset_euristic(){
+	    heuristic_start_time_slot = get_time();
+        heuristic_start_energy_slot = get_energy();
 	}
 
 #include <heuristics.c>

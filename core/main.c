@@ -27,11 +27,6 @@ void *start_thread(){
 	
     srand48_r(tid+254, &seedT);
 
-#if POWERCAP == 1
-    //init the power subsystem for each thread
-    init_powercap_thread(tid);
-#endif
-
 	//START THREAD (definita in core.c)
 	thread_loop(tid);
 
@@ -84,6 +79,10 @@ void start_simulation() {
 
     //Main thread
     thread_loop(0);
+
+#if POWERCAP == 1
+    end_powercap_mainthread();
+#endif
 
     for(i = 0; i < n_cores-1; i++){
         pthread_join(p_tid[i], NULL);

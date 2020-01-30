@@ -6,22 +6,25 @@
 #include "application.h"
 
 
-void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, int event_size, lp_state_type *pointer) {
+void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_type *event_content, int event_size, lp_state_type *pointer) {
+    event_content_type new_event_content;
+    unsigned int i, j;
+    int receiver;
+    int trails;
 
-	event_content_type new_event_content;
+    (void) event_size; //suppress warning
 
-	new_event_content.cell = -1;
-	new_event_content.new_trails = -1;
+    new_event_content.cell = -1;
+    new_event_content.new_trails = -1;
 
-	int i, j;
-	int receiver, TEMP;
-	int trails;
-
-	simtime_t timestamp=0;
+    simtime_t timestamp=0;
 	simtime_t delta=0;
-	
+
+	//Simulating some work to be performed on the cell
 	for ( i = 0 ; i < LOOP_COUNT ; i++)
 		j= i*i;
+
+    (void) j;
 
 	switch(event_type) {
 
@@ -166,7 +169,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 // funzione dell'applicazione invocata dalla piattaforma
 // per stabilire se la simulazione e' terminata
 int OnGVT(unsigned int me, lp_state_type *snapshot) {
-	
+    (void) me;//suppress warning unused parameter
 	//printf("value %d ", snapshot->trails);
 
  	if(snapshot->trails > VISITE_MINIME)

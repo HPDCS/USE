@@ -29,3 +29,6 @@ static inline void check_running_array(int threadId){
 extern void init_powercap_mainthread(unsigned int threads);
 extern void end_powercap_mainthread();
 extern void init_powercap_thread(unsigned int id);
+extern void sample_average_powercap_violation();
+extern void start_euristic(double throughput);
+extern void reset_euristic();
