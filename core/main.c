@@ -56,6 +56,7 @@ void start_simulation() {
     printf("\t- CHECKPOINT PERIOD %u\n", CHECKPOINT_PERIOD);
     printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", CLEAN_CKP_INTERVAL);
     printf("\t- ON_GVT PERIOD %u\n", ONGVT_PERIOD);
+    printf("\t- NO_POWER_MANAGEMENT %u\n", NO_POWER_MANAGEMENT); //remove
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif

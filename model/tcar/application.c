@@ -9,18 +9,18 @@
 void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_type *event_content, int event_size, lp_state_type *pointer) {
     event_content_type new_event_content;
     unsigned int i, j;
-    int receiver;
+    unsigned int receiver;
     int trails;
 
     (void) event_size; //suppress warning
 
-    new_event_content.cell = -1;
+    new_event_content.cell = -1; //can we initialize it directly to 'me'?
     new_event_content.new_trails = -1;
 
     simtime_t timestamp=0;
 	simtime_t delta=0;
 
-	//Simulating some work to be performed on the cell
+	//Simulating some work to be performed in the cell
 	for ( i = 0 ; i < LOOP_COUNT ; i++)
 		j= i*i;
 
@@ -95,7 +95,8 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			for (i = 0; i < 6; i++) {
 				if(pointer->neighbour_trails[i] != -1) {
 					receiver = GetNeighbourId(me, i);
-					if(receiver >= n_prc_tot || receiver < 0)
+
+					if(receiver >= n_prc_tot)
 						printf("%s:%d: %d -> %d\n", __FILE__, __LINE__, me, receiver);						
 					
 					ScheduleNewEvent(receiver, now + delta, UPDATE_NEIGHBORS, &new_event_content, sizeof(new_event_content));
@@ -111,7 +112,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 		case UPDATE_NEIGHBORS:
 
 			for (i = 0; i < 6; i++) {
-				if(event_content->cell == GetNeighbourId(me, i)) {
+				if(event_content->cell == (int) GetNeighbourId(me, i)) {
 					pointer->neighbour_trails[i] = event_content->new_trails;
 				}
 			}
@@ -150,7 +151,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			}
 
-			if(receiver >= n_prc_tot || receiver < 0)
+			if(receiver >= n_prc_tot)
 				printf("%s:%d: %d -> %d\n", __FILE__, __LINE__, me, receiver);
 				
 			if (delta < LOOKAHEAD)

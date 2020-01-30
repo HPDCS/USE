@@ -30,29 +30,29 @@
     int max_pstate;					// Maximum index of available pstate for the running machine
     int current_pstate;				// Value of current pstate, index of pstate array which contains frequencies
     int total_commits_round; 		// Number of total commits for each heuristics step
-    int starting_threads;			// Number of threads running at the start of the heuristic search. Defined in hope_config.txt
-    int static_pstate;				// Static -state used for the execution with heuristic 8. Defined in hope_config.txt
+    int starting_threads;			// Number of threads running at the start of the heuristic search. Defined in config.txt
+    int static_pstate;				// Static -state used for the execution with heuristic 8. Defined in config.txt
     int steps;						// Number of steps required for the heuristic to converge
-    int exploit_steps;				// Number of steps that should be waited until the next exploration is started. Defined in hope_config.txt
+    int exploit_steps;				// Number of steps that should be waited until the next exploration is started. Defined in config.txt
     int current_exploit_steps;		// Current number of steps since the last completed exploration
-    double extra_range_percentage;	// Defines the range in percentage over power_limit which is considered valid for the HIGH and LOW configurations. Used by dynamic_heuristic1. Defined in hope_config.txt
-    int window_size; 				// Defines the lenght of the window, defined in steps, that should achieve a power consumption within power_limit. Used by dynamic_heuristic1. Defined in hope_config.txt
-    double hysteresis;				// Defines the amount in percentage of hysteresis that should be applied when deciding the next step in a window based on the current value of window_power. Used by dynamic_heuristic1. Defined in hope_config.txt
-    double power_uncore;			// System specific parameter that defines the amount of power consumption used by the uncore part of the system, which we consider to be constant. Defined in hope_config.txt
+    double extra_range_percentage;	// Defines the range in percentage over power_limit which is considered valid for the HIGH and LOW configurations. Used by dynamic_heuristic1. Defined in config.txt
+    int window_size; 				// Defines the lenght of the window, defined in steps, that should achieve a power consumption within power_limit. Used by dynamic_heuristic1. Defined in config.txt
+    double hysteresis;				// Defines the amount in percentage of hysteresis that should be applied when deciding the next step in a window based on the current value of window_power. Used by dynamic_heuristic1. Defined in config.txt
+    double power_uncore;			// System specific parameter that defines the amount of power consumption used by the uncore part of the system, which we consider to be constant. Defined in config.txt
 
     stats_t** stats_array;			// Pointer to pointers of struct stats_s, one for each thread
     volatile int round_completed;   // Defines if round completed and thread 0 should collect stats and call the heuristic function
     double** power_profile; 		// Power consumption matrix of the machine. Precomputed using profiler.c included in root folder.
                                     // Rows are threads, columns are p-states. It has total_threads+1 rows as first row is filled with 0 for the profile with 0 threads
-    double power_limit;				// Maximum power that should be used by the application expressed in Watt. Defined in hope_config.txt
-    double energy_per_tx_limit;		// Maximum energy per tx that should be drawn by the application expressed in micro Joule. Defined in hope_config.txt
+    double power_limit;				// Maximum power that should be used by the application expressed in Watt. Defined in config.txt
+    double energy_per_tx_limit;		// Maximum energy per tx that should be drawn by the application expressed in micro Joule. Defined in config.txt
     int heuristic_mode;				// Used to switch between different heuristics mode. Can be set from 0 to 14.
     double jump_percentage;			// Used by heuristic mode 2. It defines how near power_limit we expect the optimal configuration to be
     volatile int shutdown;			// Used to check if should shutdown
     long effective_commits; 		// Number of commits during the phase managed by the heuristics. Necessary due to the delay at the end of execution with less than max threads
-    int detection_mode; 			// Defines the detection mode. Value 0 means detection is disabled. 1 restarts the exploration from the start. Detection mode 2 resets the execution after a given number of steps. Defined in hope_config.txt and loaded at startup
-    double detection_tp_threshold;	// Defines the percentage of throughput variation of the current optimal configuration compared to the results at the moment of convergece that should trigger a new exploration. Defined in hope_config.txt
-    double detection_pwr_threshold; // Defines the percentage of power consumption variation of the current optimal configuration compared to the results at the moment of convergece that should trigger a new exploration. Defined in hope_config.txt
+    int detection_mode; 			// Defines the detection mode. Value 0 means detection is disabled. 1 restarts the exploration from the start. Detection mode 2 resets the execution after a given number of steps. Defined in config.txt and loaded at startup
+    double detection_tp_threshold;	// Defines the percentage of throughput variation of the current optimal configuration compared to the results at the moment of convergece that should trigger a new exploration. Defined in config.txt
+    double detection_pwr_threshold; // Defines the percentage of power consumption variation of the current optimal configuration compared to the results at the moment of convergece that should trigger a new exploration. Defined in config.txt
     int core_packing;				// 0-> threads scheduling, 1 -> core packing
     int lower_sampled_model_pstate;	// Define the lower sampled pstate to compute the model
 
@@ -280,7 +280,10 @@
 	}
 
 	// SIGUSR1 handler. Doesn't need to execute any code
-	void sig_func(int sig){}
+	//TODO: verify if sig is required
+	void sig_func(int sig){
+	    (void) sig;//suppress warning
+	}
 
 	// Executed inside stm_init
 
@@ -486,7 +489,7 @@
 		
 		// Load config file 
 		FILE* config_file;
-		if ((config_file = fopen("hope_config.txt", "r")) == NULL) {
+		if ((config_file = fopen("powercap/config.txt", "r")) == NULL) {
 			printf("Error opening POWERCAP configuration file.\n");
 			exit(1);
 		}
@@ -511,7 +514,7 @@
 	  		exit(1);
 	  	}
 
-	  	// Necessary for the static execution in order to avoid running for the first step with a different frequency than manually set in hope_config.txt
+	  	// Necessary for the static execution in order to avoid running for the first step with a different frequency than manually set in config.txt
 	  	if(heuristic_mode == 8){
 	  		if(/*static_pstate >= 0 && */ static_pstate <= max_pstate)
 	  			set_pstate(static_pstate);
@@ -798,7 +801,7 @@
         #endif
 
         if(starting_threads > total_threads){
-            printf("Starting threads set higher than total threads. Please modify this value in hope_config.txt\n");
+            printf("Starting threads set higher than total threads. Please modify this value in config.txt\n");
             exit(1);
         }
 

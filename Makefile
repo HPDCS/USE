@@ -13,6 +13,14 @@ INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Ipowercap/ -Idatatype
 LIBS=-pthread -lm
 ARCH_X86=1
 ARCH_X86_64=1
+NO_POWER_MANAGEMENT_FILES = $(shell expr 1 - \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"),1),0) \* \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed"),1),0) \* \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpufreq/boost"),1),0) \* \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies"),1),0) \* \
+    $(or $(and $(wildcard "/sys/class/powercap/intel-rapl/intel-rapl:0/energy_uj"),1),0) \
+) ## ad check if /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors contains the word userspace
+
 
 ifdef MAX_SKIPPED_LP
 CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=$(MAX_SKIPPED_LP)
@@ -39,9 +47,9 @@ CFLAGS:= $(CFLAGS) -DREVERSIBLE=0
 endif
 
 ifdef POWERCAP
-CFLAGS:= $(CFLAGS) -DPOWERCAP=1
+CFLAGS:= $(CFLAGS) -DPOWERCAP=1 -DNO_POWER_MANAGEMENT=$(NO_POWER_MANAGEMENT_FILES)
 else
-CFLAGS:= $(CFLAGS) -DPOWERCAP=0
+CFLAGS:= $(CFLAGS) -DPOWERCAP=0 -DNO_POWER_MANAGEMENT=1
 endif
 
 ifdef VERBOSE
@@ -92,7 +100,6 @@ else
 CFLAGS:= $(CFLAGS) -DONGVT_PERIOD=-1
 endif
 
-
 ifdef PRINT_SCREEN
 CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=$(PRINT_SCREEN)
 else
@@ -119,7 +126,6 @@ endif
 ifdef ENABLE_PRUNE
 CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=$(ENABLE_PRUNE)
 else
-CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=1
 endif
 
 

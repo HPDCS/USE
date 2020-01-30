@@ -196,19 +196,6 @@ void heuristic_power(double throughput, double power){
 }
 
 
-void explore_all_configurations(double throughput, double power){
-
-	if(active_threads == total_threads){
-		if( current_pstate > 0 ){
-			set_pstate(current_pstate-1);
-			set_threads(1);
-			printf("\n");
-		}
-	}
-	else set_threads(active_threads+1);
-}
-
-
 // Helper function for dynamic heuristic0, called in phase 0
 void from_phase0_to_next(){
 	
