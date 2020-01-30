@@ -770,6 +770,36 @@ stat64_t execute_time;
 }
 
 #if IPI_HANDLE_INTERRUPT==1
+
+#if IPI_SUPPORT==1
+
+struct run_time_data
+{
+  /* "0" */
+  size_t in_lpstate_best_evt_reliable_offset;
+  /* "1" */
+  size_t in_lpstate_bound_offset;
+  /* "2" */
+  size_t in_msg_state_offset;
+  /* "3" */
+  size_t in_msg_tie_breaker_offset;
+  /* "4" */
+  size_t in_msg_timestamp_offset;
+} __attribute__((packed,aligned(8)));
+
+struct run_time_data rt_data;
+
+static inline void run_time_data_init (void)
+{
+  rt_data.in_lpstate_best_evt_reliable_offset = offsetof(struct _LP_state, best_evt_reliable);
+  rt_data.in_lpstate_bound_offset = offsetof(struct _LP_state, bound);
+  rt_data.in_msg_state_offset = offsetof(struct __msg_t, state);
+  rt_data.in_msg_tie_breaker_offset = offsetof(struct __msg_t, tie_breaker);
+  rt_data.in_msg_timestamp_offset = offsetof(struct __msg_t, timestamp);
+}
+
+#endif
+
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state=0;
 #if ONGVT_PERIOD != -1
@@ -777,6 +807,8 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 #if IPI_SUPPORT==1
+	//register helpful data available only at run-time
+	run_time_data_init();
 	//register thread in order to send and to receive IPI
 	register_thread_to_ipi_module(thread_id,"ProcessEvent",(unsigned long)ProcessEvent);
 #endif
@@ -819,7 +851,7 @@ void thread_loop(unsigned int thread_id) {
 		#if REPORT==1
         	statistics_post_th_data(tid,STAT_IPI_RECEIVED,1);
         #endif
-        	if(LPS[curent_lp]->state==LP_STATE_READY){
+        	if(LPS[current_lp]->state==LP_STATE_READY){
         		statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
         	}
         	else{
