@@ -90,6 +90,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 __thread double window_adv[WINDOW_SIZE];
 __thread double window_com[WINDOW_SIZE];
 __thread double window_tot[WINDOW_SIZE];
+__thread double window_rol[WINDOW_SIZE];
 __thread double window_dur[WINDOW_SIZE];
 __thread int window_phase = 0;
 __thread struct timespec time_interval_for_stats_start;
@@ -97,13 +98,22 @@ __thread struct timespec time_interval_for_stats_end;
 __thread double last_total_events = 0;
 __thread double last_committed_events = 0;
 __thread double last_advanced_events = 0;
+__thread double last_rollback_events = 0;
 __thread double previous_total_events = 0;
 __thread double previous_committed_events = 0;
 __thread double previous_advanced_events = 0;
+__thread double previous_rollback_events = 0;
+
+/*
+ * TODO: aggiungere le modalità di selezione del valore:
+ * Attuale: Calcolo la mediana e scarto tutto quello che in basso ne è fuori del 10%. Butto se il max è fuori del 10%
+ * Max: selezione sempre e solo il massimo
+ * Max-filtrato: se non c'è troppa oscillazione, prendo il massimo
+*/
 
 static void powercap_gathering_stats(){
-	double tot=0, adv=0, com=0, total_events=0, committed_events=0, advanced_events=0;
-	double median, max_from_median, min_from_median, sum_adv=0, sum_dur=0, sum_obs=0;
+	double tot=0, adv=0, com=0, rol=0, total_events=0, committed_events=0, advanced_events=0, rollback_events=0;
+	double median, max_from_median, min_from_median, sum_adv=0, sum_dur=0, sum_obs=0, sum_rol=0;
 	int skip_heuristic = 0;
 	unsigned int i;
 
@@ -117,26 +127,25 @@ static void powercap_gathering_stats(){
 		for(i = 0; i < n_prc_tot; i++) {
 			total_events += lp_stats[i].events_total;
 			advanced_events += LPS[i]->num_executed_frames;
+			rollback_events += lp_stats[i].counter_rollbacks;
 		}
 		for(i = 0 ; i < n_cores; i++){
 			committed_events += thread_stats[i].events_committed;
 		}
 
-		//Print collected information
-		tot = total_events - last_total_events;
-		com = committed_events - last_committed_events;
-		adv = advanced_events - last_advanced_events;
-		//printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot);
-
 		//Update fields required for the next computation
 		time_interval_for_stats_start.tv_nsec = time_interval_for_stats_end.tv_nsec;
 		time_interval_for_stats_start.tv_sec = time_interval_for_stats_end.tv_sec;
 
-        window_tot[window_phase % WINDOW_SIZE] = tot;
-        window_com[window_phase % WINDOW_SIZE] = com;
-        window_adv[window_phase % WINDOW_SIZE] = adv;
+        window_tot[window_phase % WINDOW_SIZE] = total_events - last_total_events;
+        window_com[window_phase % WINDOW_SIZE] = committed_events - last_committed_events;
+        window_adv[window_phase % WINDOW_SIZE] = advanced_events - last_advanced_events;
+        window_rol[window_phase % WINDOW_SIZE] = rollback_events - last_rollback_events;
         window_dur[window_phase % WINDOW_SIZE] = duration;
         window_phase++;
+
+        printf("RTA: %f\n",window_adv[(window_phase-1) % WINDOW_SIZE]);
+        fflush(stdout);
 
         //Task to be executed at the end of the window
         if(window_phase % WINDOW_SIZE == 0) {
@@ -147,17 +156,28 @@ static void powercap_gathering_stats(){
             min_from_median = median * (1 - PCAP_TOLLERANCE);
 
             //TODO: if we shift from time to evt, we have to consider the time passed as reference
+            printf("\n---------------------\n");
             for(i = 0; i < WINDOW_SIZE; i++){
+                printf("ADV: %f",window_adv[i]);
+
                 //If the median is far away from the max, this means that this run is corrupted
                 if(window_adv[i] > max_from_median){
                     skip_heuristic = 1;
+                    printf(" *  KILL RUN");
                 }
                 //The results too low respect the median cannot be considered because affected by some housekeeping task
                 if(window_adv[i] > min_from_median){
                     sum_adv += window_adv[i];
                     sum_dur += window_dur[i];
+                    sum_rol += window_rol[i];
                     sum_obs++;
+                    if(window_adv[i] == median)
+                        printf(" <> MEDIAN");
+                } else {
+                    printf(" -  REMOVED");
                 }
+                printf("\n");
+                fflush(stdout);
             }
 
             if(skip_heuristic == 0){
@@ -171,22 +191,26 @@ static void powercap_gathering_stats(){
                 adv += window_adv[i];
                 com += window_com[i];
                 tot += window_tot[i];
+                rol += window_rol[i];
                 duration += window_dur[i];
             }
             if (skip_heuristic == 1)
                 printf("\033[0;31m");
             else if ((double)sum_obs/(double)WINDOW_SIZE < 0.8)
                 printf("\033[0;33m");
-            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f Obs:%f Tot_obs:%d\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, sum_obs,WINDOW_SIZE);
+            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f Eff1:%f Eff2:%f Roll:%f Obs:%f Tot_obs:%d\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, rol, sum_obs, WINDOW_SIZE);
             printf("\033[0m");
+            fflush(stdout);
             previous_advanced_events = adv;
             previous_committed_events = com;
+            previous_rollback_events = rol;
             previous_total_events = tot;
         }
 
 		last_total_events = total_events;
 		last_committed_events = committed_events;
 		last_advanced_events = advanced_events;
+		last_rollback_events = rollback_events;
 
 	}
 }
@@ -432,7 +456,7 @@ void check_OnGVT(unsigned int lp_idx){
 	unsigned int old_state;
 	current_lp = lp_idx;
 	LPS[lp_idx]->until_ongvt = 0;
-	
+
 	if(!is_end_sim(lp_idx)){
 		// Ripristina stato sul commit_horizon
 		old_state = LPS[lp_idx]->state;
@@ -757,7 +781,7 @@ void thread_loop(unsigned int thread_id) {
 				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
 #endif
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			
+
 			LPS[current_lp]->state = old_state;
 
 			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
