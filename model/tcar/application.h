@@ -59,7 +59,7 @@ typedef struct _lp_state_type{
 
 int FindNeighbour(unsigned int sender);
 bool isValidNeighbour(unsigned int sender, unsigned int neighbour);
-int GetNeighbourId(unsigned int sender, unsigned int neighbour);
+unsigned int GetNeighbourId(unsigned int sender, unsigned int neighbour);
 
 
 #endif /* _ANT_ROBOT_H */

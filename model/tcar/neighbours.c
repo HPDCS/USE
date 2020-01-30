@@ -58,7 +58,7 @@ bool isValidNeighbour(unsigned int sender, unsigned int neighbour) {
 			break;
 	}
 
-	if(nx < 0 || ny < 0 || nx >= edge || ny >= edge) {
+	if(nx >= edge || ny >= edge) {
 		return false;
 	}
 
@@ -67,7 +67,7 @@ bool isValidNeighbour(unsigned int sender, unsigned int neighbour) {
 
 
 
-int GetNeighbourId(unsigned int sender, unsigned int neighbour) {
+unsigned int GetNeighbourId(unsigned int sender, unsigned int neighbour) {
 	unsigned int receiver;
 
  	// For hexagon topology

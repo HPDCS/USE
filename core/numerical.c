@@ -279,8 +279,8 @@ float standard_deviation(float data[], int size, double * mean_ret) {
     return sqrt(std_dev / size);
 }
 
-#ifndef ELEM_SWAP(a,b)
-#define ELEM_SWAP(a,b) { register double t=(a);(a)=(b);(b)=t; }
+#ifndef ELEM_SWAP
+#define ELEM_SWAP(a,b) {register double t=(a);(a)=(b);(b)=t;}
 #endif
 
 double quick_select_median(double arr[], uint16_t n)

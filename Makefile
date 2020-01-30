@@ -9,10 +9,18 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
 FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 
-INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
+INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Ipowercap/ -Idatatypes
 LIBS=-pthread -lm
 ARCH_X86=1
 ARCH_X86_64=1
+NO_POWER_MANAGEMENT_FILES = $(shell expr 1 - \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"),1),0) \* \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed"),1),0) \* \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpufreq/boost"),1),0) \* \
+    $(or $(and $(wildcard "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies"),1),0) \* \
+    $(or $(and $(wildcard "/sys/class/powercap/intel-rapl/intel-rapl:0/energy_uj"),1),0) \
+) ## ad check if /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors contains the word userspace
+
 
 ifdef MAX_SKIPPED_LP
 CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=$(MAX_SKIPPED_LP)
@@ -36,6 +44,12 @@ ifdef REVERSIBLE
 CFLAGS:= $(CFLAGS) -DREVERSIBLE=$(REVERSIBLE)
 else
 CFLAGS:= $(CFLAGS) -DREVERSIBLE=0
+endif
+
+ifdef POWERCAP
+CFLAGS:= $(CFLAGS) -DPOWERCAP=1 -DNO_POWER_MANAGEMENT=$(NO_POWER_MANAGEMENT_FILES)
+else
+CFLAGS:= $(CFLAGS) -DPOWERCAP=0 -DNO_POWER_MANAGEMENT=1
 endif
 
 ifdef VERBOSE
@@ -86,7 +100,6 @@ else
 CFLAGS:= $(CFLAGS) -DONGVT_PERIOD=-1
 endif
 
-
 ifdef PRINT_SCREEN
 CFLAGS:= $(CFLAGS) -DPRINT_SCREEN=$(PRINT_SCREEN)
 else
@@ -113,7 +126,6 @@ endif
 ifdef ENABLE_PRUNE
 CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=$(ENABLE_PRUNE)
 else
-CFLAGS:= $(CFLAGS) -DENABLE_PRUNE=1
 endif
 
 
@@ -225,10 +237,13 @@ MM_SOURCES=mm/allocator.c\
 REVERSE_SOURCES=	reverse/reverse.c\
 		reverse/slab.c
 
+POWERCAP_SOURCES=   powercap/powercap.c
+
 
 MM_OBJ=$(MM_SOURCES:.c=.o)
 CORE_OBJ=$(CORE_SOURCES:.c=.o)
 REVERSE_OBJ=$(REVERSE_SOURCES:.c=.o)
+POWERCAP_OBJ=$(POWERCAP_SOURCES:.c=.o)
 
 PCS_OBJ=$(PCS_SOURCES:.c=.o)
 PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
@@ -270,7 +285,7 @@ robot_explore: clean _robot_explore executable
 hash: TARGET=hash 
 hash: clean _hash executable
 
-executable: mm core reverse link
+executable: mm core reverse powercap link
 
 
 link:
@@ -292,7 +307,7 @@ else
 #	ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o model/application-mm.o model/__application.o --whole-archive mm/__mm.o
 #	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__core.o $(LIBS)
 endif
-	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o core/__core.o $(LIBS)
+	gcc $(CFLAGS) -o $(TARGET) model/application-mm.o reverse/__reverse.o powercap/__powercap.o core/__core.o $(LIBS)
 
 
 
@@ -304,6 +319,9 @@ core: $(CORE_OBJ)
 
 reverse: $(REVERSE_OBJ)
 	@ld -r -g $(REVERSE_OBJ) -o reverse/__reverse.o
+
+powercap: $(POWERCAP_OBJ)
+	@ld -r -g $(POWERCAP_OBJ) -o powercap/__powercap.o
 
 %.o: %.c
 	@echo "[CC] $@"

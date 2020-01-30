@@ -12,6 +12,7 @@
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
+#include <powercap.h>
 
 __thread struct drand48_data seedT;
 
@@ -55,6 +56,7 @@ void start_simulation() {
     printf("\t- CHECKPOINT PERIOD %u\n", CHECKPOINT_PERIOD);
     printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", CLEAN_CKP_INTERVAL);
     printf("\t- ON_GVT PERIOD %u\n", ONGVT_PERIOD);
+    printf("\t- NO_POWER_MANAGEMENT %u\n", NO_POWER_MANAGEMENT); //remove
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif
@@ -64,6 +66,9 @@ void start_simulation() {
 //    printf("\t- CONSERVATIVE SIMULATION\n");
 //#endif
     printf("\n" COLOR_RESET);
+#if POWERCAP == 1
+    init_powercap_mainthread(n_cores);
+#endif
 
     //Child thread
     for(i = 0; i < n_cores - 1; i++) {
@@ -75,6 +80,10 @@ void start_simulation() {
 
     //Main thread
     thread_loop(0);
+
+#if POWERCAP == 1
+    end_powercap_mainthread();
+#endif
 
     for(i = 0; i < n_cores-1; i++){
         pthread_join(p_tid[i], NULL);

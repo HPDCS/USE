@@ -31,6 +31,7 @@
 #include "lookahead.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
+#include <powercap.h>
 
 
 //id del processo principale
@@ -77,10 +78,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 				;
 #endif
 
-
-#define PERIODIC_STATS 1
-
-#if PERIODIC_STATS == 1
+#if POWERCAP == 1
 #include <time.h>
 #define MILLION 1000000
 #define BILLION 1000000000
@@ -103,9 +101,10 @@ __thread double previous_total_events = 0;
 __thread double previous_committed_events = 0;
 __thread double previous_advanced_events = 0;
 
-static void periodic_stats(){
+static void powercap_gathering_stats(){
 	double tot=0, adv=0, com=0, total_events=0, committed_events=0, advanced_events=0;
 	double median, max_from_median, min_from_median, sum_adv=0, sum_dur=0, sum_obs=0;
+	int skip_heuristic = 0;
 	unsigned int i;
 
 	//Check if is elapsed enough time from the last collection
@@ -114,7 +113,7 @@ static void periodic_stats(){
 	                    BILLION * (time_interval_for_stats_end.tv_sec - time_interval_for_stats_start.tv_sec);
 
 	if(duration > STATS_PERIOD_NS){
-	    //Collect stats
+	    //Gather stats
 		for(i = 0; i < n_prc_tot; i++) {
 			total_events += lp_stats[i].events_total;
 			advanced_events += LPS[i]->num_executed_frames;
@@ -150,8 +149,9 @@ static void periodic_stats(){
             //TODO: if we shift from time to evt, we have to consider the time passed as reference
             for(i = 0; i < WINDOW_SIZE; i++){
                 //If the median is far away from the max, this means that this run is corrupted
-                if(window_adv[i] > max_from_median)
-                    printf("Something is gone in the wrong way\n");//goto WTF;
+                if(window_adv[i] > max_from_median){
+                    skip_heuristic = 1;
+                }
                 //The results too low respect the median cannot be considered because affected by some housekeeping task
                 if(window_adv[i] > min_from_median){
                     sum_adv += window_adv[i];
@@ -160,9 +160,11 @@ static void periodic_stats(){
                 }
             }
 
-                //Se la mediana dista dal massimo più del 10% riparto da capo
-                //Taglio via tutto ciò che è sotto il 10% rispetto alla mediana
-
+            if(skip_heuristic == 0){
+                start_euristic(sum_adv*BILLION/sum_dur);
+            }
+            else
+                reset_euristic();
 
             adv = com = tot = duration = 0;
             for (i = 0; i < WINDOW_SIZE; i++) {
@@ -171,7 +173,12 @@ static void periodic_stats(){
                 tot += window_tot[i];
                 duration += window_dur[i];
             }
-            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f Obs:%f Tot_obs:%f\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, sum_obs,WINDOW_SIZE);
+            if (skip_heuristic == 1)
+                printf("\033[0;31m");
+            else if ((double)sum_obs/(double)WINDOW_SIZE < 0.8)
+                printf("\033[0;33m");
+            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f  Eff1:%f Eff2:%f Obs:%f Tot_obs:%d\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, sum_obs,WINDOW_SIZE);
+            printf("\033[0m");
             previous_advanced_events = adv;
             previous_committed_events = com;
             previous_total_events = tot;
@@ -180,7 +187,6 @@ static void periodic_stats(){
 		last_total_events = total_events;
 		last_committed_events = committed_events;
 		last_advanced_events = advanced_events;
-
 
 	}
 }
@@ -481,7 +487,11 @@ void init_simulation(unsigned int thread_id){
 	tid = thread_id;
 	int i = 0;
 
-	
+#if POWERCAP == 1
+    //init the power subsystem for each thread
+    init_powercap_thread(tid);
+#endif
+
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
 #endif
@@ -630,9 +640,9 @@ void thread_loop(unsigned int thread_id) {
 	
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
-#endif	
+#endif
 
-#if PERIODIC_STATS == 1
+#if POWERCAP == 1
 	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_start);
 #endif
 
@@ -644,19 +654,18 @@ void thread_loop(unsigned int thread_id) {
 				&& !sim_error
 		) {
 
-
-#if PERIODIC_STATS == 1
+#if POWERCAP == 1
 	//The main thread, the one with tid=0, is used to control other threads
 	//This means that the main thread is the one that cannot go to sleep
-	if (tid == 0)
+	if (tid == 0){
 	    if (evt_count%EVENTS_BEFORE_STATS_PERIOD_NS == 0)
-		    periodic_stats();
+		    powercap_gathering_stats();
+    }
 	//The other thread can be put to sleep at this point of the execution since here they have nothing to be executed
-	else
-	    if(1==2) //vuole che dormo
-	        ;//dormo
+	else{
+        check_running_array(tid);
+	}
 #endif
-
 
 		///* FETCH *///
 #if REPORT == 1
@@ -924,7 +933,6 @@ end_loop:
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
 			pthread_join(sleeper, NULL);
-
 		}
 	}
 }
