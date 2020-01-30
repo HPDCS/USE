@@ -164,7 +164,7 @@ static void powercap_gathering_stats(){
             }
 
             if(skip_heuristic == 0)
-                start_euristic(sum_adv/sum_dur);
+                start_euristic(sum_adv*1000/sum_dur);
             else
                 reset_euristic();
 
