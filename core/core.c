@@ -153,7 +153,7 @@ static void powercap_gathering_stats(){
                 //If the median is far away from the max, this means that this run is corrupted
                 if(window_adv[i] > max_from_median){
                     skip_heuristic = 1;
-                    printf("Something is gone in the wrong way\n");//goto WTF;
+                    // printf("Something is gone in the wrong way\n");//goto WTF;
                 }
                 //The results too low respect the median cannot be considered because affected by some housekeeping task
                 if(window_adv[i] > min_from_median){

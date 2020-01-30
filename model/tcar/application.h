@@ -35,7 +35,7 @@
 #endif
 
 #ifndef VISITE_MINIME
-	#define VISITE_MINIME	1000
+	#define VISITE_MINIME	100000
 #endif
 
 #ifndef LOOP_COUNT
