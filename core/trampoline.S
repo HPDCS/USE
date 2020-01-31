@@ -6,8 +6,6 @@
 .type cfv_trampoline, @function
 cfv_trampoline:
 
-#if IPI_POSTING==1
-
 /**************************/
 /*     PREAMBLE START     */
 
@@ -60,32 +58,29 @@ cfv_trampoline:
 
 	/* %rcx <--- (&rt_dta)->in_lpstate_bound_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->bound (type: msg_t *) */
-	/* ( LPS[current_lp]->bound != NULL ) ? */
+	/* ( LPS[current_lp]->bound == NULL ) ? */
 	movq		8(%rax), %rcx
 	movq		(%rdx, %rcx, 1), %rcx
 	testq		%rcx, %rcx
-	jnz			.L1
+	jz			.L1
 
-	/* save XMM0 */
+	/* save XMM0, XMM1 */
 	subq		$0x10, %rsp
 	movsd		%xmm0, 8(%rsp)
+	movsd		%xmm1, (%rsp)
 
 	/* %rdx <--- (&rt_dta)->in_msg_timestamp_offset (type: size_t) */
-	/* %xmm0 <--- LPS[current_lp]->bound->timestamp (type: double) */
-	/* (%rsp) <--- LPS[current_lp]->bound->timestamp (type: double) */
+	/* %xmm1 <--- LPS[current_lp]->bound->timestamp (type: double) */
 	/* %xmm0 <--- LPS[current_lp]->best_evt_reliable->timestamp (type: double) */
 	/* (  LPS[current_lp]->best_evt_reliable->timestamp >= LPS[current_lp]->bound->timestamp ) ? */
 	movq		32(%rax), %rdx
-	movsd		(%rcx, %rdx, 1), %xmm0
-	movsd		%xmm0, (%rsp)
+	movsd		(%rcx, %rdx, 1), %xmm1
 	movsd		(%rbx, %rdx, 1), %xmm0
-	comisd		(%rsp), %xmm0
-	jge			.L2
+	comisd		%xmm1, %xmm0
+	jae			.L2
 
 /*      PREAMBLE END      */
 /**************************/
-
-#endif
 
 	/* %rsi <--- 1 */
 	movq		$0x1, %rsi
@@ -97,17 +92,20 @@ cfv_trampoline:
 	/* RESTORES CURRENT CONTEXT */
 	call		_long_jmp
 
-#if IPI_POSTING==1
-
 /**************************/
 /*    POSTAMBLE START     */
 
 .L2:
-	/* restore XMM0 */
+	/* restore XMM0, XMM1 */
+	movsd		(%rsp), %xmm1
 	movsd		8(%rsp), %xmm0
 	addq		$0x10, %rsp
 
 .L1:
+	/* restore RCX, RDX */
+	popq		%rdx
+	popq		%rcx
+
 	/* New Stack-Frame creation on top
 	   of the old Stack-Pointer */
 	movq		32(%rsp), %rax
@@ -132,16 +130,12 @@ cfv_trampoline:
 	addb		$0x7f, %al
 	sahf
 
-	/* restore RBX, RAX, RCX, RDX */
-	popq		%rdx
-	popq		%rcx
+	/* restore RBX, RAX */
 	popq		%rbx
 	popq		%rax
 
 /*     POSTAMBLE END      */
 /**************************/
-
-#endif
 
 	retq
 
