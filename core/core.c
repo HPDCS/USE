@@ -298,10 +298,8 @@ void LPs_metada_init() {
 		LPS[i]->old_valid_bound=NULL;
 #endif
 #if IPI_POSTING==1
-		LPS[i]->best_evt_reliable=NULL;
-		LPS[i]->best_evt_unreliable =NULL;
+		LPS[i]->priority_message=NULL;
 #endif
-
 
 	}
 	
@@ -769,9 +767,7 @@ stat64_t execute_time;
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
 
-#if IPI_HANDLE_INTERRUPT==1
 
-#if IPI_SUPPORT==1
 
 struct run_time_data
 {
@@ -789,17 +785,18 @@ struct run_time_data
 
 struct run_time_data rt_data;
 
+#if IPI_SUPPORT==1
 static inline void run_time_data_init (void)
 {
-  rt_data.in_lpstate_best_evt_reliable_offset = offsetof(struct _LP_state, best_evt_reliable);
+  rt_data.in_lpstate_best_evt_reliable_offset = offsetof(struct _LP_state, priority_message);
   rt_data.in_lpstate_bound_offset = offsetof(struct _LP_state, bound);
   rt_data.in_msg_state_offset = offsetof(struct __msg_t, state);
   rt_data.in_msg_tie_breaker_offset = offsetof(struct __msg_t, tie_breaker);
   rt_data.in_msg_timestamp_offset = offsetof(struct __msg_t, timestamp);
 }
-
 #endif
 
+#if IPI_HANDLE_INTERRUPT==1
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state=0;
 #if ONGVT_PERIOD != -1

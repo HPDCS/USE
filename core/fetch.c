@@ -221,6 +221,35 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define set_commit_state_as_safe(event)					(	(event)->monitor =  (void*) 0x5afe 		)		
 #define set_commit_state_as_banana(event)				(	(event)->monitor =  (void*) 0xBA4A4A  	) 
 
+bool check_if_already_handled_inside_lock(msg_t*event){
+	simtime_t ts;
+	unsigned int tb;
+	LP_state *lp_ptr=LPS[event->receiver_id];
+	ts = event->timestamp;
+	tb = event->tie_breaker;
+	msg_t *bound_ptr=lp_ptr->bound;
+	bound_ptr = lp_ptr->bound;
+	simtime_t lvt_ts = bound_ptr->timestamp; 
+	unsigned int lvt_tb = bound_ptr->tie_breaker; 
+	bool in_past=(ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));
+	//mettere return false default e poi solo i casi in cui si ritorna true
+	//vedere semplicemente se è dietro il bound?? se ho anti_msg banana in future ritornerei che è da gestire nuovamente...
+	int current_event_state=event->state;
+	if(event->state==ELIMINATED)
+		return true;
+	if(event->state==NEW_EVT)
+		return false;
+	if(event->state==ANTI_MSG){
+		if(event->monitor==(void*) 0xBA4A4A)
+			return true;
+		else
+			return false;
+	}
+	if(in_past && event->state==EXTRACTED)
+		return true;
+	return false;
+
+}
 unsigned int fetch_internal(){
 	//cristian:local variables node and event:at the end of this function we have node with an event to execute
 	//local variable min_node:node that cointains values min(timestamp) and min_tb
@@ -243,18 +272,10 @@ unsigned int fetch_internal(){
 #endif
 
 #if IPI_POSTING==1
-#if IPI_POSTING_SINGLE_INFO==1
-    msg_t *array_events[2];
-    int num_events=2;
-#else
-	msg_t *array_events[3];
-    int num_events=3;
-#endif
-    int curr_id;
-    int id_current_node;//current_event is taken from node into calqueue
-    int id_reliable;//id of event reliable
-    int id_unreliable;//id of event unreliable
+	msg_t *priority_message;
+    bool from_info_posted=false;
 #endif//IPI_POSTING
+
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
 		return 0;
@@ -298,14 +319,23 @@ unsigned int fetch_internal(){
 
 		from_get_next_and_valid = false;
 
+		#if IPI_POSTING==1
+		from_info_posted=false;
+		#endif
+
 		event = (msg_t *)node->payload;		// Event under exploration
 		lp_idx = node->tag;					// Index of the LP relative to the event under exploration
 		lp_ptr = LPS[lp_idx];				// State of the LP relative of the event under exploration
 		ts = node->timestamp;				// Timestamp of the event under exploration
-		tb = node->counter;					// Timestamp of the event under exploration
+		tb = node->counter;					// Tie_breaker of the event under exploration
 		#if DEBUG==1//not present in original version
         if(tb==0){
             printf("event get from calqueue with tie_breaker 0\n");
+            print_event(event);
+            gdb_abort;
+        }
+        if(tb!=event->tie_breaker){
+        	printf("tie_breaker in node doesn't match with tie_breaker in event\n");
             print_event(event);
             gdb_abort;
         }
@@ -352,12 +382,12 @@ unsigned int fetch_internal(){
 					event->event_on_gvt_on_commit = (msg_t *)min_node->payload;
 				#endif
                 #if IPI_POSTING==1
-                    #if DEBUG==1
+                    /*#if DEBUG==1
                     if(event->posted==POSTED){
                         printf("event posted to commit,won't be never more committed\n");
                         gdb_abort;
                     }
-                    #endif
+                    #endif*/
                     //event is UNPOSTED when committed
                     do_commit_outside_lock_and_goto_next(event, node, lp_idx);
                 #else
@@ -366,8 +396,7 @@ unsigned int fetch_internal(){
 				}
 				///* EXECUTED AND UNSAFE *///
 				//cristian:it can be in state "not executed" or(not exclusive) "not safe", ignore it
-				else{ 
-					read_new_min = false;//questa riga di codice è già embeddata dentro la macro do_skip,rimuoverla per una maggior comprensione
+				else{
 					do_skip_outside_lock_and_goto_next(lp_idx);
 				}
 			}
@@ -384,7 +413,8 @@ unsigned int fetch_internal(){
 #if IPI_POSTING==1
                 //reset_all_LP_info(event, lp_idx);
                 //unpost_event(event);
-                if(event->posted==UNPOSTED)
+
+                //if(event->posted_valid==UNPOSTED)
                     do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);
 #else
                 do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED	
@@ -393,13 +423,13 @@ unsigned int fetch_internal(){
 			///* DELETE BANANA NODE *///
 			if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){//cristian:state is anti_msg and it is handled, remove it from calqueue
                 #if IPI_POSTING==1
-                #if DEBUG==1
+                /*#if DEBUG==1
                 if(event->posted==POSTED){
                     printf("posted event with state ANTI\n");
                     gdb_abort;
                 }
-                #endif
-                reset_all_LP_info(event, lp_idx);
+                #endif*/
+                //reset_all_LP_info(event, lp_idx);
                 #endif
                 //remove only in case event->monitor==banana because concurrently another thread is executing this node and we cannot remove it
 				do_remove_outside_lock_and_goto_next(event,node,lp_idx);
@@ -517,7 +547,6 @@ unsigned int fetch_internal(){
             #endif*/	
 		}
 		
-		//read_new_min = false;
 		if(
 #if OPTIMISTIC_MODE != FULL_SPECULATIVE
 	#if OPTIMISTIC_MODE == ONE_EVT_PER_LP
@@ -529,57 +558,40 @@ unsigned int fetch_internal(){
 		tryLock(lp_idx)
 		) {
 #if IPI_POSTING==1
-lock_LP_taken:
-#if IPI_POSTING_SINGLE_INFO==1
-            id_current_node=0;
-            id_reliable=1;
-            id_unreliable=-1;
-            array_events[0]=event;//current event
-            array_events[1]=LPS[lp_idx]->best_evt_reliable;//reliable
-#else
-            id_current_node=0;
-            id_reliable=1;
-            id_unreliable=2;
-            array_events[0]=event;//current event
-            array_events[1]=LPS[lp_idx]->best_evt_reliable;//reliable
-            array_events[2]=LPS[lp_idx]->best_evt_unreliable;//unreliable
-#endif//IPI_POSTING_SINGLE_INFO
+            priority_message=LPS[lp_idx]->priority_message;
+        	if(priority_message!=NULL){
+        		printf("messaggio postato\n");
+        		print_event(priority_message);
+        	}
+            if(first_has_greater_ts(event,priority_message)){
+            	CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+        		(unsigned long)priority_message,(unsigned long)NULL);
+        		if(!check_if_already_handled_inside_lock(priority_message))
+        		{
+            	//priority_message=LPS[lp_idx]->priority_message;
+            	//CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+        		//(unsigned long)priority_message,(unsigned long)NULL);
+            		//unlock(lp_idx);
+            		//return 0;
+            		//goto get_next;
+            		from_info_posted=true;
+            		event=priority_message;
+            	}
+            }
+            
+            /*#if DEBUG==1
+            if(from_info_posted== true && !check_if_already_handled_inside_lock(event)){
+            	printf("event already handled\n");
+            	gdb_abort;
+            }
+            #endif*/
+         
+            //event is taken from calqueue
 
-            #if IPI_POSTING_SINGLE_INFO==1
-            sort_events(array_events,&num_events,&id_current_node,&id_reliable,lp_idx);
-            #else
-            sort_events(array_events,&num_events,&id_current_node,&id_reliable,&id_unreliable,lp_idx);
-            #endif
-            #if DEBUG==1
-            for(int i=0;i<num_events;i++){
-                if(array_events[i]!=NULL && (array_events[i]->tie_breaker==0)){
-                    printf("tie breaker is zero in fetch,num_events=%d\n",num_events);
-                    while(array_events[i]->tie_breaker==0){
-                        printf("tie breaker is zero in fetch,num_events=%d\n",num_events);
-                    }
-                    gdb_abort;
-                }
+            if(from_info_posted){//update ts and tb
+            	ts = event->timestamp;
+            	tb = event->tie_breaker;
             }
-            check_LP_info(array_events, num_events, lp_idx, id_current_node, id_reliable, id_unreliable);
-            #endif//DEBUG
-            
-            curr_id=0;
-retry_with_new_node:
-            if(curr_id>=num_events){
-                add_lp_unsafe_set(lp_idx);
-                read_new_min = false;
-                unlock(lp_idx);
-                goto get_next;//node is not null and relative to current_node,never swapped with LP info
-                //from get next_and_valid setted to false after in while loop
-            }
-            from_get_next_and_valid=false;//initialized to false every time
-            event=array_events[curr_id];//get_node[i] from array sorted
-            
-            if(event==NULL){
-                goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
-            }
-            ts = event->timestamp;
-            tb = event->tie_breaker;
 #endif//IPI_POSTING
 			validity = is_valid(event);
 			
@@ -590,9 +602,10 @@ retry_with_new_node:
 				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb)); 
 			}
 #if IPI_POSTING==1
-            in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));//calculate in_past for each events
-            safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//calculate safe for each events
-
+			if(from_info_posted){
+				in_past = (ts < lvt_ts || (ts == lvt_ts && tb <= lvt_tb));//calculate in_past for each events
+            	safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//calculate safe for each events
+			}
 #endif//IPI_POSTING
             curr_evt_state = event->state;
 		
@@ -602,12 +615,12 @@ retry_with_new_node:
 				local_next_evt = list_next(lp_ptr->bound);
 				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
-					#if IPI_POSTING==1 && DEBUG==1
+					/*#if IPI_POSTING==1 && DEBUG==1
                     if(local_next_evt->posted==POSTED){
                         printf("event posted in localqueue after bound\n");
                         gdb_abort;
                     }
-                    #endif
+                    #endif*/
                     list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					local_next_evt->frame = tid+1;
 					list_node_clean_by_content(local_next_evt); //NON DOVREBBE SERVIRE
@@ -617,10 +630,7 @@ retry_with_new_node:
 					local_next_evt = list_next(lp_ptr->bound);
 				}
 #if IPI_POSTING==1      
-                if(local_next_evt==event){
-                    reset_all_LP_info_inside_lock(event,lp_idx);
-                }
-				else if( local_next_evt != NULL && 
+                if( local_next_evt != NULL && 
 					(
 						local_next_evt->timestamp < ts || 
 						(local_next_evt->timestamp == ts && local_next_evt->tie_breaker < tb)
@@ -640,17 +650,27 @@ retry_with_new_node:
 						printf("[%u]GET_NEXT_AND_VALID: \n",tid); 
 						printf("\tevent         : ");print_event(event);
 						printf("\tlocal_next_evt: ");print_event(local_next_evt);
+
 						gdb_abort;
 					}
 				#endif
 					event = local_next_evt;//cristian:aggiorna event,andrebbe riaggiornato anche node
 					//node = (void*)0x1;//local_next_evt->node;
 					from_get_next_and_valid = true;
+					#if DEBUG==1 && IPI_POSTING==1
+					if (from_info_posted){
+						printf("event taken from info_posted and from_get_next_and_valid\n");
+						gdb_abort;
+					}
+					#endif
 					ts = event->timestamp;
-					//cristian:non va ricalcolato il tb rispetto al local_next_evt che è event???
+					tb = event->tie_breaker;
                     //in past non va ricalcolato,sia se avviene lo swap sia se non avviene la variabile past assume lo stesso valore
+					//the state of the node is set to EXTRACTED because it is the expected one. 
+					//In case it is become ANTI, we lost the update. This is done because we cannot retrieve the relative node.
+					curr_evt_state = EXTRACTED;
 					safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min)  && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//se lo sposto più avanti non funziona!!!
-                    curr_evt_state = EXTRACTED;
+                    
                 }
                 else{
                     //node non viene aggiornato rispetto all'evento corrente,quindi se viene preso un evento EXTRACTED dalla coda locale,
@@ -660,18 +680,24 @@ retry_with_new_node:
 				/// GET_NEXT_EXECUTED_AND_VALID: FINE ///
 				if(curr_evt_state == 0x0) {//cristian:state is new_evt,from_get_next_and_valid is false
 					#if DEBUG==1//not present in original version
-						if(event->frame!=0){
-							printf("NEW_EVT already executed\n");
-							gdb_abort;
-						}
+					if(event->frame!=0){
+						printf("NEW_EVT already executed\n");
+						gdb_abort;
+					}
+					if(from_get_next_and_valid){
+						printf("NEW_EVT taken from get_next_and_valid\n");
+						gdb_abort;
+					}
 					#endif
 					if(__sync_or_and_fetch(&(event->state),EXTRACTED) != EXTRACTED){//cristian:after sync_or_and_fetch new state is EXTRACTED or(exclusive) ANTI_MSG
 						
 #if IPI_POSTING==1
 						//o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
                         set_commit_state_as_banana(event);//cristian:ANTI_MSG never executed from state NEW_EVT->mark as handled and remove from calqueue
-                        remove_removed_if_current_node(curr_id,id_current_node,event,node);
-                        goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        remove_removed_if_current_node(from_info_posted,event,node);
+                        unlock(lp_idx);
+                        goto get_next;
+                        //goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
 #else
                         //o era eliminato, o era un antimessaggio nel futuro, in ogni caso devo dire che è stato già eseguito (?)
                         set_commit_state_as_banana(event);
@@ -682,7 +708,7 @@ retry_with_new_node:
 					else {//cristian:state is changed to extracted,only this thread with lock can change this state from new_evt to extracted
 						//cristian:this event extracted can be in the past or future,but is never been executed so return it to simulation loop
 #if IPI_POSTING==1
-                        reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        //reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
 #endif
 						return_evt_to_main_loop();
 					}
@@ -690,7 +716,7 @@ retry_with_new_node:
 				///* VALID AND NOT EXECUTED AND LOCK TAKEN AND EXTRACTED *///
 				else if(curr_evt_state == EXTRACTED){//event is not new_evt in fact it is extracted previously from another thread(only lock owner can change state to extracted!!)
 					if(in_past){//cristian:this event valid+extracted+in past was executed from another thread,ignore it
-#if DEBUG ==1//not present in original version
+						#if DEBUG ==1//not present in original version
 						if(from_get_next_and_valid){
 							printf("event in past and taken from get_local_next function\n");
 							gdb_abort;
@@ -699,17 +725,13 @@ retry_with_new_node:
 							printf("event EXTRACTED in past not EXECUTED\n");
 							gdb_abort;
 						}
-#endif
-                        #if IPI_POSTING==1
-                        goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
-                        #else
+						#endif
                         do_skip_inside_lock_and_goto_next(lp_idx);
-                        #endif//IPI_POSTING
 						
 					}
 					else{//cristian:this event valid+extracted+in future must be executed,return it to simulation loop
                         #if IPI_POSTING==1
-                        reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        //reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
                         #endif//IPI_POSTING
 						return_evt_to_main_loop();
 						
@@ -721,7 +743,7 @@ retry_with_new_node:
 					if(from_get_next_and_valid){
 							printf("event anti_msg taken from get_local_next function\n");
 							gdb_abort;
-						}
+					}
 #endif//DEBUG
 					if(!in_past){//cristian:anti_msg in the future,mark it as handled
 						set_commit_state_as_banana(event);
@@ -730,8 +752,10 @@ retry_with_new_node:
 					if(event->monitor == (void*) 0xba4a4a){//cristian:if event in state anti_msg is mark as handled remove it from calqueue
 						//cristian:now an event anti_msg in the future is marked as handled
 #if IPI_POSTING==1
-                        remove_if_current_node(curr_id,id_current_node,node);
-                        goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        remove_if_current_node(from_info_posted,node);
+                        //goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        unlock(lp_idx);
+                        goto get_next;
 #else
                         do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 #endif//IPI_POSTING
@@ -747,7 +771,7 @@ retry_with_new_node:
 						}
 #endif//DEBUG
                         #if IPI_POSTING==1
-                        reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        //reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
                         #endif
 						return_evt_to_main_loop();
 					}
@@ -757,11 +781,13 @@ retry_with_new_node:
 					if(from_get_next_and_valid){
 							printf("event anti_msg taken from get_local_next function\n");
 							gdb_abort;
-						}
+					}
 #endif//DEBUG
                     #if IPI_POSTING==1
-                    remove_removed_if_current_node(curr_id,id_current_node,event,node);
-                    goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                    remove_removed_if_current_node(from_info_posted,event,node);
+                    //goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                    unlock(lp_idx);
+                    goto get_next;
                     #else//IPI_POSTING
                     do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);			//<<-ELIMINATED
                     #endif
@@ -771,10 +797,10 @@ retry_with_new_node:
 			///* NOT VALID *///		
 			else {
 #if DEBUG==1//not present in original version
-					if(from_get_next_and_valid){
-							printf("event not valid taken from get_local_next function\n");
-							gdb_abort;
-						}
+				if(from_get_next_and_valid){
+						printf("event not valid taken from get_local_next function\n");
+						gdb_abort;
+				}
 #endif//DEBUG			
 				///* MARK NON VALID NODE *///
 				if( (curr_evt_state & ELIMINATED) == 0 ){ //cristian:state is "new_evt" or(exclusive) "extracted"
@@ -786,16 +812,18 @@ retry_with_new_node:
 				if( (curr_evt_state & EXTRACTED) == 0 ){//cristian:state is "new_evt" or(exclusive) "eliminated", but if it is 
 					//cristian:new_evt it was changed to eliminated in the previous branch!!!so the event state is eliminated!!!!
 #if IPI_POSTING==1
-                    remove_removed_if_current_node(curr_id,id_current_node,event,node);
-                    goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                    remove_removed_if_current_node(from_info_posted,event,node);
+                    //goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                	unlock(lp_idx);
+                    goto get_next;
 #else
                     do_remove_removed_inside_lock_and_goto_next(event,node,lp_idx);					//<<-ELIMINATED
 #endif
 				}
 				else{//cristian:the event state is not eliminated,new_evt or extracted,so state event must be anti_msg!!!!
-			#if DEBUG==1
+					#if DEBUG==1
 					assert(curr_evt_state == ANTI_MSG);
-			#endif
+					#endif
 					///* ANTI-MESSAGE IN THE FUTURE*///
 					if(!in_past){//cristian:anti_msg in the future,mark it as handled
 							set_commit_state_as_banana(event);
@@ -804,8 +832,10 @@ retry_with_new_node:
 					///* DELETE BANANA NODE *///
 					if(event->monitor == (void*) 0xba4a4a){//cristian:anti_msg handled,remove it from calqueue
 #if IPI_POSTING==1
-                        remove_if_current_node(curr_id,id_current_node,node);
-                        goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        remove_if_current_node(from_info_posted,node);
+                        //goto_next_information(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        unlock(lp_idx);
+                        goto get_next;
 #else
                         do_remove_inside_lock_and_goto_next(event,node,lp_idx);
 #endif
@@ -815,7 +845,7 @@ retry_with_new_node:
 						//cristian:if it is anti_msg,then another thread
 						//cristian:in the past (in wall clock time) has changed its state to extracted and executed it!!!!
 #if IPI_POSTING==1
-                        reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
+                        //reset_and_unpost(lp_idx,event,curr_id,id_reliable,id_unreliable);
 #endif
 						return_evt_to_main_loop();
 					}
@@ -829,6 +859,30 @@ retry_with_new_node:
 		#if OPTIMISTIC_MODE == ST_BINDING_LP
 			add_lp_locked_set(lp_idx);
 		#endif
+			#if IPI_POSTING==1
+			if(in_past){
+				int value_posted=event->posted;
+				if(validity){//event in past and valid
+					if(value_posted==NEVER_POSTED && CAS_x86((unsigned long long*)&(event->posted),
+        			(unsigned long)NEVER_POSTED,(unsigned long)POSTED_VALID)==true){
+						post_information(event);
+						#if IPI_SUPPORT==1
+        				send_ipi_to_lp(event);
+        				#endif
+        			}
+				}
+				/*else{//event in past and invalid
+					if(value_posted!=POSTED_INVALID && CAS_x86((unsigned long long*)&(event->posted),
+        			(unsigned long)value_posted,(unsigned long)POSTED_INVALID)==true){
+        				post_information(event);
+        				#if IPI_SUPPORT==1
+        				send_ipi_to_lp(event);
+        				#endif
+        			}
+				}*/
+			}
+			#endif
+			//event in future,go to next_node
 		}
 	
 
@@ -877,7 +931,7 @@ get_next:
         return 0;
 
 #if IPI_POSTING==1
-    if(from_get_next_and_valid || curr_id !=id_current_node){
+    if(from_get_next_and_valid || from_info_posted){
     	node = NULL;
     }
 #else
@@ -894,7 +948,7 @@ get_next:
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
 #if IPI_POSTING==1 && REPORT==1
-    update_LP_statistics(curr_id,id_reliable,id_unreliable,from_get_next_and_valid,lp_idx);
+    update_LP_statistics(from_info_posted,from_get_next_and_valid,lp_idx);
 #endif
     current_msg = event;//(msg_t *) node->payload;
     current_node = node;//reset this information,current_node must be not used in simulation_loop
@@ -956,16 +1010,44 @@ void prune_local_queue_with_ts(simtime_t ts){
 		tmp_node = list_next(current);
 		
 		if(current->max_outgoing_ts < ts){
-            #if DEBUG==1 && IPI_POSTING==1 
-            if(current->posted!=UNPOSTED){
+            /*#if DEBUG==1 && IPI_POSTING==1 
+            if(current->posted_valid!=UNPOSTED){
                 printf("event POSTED cannot be garbage collectioned\n");
                 print_event(current);
                 gdb_abort;
             }
+            #endif*/
+            #if IPI_POSTING==1
+            if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
+            	if(LPS[current->receiver_id]->priority_message==current){
+            		current = tmp_node;
+            		continue;
+            	}
+            	else if (current->collectionable==false){
+            		current->collectionable=true;
+            		current = tmp_node;
+            		continue;
+            	}
+            	//current is not posted on LP and it is collectionable,collect it!
+            }
+            //current is never been posted on LP collect it
             #endif
 			from = current;
 			//trovato il primo nodo valido, continuo localmente la ricerca
 			while(current!=NULL && current->max_outgoing_ts < ts){
+				#if IPI_POSTING==1
+            if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
+            	if(LPS[current->receiver_id]->priority_message==current){
+            		break;
+            	}
+            	else if (current->collectionable==false){
+            		current->collectionable=true;
+            		break;
+            	}
+            	//current is not posted on LP and it is collectionable,collect it!
+            }
+            //current is never been posted on LP collect it
+            #endif
 				to = current;
 				count_nodes++;
 				current = list_next(current); 

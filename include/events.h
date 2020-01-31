@@ -71,7 +71,8 @@ typedef struct __msg_t
 #endif
 #if IPI_POSTING==1
 	int id_in_thread_pool_hash_table;
-	bool posted;
+	int posted;
+	bool collectionable;//used for garbage collection
 #endif
 } msg_t;
 

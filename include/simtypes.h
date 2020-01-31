@@ -130,13 +130,7 @@ typedef struct _LP_state {
 #endif
 
 #if IPI_POSTING==1
-	msg_t* best_evt_reliable;
-#if IPI_POSTING_SINGLE_INFO==1
-	#define best_evt_unreliable best_evt_reliable
-#else
-	msg_t* best_evt_unreliable;
-#endif
-
+	msg_t* priority_message;//used to write priority message
 #endif
 
 } LP_state;
