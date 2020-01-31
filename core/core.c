@@ -141,7 +141,9 @@ static void powercap_gathering_stats(){
         window_dur[window_phase % WINDOW_SIZE] = duration;
         window_phase++;
 
+#if DEBUG_SMALL_SAMPLES == 1
         printf("RTA: %f\n",window_adv[(window_phase-1) % WINDOW_SIZE]);
+#endif
 
         //Task to be executed at the end of the window
         if(window_phase % WINDOW_SIZE == 0) {
@@ -151,10 +153,16 @@ static void powercap_gathering_stats(){
             max_from_median = median * (1 + PCAP_TOLLERANCE);
             min_from_median = median * (1 - PCAP_TOLLERANCE);
 
+#if DEBUG_SMALL_SAMPLES == 1
             //TODO: if we shift from time to evt, we have to consider the time passed as reference
             printf("\n---------------------\n");
+#endif
+
             for(i = 0; i < WINDOW_SIZE; i++){
+#if DEBUG_SMALL_SAMPLES == 1
                 printf("ADV: %f",window_adv[i]);
+#endif
+
 
 #if POWERCAP_SAMPLE_FILTERING < 2 //0 or 1
                 if(window_adv[i] > sum_adv){
@@ -168,7 +176,11 @@ static void powercap_gathering_stats(){
                 //If the median is far away from the max, this means that this run is corrupted
                 if(window_adv[i] > max_from_median){
                     skip_heuristic = 1;
+
+#if DEBUG_SMALL_SAMPLES == 1
                     printf(" *  KILL RUN");
+#endif
+
                 }
 #endif
 
@@ -179,13 +191,20 @@ static void powercap_gathering_stats(){
                     sum_dur += window_dur[i];
                     sum_rol += window_rol[i];
                     sum_obs++;
+#if DEBUG_SMALL_SAMPLES == 1
                     if(window_adv[i] == median)
                         printf(" <> MEDIAN");
-                } else {
+#endif                    
+                } 
+#if DEBUG_SMALL_SAMPLES == 1
+                else {
                     printf(" -  REMOVED");
                 }
+#endif                    
 #endif
+#if DEBUG_SMALL_SAMPLES == 1
                 printf("\n");
+#endif
             }
 
             if(skip_heuristic == 0){
@@ -203,12 +222,15 @@ static void powercap_gathering_stats(){
                 duration += window_dur[i];
             }
 
+#if DEBUG_SMALL_SAMPLES == 1
             if (skip_heuristic == 1)
                 printf("\033[0;31m");
             else if ((double)sum_obs/(double)WINDOW_SIZE < 0.8)
                 printf("\033[0;33m");
-            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f Eff1:%f Eff2:%f Roll:%f Obs:%f Tot_obs:%d\n", duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, rol, sum_obs, WINDOW_SIZE);
+            printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f Eff1:%f Eff2:%f Roll:%f Obs:%f Tot_obs:%d\n", 
+            	duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, rol, sum_obs, WINDOW_SIZE);
             printf("\033[0m");
+#endif
 
             previous_advanced_events = adv;
             previous_committed_events = com;
@@ -260,8 +282,10 @@ size_t node_size_msg_t;
 size_t node_size_state_t;
 
 void * do_sleep(){
+#if SUPPRESS_USE_PRINTS == 0
 	printf("The process will last %d seconds\n", sec_stop);
-	
+#endif	
+
 	sleep(sec_stop);
 	if(sec_stop != 0)
 		stop_timer = true;
@@ -585,7 +609,10 @@ void init_simulation(unsigned int thread_id){
 		}
 
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
+
+#if SUPPRESS_USE_PRINTS == 0		
 		printf("EXECUTED ALL INIT EVENTS\n");
+#endif
 	}
 
 
@@ -963,10 +990,14 @@ end_loop:
 	//statistics_fini();
 	
 	if(sim_error){
+#if SUPPRESS_USE_PRINTS == 0		
 		printf(RED("[%u] Execution ended for an error\n"), tid);
+#endif	
 	} else if (stop || stop_timer){
 		//sleep(5);
+#if SUPPRESS_USE_PRINTS == 0
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
+#endif
 		if(tid==0){
 			pthread_join(sleeper, NULL);
 		}

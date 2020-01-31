@@ -29,10 +29,12 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 	switch(event_type) {
 
 		case INIT:
-		
+			
+#if SUPPRESS_MODEL_PRINTS == 0 
 			if(me == 0) {
 				printf("Running TCAR with:\n NUM_CELLE_OCCUPATE=%d ROBOT_PER_CELLA=%d, TOTAL_VISIT=%d, LOOKAHEAD=%f\n", NUM_CELLE_OCCUPATE, ROBOT_PER_CELLA, VISITE_MINIME, LOOKAHEAD);
 			}
+#endif
 
 			pointer = (lp_state_type *)malloc(sizeof(lp_state_type));
 			if(pointer == NULL){
@@ -41,10 +43,11 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			SetState(pointer);
 			pointer->trails = 0;
 
+#if SUPPRESS_MODEL_PRINTS == 0 
 			if(NUM_CELLE_OCCUPATE > n_prc_tot){
 				printf("%s:%d: Require more cell than available LPs\n", __FILE__, __LINE__);
 			}
-
+#endif
 			if((NUM_CELLE_OCCUPATE % 2) == 0){
 				//Occupo le "prime" e "ultime" celle
 				if(me < (NUM_CELLE_OCCUPATE/2) || me >= ((n_prc_tot)-(NUM_CELLE_OCCUPATE/2))) {
@@ -96,9 +99,10 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				if(pointer->neighbour_trails[i] != -1) {
 					receiver = GetNeighbourId(me, i);
 
+#if SUPPRESS_MODEL_PRINTS == 0 
 					if(receiver >= n_prc_tot)
 						printf("%s:%d: %d -> %d\n", __FILE__, __LINE__, me, receiver);						
-					
+#endif
 					ScheduleNewEvent(receiver, now + delta, UPDATE_NEIGHBORS, &new_event_content, sizeof(new_event_content));
 				}
 			}

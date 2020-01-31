@@ -40,7 +40,7 @@ void start_simulation() {
     int ret;
     unsigned int i;
 
-
+#if SUPPRESS_USE_PRINTS == 0
     printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
 //#if SPERIMENTAL == 1
 //    printf("\t- SPERIMENTAL features enabled.\n");
@@ -66,6 +66,7 @@ void start_simulation() {
 //    printf("\t- CONSERVATIVE SIMULATION\n");
 //#endif
     printf("\n" COLOR_RESET);
+#endif
 #if POWERCAP == 1
     init_powercap_mainthread(n_cores);
 #endif
@@ -91,7 +92,10 @@ void start_simulation() {
 }
 
 int main(int argn, char *argv[]) {
+
+#if SUPPRESS_USE_PRINTS == 0
     timer exec_time;
+#endif
 
     if(argn < 3) {
         fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
@@ -103,15 +107,19 @@ int main(int argn, char *argv[]) {
         if(argn == 4)
             sec_stop = atoi(argv[3]);
     }
-  
+
+#if SUPPRESS_USE_PRINTS == 0
     printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);
 
 	clock_timer simulation_clocks;
 	clock_timer_start(simulation_clocks);
+#endif
 
 	start_simulation();
+
+#if SUPPRESS_USE_PRINTS == 0
     double simduration = (double)timer_value_seconds(exec_time);
 
     print_statistics();
@@ -122,6 +130,7 @@ int main(int argn, char *argv[]) {
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
     //statistics_fini();
+#endif
 
     return 0;
 }
