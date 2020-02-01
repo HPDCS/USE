@@ -9,4 +9,20 @@ extern void cfv_trampoline(void);
 
 extern __thread void * alternate_stack;
 extern __thread unsigned long alternate_stack_area;
+
+struct run_time_data
+{
+  /* "0" */
+  size_t in_lpstate_best_evt_reliable_offset;
+  /* "1" */
+  size_t in_lpstate_bound_offset;
+  /* "2" */
+  size_t in_msg_state_offset;
+  /* "3" */
+  size_t in_msg_tie_breaker_offset;
+  /* "4" */
+  size_t in_msg_timestamp_offset;
+} __attribute__((packed,aligned(8)));
+
+void run_time_data_init(void);
 #endif

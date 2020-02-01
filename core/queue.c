@@ -110,9 +110,9 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
     memcpy(msg_ptr->data, event_content, event_size);
-    #if IPI_POSTING==1
+    /*#if IPI_POSTING==1
     insert_msg_in_hash_table(msg_ptr);
-    #endif//IPI_POSTING
+    #endif//IPI_POSTING*/
 }
 
 void queue_clean(){ 
@@ -162,6 +162,7 @@ void queue_clean(){
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
+    bool flagged=false,posted=false;//if flagged is true,then event is flagged POSTED_VALID,if posted is true then event is posted successfully
 #if REPORT == 1
         clock_timer queue_op;
 #endif
@@ -212,7 +213,9 @@ void queue_deliver_msgs(void) {
         if(current_msg->max_outgoing_ts < new_hole->timestamp)
             current_msg->max_outgoing_ts = new_hole->timestamp;
 
-        post_information_with_straggler(new_hole);
+        //post_information_with_straggler(new_hole);
+
+        msg_t*old_priority_message = flag_as_posted(new_hole,&flagged);
 
         _thr_pool.messages[i].father = NULL;
 
@@ -230,9 +233,15 @@ void queue_deliver_msgs(void) {
         #if DEBUG==1//not present in original version
         check_tie_breaker_not_zero(new_hole->tie_breaker);
         #endif
+
+        if (flagged){
+            posted=post_info_with_oldval(new_hole,old_priority_message);
+        }
         #if IPI_SUPPORT==1
-            if(new_hole->posted==POSTED)
-                send_ipi_to_lp(new_hole);
+        if(posted)
+            send_ipi_to_lp(new_hole);
+        #else
+        (void)posted;
         #endif
     }
     _thr_pool._thr_pool_count=0;

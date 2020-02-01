@@ -244,17 +244,11 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_INFOS_POSTED:
 			stats[idx].infos_posted += value;
 			break;
-		case STAT_INFOS_POSTED_ANTI_MSG:
-			stats[idx].infos_posted_anti_msg += value;
+		case STAT_INFOS_POSTED_ATTEMPT:
+			stats[idx].infos_posted_attempt += value;
 			break;
 		case STAT_INFOS_POSTED_USEFUL:
 			stats[idx].infos_posted_useful += value;
-			break;
-		case STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC:
-			stats[idx].clock_exec_evt_inter_forward_exec += value;
-			break;
-		case STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC:
-			stats[idx].clock_exec_evt_inter_silent_exec += value;
 			break;
 		case STAT_SYNC_CHECK_IN_PAST:
 			stats[idx].sync_check_in_past += value;
@@ -265,8 +259,7 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 		#endif
 		
-		#if IPI_POSTING==1 || IPI_SUPPORT==1
-
+		#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
 		case STAT_SYNC_CHECK_USEFUL:
 			stats[idx].sync_check_useful += value;
 			break;
@@ -275,6 +268,12 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			break;
 		case STAT_EVENT_SILENT_INTERRUPTED:
 			stats[idx].event_silent_interrupted += value;
+			break;
+		case STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC:
+			stats[idx].clock_exec_evt_inter_forward_exec += value;
+			break;
+		case STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC:
+			stats[idx].clock_exec_evt_inter_silent_exec += value;
 			break;
 		#endif
 
@@ -322,13 +321,13 @@ void gather_statistics() {
 		system_stats->clock_fetch_unsucc   += thread_stats[i].clock_fetch_unsucc;
 		system_stats->events_get_next_fetch+= thread_stats[i].events_get_next_fetch;
 		
+		#if IPI_POSTING==1 && REPORT==1
+		system_stats->infos_posted += 		thread_stats[i].infos_posted;//per thread num info posted by thread
+		system_stats->infos_posted_attempt += 		thread_stats[i].infos_posted_attempt;//per thread num info posted by thread
+		#endif
 		#if IPI_SUPPORT && REPORT==1
 		system_stats->ipi_sended += thread_stats[i].ipi_sended;
 		system_stats->ipi_received += thread_stats[i].ipi_received;
-		#endif
-
-		#if IPI_POSTING==1 && REPORT==1
-		system_stats->infos_posted_anti_msg += thread_stats[i].infos_posted_anti_msg;
 		#endif
 	}
 
@@ -346,10 +345,11 @@ void gather_statistics() {
 	#endif
 
 	#if IPI_POSTING==1 && REPORT==1
-	system_stats->infos_posted_anti_msg_tot = system_stats->infos_posted_anti_msg;
-	system_stats->infos_posted_anti_msg /= n_cores;
+	system_stats->infos_posted_tot = system_stats->infos_posted;//per lp num info posted by lp
+    system_stats->infos_posted/= n_cores;
+    system_stats->infos_posted_attempt_tot = system_stats->infos_posted_attempt;//per lp num info posted by lp
+    system_stats->infos_posted_attempt/= n_cores;
 	#endif
-
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
 		system_stats->events_total         += lp_stats[i].events_total;
@@ -399,13 +399,11 @@ void gather_statistics() {
 
 	#if IPI_POSTING==1 && REPORT==1
     	system_stats->event_not_flushed  += lp_stats[i].event_not_flushed;//per lp event that lp father doesn't flush
-    	system_stats->infos_posted += lp_stats[i].infos_posted;//per lp num info posted by lp
     	system_stats->infos_posted_useful += lp_stats[i].infos_posted_useful;//per lp num info useful for lp
     	system_stats->sync_check_in_past += lp_stats[i].sync_check_in_past;//per lp num sync_check in past maded by lp
     	system_stats->sync_check_in_future += lp_stats[i].sync_check_in_future;//per lp num sync_check in future maded by lp
     	system_stats->sync_check_useful += lp_stats[i].sync_check_useful;//per lp num sync_check useful maded by lp
-    	system_stats->clock_exec_evt_inter_forward_exec += lp_stats[i].clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
-    	system_stats->clock_exec_evt_inter_silent_exec += lp_stats[i].clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    	
     #endif
     	system_stats->events_exec_and_committed += lp_stats[i].events_exec_and_committed;
     	system_stats->clock_forward_exec += lp_stats[i].clock_forward_exec;
@@ -413,6 +411,8 @@ void gather_statistics() {
     	#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
     	system_stats->event_forward_interrupted += lp_stats[i].event_forward_interrupted;
     	system_stats->event_silent_interrupted += lp_stats[i].event_silent_interrupted;
+    	system_stats->clock_exec_evt_inter_forward_exec += lp_stats[i].clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
+    	system_stats->clock_exec_evt_inter_silent_exec += lp_stats[i].clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
     	#endif
 	}
 	
@@ -440,7 +440,6 @@ void gather_statistics() {
 	system_stats->clock_safe         /= (system_stats->events_total - system_stats->events_silent);
 	system_stats->clock_frame_tot     = system_stats->clock_safe * system_stats->total_frames;
 
-
 	system_stats->events_get_next_fetch /= system_stats->events_fetched;	
 	system_stats->clock_enqueue       /= system_stats->events_enqueued;
 		
@@ -455,17 +454,8 @@ void gather_statistics() {
     system_stats->event_not_flushed_tot = system_stats->event_not_flushed;//per lp event that lp father doesn't flush
     system_stats->event_not_flushed/= n_prc_tot;
 
-    system_stats->infos_posted_tot = system_stats->infos_posted;//per lp num info posted by lp
-    system_stats->infos_posted/= n_prc_tot;
-
     system_stats->infos_posted_useful_tot = system_stats->infos_posted_useful;//per lp num info useful for lp
     system_stats->infos_posted_useful/= n_prc_tot;
-
-    system_stats->clock_exec_evt_inter_forward_exec_tot  =  system_stats->clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
-    system_stats->clock_exec_evt_inter_forward_exec/= n_prc_tot;
-
-    system_stats->clock_exec_evt_inter_silent_exec_tot  =  system_stats->clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
-    system_stats->clock_exec_evt_inter_silent_exec /= n_prc_tot;
 
     system_stats->sync_check_in_past_tot  =  system_stats->sync_check_in_past;//per lp num sync_check in past maded by lp
     system_stats->sync_check_in_past/= n_prc_tot;
@@ -478,6 +468,17 @@ void gather_statistics() {
     system_stats->sync_check_useful_tot  =  system_stats->sync_check_useful;//per lp num sync_check useful maded by lp
     system_stats->sync_check_useful/= n_prc_tot;
 
+    system_stats->clock_exec_interruption_tot = system_stats->clock_exec_evt_inter_forward_exec+system_stats->clock_exec_evt_inter_silent_exec;
+    system_stats->clock_exec_interruption = system_stats->clock_exec_interruption_tot /n_prc_tot;
+
+    system_stats->clock_exec_evt_inter_forward_exec_tot  =  system_stats->clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
+    system_stats->clock_exec_evt_inter_forward_exec/= n_prc_tot;
+
+    system_stats->clock_exec_evt_inter_silent_exec_tot  =  system_stats->clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    system_stats->clock_exec_evt_inter_silent_exec /= n_prc_tot;
+
+    system_stats->event_interrupted_tot = system_stats->event_forward_interrupted + system_stats->event_silent_interrupted;
+    system_stats->event_interrupted = system_stats->event_interrupted_tot/n_prc_tot;
     system_stats->event_forward_interrupted_tot= system_stats->event_forward_interrupted;
      system_stats->event_forward_interrupted /= n_prc_tot;
      system_stats->event_silent_interrupted_tot= system_stats->event_silent_interrupted;
@@ -590,40 +591,34 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->event_not_flushed_tot);
 	printf("Event not flushed per LP........................: %12.2f\n",
 		stats->event_not_flushed);
-    
+
+    printf("\n");
+
+    printf("Num attempts Info posted tot....................: %12lu\n",
+		(unsigned long)stats->infos_posted_attempt_tot);
+	printf("Num attempts Info posted per thread.............: %12.2f\n",
+		stats->infos_posted_attempt);
+
 	printf("Info posted tot.................................: %12lu\n",
 		(unsigned long)stats->infos_posted_tot);
-	printf("Info posted per LP..............................: %12.2f\n",
+	printf("Info posted per thread..........................: %12.2f\n",
 		stats->infos_posted);
 
-	printf("Info posted anti_msg tot........................: %12lu\n",
-		(unsigned long)stats->infos_posted_anti_msg_tot);
-	printf("Info posted anti_msg per thread.................: %12.2f\n",
-		stats->infos_posted_anti_msg);
-    
 	printf("Info posted useful tot..........................: %12lu\n",
 		(unsigned long)stats->infos_posted_useful_tot);
 	printf("Info posted useful per LP.......................: %12.2f\n",
 		stats->infos_posted_useful);
 
-	printf("Evt_interrupted_forward_exec Time tot...........: %12lu\n",
-		(unsigned long)stats->clock_exec_evt_inter_forward_exec_tot);
-	printf("Evt_interrupted_forward_exec Time per LP........: %12.2f\n",
-		stats->clock_exec_evt_inter_forward_exec);
+	printf("\n");
 
-	printf("Evt_interrupted_silent_exec Time tot............: %12lu\n",
-		(unsigned long)stats->clock_exec_evt_inter_silent_exec_tot);
-	printf("Evt_interrupted_silent_exec Time per LP.........: %12.2f\n",
-		stats->clock_exec_evt_inter_silent_exec);
-
-	printf("Sync check in past tot..........................: %12lu\n",
+	printf("Sync check Silent Execution tot.................: %12lu\n",
 		(unsigned long)stats->sync_check_in_past_tot);
-	printf("Sync check in past per LP.......................: %12.2f\n",
+	printf("Sync check Silent Execution per LP..............: %12.2f\n",
 		stats->sync_check_in_past);
 
-	printf("Sync check in future tot........................: %12lu\n",
+	printf("Sync check Forward Execution tot................: %12lu\n",
 		(unsigned long)stats->sync_check_in_future_tot);
-	printf("Sync check in future per LP.....................: %12.2f\n",
+	printf("Sync check Forward Execution per LP.............: %12.2f\n",
 		stats->sync_check_in_future);
 	#endif
 
@@ -632,6 +627,8 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->sync_check_useful_tot);
 	printf("Sync check useful per LP........................: %12.2f\n",
 		stats->sync_check_useful);
+
+	printf("\n");
 
 	printf("Events forward interrupted tot..................: %12lu\n",
 		(unsigned long)stats->event_forward_interrupted_tot);
@@ -642,6 +639,26 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->event_silent_interrupted_tot);
 	printf("Events silent interrupted per LP................: %12.2f\n",
 		stats->event_silent_interrupted);
+
+	printf("Events interrupted tot..........................: %12lu\n",
+		(unsigned long)stats->event_interrupted_tot);
+	printf("Events interrupted per LP.......................: %12.2f\n",
+		stats->event_interrupted);
+
+	printf("Evt_interrupted_forward_exec Time tot...........: %12lu clocks\n",
+		(unsigned long)stats->clock_exec_evt_inter_forward_exec_tot);
+	printf("Evt_interrupted_forward_exec Time per LP........: %12.2f clocks\n",
+		stats->clock_exec_evt_inter_forward_exec);
+
+	printf("Evt_interrupted_silent_exec Time tot............: %12lu clocks\n",
+		(unsigned long)stats->clock_exec_evt_inter_silent_exec_tot);
+	printf("Evt_interrupted_silent_exec Time per LP.........: %12.2f clocks\n",
+		stats->clock_exec_evt_inter_silent_exec);
+
+	printf("Evt_interrupted Time tot........................: %12lu clocks\n",
+		(unsigned long)stats->clock_exec_interruption_tot);
+	printf("Evt_interrupted_Time per LP.....................: %12.2f clocks\n",
+		stats->clock_exec_interruption);
 
 	printf("\n\n");
 	#endif

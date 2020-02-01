@@ -13,7 +13,7 @@
 #include <preempt_counter.h>
 #include <hpdcs_utils.h>
 #include <queue.h>
-
+#include <ipi.h>
 __thread int ipi_registration_error = 0;
 
 __thread void * alternate_stack = NULL;
@@ -22,6 +22,17 @@ __thread unsigned long alternate_stack_area = 4096UL;
 __thread unsigned long interruptible_section_start = 0UL;
 __thread unsigned long interruptible_section_end = 0UL;
 char program_name[MAX_LEN_PROGRAM_NAME];
+
+struct run_time_data rt_data;
+
+void run_time_data_init (void)
+{
+  rt_data.in_lpstate_best_evt_reliable_offset = offsetof(struct _LP_state, priority_message);
+  rt_data.in_lpstate_bound_offset = offsetof(struct _LP_state, bound);
+  rt_data.in_msg_state_offset = offsetof(struct __msg_t, state);
+  rt_data.in_msg_tie_breaker_offset = offsetof(struct __msg_t, tie_breaker);
+  rt_data.in_msg_timestamp_offset = offsetof(struct __msg_t, timestamp);
+}
 
 void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0

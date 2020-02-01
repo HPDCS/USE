@@ -11,7 +11,7 @@
 #define printth(format, ...) printf("T%u :: " format, tid, ##__VA_ARGS__);
 
 #if IPI_POSTING==1
-#define print_event(event)	printf("[LP:%u->%u]: TS:%f TB:%u EP:%u STATE:%#02x(%s) IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p,posted=%d\n",\
+#define print_event(event)	printf("[LP:%u->%u]: TS:%f TB:%u EP:%u STATE:%#02x(%s) IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p,posted=%d,MONITOR=%lx\n",\
 							event->sender_id,\
 							event->receiver_id,\
 							event->timestamp,\
@@ -22,9 +22,10 @@
 							is_valid(event),\
 							event,\
 							event->node,\
-							event->posted)
+							event->posted,\
+							(unsigned long)event->monitor)
 #else
-#define print_event(event)	printf("[LP:%u->%u]: TS:%f TB:%u EP:%u STATE:%#02x(%s) IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p\n",\
+#define print_event(event)	printf("[LP:%u->%u]: TS:%f TB:%u EP:%u STATE:%#02x(%s) IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p,MONITOR=%lx\n",\
 							event->sender_id,\
 							event->receiver_id,\
 							event->timestamp,\
@@ -34,7 +35,8 @@
 							evt_state_str(event->state),\
 							is_valid(event),\
 							event,\
-							event->node)
+							event->node,\
+							(unsigned long)event->monitor)
 #endif
 
 #else

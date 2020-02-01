@@ -403,6 +403,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
         	#endif
 			msg_t*evt=get_best_LP_info_good(current_lp);
 	        if(evt!=NULL){
+	        	#if REPORT==1
+	        	statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC,clock_timer_value(event_processing_timer));
+	        	#endif
 	        	make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
 	        	//messagges already inserted in thread_pool will be cleaned with queue_clean
 	        }
@@ -428,6 +431,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	    			if( (evt->timestamp<LPS[current_lp]->last_silent_exec_evt->timestamp)
 			    		|| ( (evt->timestamp==LPS[current_lp]->last_silent_exec_evt->timestamp) 
 			    			&& (evt->tie_breaker<LPS[current_lp]->last_silent_exec_evt->tie_breaker) )){
+	    				#if REPORT==1
+	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
+	        			#endif
 	    				make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
 		            }
 		            //here priority message is after last_silent_exec,we don't need to do a rollback
@@ -437,6 +443,9 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 			    		|| ( (evt->timestamp==LPS[current_lp]->last_silent_exec_evt->timestamp) && (evt->tie_breaker<LPS[current_lp]->last_silent_exec_evt->tie_breaker) )){
 	    				//priority message is before last_silent_exec,we must to do a rollback,but before insert current_msg ordered in localqueue
 	    				insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
+						#if REPORT==1
+	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
+	        			#endif
 						make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
 			            //messagges already inserted in thread_pool will be cleaned with queue_clean
 			        }
@@ -768,32 +777,8 @@ stat64_t execute_time;
 }
 
 
-
-struct run_time_data
-{
-  /* "0" */
-  size_t in_lpstate_best_evt_reliable_offset;
-  /* "1" */
-  size_t in_lpstate_bound_offset;
-  /* "2" */
-  size_t in_msg_state_offset;
-  /* "3" */
-  size_t in_msg_tie_breaker_offset;
-  /* "4" */
-  size_t in_msg_timestamp_offset;
-} __attribute__((packed,aligned(8)));
-
-struct run_time_data rt_data;
-
 #if IPI_SUPPORT==1
-static inline void run_time_data_init (void)
-{
-  rt_data.in_lpstate_best_evt_reliable_offset = offsetof(struct _LP_state, priority_message);
-  rt_data.in_lpstate_bound_offset = offsetof(struct _LP_state, bound);
-  rt_data.in_msg_state_offset = offsetof(struct __msg_t, state);
-  rt_data.in_msg_tie_breaker_offset = offsetof(struct __msg_t, tie_breaker);
-  rt_data.in_msg_timestamp_offset = offsetof(struct __msg_t, timestamp);
-}
+extern struct run_time_data rt_data;
 #endif
 
 #if IPI_HANDLE_INTERRUPT==1
@@ -805,11 +790,11 @@ void thread_loop(unsigned int thread_id) {
 
 #if IPI_SUPPORT==1
 	//register helpful data available only at run-time
-	run_time_data_init();
+	if(thread_id==0)
+		run_time_data_init();
 	//register thread in order to send and to receive IPI
 	register_thread_to_ipi_module(thread_id,"ProcessEvent",(unsigned long)ProcessEvent);
 #endif
-
 	initialize_preempt_counter(thread_id);//init counter
 	init_simulation(thread_id);
 
@@ -850,9 +835,11 @@ void thread_loop(unsigned int thread_id) {
         #endif
         	if(LPS[current_lp]->state==LP_STATE_READY){
         		statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
+        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC,clock_timer_value(event_processing_timer));
         	}
         	else{
         		statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
+        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
         	}
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
@@ -990,11 +977,14 @@ void thread_loop(unsigned int thread_id) {
 			
 			LPS[current_lp]->state = old_state;
 			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
-			if(current_evt_state != ANTI_MSG) {
-				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
-			}
-			else{
-				statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
+			if(LPS[current_lp]->LP_state_is_valid==true){
+				//event was in past before rollback
+				if(current_evt_state != ANTI_MSG) {
+					statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
+				}
+				else{
+					statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
+				}
 			}
 			LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
@@ -1033,9 +1023,6 @@ void thread_loop(unsigned int thread_id) {
 		// Update event and LP control variables
 		current_msg->epoch = LPS[current_lp]->epoch;
 		#endif
-	#if DEBUG == 1
-		current_msg->execution_time = CLOCK_READ();
-	#endif
 		insert_current_msg_after_given_event(LPS[current_lp]->old_valid_bound);
 
 #if CKPT_RECALC == 1
@@ -1073,7 +1060,7 @@ void thread_loop(unsigned int thread_id) {
 		LPS[current_lp]->bound = current_msg;
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
-		LPS[current_lp]->old_valid_bound=NULL;//reset old_valid_bound
+		LPS[current_lp]->old_valid_bound = NULL;//reset old_valid_bound
 
 		// Take a simulation state snapshot, in some way
 		LogState(current_lp);

@@ -116,13 +116,6 @@ endif
 
 ifeq ($(NEW_IPI_POSTING),1)
 
-#IPI_POSTING_SINGLE_INFO
-ifdef IPI_POSTING_SINGLE_INFO
-CFLAGS:=$(CFLAGS) -DIPI_POSTING_SINGLE_INFO=$(IPI_POSTING_SINGLE_INFO)
-else
-CFLAGS:=$(CFLAGS) -DIPI_POSTING_SINGLE_INFO=0
-endif
-
 
 ifeq ($(NEW_IPI_HANDLE_INTERRUPT),1)
 #IPI_POSTING_SYNC_CHECK_FUTURE
@@ -147,7 +140,6 @@ endif
 
 else
 #IPI_POSTING==0,macros that require IPI_POSTING are setted to 0
-CFLAGS:=$(CFLAGS) -DIPI_POSTING_SINGLE_INFO=0
 CFLAGS:=$(CFLAGS) -DIPI_POSTING_SYNC_CHECK_FUTURE=0
 CFLAGS:=$(CFLAGS) -DIPI_POSTING_SYNC_CHECK_PAST=0
 endif
@@ -333,9 +325,15 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 
 TARGET=phold
 
-ifeq ($(NEW_IPI_LONG_JMP),1)
-ASM_SOURCES=core/jmp.S\
+
+
+ifeq ($(NEW_IPI_SUPPORT),1)
+	ASM_SOURCES=core/jmp.S\
 		core/trampoline.S
+else
+	ifeq ($(NEW_IPI_LONG_JMP),1)
+	ASM_SOURCES=core/jmp.S
+	endif
 endif
 
 CORE_SOURCES =  core/ipi_ctrl.c\

@@ -87,18 +87,18 @@
 #define STAT_EVENT_FLUSHED                  600
 #define STAT_EVENT_NOT_FLUSHED              601
 #define STAT_INFOS_POSTED                   602
-#define STAT_INFOS_POSTED_USEFUL            603
-#define STAT_SYNC_CHECK_IN_PAST             604
-#define STAT_SYNC_CHECK_IN_FUTURE           605
-#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 606
-#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 607
-#define STAT_INFOS_POSTED_ANTI_MSG 608
+#define STAT_INFOS_POSTED_ATTEMPT           603
+#define STAT_INFOS_POSTED_USEFUL            604
+#define STAT_SYNC_CHECK_IN_PAST             605
+#define STAT_SYNC_CHECK_IN_FUTURE           606
 #endif
 
 #if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
-#define STAT_SYNC_CHECK_USEFUL              609
-#define STAT_EVENT_FORWARD_INTERRUPTED 610
-#define STAT_EVENT_SILENT_INTERRUPTED 611
+#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 607
+#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 608
+#define STAT_SYNC_CHECK_USEFUL              610
+#define STAT_EVENT_FORWARD_INTERRUPTED 611
+#define STAT_EVENT_SILENT_INTERRUPTED 612
 #endif
 
 #define STAT_EVENTS_EXEC_AND_COMMITED 700
@@ -172,45 +172,53 @@ struct stats_t {
 
     #if IPI_POSTING==1 && REPORT==1
     stat64_t event_not_flushed;//per lp event that lp father doesn't flush
-    stat64_t infos_posted;//per lp num info posted by lp
-    stat64_t infos_posted_anti_msg;
+    stat64_t infos_posted;//per thread num info posted by thread
+    stat64_t infos_posted_attempt;//per thread num tries to post info by thread
     stat64_t infos_posted_useful;//per lp num info useful for lp
     stat64_t sync_check_in_past;//per lp num sync_check in past maded by lp
     stat64_t sync_check_in_future;//per lp num sync_check in future maded by lp
     
-    stat64_t clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
-    stat64_t clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    
     
     //calculated in gather_statistics()
-    stat64_t event_not_flushed_tot;//per lp event that lp father doesn't flush
-    stat64_t infos_posted_tot;//per lp num info posted by lp
+    stat64_t event_not_flushed_tot;
+    stat64_t infos_posted_tot;
+    stat64_t infos_posted_attempt_tot;
     stat64_t infos_posted_anti_msg_tot;
-    stat64_t infos_posted_useful_tot;//per lp num info useful for lp
-    stat64_t sync_check_in_past_tot;//per lp num sync_check in past maded by lp
-    stat64_t sync_check_in_future_tot;//per lp num sync_check in future maded by lp
-    stat64_t clock_exec_evt_inter_forward_exec_tot;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
-    stat64_t clock_exec_evt_inter_silent_exec_tot;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+    stat64_t infos_posted_useful_tot;
+    stat64_t sync_check_in_past_tot;
+    stat64_t sync_check_in_future_tot;
     #endif
 
     #if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
     stat64_t sync_check_useful;//per lp num sync_check useful maded by lp
 
-    //calculated in gather statistics()
-    stat64_t sync_check_useful_tot;//per lp num sync_check useful maded by lp
-
     stat64_t event_forward_interrupted;//per LP
     stat64_t event_silent_interrupted;//per LP
+    stat64_t event_interrupted;//per LP
 
+    //calculated in gather_statistics()
+    stat64_t sync_check_useful_tot;
     stat64_t event_forward_interrupted_tot;
     stat64_t event_silent_interrupted_tot;
+    stat64_t event_interrupted_tot;
+
+    stat64_t clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
+    stat64_t clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
+
+    stat64_t clock_exec_evt_inter_forward_exec_tot;
+    stat64_t clock_exec_evt_inter_silent_exec_tot;
+    stat64_t clock_exec_interruption_tot;
+    stat64_t clock_exec_interruption;
     #endif
 
     stat64_t events_exec_and_committed;//per LP
-    stat64_t events_exec_and_committed_tot;//tot
-
+    
     stat64_t clock_forward_exec;//per LP
-    stat64_t clock_forward_exec_tot;
     stat64_t clock_forward_exec_per_event;//per event
+    stat64_t clock_forward_exec_tot;
+
+    stat64_t events_exec_and_committed_tot;
     
 } __attribute__((aligned (64)));
 

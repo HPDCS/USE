@@ -14,139 +14,11 @@
 #include <events.h>
 #include <posting.h>
 
-void reset_LP_info(msg_t*event,int lp_idx){
-    //I don't know if event is reliable or unreliable
-    msg_t *evt;
-    evt=LPS[lp_idx]->priority_message;
-    if(event!=NULL && evt==event)
-        CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
-        (unsigned long)event,(unsigned long)NULL);
-}
-
-#if REPORT==1
-void update_statistics(int lp_idx){
-    statistics_post_lp_data(lp_idx,STAT_INFOS_POSTED_USEFUL,1);
-    return;
-}
+#if IPI_SUPPORT==1
+#include <ipi.h>
 #endif
 
-/*#if IPI_POSTING_SINGLE_INFO==1
-void swap_nodes(msg_t**event1,msg_t**event2,int i,int k,int*id_current_node,int*id_reliable){
-    //swap two nodes with their relative indexes
-    msg_t*temp_event;
-    temp_event=*event1;
-    *event1=*event2;
-    *event2=temp_event;
-    if(i==*id_current_node){
-        *id_current_node=k;
-    }
-    else if(k==*id_current_node){
-        *id_current_node=i;
-    }
-    if(i==*id_reliable){
-        *id_reliable=k;
-    }
-    else if(k==*id_reliable){
-        *id_reliable=i;
-    }
-    return;
-}
-#endif//IPI_POSTING_SINGLE_INFO*/
-
-bool first_has_greater_ts(msg_t*event1,msg_t*event2){
-    if(event1==NULL){
-        return true;
-    }
-    else if(event2==NULL){
-        return false;
-    }
-    //node1!=NULL and node2!=NULL
-    if( (event1->timestamp < event2->timestamp)
-                    || ( (event1->timestamp == event2->timestamp) && (event1->tie_breaker<=event2->tie_breaker) ) ){
-        return false;
-    }          
-    return true;
-}
-
-/*#if DEBUG==1
-void check_LP_info(msg_t **array_events,int num_events,int lp_idx,int id_current_node,int id_reliable,int id_unreliable){
-    #if IPI_POSTING_SINGLE_INFO==1
-        (void)id_unreliable;
-    #endif
-    for(int i=0;i<num_events;i++)
-    {
-        if(array_events[i]!=NULL)
-        {
-            #if IPI_POSTING_SINGLE_INFO==1
-            if(array_events[i]->receiver_id!=lp_idx 
-                //|| (( (array_events[i]->state & EXTRACTED) ==EXTRACTED) && (i==id_reliable))
-                ||(array_events[i]->posted==UNPOSTED && (i==id_reliable) && (array_events[i]->state!=ELIMINATED) && (array_events[i]->state!=ANTI_MSG))
-                || (array_events[i]->tie_breaker==0))
-            #endif   
-                {
-                if(i==id_reliable){
-                    printf("invalid LP id in array_events,reliable node,lp_idx=%d,LP id in event=%d\n",
-                        lp_idx,array_events[i]->receiver_id);
-                    print_event(array_events[i]);
-                }
-                else if(i==id_current_node){
-                    printf("invalid LP id in array_events,current_node,lp_idx=%d,LP id in event=%d\n",
-                        lp_idx,array_events[i]->receiver_id);
-                    print_event(array_events[i]);
-                }
-                else{
-                    printf("invalid id i=%d\n",i);
-                }
-                gdb_abort;
-            }
-        }
-    }
-}
-#endif//DEBUG*/
-
-void print_lp_id_in_thread_pool_list(){
-    if(_thr_pool._thr_pool_count==0){
-        printf("empty thread pool\n");
-    }
-    for(unsigned int i=0;i<_thr_pool._thr_pool_count;i++){
-        printf("LP id=%d\n",_thr_pool.messages[i].father->receiver_id);
-    }
-}
-
-void post_information(msg_t*event){
-    unsigned int lp_idx=event->receiver_id;
-    while(1){
-        simtime_t bound_ts;
-        if(LPS[lp_idx]->bound!=NULL){
-            bound_ts=LPS[lp_idx]->bound->timestamp;
-        }
-        msg_t*event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
-        if(event_dest_LP==NULL){
-            if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
-                (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
-                continue;
-            //information modified
-            #if REPORT==1
-            statistics_post_lp_data(tid,STAT_INFOS_POSTED,1);
-            #endif
-            break;//
-        }
-        else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
-        {//msg_dest_LP!=NULL
-            if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
-                    (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
-                continue;
-            //information modified
-            #if REPORT==1
-            statistics_post_lp_data(tid,STAT_INFOS_POSTED,1);
-            #endif
-            break;//break with posted=POSTED
-        }
-        break;//timestamp is greater,exit
-    }
-}
-
-void post_information_with_straggler(msg_t*new_hole){
+/*void post_information_with_straggler(msg_t*new_hole){
     int index_in_hash_table=new_hole->id_in_thread_pool_hash_table;
     msg_t*event_in_list=_thr_pool.collision_list[index_in_hash_table];
     if(event_in_list!=NULL && event_in_list==new_hole){
@@ -154,7 +26,7 @@ void post_information_with_straggler(msg_t*new_hole){
         simtime_t bound_ts=0.0;
         unsigned int lp_id=event_in_list->receiver_id;
         
-        /*while(1){
+        while(1){
             //father event is safe?
             event_in_list->posted_valid=POSTED;
             if(LPS[lp_id]->bound!=NULL){
@@ -184,12 +56,12 @@ void post_information_with_straggler(msg_t*new_hole){
             }
             event_in_list->posted_valid=UNPOSTED;
             break;//timestamp is greater,exit
-        }*/
+        }
         _thr_pool.collision_list[index_in_hash_table]=NULL;
     }
-}
+}*/
 
-void insert_msg_in_hash_table(msg_t*msg_ptr){//open addressing
+/*void insert_msg_in_hash_table(msg_t*msg_ptr){//open addressing
     unsigned int hash_table_size=MAX_THR_HASH_TABLE_SIZE;
     #if DEBUG==1
     if((MAX_THR_HASH_TABLE_SIZE & (MAX_THR_HASH_TABLE_SIZE-1))!=0){
@@ -217,39 +89,217 @@ void insert_msg_in_hash_table(msg_t*msg_ptr){//open addressing
             break;
         }
     }
+}*/
+
+/*void reset_LP_info(msg_t*event,int lp_idx){
+    //I don't know if event is reliable or unreliable
+    msg_t *evt;
+    evt=LPS[lp_idx]->priority_message;
+    if(event!=NULL && evt==event)
+        CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+        (unsigned long)event,(unsigned long)NULL);
+}*/
+
+#if REPORT==1
+void update_statistics(int lp_idx){
+    statistics_post_lp_data(lp_idx,STAT_INFOS_POSTED_USEFUL,1);
+    return;
+}
+#endif
+
+bool first_has_greater_ts(msg_t*event1,msg_t*event2){
+    if(event1==NULL){
+        return true;
+    }
+    else if(event2==NULL){
+        return false;
+    }
+    //node1!=NULL and node2!=NULL
+    if( (event1->timestamp < event2->timestamp)
+                    || ( (event1->timestamp == event2->timestamp) && (event1->tie_breaker<=event2->tie_breaker) ) ){
+        return false;
+    }          
+    return true;
 }
 
+#if DEBUG==1
+void check_LP_info(int lp_idx,msg_t*priority_info){
+    if( (priority_info!=NULL)){
+        if( (priority_info->posted==NEVER_POSTED) || (priority_info->receiver_id!=lp_idx)){
+            printf("invalid priority_info\n");
+            print_event(priority_info);
+            gdb_abort;
+        }
+    } 
+        
+}
+#endif//DEBUG
+
+void print_lp_id_in_thread_pool_list(){
+    if(_thr_pool._thr_pool_count==0){
+        printf("empty thread pool\n");
+    }
+    for(unsigned int i=0;i<_thr_pool._thr_pool_count;i++){
+        printf("LP id=%d\n",_thr_pool.messages[i].father->receiver_id);
+    }
+}
+
+void reset_priority_message(unsigned int lp_idx,msg_t*old_priority_message_to_reset){
+    msg_t*new_priority_message=LPS[lp_idx]->priority_message;
+    if(new_priority_message==old_priority_message_to_reset)
+        CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+            (unsigned long)old_priority_message_to_reset,(unsigned long)NULL);
+}
+
+bool post_info_event_valid(msg_t*event){
+    int value_posted=event->posted;
+    if(value_posted==NEVER_POSTED && CAS_x86((unsigned long long*)&(event->posted),
+        (unsigned long)NEVER_POSTED,(unsigned long)POSTED_VALID)==true){
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT,1);
+        #endif
+        return post_information(event,true);
+    }
+    return false;
+}
+
+bool post_info_event_invalid(msg_t*event){
+    int value_posted=event->posted;
+    if(value_posted!=POSTED_INVALID && CAS_x86((unsigned long long*)&(event->posted),
+        (unsigned long)value_posted,(unsigned long)POSTED_INVALID)==true){
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT,1);
+        #endif
+        return post_information(event,true);
+    }
+    return false;
+}
+
+msg_t* flag_as_posted(msg_t*event,bool* flagged){
+    unsigned int lp_idx=event->receiver_id;
+    simtime_t bound_ts;
+    if(LPS[lp_idx]->bound!=NULL){
+        bound_ts=LPS[lp_idx]->bound->timestamp;
+    }
+    msg_t*event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
+    if(event_dest_LP==NULL){
+        event->posted=POSTED_VALID;
+        *flagged=true;
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT,1);
+        #endif
+        return NULL;
+    }
+    else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+    {
+        event->posted=POSTED_VALID;
+        *flagged=true;
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT,1);
+        #endif
+        return event_dest_LP;
+    }
+    *flagged=false;
+    return NULL;
+}
+
+bool post_info_with_oldval(msg_t*event,msg_t*old_priority_message){
+    unsigned int lp_idx=event->receiver_id;
+    if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+                (unsigned long)old_priority_message,(unsigned long)event)==false)//CAS failed
+        return post_information(event,true);
+    return false;
+}
+
+bool post_information(msg_t*event,bool retry_loop){
+    unsigned int lp_idx=event->receiver_id;
+    simtime_t bound_ts;
+    msg_t*event_dest_LP;
+    if(retry_loop){
+        while(1){
+            if(LPS[lp_idx]->bound!=NULL){
+                bound_ts=LPS[lp_idx]->bound->timestamp;
+            }
+            event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
+            if(event_dest_LP==NULL){
+                if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+                    (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
+                    continue;
+                //information modified
+                #if REPORT==1
+                statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+                #endif
+                return true;//
+            }
+            else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+            {//msg_dest_LP!=NULL
+                if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+                    (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
+                    continue;
+                //information modified
+                #if REPORT==1
+                statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+                #endif
+                return true;
+            }
+            break;//timestamp is greater,exit
+        }
+        return false;
+    }
+    else{//one shot
+        if(LPS[lp_idx]->bound!=NULL){
+                bound_ts=LPS[lp_idx]->bound->timestamp;
+        }
+        event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
+        if(event_dest_LP==NULL){
+            if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+                (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
+                return false;
+            //information modified
+            #if REPORT==1
+            statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+            #endif
+            return true;//
+        }
+        else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+        {//msg_dest_LP!=NULL
+            if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+                    (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
+                return false;
+            //information modified
+            #if REPORT==1
+            statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+            #endif
+            return true;
+        }
+        return false;//timestamp is greater,exit
+    }
+}
 
 msg_t* LP_info_is_good(int lp_idx){
     //return NULL if info is not usable,else return info usable
-    //TODO this function does not reset/unpost information because is not needed,write another function to reset/unpost info where is convenient
     msg_t*LP_info;
     LP_info=LPS[lp_idx]->priority_message;
     if(LP_info==NULL)
         return LP_info;
     #if DEBUG==1
-        if(LP_info->receiver_id!=lp_idx){
-            printf("invalid lp id in LP_info\n");
-            gdb_abort;
-        }
-        if(LP_info->monitor==(void*)0x5AFE){
-            printf("invalid monitor value in LP_info\n");
-            gdb_abort;
-        }
-        /*if((LP_info->posted_valid==UNPOSTED) && (LP_info->state!=ANTI_MSG)){
-            printf("info is UNPOSTED and event_state is not ANTI_MSG\n");
-            gdb_abort;
-        }
-        if( (LP_info->state==ANTI_MSG) && (LP_info->posted_valid==POSTED)){
-            printf("info is NEW_EVT && UNPOSTED\n");
-            gdb_abort;
-        }*/
+    if(LP_info->posted==NEVER_POSTED){
+        printf("invalid LP_info,info is NEVER_POSTED\n");
+        gdb_abort;
+    }
+    if(LP_info->receiver_id!=lp_idx){
+        printf("invalid lp id in LP_info\n");
+        gdb_abort;
+    }
+    if(LP_info->tie_breaker==0){
+        printf("invalid tie_breaker in LP_info\n");
+        gdb_abort;
+    }
     #endif
-    if(LP_info->state==ELIMINATED)
+    unsigned int info_state = LP_info->state;
+    if(info_state!=NEW_EVT || (info_state==ANTI_MSG && (LP_info->monitor==(void*)0xBA4A4A)))
         return NULL;
     simtime_t bound_ts=0.0;
-    if(LP_info->tie_breaker==0)
-        return NULL;
     if(LPS[lp_idx]->bound!=NULL){
         bound_ts=LPS[lp_idx]->bound->timestamp;
     }
