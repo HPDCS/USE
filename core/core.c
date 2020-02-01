@@ -990,7 +990,7 @@ end_loop:
 	//statistics_fini();
 	
 	if(sim_error){
-#if SUPPRESS_USE_PRINTS == 0		
+#if SUPPRESS_USE_PRINTS == 0
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 #endif	
 	} else if (stop || stop_timer){
