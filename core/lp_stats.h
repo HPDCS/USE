@@ -87,8 +87,8 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 			for (s=0; s<NUMBER_OF_STATES; s++)
 				for (t=0; t<NUMBER_OF_TYPES; t++)
 					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != 0.0)
-						printf("LP[%u] (Execution State: %u | Event Type: %u) - Average Execution Time: %f\n",
-							index, s, t, ((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time);
+						printf("LP-ID: %u - LP-Exe-State: %s - EVENT-Type: %u - Avg-Exe-Time: %llu\n",
+							index, (s == 0) ? "Forward" : "Silent", t, (unsigned long long int) ((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time);
 
 			free((void *) LPS[index]->lp_statistics);
 			LPS[index]->lp_statistics = NULL;
