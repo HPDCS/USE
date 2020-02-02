@@ -61,7 +61,7 @@ bool bound_is_corrupted(int lp_idx){
 }
 
 void make_LP_state_invalid(msg_t*restore_bound){
-	LPS[current_lp]->ts_current_msg_in_execution=0.0;
+	LPS[current_lp]->msg_curr_executed=NULL;
     LPS[current_lp]->LP_state_is_valid=false;//invalid state
     LPS[current_lp]->dummy_bound->state=NEW_EVT;
     LPS[current_lp]->state=LP_STATE_READY;//restore LP_state

@@ -37,14 +37,13 @@ void run_time_data_init (void)
 void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
     unsigned int lck_tid;
-    simtime_t ts_evt_exec_dest;
     unsigned int lp_idx;
     lp_idx=event->receiver_id;
     lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
     if(lck_tid==0)
         return;
-    ts_evt_exec_dest = LPS[lp_idx]->ts_current_msg_in_execution;
-    if(event->timestamp < ts_evt_exec_dest){
+    msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
+    if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
         #if REPORT==1
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif

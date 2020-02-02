@@ -125,8 +125,8 @@ typedef struct _LP_state {
 	msg_t* last_silent_exec_evt;
 	msg_t* old_valid_bound;
 	msg_t* dummy_bound;
+	msg_t* msg_curr_executed;//this is NULL if there is no event in execution 
 	bool LP_state_is_valid;
-	simtime_t ts_current_msg_in_execution;//this is 0.0 if there is no event in execution 
 #endif
 
 #if IPI_POSTING==1

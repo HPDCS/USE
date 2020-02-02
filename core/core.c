@@ -655,7 +655,7 @@ void init_simulation(unsigned int thread_id){
 #if IPI_HANDLE_INTERRUPT==1
 			//after execution of INIT_EVENTS alloc dummy_bound
 			LPS[current_lp]->dummy_bound=allocate_dummy_bound(current_lp);
-			LPS[current_lp]->ts_current_msg_in_execution=0.0;
+			LPS[current_lp]->msg_curr_executed=NULL;
 #endif
 		}
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
@@ -712,6 +712,7 @@ stat64_t execute_time;
 #endif
 #if IPI_SUPPORT==1
 		event->evt_start_time = RDTSC();//event starting time sampled just before updating preemption_counter
+		event->execution_mode=LPS[LP]->state;
 #endif
 		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
 			#if IPI_PREEMPT_COUNTER==1
@@ -730,7 +731,7 @@ stat64_t execute_time;
 			#endif
 		}
 		#if IPI_HANDLE_INTERRUPT==1
-		LPS[current_lp]->ts_current_msg_in_execution=event_ts;
+		LPS[current_lp]->msg_curr_executed=event;
 		#endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
@@ -753,12 +754,12 @@ stat64_t execute_time;
 			#endif
 		}
 #if IPI_SUPPORT==1
-		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, LPS[LP]->state, event_type, RDTSC()-event->evt_start_time);
+		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, event->execution_mode, event_type, RDTSC()-event->evt_start_time);
 		event->evt_start_time = 0ULL;//event starting time can be zero-ed immediately after having sampled its statistic
 #endif
 
 		#if IPI_HANDLE_INTERRUPT==1
-		LPS[current_lp]->ts_current_msg_in_execution=0.0;
+		LPS[current_lp]->msg_curr_executed=NULL;
 		#endif
 
 #if REPORT == 1

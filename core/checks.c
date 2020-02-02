@@ -67,8 +67,8 @@ void check_CFV_ALREADY_HANDLED(){
 		printf("dummy bound is not NEW_EVT CFV_ALREADY_HANDLED\n");
 		gdb_abort;
 	}
-	if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
-		printf("ts_current_msg_in_execution different than 0 in CFV_ALREADY_HANDLED\n");
+	if(LPS[current_lp]->msg_curr_executed!=NULL){
+		printf("msg_curr_executed different than NULL in CFV_ALREADY_HANDLED\n");
 		gdb_abort;
 	}
 	
@@ -152,8 +152,8 @@ void check_thread_loop_after_fetch(){
 		printf("bound is corrupted\n");
 		gdb_abort;
 	}
-	if(LPS[current_lp]->ts_current_msg_in_execution!=0.0){
-		printf("ts_current_msg_in_execution different than 0 thread_loop\n");
+	if(LPS[current_lp]->msg_curr_executed!=NULL){
+		printf("msg_curr_executed different than NULL thread_loop\n");
 		gdb_abort;
 	}
 	if(LPS[current_lp]->old_valid_bound!=NULL){
