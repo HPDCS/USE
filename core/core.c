@@ -442,6 +442,18 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 	    				make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
 		            }
 		            //here priority message is after last_silent_exec,we don't need to do a rollback
+	    			else if((evt->timestamp<LPS[current_lp]->msg_curr_executed->timestamp)
+			    		|| ( (evt->timestamp==LPS[current_lp]->msg_curr_executed->timestamp) 
+			    			&& (evt->tie_breaker<LPS[current_lp]->msg_curr_executed->tie_breaker) ))
+	    			{
+						#if REPORT==1
+	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
+	        			#endif
+	    				make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
+	    			}
+	    			else{
+	    				reset_info_and_change_bound(current_lp,evt);
+	    			}
 	    		}
 	    		else{//current_msg not null
 	    			if( (evt->timestamp<LPS[current_lp]->last_silent_exec_evt->timestamp)
@@ -455,6 +467,19 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 			            //messagges already inserted in thread_pool will be cleaned with queue_clean
 			        }
 			        //here priority message is after last_silent_exec,we don't need to do a rollback
+	    			else if((evt->timestamp<LPS[current_lp]->msg_curr_executed->timestamp)
+			    		|| ( (evt->timestamp==LPS[current_lp]->msg_curr_executed->timestamp) 
+			    			&& (evt->tie_breaker<LPS[current_lp]->msg_curr_executed->tie_breaker) ))
+	    			{
+	    				insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
+						#if REPORT==1
+	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
+	        			#endif
+	    				make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
+	    			}
+	    			else{
+	    				reset_info_and_change_bound(current_lp,evt);
+	    			}
 	    		}
 			}
 		}

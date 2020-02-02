@@ -7,7 +7,6 @@
 
 msg_t* allocate_dummy_bound(int lp_idx);
 void reset_info_and_change_bound(unsigned int lid,msg_t*event);
-void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker);
 void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event);
 bool dummy_bound_is_corrupted(int lp_idx);
 bool bound_is_corrupted(int lp_idx);

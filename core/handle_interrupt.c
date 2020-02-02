@@ -70,11 +70,8 @@ void make_LP_state_invalid(msg_t*restore_bound){
 }
 
 void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker){
-	#if DEBUG==1
-	check_tie_breaker_not_zero(*tie_breaker);
-	#endif
 	*until_ts=LPS[lid]->dummy_bound->timestamp;
-	*tie_breaker=LPS[lid]->dummy_bound->tie_breaker+1;
+	*tie_breaker=LPS[lid]->dummy_bound->tie_breaker;
 }
 
 void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound){
@@ -92,6 +89,10 @@ void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound){
 
 
 void change_bound_with_current_msg(){
+	#if DEBUG==1
+	check_tie_breaker_not_zero(current_msg->tie_breaker);
+	#endif
+
 	LPS[current_lp]->old_valid_bound=LPS[current_lp]->bound;
 	LPS[current_lp]->dummy_bound->timestamp=current_msg->timestamp;
 	LPS[current_lp]->dummy_bound->tie_breaker=current_msg->tie_breaker-1;
@@ -111,7 +112,7 @@ void reset_info_and_change_bound(unsigned int lid,msg_t*event){
 
 	LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
 	LPS[lid]->dummy_bound->timestamp=event->timestamp;
-	LPS[lid]->dummy_bound->tie_breaker=event->tie_breaker-1;
+	LPS[lid]->dummy_bound->tie_breaker=event->tie_breaker;
 	LPS[lid]->bound=LPS[lid]->dummy_bound;//modify bound,now priority message must be smaller than this bound
 }
 

@@ -244,7 +244,6 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	#endif
 
 	#if IPI_HANDLE_INTERRUPT==1
-	bool insert_current_msg_in_localqueue=false;
 	LPS[lid]->last_silent_exec_evt = evt;
 	#endif
 
@@ -284,7 +283,6 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			check_stop_rollback(old_state,lid);
 			#endif
 			
-			insert_current_msg_in_localqueue=true;
 			LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
 			break;
 		}
@@ -330,7 +328,6 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			        	}
 		    		}
 		    		else{//current_msg not null
-		    			insert_current_msg_in_localqueue=true;
 			    		if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
 			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) 
 			    			&& (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
@@ -357,6 +354,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		#endif//IPI_POSTING_SYNC_CHECK_PAST
 
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
+		change_dest_ts(lid,&until_ts,&tie_breaker);//if ScheduleNeWEvent viewed priority_message it changed the bound with priority_msg but doesn't chagne dest_ts 
 		events++;
 
 		last_executed_event = evt;
@@ -373,7 +371,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	}
 	
 	#if IPI_HANDLE_INTERRUPT==1
-	if(insert_current_msg_in_localqueue){
+	if(current_msg!=NULL){
 		insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);
 	}
 	#endif
