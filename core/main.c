@@ -12,6 +12,10 @@
 #include <reverse.h>
 #include <statistics.h>
 
+extern bool sim_error;
+extern volatile bool stop_timer;
+extern volatile bool stop;
+
 #if IPI_SUPPORT==1
 #include <ipi.h>
 extern char program_name[MAX_LEN_PROGRAM_NAME];
@@ -158,7 +162,13 @@ int main(int argn, char *argv[]) {
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
     //statistics_fini();
-
+    if(sim_error){
+        printf(RED("Execution ended for an error\n"));
+    } 
+    else if (stop || stop_timer){
+        //sleep(5);
+        printf(GREEN( "Execution ended correctly\n"));
+    }
     return 0;
 }
 

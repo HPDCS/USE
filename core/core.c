@@ -1197,7 +1197,8 @@ end_loop:
 
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
-	} else if (stop || stop_timer){
+	} 
+	else if (stop || stop_timer){
 		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
