@@ -50,6 +50,7 @@
 
 #if IPI_SUPPORT==1
 #include <ipi.h>
+#include <lp_stats.h>
 #endif
 
 #if IPI_HANDLE_INTERRUPT==1
@@ -284,11 +285,11 @@ void LPs_metada_init() {
 		LPS[i]->bound 					= NULL;
 		LPS[i]->queue_states 			= new_list(i, state_t);
 		LPS[i]->mark 					= 0;
-		#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#if IPI_CONSTANT_CHILD_INVALIDATION==1
 		set_epoch_of_LP(i,1);
-		#else
+#else
 		LPS[i]->epoch 					= 1;
-		#endif
+#endif
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
 
@@ -300,7 +301,9 @@ void LPs_metada_init() {
 #if IPI_POSTING==1
 		LPS[i]->priority_message=NULL;
 #endif
-
+#if IPI_SUPPORT==1
+		LPS[i]->lp_statistics = NULL;//LP event's statistic initialization, struct will be allocated by LP-0 at init time
+#endif
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
@@ -597,6 +600,10 @@ void init_simulation(unsigned int thread_id){
 	if(tid == 0){
 		LPs_metada_init();
 		printf("LP_metada init finished\n");
+#if IPI_SUPPORT==1
+		init_lp_stats(LPS, n_prc_tot);//allocation of lp_stats structs for all LPs
+		printf("LP_stats init finished\n");
+#endif
 		dymelor_init();
 		printf("Dymelor_init finished\n");
 		statistics_init();
@@ -616,21 +623,24 @@ void init_simulation(unsigned int thread_id){
        		current_msg->type 			= INIT;//
        		current_msg->state 			= 0x0;//
        		current_msg->father 		= NULL;//
-       		#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#if IPI_CONSTANT_CHILD_INVALIDATION==1
        		current_msg->epoch= get_epoch_of_LP(current_lp);
-			#else
+#else
        		current_msg->epoch 		= LPS[current_lp]->epoch;//
-       		#endif
+#endif
        		current_msg->monitor 		= 0x0;//
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
-			#if IPI_PREEMPT_COUNTER==1
+#if IPI_SUPPORT==1
+			current_msg->evt_start_time = 0ULL;//event INIT does not require to be monitored
+#endif
+#if IPI_PREEMPT_COUNTER==1
 			increment_preempt_counter();
-			#endif
+#endif
 
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-			#if IPI_PREEMPT_COUNTER==1
+#if IPI_PREEMPT_COUNTER==1
 			decrement_preempt_counter();
-			#endif
+#endif
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 			LPS[current_lp]->bound = current_msg;
 			LPS[current_lp]->num_executed_frames++;
@@ -642,11 +652,11 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->until_ckpt_recalc = 0;
 			LPS[current_lp]->ckpt_period = 20;
 			//LPS[current_lp]->epoch = 1;
-			#if IPI_HANDLE_INTERRUPT==1
+#if IPI_HANDLE_INTERRUPT==1
 			//after execution of INIT_EVENTS alloc dummy_bound
 			LPS[current_lp]->dummy_bound=allocate_dummy_bound(current_lp);
 			LPS[current_lp]->ts_current_msg_in_execution=0.0;
-			#endif
+#endif
 		}
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
@@ -694,12 +704,15 @@ stat64_t execute_time;
 #if REPORT == 1 
 		clock_timer_start(event_processing_timer);
 #endif
-	#if DEBUG==1//not present in original version
+#if DEBUG==1//not present in original version
 		if(LPS[LP]->state!=LP_STATE_READY && LPS[LP]->state!=LP_STATE_SILENT_EXEC){
 			printf("invalid event state,state is %d\n",LPS[LP]->state);
 			gdb_abort;
 		}
-	#endif
+#endif
+#if IPI_SUPPORT==1
+		event->evt_start_time = RDTSC();//event starting time sampled just before updating preemption_counter
+#endif
 		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
 			#if IPI_PREEMPT_COUNTER==1
 			#if IPI_INTERRUPT_FUTURE==1
@@ -739,6 +752,10 @@ stat64_t execute_time;
 			#endif
 			#endif
 		}
+#if IPI_SUPPORT==1
+		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, LPS[LP]->state, event_type, RDTSC()-event->evt_start_time);
+		event->evt_start_time = 0ULL;//event starting time can be zero-ed immediately after having sampled its statistic
+#endif
 
 		#if IPI_HANDLE_INTERRUPT==1
 		LPS[current_lp]->ts_current_msg_in_execution=0.0;
@@ -1157,7 +1174,9 @@ end_loop:
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
 			pthread_join(sleeper, NULL);
-
+#if IPI_SUPPORT==1
+			fini_lp_stats(LPS, n_prc_tot);//LP-0 is in charge of removing allocated structs
+#endif
 		}
 	}
 }

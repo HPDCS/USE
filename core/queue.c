@@ -109,6 +109,10 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->data_size = event_size;
     msg_ptr->type = event_type;
 
+#if IPI_SUPPORT==1
+    msg_ptr->evt_start_time = 0ULL;//event starting time initialization
+#endif
+
     memcpy(msg_ptr->data, event_content, event_size);
     /*#if IPI_POSTING==1
     insert_msg_in_hash_table(msg_ptr);

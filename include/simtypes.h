@@ -133,6 +133,10 @@ typedef struct _LP_state {
 	msg_t* priority_message;//used to write priority message
 #endif
 
+#if IPI_SUPPORT==1
+	void *lp_statistics;//used to keep track of per-LP event's statistics
+#endif
+
 } LP_state;
 
 
