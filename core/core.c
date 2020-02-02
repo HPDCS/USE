@@ -55,6 +55,7 @@
 
 #if IPI_HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
+#include <lp_stats.h>
 #endif
 
 //id del processo principale
@@ -630,7 +631,7 @@ void init_simulation(unsigned int thread_id){
 #endif
        		current_msg->monitor 		= 0x0;//
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
-#if IPI_SUPPORT==1
+#if IPI_HANDLE_INTERRUPT==1
 			current_msg->evt_start_time = 0ULL;//event INIT does not require to be monitored
 #endif
 #if IPI_PREEMPT_COUNTER==1
@@ -710,7 +711,7 @@ stat64_t execute_time;
 			gdb_abort;
 		}
 #endif
-#if IPI_SUPPORT==1
+#if IPI_HANDLE_INTERRUPT==1
 		event->evt_start_time = RDTSC();//event starting time sampled just before updating preemption_counter
 		event->execution_mode=LPS[LP]->state;
 #endif
@@ -753,9 +754,9 @@ stat64_t execute_time;
 			#endif
 			#endif
 		}
+
 #if IPI_SUPPORT==1
 		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, event->execution_mode, event_type, RDTSC()-event->evt_start_time);
-		event->evt_start_time = 0ULL;//event starting time can be zero-ed immediately after having sampled its statistic
 #endif
 
 		#if IPI_HANDLE_INTERRUPT==1

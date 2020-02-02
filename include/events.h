@@ -74,7 +74,7 @@ typedef struct __msg_t
 	int posted;
 	bool collectionable;//used for garbage collection
 #endif
-#if IPI_SUPPORT==1
+#if IPI_HANDLE_INTERRUPT==1
 	unsigned int execution_mode;
 	unsigned long long int evt_start_time;//set to the event starting time when executed, 0 otherwise
 #endif

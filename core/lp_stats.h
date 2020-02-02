@@ -7,8 +7,9 @@
  * MACRO "IPI_SUPPORT" MUST BE *
  * DEFINED AND SET TO 1.       *
  *******************************/
-# if IPI_SUPPORT==1
 
+
+#if IPI_HANDLE_INTERRUPT==1
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +34,9 @@
 	(((unsigned long long int) cycles_high << 32) | cycles_low); \
 })
 #endif
+#endif
+
+# if IPI_SUPPORT==1
 
 #define ALPHA				0.3
 #define NUMBER_OF_TYPES		30
