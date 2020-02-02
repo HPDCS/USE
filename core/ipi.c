@@ -27,11 +27,13 @@ struct run_time_data rt_data;
 
 void run_time_data_init (void)
 {
-  rt_data.in_lpstate_best_evt_reliable_offset = offsetof(struct _LP_state, priority_message);
+  rt_data.in_lpstate_priority_message_offset = offsetof(struct _LP_state, priority_message);
   rt_data.in_lpstate_bound_offset = offsetof(struct _LP_state, bound);
   rt_data.in_msg_state_offset = offsetof(struct __msg_t, state);
-  rt_data.in_msg_tie_breaker_offset = offsetof(struct __msg_t, tie_breaker);
+  rt_data.in_msg_monitor_offset = offsetof(struct __msg_t, tie_breaker);
   rt_data.in_msg_timestamp_offset = offsetof(struct __msg_t, timestamp);
+  rt_data.in_stats_ipi_trampoline_received_offset = offsetof(struct stats_t, ipi_trampoline_received);
+  rt_data.sizeof_stats = sizeof(struct stats_t);
 }
 
 void send_ipi_to_lp(msg_t*event){

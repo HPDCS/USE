@@ -327,6 +327,7 @@ void gather_statistics() {
 		#endif
 		#if IPI_SUPPORT && REPORT==1
 		system_stats->ipi_sended += thread_stats[i].ipi_sended;
+		system_stats->ipi_trampoline_received += thread_stats[i].ipi_trampoline_received;
 		system_stats->ipi_received += thread_stats[i].ipi_received;
 		#endif
 	}
@@ -337,9 +338,11 @@ void gather_statistics() {
 	
 	#if IPI_SUPPORT==1 && REPORT==1
 	system_stats->ipi_sended_tot = system_stats->ipi_sended;
+	system_stats->ipi_trampoline_received_tot = system_stats->ipi_trampoline_received;
 	system_stats->ipi_received_tot = system_stats->ipi_received;
 
 	system_stats->ipi_sended /= n_cores;
+	system_stats->ipi_trampoline_received /= n_cores;
 	system_stats->ipi_received /= n_cores;
 
 	#endif
@@ -579,6 +582,10 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->ipi_sended_tot);
 	printf("IPI sent per thread.............................: %12.2f\n",
 		stats->ipi_sended);
+	printf("IPI handled in trampoline tot...................: %12lu\n",
+		(unsigned long)stats->ipi_trampoline_received_tot);
+	printf("IPI handled in trampoline per thread............: %12.2f\n",
+		stats->ipi_trampoline_received);
 	printf("IPI received tot................................: %12lu\n",
 		(unsigned long)stats->ipi_received_tot);
 	printf("IPI received per thread.........................: %12.2f\n",

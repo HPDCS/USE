@@ -163,10 +163,12 @@ struct stats_t {
 
     #if IPI_SUPPORT==1 && REPORT==1
     stat64_t ipi_sended;//per thread num of ipis sended by target thread
+    stat64_t ipi_trampoline_received;//per thread num of ipis handled in trampoline
     stat64_t ipi_received;//per thread num of ipis received by target thread
 
     //calculated in gather statistics
     stat64_t ipi_sended_tot;
+    stat64_t ipi_trampoline_received_tot;
     stat64_t ipi_received_tot;
     #endif
 

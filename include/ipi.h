@@ -13,15 +13,19 @@ extern __thread unsigned long alternate_stack_area;
 struct run_time_data
 {
   /* "0" */
-  size_t in_lpstate_best_evt_reliable_offset;
+  size_t in_lpstate_priority_message_offset;
   /* "1" */
   size_t in_lpstate_bound_offset;
   /* "2" */
   size_t in_msg_state_offset;
   /* "3" */
-  size_t in_msg_tie_breaker_offset;
+  size_t in_msg_monitor_offset;
   /* "4" */
   size_t in_msg_timestamp_offset;
+  /* "5" */
+  size_t in_stats_ipi_trampoline_received_offset;
+  /* "6" */
+  size_t sizeof_stats;
 } __attribute__((packed,aligned(8)));
 
 void run_time_data_init(void);
