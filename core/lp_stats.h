@@ -75,8 +75,7 @@ static inline __attribute__((always_inline))
 void store_lp_stats(lp_evt_stats *lps, unsigned int s, unsigned int t, unsigned long long time)
 {
 	s = (s == LP_STATE_SILENT_EXEC) ? 1 : 0;
-	lps->lp_state[s].evt_type[t].avg_exec_time +=
-		ALPHA * (((double) time) - lps->lp_state[s].evt_type[t].avg_exec_time);
+	lps->lp_state[s].evt_type[t].avg_exec_time += ALPHA * (((double) time) - lps->lp_state[s].evt_type[t].avg_exec_time);
 }
 
 static inline __attribute__((always_inline))

@@ -101,6 +101,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 #endif
 
 volatile unsigned int ready_wt = 0;
+volatile unsigned int ended_wt = 0;
 
 simulation_configuration rootsim_config;
 
@@ -1165,10 +1166,10 @@ end_loop:
 #if IPI_SUPPORT==1
 	ipi_unregister();
 #endif
-	// Unmount statistical data
-	// FIXME
-	//statistics_fini();
 	
+	__sync_fetch_and_add(&ended_wt, 1);
+	__sync_synchronize();
+
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} else if (stop || stop_timer){
@@ -1176,10 +1177,16 @@ end_loop:
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
 			pthread_join(sleeper, NULL);
-#if IPI_SUPPORT==1
-			fini_lp_stats(LPS, n_prc_tot);//LP-0 is in charge of removing allocated structs
-#endif
 		}
+	}
+
+	while(ended_wt!=n_cores);
+
+	if (tid==0) {
+#if IPI_SUPPORT==1
+		fini_lp_stats(LPS, n_prc_tot);//LP-0 is in charge of removing allocated structs
+#endif
+		statistics_fini();
 	}
 }
 
