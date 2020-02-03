@@ -1,4 +1,4 @@
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 
 #include <stdio.h>
 #include <core.h>
@@ -14,7 +14,7 @@
 #include <checks.h>
 #endif
 
-#if IPI_POSTING==1
+#if POSTING==1
 #include <posting.h>
 #endif
 
@@ -102,7 +102,7 @@ void change_bound_with_current_msg(){
 	#endif
 }
 
-#if IPI_POSTING==1
+#if POSTING==1
 void reset_info_and_change_bound(unsigned int lid,msg_t*event){
 	#if DEBUG==1
 	check_tie_breaker_not_zero(event->tie_breaker);

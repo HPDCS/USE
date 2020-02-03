@@ -11,7 +11,7 @@
 #include <limits.h>
 #include <nb_calqueue.h>
 
-#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#if CONSTANT_CHILD_INVALIDATION==1
 #include <atomic_epoch_and_ts.h>
 #endif
 
@@ -19,7 +19,7 @@
 
 #define THR_POOL_SIZE		128
 
-#if IPI_POSTING==1
+#if POSTING==1
 //MAX_THR_HASH_TABLE_SIZE must be min(MAX_LPs,THR_POOL_SIZE)
 #if THR_POOL_SIZE<=MAX_LPs
 	#define MAX_THR_HASH_TABLE_SIZE (THR_POOL_SIZE)

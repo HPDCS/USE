@@ -2,14 +2,14 @@ PROGRAMMA ORIGINALE: Il programma non prevede meccanismi per interrompere un thr
 
 CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo tale da aggiungere il predicato "il padre dovrà eventually essere rieseguito?" che quindi permette l'invalidazione degli eventi figli sia nel caso in cui il padre è già stato ri-eseguito(la sua epoca è aumentata rispetto alla precedente esecuzione) e sia nel caso in cui il padre dovrà essere rieseguito.
 
-IPI_PREEMPT_COUNTER: macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo(sincrona/asincrona), può accadere. L'interruzione può avvenire solo quando il preemption_counter è 0.Aumentare il preemption counter assicura che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
+PREEMPT_COUNTER: macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo(sincrona/asincrona), può accadere. L'interruzione può avvenire solo quando il preemption_counter è 0.Aumentare il preemption counter assicura che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
 Il programma non è ancora in grado di interrompersi.
 
 
-IPI_LONG_JMP: macro che dà la possibilità al programma di fare delle long_jmp in qualsiasi scenario,ma solo quando il preempt_counter è 0.In alcuni punti critici del codice,fare long_jmp non è safe.Di fatto con questa macro abilitata il programma supporta il meccanismo delle interruzioni sincrone.
+LONG_JMP: macro che dà la possibilità al programma di fare delle long_jmp in qualsiasi scenario,ma solo quando il preempt_counter è 0.In alcuni punti critici del codice,fare long_jmp non è safe.Di fatto con questa macro abilitata il programma supporta il meccanismo delle interruzioni sincrone.
 Lasciare il valore di counter a 0 se si vuole chiamare la long_jmp come se fosse una normale funzione.
 
-IPI_HANDLE_INTERRUPT: macro che implementa il supporto per settare un LP come valido/invalido,utile per permettere l'interruzione asincrona/sincrona in scenari critici,quando il preemption counter è 0.
+HANDLE_INTERRUPT: macro che implementa il supporto per settare un LP come valido/invalido,utile per permettere l'interruzione asincrona/sincrona in scenari critici,quando il preemption counter è 0.
 Grazie a questa macro è possibile in seguito all'interruzione settare un LP come invalido per poterlo ripristinare correttamente appena possibile.
 Si preoccupa di invalidare e ripristinare lo stato dell'LP in seguito a qualsiasi interruzione asincrona/sincrona.
 Non si preoccupa di gestire l'evento current_msg interrotto(aumentare numero frame,inserirlo in coda locale,settarlo come interrotto,farlo apparire nel futuro ecc),deve essere fatto esplicitamente da altre macro.
@@ -17,17 +17,11 @@ Non si preoccupa di gestire l'evento current_msg interrotto(aumentare numero fra
 IPI_SUPPORT: macro che dà la possibilità al programma di inviare e ricevere interruzioni asincrone, in modo safe.
 Le interruzioni possono essere inviate da un thread ad un altro in qualsiasi scenario. Le interruzioni vengono effettivamente catturate quando il thread destinatario ha preemption counter pari a 0 e sta eseguendo una ProcessEvent.
 
-IPI_SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se risultano veri, fanno eseguire una interruzione sincrona.Prima di eseguire l'interruzione sincrona è necessario settare l'LP come invalido e gestire correttamente current_msg interrotto.
+SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se risultano veri, fanno eseguire una interruzione sincrona.Prima di eseguire l'interruzione sincrona è necessario settare l'LP come invalido e gestire correttamente current_msg interrotto.
 
-IPI_POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP
+POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP
 
 TODO:
-
--postare info su anti_msg in past quando non è possibile eseguire try_lock(solo ts o pointer ad evento,ma è più complicato e inefficiente)
--inserire statistiche basate su grana degli eventi in base al type
--modello decisionale:livello speculatività,stato simulazione lp dest(stateready,staterollback,bound,evento in esecuzione ecc),lp in processevent,residual time ecc
--print_statistics stampa solo i valori non fa nessun calcolo,nemmeno sottrazioni
-
 
 -operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice es rollback_length.
 -varie statistiche non vengono calcolate adeguatamente anche nel caso in cui non ci siano interruzioni
@@ -40,16 +34,13 @@ TODO:
 -righe 403,404 non necessarie in numerical.c
 -nel programma originale mettere volatile alla variabile ready_wt
 -nel programma originale modificare il node->counter(preso dall'evento precedente) nella fetch con event->tiebreaker(preso dall'evento corrente)
--postare info in base al livello di speculatività
 
 -inserire barriera leggera di memoria a tutti gli aggiornamenti del counter(+1 -1). Altrimenti un riordino delle istruzioni crea problemi!!
--inserire barriera di memoria tra scrittura unposted e flush sulla coda globale,per garantire che ogni evento inserito in coda globale non postato non sia mai flaggato come Posted
 -micro bug in ONGVT_PERIOD legato all'aggiornamento del commit_ts e commit_tb horizon è possibile impostare il tb non correlato con il timestamp e per questo si vede la fine simulazione su un evento non safe!!
 
 
 -idea:
--cfv su interruzione solo se info postata è buona(mettere dentro il trampolino questa logica con chiamata diretta alla funzione, e poi successivamente pensare all'assembly)
--rimuovere father frame,attualmente non utilizzato e se si utilizza la IPI_CONSTANT_CHILD_INVALIDATION non serve più father frame
+-rimuovere father frame,attualmente non utilizzato e se si utilizza la CONSTANT_CHILD_INVALIDATION non serve più father frame
 
 Osservazioni:
 -se nella simulazione il master seed è sempre lo stesso e tutti gli eventi hanno ts diverso(tb=1) la simulazione termina sempre con lo stesso stato finale e stato transitorio?

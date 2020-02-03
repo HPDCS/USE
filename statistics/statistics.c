@@ -236,7 +236,7 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 		#endif
 
-		#if IPI_POSTING==1 && REPORT==1
+		#if POSTING==1 && REPORT==1
 
 		case STAT_EVENT_NOT_FLUSHED:
 			stats[idx].event_not_flushed += value;
@@ -250,16 +250,16 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_INFOS_POSTED_USEFUL:
 			stats[idx].infos_posted_useful += value;
 			break;
-		case STAT_SYNC_CHECK_IN_PAST:
-			stats[idx].sync_check_in_past += value;
+		case STAT_SYNC_CHECK_SILENT:
+			stats[idx].sync_check_silent += value;
 			break;
-		case STAT_SYNC_CHECK_IN_FUTURE:
-			stats[idx].sync_check_in_future += value;
+		case STAT_SYNC_CHECK_FORWARD:
+			stats[idx].sync_check_forward += value;
 			break;
 
 		#endif
 		
-		#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
+		#if POSTING==1 || IPI_SUPPORT==1 && REPORT==1
 		case STAT_SYNC_CHECK_USEFUL:
 			stats[idx].sync_check_useful += value;
 			break;
@@ -321,7 +321,7 @@ void gather_statistics() {
 		system_stats->clock_fetch_unsucc   += thread_stats[i].clock_fetch_unsucc;
 		system_stats->events_get_next_fetch+= thread_stats[i].events_get_next_fetch;
 		
-		#if IPI_POSTING==1 && REPORT==1
+		#if POSTING==1 && REPORT==1
 		system_stats->infos_posted += 		thread_stats[i].infos_posted;//per thread num info posted by thread
 		system_stats->infos_posted_attempt += 		thread_stats[i].infos_posted_attempt;//per thread num info posted by thread
 		#endif
@@ -347,7 +347,7 @@ void gather_statistics() {
 
 	#endif
 
-	#if IPI_POSTING==1 && REPORT==1
+	#if POSTING==1 && REPORT==1
 	system_stats->infos_posted_tot = system_stats->infos_posted;//per lp num info posted by lp
     system_stats->infos_posted/= n_cores;
     system_stats->infos_posted_attempt_tot = system_stats->infos_posted_attempt;//per lp num info posted by lp
@@ -400,18 +400,18 @@ void gather_statistics() {
 		
 		system_stats->total_frames         += LPS[i]->num_executed_frames;
 
-	#if IPI_POSTING==1 && REPORT==1
+	#if POSTING==1 && REPORT==1
     	system_stats->event_not_flushed  += lp_stats[i].event_not_flushed;//per lp event that lp father doesn't flush
     	system_stats->infos_posted_useful += lp_stats[i].infos_posted_useful;//per lp num info useful for lp
-    	system_stats->sync_check_in_past += lp_stats[i].sync_check_in_past;//per lp num sync_check in past maded by lp
-    	system_stats->sync_check_in_future += lp_stats[i].sync_check_in_future;//per lp num sync_check in future maded by lp
+    	system_stats->sync_check_silent += lp_stats[i].sync_check_silent;//per lp num sync_check in past maded by lp
+    	system_stats->sync_check_forward += lp_stats[i].sync_check_forward;//per lp num sync_check in future maded by lp
     	system_stats->sync_check_useful += lp_stats[i].sync_check_useful;//per lp num sync_check useful maded by lp
     	
     #endif
     	system_stats->events_exec_and_committed += lp_stats[i].events_exec_and_committed;
     	system_stats->clock_forward_exec += lp_stats[i].clock_forward_exec;
 
-    	#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
+    	#if POSTING==1 || IPI_SUPPORT==1 && REPORT==1
     	system_stats->event_forward_interrupted += lp_stats[i].event_forward_interrupted;
     	system_stats->event_silent_interrupted += lp_stats[i].event_silent_interrupted;
     	system_stats->clock_exec_evt_inter_forward_exec += lp_stats[i].clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
@@ -452,7 +452,7 @@ void gather_statistics() {
 	system_stats->mem_checkpoint /= system_stats->counter_checkpoints;
 	system_stats->checkpoint_period /= n_prc_tot;
 
-	#if IPI_POSTING==1 && REPORT==1
+	#if POSTING==1 && REPORT==1
 	//calculate in gather_statistics()
     system_stats->event_not_flushed_tot = system_stats->event_not_flushed;//per lp event that lp father doesn't flush
     system_stats->event_not_flushed/= n_prc_tot;
@@ -460,14 +460,14 @@ void gather_statistics() {
     system_stats->infos_posted_useful_tot = system_stats->infos_posted_useful;//per lp num info useful for lp
     system_stats->infos_posted_useful/= n_prc_tot;
 
-    system_stats->sync_check_in_past_tot  =  system_stats->sync_check_in_past;//per lp num sync_check in past maded by lp
-    system_stats->sync_check_in_past/= n_prc_tot;
+    system_stats->sync_check_silent_tot  =  system_stats->sync_check_silent;//per lp num sync_check in past maded by lp
+    system_stats->sync_check_silent/= n_prc_tot;
 
-    system_stats->sync_check_in_future_tot  =  system_stats->sync_check_in_future;//per lp num sync_check in future maded by lp
-    system_stats->sync_check_in_future/= n_prc_tot;
+    system_stats->sync_check_forward_tot  =  system_stats->sync_check_forward;//per lp num sync_check in future maded by lp
+    system_stats->sync_check_forward/= n_prc_tot;
     #endif
 
-    #if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
+    #if IPI_SUPPORT==1 || POSTING==1 && REPORT==1
     system_stats->sync_check_useful_tot  =  system_stats->sync_check_useful;//per lp num sync_check useful maded by lp
     system_stats->sync_check_useful/= n_prc_tot;
 
@@ -593,7 +593,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n\n");
 	#endif
 
-	#if IPI_POSTING==1 && REPORT==1
+	#if POSTING==1 && REPORT==1
 	printf("Event not flushed tot...........................: %12lu\n",
 		(unsigned long)stats->event_not_flushed_tot);
 	printf("Event not flushed per LP........................: %12.2f\n",
@@ -619,17 +619,17 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n");
 
 	printf("Sync check Silent Execution tot.................: %12lu\n",
-		(unsigned long)stats->sync_check_in_past_tot);
+		(unsigned long)stats->sync_check_silent_tot);
 	printf("Sync check Silent Execution per LP..............: %12.2f\n",
-		stats->sync_check_in_past);
+		stats->sync_check_silent);
 
 	printf("Sync check Forward Execution tot................: %12lu\n",
-		(unsigned long)stats->sync_check_in_future_tot);
+		(unsigned long)stats->sync_check_forward_tot);
 	printf("Sync check Forward Execution per LP.............: %12.2f\n",
-		stats->sync_check_in_future);
+		stats->sync_check_forward);
 	#endif
 
-	#if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
+	#if IPI_SUPPORT==1 || POSTING==1 && REPORT==1
 	printf("Sync check useful tot...........................: %12lu\n",
 		(unsigned long)stats->sync_check_useful_tot);
 	printf("Sync check useful per LP........................: %12.2f\n",

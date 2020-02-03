@@ -69,12 +69,12 @@ typedef struct __msg_t
 	simtime_t gvt_on_commit;
 	struct __msg_t * event_on_gvt_on_commit;
 #endif
-#if IPI_POSTING==1
+#if POSTING==1
 	int id_in_thread_pool_hash_table;
 	int posted;
 	bool collectionable;//used for garbage collection
 #endif
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 	unsigned int execution_mode;
 	unsigned long long int evt_start_time;//set to the event starting time when executed, 0 otherwise
 #endif

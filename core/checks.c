@@ -14,21 +14,21 @@
 #include <hpdcs_utils.h>
 #include <prints.h>
 
-#if IPI_POSTING==1
+#if POSTING==1
 #include <posting.h>
 #endif
 
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
 #endif
 
-#if IPI_PREEMPT_COUNTER==1
+#if PREEMPT_COUNTER==1
 #include <preempt_counter.h>
 #endif
 extern __thread unsigned long long current_evt_state;
 extern __thread void* current_evt_monitor;
 
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 void check_after_rollback(){
 	if(current_msg->timestamp<LPS[current_lp]->old_valid_bound->timestamp
 	|| ((current_msg->timestamp==LPS[current_lp]->old_valid_bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->old_valid_bound->tie_breaker)) ){
@@ -55,14 +55,14 @@ void check_CFV_ALREADY_HANDLED(){
 		printf("LP state is not ready\n");
 		gdb_abort;
 	}
-	#if IPI_PREEMPT_COUNTER==1
+	#if PREEMPT_COUNTER==1
 	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
 				printf("preempt counter is not INIT in CFV_ALREADY_HANDLED\n");
 				gdb_abort;
 	}
 	#endif
 
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
 		printf("dummy bound is not NEW_EVT CFV_ALREADY_HANDLED\n");
 		gdb_abort;
@@ -88,7 +88,7 @@ void check_CFV_ALREADY_HANDLED(){
 	#endif
 }
 void check_thread_loop_before_fetch(){
-	#if IPI_PREEMPT_COUNTER==1
+	#if PREEMPT_COUNTER==1
 	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
 		printf("preempt counter is not INIT before simulation loop\n");
 		gdb_abort;
@@ -102,7 +102,7 @@ void check_thread_loop_before_fetch(){
 	}
 }
 void check_CFV_INIT(){
-	#if IPI_PREEMPT_COUNTER==1
+	#if PREEMPT_COUNTER==1
 	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
 				printf("preempt counter is not INIT in CFV_INIT\n");
 				gdb_abort;
@@ -114,13 +114,13 @@ void check_CFV_TO_HANDLE(){
 				printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 				gdb_abort;
 	}
-	#if IPI_PREEMPT_COUNTER==1
+	#if PREEMPT_COUNTER==1
 	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
 			printf("interrupt code not interruptible\n");
 			gdb_abort;
 	}
 	#endif
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->old_valid_bound==NULL){
 		printf("old_valid_bound is NULL CFV_TO_HANDLE\n");
 		gdb_abort;
@@ -138,7 +138,7 @@ void check_thread_loop_after_fetch(){
 		printf("LP state is not ready\n");
 		gdb_abort;
 	}
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
 		printf("dummy bound is not NEW_EVT\n");
 		gdb_abort;
@@ -199,7 +199,7 @@ void check_stop_rollback(unsigned short int old_state,unsigned int lid){
 		printf("event will be executed because we are in LP_STATE_ON_GVT but is not valid\n");
 		gdb_abort;
 	}
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	if(LPS[lid]->old_valid_bound==NULL){
 		printf("old_valid_bound is NULL in silent execution\n");
 		gdb_abort;
@@ -237,7 +237,7 @@ void check_queue_deliver_msgs(){
             printf("LP state is not ready in queue_deliver_msgs\n");
             gdb_abort;
     }
-    #if IPI_HANDLE_INTERRUPT==1
+    #if HANDLE_INTERRUPT==1
     if(current_msg==NULL){
                 printf("current_msg NULL queuedeliver_msgs\n");
                 gdb_abort;
@@ -250,7 +250,7 @@ void check_ScheduleNewEventFuture(){
             printf("LP state is not ready ScheduleNewEvent\n");
             gdb_abort;
         }
-        #if IPI_HANDLE_INTERRUPT==1
+        #if HANDLE_INTERRUPT==1
         if(current_msg==NULL){
         	printf("current msg is NULL in ScheduleNewEvent,LP_STATE_READY\n");
         	gdb_abort;
@@ -318,7 +318,7 @@ void check_thread_loop_after_executeEvent(){
         printf("not empty pool count,tid=%d\n",tid);
         gdb_abort;
     }
-#if IPI_POSTING==1
+#if POSTING==1
     for(unsigned int i=0;i<MAX_THR_HASH_TABLE_SIZE;i++){
         if(_thr_pool.collision_list[i]!=NULL){
             printf("not empty collision list,tid=%d\n",tid);
@@ -331,7 +331,7 @@ void check_thread_loop_after_executeEvent(){
 			print_event(current_msg);
 			gdb_abort;				
 	}
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->old_valid_bound->frame != LPS[current_lp]->num_executed_frames-1){
 			printf("invalid frame number in event,frame_event=%d,frame_LP=%d\n",LPS[current_lp]->old_valid_bound->frame,LPS[current_lp]->num_executed_frames);
 			gdb_abort;

@@ -3,7 +3,7 @@
 #include <preempt_counter.h>
 #include <hpdcs_utils.h>
 
-#if IPI_PREEMPT_COUNTER==1
+#if PREEMPT_COUNTER==1
 #define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",*preempt_count_ptr,thread_id)
 #if IPI_SUPPORT==1
 __thread unsigned long long * preempt_count_ptr = NULL;
@@ -61,4 +61,4 @@ void increment_preempt_counter(){
 	(*preempt_count_ptr)=(*preempt_count_ptr)+1;
 }
 
-#endif //IPI_PREEMPT_COUNTER
+#endif //PREEMPT_COUNTER

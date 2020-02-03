@@ -67,32 +67,32 @@ void start_simulation() {
     printf("\t- REPORT prints enabled.\n");
 #endif
 
-#if IPI_CONSTANT_CHILD_INVALIDATION==1
-    printf("\t- IPI_CONSTANT_CHILD_INVALIDATION enabled.\n");
+#if CONSTANT_CHILD_INVALIDATION==1
+    printf("\t- CONSTANT_CHILD_INVALIDATION enabled.\n");
 #endif
-#if IPI_PREEMPT_COUNTER==1
-    printf("\t- IPI_PREEMPT_COUNTER enabled.\n");
+#if PREEMPT_COUNTER==1
+    printf("\t- PREEMPT_COUNTER enabled.\n");
 #endif
-#if IPI_INTERRUPT_PAST==1
-    printf("\t- IPI_INTERRUPT_PAST enabled.\n");
+#if INTERRUPT_SILENT==1
+    printf("\t- INTERRUPT_SILENT enabled.\n");
 #endif
-#if IPI_INTERRUPT_FUTURE==1
-    printf("\t- IPI_INTERRUPT_FUTURE enabled.\n");
+#if INTERRUPT_FORWARD==1
+    printf("\t- INTERRUPT_FORWARD enabled.\n");
 #endif
-#if IPI_LONG_JMP==1
-    printf("\t- IPI_LONG_JMP enabled.\n");
+#if LONG_JMP==1
+    printf("\t- LONG_JMP enabled.\n");
 #endif
-#if IPI_HANDLE_INTERRUPT==1
-    printf("\t- IPI_HANDLE_INTERRUPT enabled.\n");
+#if HANDLE_INTERRUPT==1
+    printf("\t- HANDLE_INTERRUPT enabled.\n");
 #endif
-#if IPI_POSTING==1
-    printf("\t- IPI_POSTING enabled.\n");
+#if POSTING==1
+    printf("\t- POSTING enabled.\n");
 #endif
-#if IPI_POSTING_SYNC_CHECK_PAST==1
-    printf("\t- IPI_POSTING_SYNC_CHECK_PAST enabled.\n");
+#if POSTING_SYNC_CHECK_SILENT==1
+    printf("\t- POSTING_SYNC_CHECK_SILENT enabled.\n");
 #endif
-#if IPI_POSTING_SYNC_CHECK_FUTURE==1
-    printf("\t- IPI_POSTING_SYNC_CHECK_FUTURE enabled.\n");
+#if POSTING_SYNC_CHECK_FORWARD==1
+    printf("\t- POSTING_SYNC_CHECK_FORWARD enabled.\n");
 #endif
 #if IPI_SUPPORT==1
     printf("\t- IPI_SUPPORT enabled.\n");

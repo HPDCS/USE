@@ -10,7 +10,7 @@
 #include <numerical.h>
 #include <nb_calqueue.h>
 
-#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#if CONSTANT_CHILD_INVALIDATION==1
 #include <atomic_epoch_and_ts.h>
 #endif
 
@@ -103,7 +103,7 @@ typedef struct _LP_state {
 	/* ADDED FOR PADS 2018 */
 	unsigned int num_executed_frames;
 
-	#if IPI_CONSTANT_CHILD_INVALIDATION==1
+	#if CONSTANT_CHILD_INVALIDATION==1
 	atomic_epoch_and_ts atomic_epoch_and_ts;
 	#else
 	/*volatile*/ unsigned int epoch;
@@ -121,7 +121,7 @@ typedef struct _LP_state {
 	
 	unsigned int until_clean_ckp;
 
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 	msg_t* last_silent_exec_evt;
 	msg_t* old_valid_bound;
 	msg_t* dummy_bound;
@@ -129,7 +129,7 @@ typedef struct _LP_state {
 	bool LP_state_is_valid;
 #endif
 
-#if IPI_POSTING==1
+#if POSTING==1
 	msg_t* priority_message;//used to write priority message
 #endif
 

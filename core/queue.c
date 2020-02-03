@@ -14,7 +14,7 @@
 #include <checks.h>
 #endif
 
-#if IPI_POSTING==1
+#if POSTING==1
 #include <posting.h>
 #endif
 
@@ -22,20 +22,20 @@
 #include <ipi.h>
 #endif
 
-#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#if CONSTANT_CHILD_INVALIDATION==1
 #include <atomic_epoch_and_ts.h>
 #endif
 
-#if IPI_LONG_JMP==1
+#if LONG_JMP==1
 #include <jmp.h>
 extern __thread cntx_buf cntx_loop;
 #endif
 
-#if IPI_PREEMPT_COUNTER==1
+#if PREEMPT_COUNTER==1
 #include <preempt_counter.h>
 #endif
 
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
 #endif
 //used to take locks on LPs
@@ -114,15 +114,15 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 #endif
 
     memcpy(msg_ptr->data, event_content, event_size);
-    /*#if IPI_POSTING==1
+    /*#if POSTING==1
     insert_msg_in_hash_table(msg_ptr);
-    #endif//IPI_POSTING*/
+    #endif//POSTING*/
 }
 
 void queue_clean(){ 
     unsigned int i = 0;
     msg_t* current;
-    #if IPI_POSTING==1 || DEBUG==1
+    #if POSTING==1 || DEBUG==1
     unsigned int father_lp_idx=n_prc_tot;//invalid lp_idx
     #endif
     for (; i<_thr_pool._thr_pool_count; i++)
@@ -130,7 +130,7 @@ void queue_clean(){
         current = _thr_pool.messages[i].father;
         if(current != NULL)
         {
-            #if IPI_POSTING==1 || DEBUG==1
+            #if POSTING==1 || DEBUG==1
             if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
                 father_lp_idx=current->sender_id;
             }
@@ -147,7 +147,7 @@ void queue_clean(){
             current->max_outgoing_ts = 0;
             list_insert_tail_by_content(freed_local_evts, current);
             _thr_pool.messages[i].father = NULL;
-            #if IPI_POSTING==1
+            #if POSTING==1
             int index_in_hash_table=current->id_in_thread_pool_hash_table;
             _thr_pool.collision_list[index_in_hash_table]=NULL;
             
@@ -162,7 +162,7 @@ void queue_clean(){
 	_thr_pool._thr_pool_count = 0;
 }
 
-#if IPI_POSTING==1
+#if POSTING==1
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
@@ -174,10 +174,10 @@ void queue_deliver_msgs(void) {
         check_queue_deliver_msgs();
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
-        #if IPI_POSTING_SYNC_CHECK_FUTURE==1 && IPI_INTERRUPT_FUTURE==1
+        #if POSTING_SYNC_CHECK_FORWARD==1 && INTERRUPT_FORWARD==1
             if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
                 #if REPORT==1
-                statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_IN_FUTURE,1);
+                statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_FORWARD,1);
                 #endif
                 #if VERBOSE>0
                 printf("sync check future queue_deliver_msgs\n");
@@ -187,7 +187,7 @@ void queue_deliver_msgs(void) {
                     make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
                 }
             }
-        #endif //IPI_POSTING_SYNC_CHECK_FUTURE
+        #endif //POSTING_SYNC_CHECK_FORWARD
 
         new_hole = _thr_pool.messages[i].father;
         if(new_hole == NULL){
@@ -196,7 +196,7 @@ void queue_deliver_msgs(void) {
         }
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
-        #if IPI_CONSTANT_CHILD_INVALIDATION==1
+        #if CONSTANT_CHILD_INVALIDATION==1
         new_hole->fatherEpoch = get_epoch_of_LP(current_lp);
         #else
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
@@ -251,7 +251,7 @@ void queue_deliver_msgs(void) {
     _thr_pool._thr_pool_count=0;
 }
 
-#else//IPI_POSTING
+#else//POSTING
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
@@ -285,7 +285,7 @@ void queue_deliver_msgs(void) {
         //memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
-        #if IPI_CONSTANT_CHILD_INVALIDATION==1
+        #if CONSTANT_CHILD_INVALIDATION==1
         new_hole->fatherEpoch = get_epoch_of_LP(current_lp);
         #else
         new_hole->fatherEpoch = LPS[current_lp]->epoch;
@@ -330,7 +330,7 @@ void queue_deliver_msgs(void) {
 }
 #endif
 
-#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#if CONSTANT_CHILD_INVALIDATION==1
 bool is_valid(msg_t * event){
     bool validity;
     validity=  

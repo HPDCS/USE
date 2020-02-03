@@ -40,7 +40,7 @@
 #include "prints.h"
 #include "timer.h"
 
-#if IPI_POSTING==1
+#if POSTING==1
 #include <posting.h>
 #endif
 
@@ -162,7 +162,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		//event->monitor = 0x5AFE;
 		event->local_next 		= bound_ptr;       //DEBUG
 		event->local_previous 	= (void*) node;        //DEBUG
-        #if IPI_CONSTANT_CHILD_INVALIDATION==1
+        #if CONSTANT_CHILD_INVALIDATION==1
         event->previous_seed    = get_epoch_of_LP(lp_idx);
         #else
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
@@ -304,10 +304,10 @@ unsigned int fetch_internal(){
 	unsigned int c = 0;
 #endif
 
-#if IPI_POSTING==1
+#if POSTING==1
 	msg_t *priority_message;
     bool from_info_posted=false,posted=false;
-#endif//IPI_POSTING
+#endif//POSTING
 
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
@@ -353,7 +353,7 @@ unsigned int fetch_internal(){
 		from_get_next_and_valid = false;
 		current_node_is_valid = true;//if true then current_node can be eliminated 
 
-		#if IPI_POSTING==1
+		#if POSTING==1
 		from_info_posted=false;
 		#endif
 
@@ -451,7 +451,7 @@ unsigned int fetch_internal(){
 			curr_evt_state = event->state;
 			safe = ((ts < (min + LOOKAHEAD)) || (LOOKAHEAD == 0 && (ts == min) && (tb <= min_tb))) && !is_in_lp_unsafe_set(lp_idx);//calculate safe for each events
 			
-			#if IPI_POSTING==1
+			#if POSTING==1
             priority_message=LPS[lp_idx]->priority_message;
             #if DEBUG==1
             check_LP_info(lp_idx,priority_message);
@@ -464,7 +464,7 @@ unsigned int fetch_internal(){
             	}
             	//else continue with current event
             }
-			#endif//IPI_POSTING
+			#endif//POSTING
 
             //now event is taken from calqueue and is not skippable
 			if(validity) {
@@ -649,7 +649,7 @@ unsigned int fetch_internal(){
 		#if OPTIMISTIC_MODE == ST_BINDING_LP
 			add_lp_locked_set(lp_idx);
 		#endif
-			#if IPI_POSTING==1
+			#if POSTING==1
 			if(in_past){
 				if(validity){
 					posted = post_info_event_valid(event);
@@ -718,7 +718,7 @@ get_next:
  	if(node == NULL)
         return 0;
 
-#if IPI_POSTING==1
+#if POSTING==1
     if(from_get_next_and_valid || from_info_posted){
     	node = NULL;
     }
@@ -734,7 +734,7 @@ get_next:
 	}
 #endif
     
-#if IPI_POSTING==1 && REPORT==1
+#if POSTING==1 && REPORT==1
     update_LP_statistics(from_info_posted,from_get_next_and_valid,lp_idx);
 #endif
     // Set the global variables with the selected event to be processed
@@ -798,14 +798,7 @@ void prune_local_queue_with_ts(simtime_t ts){
 		tmp_node = list_next(current);
 		
 		if(current->max_outgoing_ts < ts){
-            /*#if DEBUG==1 && IPI_POSTING==1 
-            if(current->posted_valid!=UNPOSTED){
-                printf("event POSTED cannot be garbage collectioned\n");
-                print_event(current);
-                gdb_abort;
-            }
-            #endif*/
-            #if IPI_POSTING==1
+            #if POSTING==1
             if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
             	if(LPS[current->receiver_id]->priority_message==current){
             		current = tmp_node;
@@ -823,7 +816,7 @@ void prune_local_queue_with_ts(simtime_t ts){
 			from = current;
 			//trovato il primo nodo valido, continuo localmente la ricerca
 			while(current!=NULL && current->max_outgoing_ts < ts){
-				#if IPI_POSTING==1
+				#if POSTING==1
             if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
             	if(LPS[current->receiver_id]->priority_message==current){
             		break;

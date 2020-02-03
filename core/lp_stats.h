@@ -9,7 +9,7 @@
  *******************************/
 
 
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

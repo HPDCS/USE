@@ -44,11 +44,11 @@
 #include <hpdcs_utils.h>
 #include <prints.h>
 
-#if IPI_POSTING==1
+#if POSTING==1
 #include <posting.h>
 #endif
 
-#if IPI_CONSTANT_CHILD_INVALIDATION==1
+#if CONSTANT_CHILD_INVALIDATION==1
 #include <atomic_epoch_and_ts.h>
 #endif
 
@@ -56,12 +56,12 @@
 #include <checks.h>
 #endif
 
-#if IPI_PREEMPT_COUNTER==1
+#if PREEMPT_COUNTER==1
 #include <preempt_counter.h>
 extern __thread unsigned long long * preempt_count_ptr;
 #endif
 
-#if IPI_HANDLE_INTERRUPT==1
+#if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
 #endif
 /// Function pointer to switch between the parallel and serial version of SetState
@@ -243,7 +243,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	last_epoch_event=evt->epoch;
 	#endif
 
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	LPS[lid]->last_silent_exec_evt = evt;
 	#endif
 
@@ -276,7 +276,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
 				break;
 		}
-		#if IPI_HANDLE_INTERRUPT==1
+		#if HANDLE_INTERRUPT==1
 		if( (evt != NULL) && !is_valid(evt)){
 			//stop rollback!!
 			#if DEBUG==1
@@ -297,14 +297,14 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		check_events_state(old_state,evt,local_next_evt);
 		#endif
 
-		#if IPI_POSTING_SYNC_CHECK_PAST==1 && IPI_INTERRUPT_PAST==1
+		#if POSTING_SYNC_CHECK_SILENT==1 && INTERRUPT_SILENT==1
 		if(old_state!=LP_STATE_ONGVT){
 			#if DEBUG==1
 			check_current_msg_is_in_future(lid);
 	    	#endif//DEBUG
 	    	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
 	    		#if REPORT==1
-    			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_IN_PAST,1);
+    			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_SILENT,1);
 				#endif
 				#if VERBOSE >0
 				printf("sync check past in silent_execution\n");
@@ -351,7 +351,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		        }
 		    }
 		}
-		#endif//IPI_POSTING_SYNC_CHECK_PAST
+		#endif//POSTING_SYNC_CHECK_SILENT
 
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
 		change_dest_ts(lid,&until_ts,&tie_breaker);//if ScheduleNeWEvent viewed priority_message it changed the bound with priority_msg but doesn't chagne dest_ts 
@@ -364,13 +364,13 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		last_epoch_event = evt->epoch;
 		#endif
 
-		#if IPI_HANDLE_INTERRUPT==1
+		#if HANDLE_INTERRUPT==1
 		LPS[lid]->last_silent_exec_evt = evt;
 		#endif
 
 	}
 	
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	if(current_msg!=NULL){
 		insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);
 	}
@@ -389,7 +389,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		}
 #endif
 
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	if(old_state != LP_STATE_ONGVT){
 		LPS[lid]->old_valid_bound = last_executed_event;
 	}
@@ -399,7 +399,7 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	}
 	#endif
 
-	#if IPI_HANDLE_INTERRUPT==1
+	#if HANDLE_INTERRUPT==1
 	LPS[lid]->last_silent_exec_evt = last_executed_event;
 	#endif
 	
@@ -482,15 +482,15 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		gdb_abort;
 	}
 	#endif
-	#if IPI_PREEMPT_COUNTER==1
-	#if IPI_INTERRUPT_PAST==1
+	#if PREEMPT_COUNTER==1
+	#if INTERRUPT_SILENT==1
 	#else
 	increment_preempt_counter();
 	#endif
 	#endif
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
-	#if IPI_PREEMPT_COUNTER==1
-	#if IPI_INTERRUPT_PAST==1
+	#if PREEMPT_COUNTER==1
+	#if INTERRUPT_SILENT==1
 	#else
 	decrement_preempt_counter();
 	#endif
@@ -506,7 +506,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		rollback_lenght = LPS[lid]->num_executed_frames; 
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		rollback_lenght -= LPS[lid]->num_executed_frames;
-		#if IPI_CONSTANT_CHILD_INVALIDATION==1
+		#if CONSTANT_CHILD_INVALIDATION==1
 		double new_epoch=get_epoch_of_LP(lid)+1;
 		atomic_epoch_and_ts temp;
 		set_epoch(&temp,new_epoch);

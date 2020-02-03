@@ -83,17 +83,17 @@
 #define STAT_IPI_RECEIVED           501
 #endif
 
-#if IPI_POSTING==1 && REPORT==1
+#if POSTING==1 && REPORT==1
 #define STAT_EVENT_FLUSHED                  600
 #define STAT_EVENT_NOT_FLUSHED              601
 #define STAT_INFOS_POSTED                   602
 #define STAT_INFOS_POSTED_ATTEMPT           603
 #define STAT_INFOS_POSTED_USEFUL            604
-#define STAT_SYNC_CHECK_IN_PAST             605
-#define STAT_SYNC_CHECK_IN_FUTURE           606
+#define STAT_SYNC_CHECK_SILENT             605
+#define STAT_SYNC_CHECK_FORWARD           606
 #endif
 
-#if IPI_POSTING==1 || IPI_SUPPORT==1 && REPORT==1
+#if POSTING==1 || IPI_SUPPORT==1 && REPORT==1
 #define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 607
 #define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 608
 #define STAT_SYNC_CHECK_USEFUL              610
@@ -172,13 +172,13 @@ struct stats_t {
     stat64_t ipi_received_tot;
     #endif
 
-    #if IPI_POSTING==1 && REPORT==1
+    #if POSTING==1 && REPORT==1
     stat64_t event_not_flushed;//per lp event that lp father doesn't flush
     stat64_t infos_posted;//per thread num info posted by thread
     stat64_t infos_posted_attempt;//per thread num tries to post info by thread
     stat64_t infos_posted_useful;//per lp num info useful for lp
-    stat64_t sync_check_in_past;//per lp num sync_check in past maded by lp
-    stat64_t sync_check_in_future;//per lp num sync_check in future maded by lp
+    stat64_t sync_check_silent;//per lp num sync_check in past maded by lp
+    stat64_t sync_check_forward;//per lp num sync_check in future maded by lp
     
     
     
@@ -188,11 +188,11 @@ struct stats_t {
     stat64_t infos_posted_attempt_tot;
     stat64_t infos_posted_anti_msg_tot;
     stat64_t infos_posted_useful_tot;
-    stat64_t sync_check_in_past_tot;
-    stat64_t sync_check_in_future_tot;
+    stat64_t sync_check_silent_tot;
+    stat64_t sync_check_forward_tot;
     #endif
 
-    #if IPI_SUPPORT==1 || IPI_POSTING==1 && REPORT==1
+    #if IPI_SUPPORT==1 || POSTING==1 && REPORT==1
     stat64_t sync_check_useful;//per lp num sync_check useful maded by lp
 
     stat64_t event_forward_interrupted;//per LP

@@ -1,4 +1,4 @@
-#if IPI_POSTING==1
+#if POSTING==1
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -314,4 +314,4 @@ msg_t* get_best_LP_info_good(int lp_idx){
         return NULL;
     return LP_info_is_good(lp_idx);
 }
-#endif//IPI_POSTING
+#endif//POSTING

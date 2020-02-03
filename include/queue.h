@@ -31,7 +31,7 @@ typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
 	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
 
-#if IPI_POSTING==1
+#if POSTING==1
     msg_t*collision_list[MAX_THR_HASH_TABLE_SIZE]  __attribute__ ((aligned (64)));
 #endif
 
