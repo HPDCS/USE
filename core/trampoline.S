@@ -23,9 +23,9 @@ cfv_trampoline:
 	pushq		%rdx
 
 	/* save XMM0, XMM1 */
-	subq		$0x10, %rsp
-	movsd		%xmm0, 8(%rsp)
-	movsd		%xmm1, (%rsp)
+	subq		$0x20, %rsp
+	movdqu		%xmm0, 16(%rsp)
+	movdqu		%xmm1, (%rsp)
 
 	/* %rax <--- &rt_data (type: struct run_time_data *) */
 	leaq		rt_data(%rip), %rax
@@ -131,9 +131,9 @@ cfv_trampoline:
 
 .L1:
 	/* restore XMM0, XMM1 */
-	movsd		(%rsp), %xmm1
-	movsd		8(%rsp), %xmm0
-	addq		$0x10, %rsp
+	movdqu		(%rsp), %xmm1
+	movdqu		16(%rsp), %xmm0
+	addq		$0x20, %rsp
 
 	/* restore RCX, RDX */
 	popq		%rdx
