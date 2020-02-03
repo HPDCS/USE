@@ -182,7 +182,7 @@ msg_t* flag_as_posted(msg_t*event,bool* flagged){
         bound_ts=LPS[lp_idx]->bound->timestamp;
     }
     msg_t*event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
-    if(event_dest_LP==NULL){
+    /*if(event_dest_LP==NULL){
         event->posted=POSTED_VALID;
         *flagged=true;
         #if REPORT==1
@@ -190,7 +190,8 @@ msg_t* flag_as_posted(msg_t*event,bool* flagged){
         #endif
         return NULL;
     }
-    else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+    else*/ 
+    if( event->timestamp<bound_ts && (event_dest_LP == NULL || event->timestamp < event_dest_LP->timestamp))
     {
         event->posted=POSTED_VALID;
         *flagged=true;
