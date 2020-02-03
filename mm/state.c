@@ -354,7 +354,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		#endif//POSTING_SYNC_CHECK_SILENT
 
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
+		#if HANDLE_INTERRUPT==1
 		change_dest_ts(lid,&until_ts,&tie_breaker);//if ScheduleNeWEvent viewed priority_message it changed the bound with priority_msg but doesn't chagne dest_ts 
+		#endif
 		events++;
 
 		last_executed_event = evt;
