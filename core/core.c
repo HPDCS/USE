@@ -677,7 +677,7 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
 			LPS[current_lp]->until_ckpt_recalc = 0;
-			LPS[current_lp]->ckpt_period = 20;
+			//LPS[current_lp]->ckpt_period = 20;
 			//LPS[current_lp]->epoch = 1;
 #if HANDLE_INTERRUPT==1
 			//after execution of INIT_EVENTS alloc dummy_bound
