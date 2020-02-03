@@ -275,6 +275,9 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC:
 			stats[idx].clock_exec_evt_inter_silent_exec += value;
 			break;
+		case STAT_IPI_SYSCALL_TIME:
+			stats[idx].clock_exec_ipi_syscall += value;
+			break;
 		#endif
 
 		case STAT_EVENTS_EXEC_AND_COMMITED:
@@ -312,7 +315,7 @@ void gather_statistics() {
 		//system_stats->clock_enqueue        += thread_stats[i].clock_enqueue;
 		//system_stats->clock_dequeue        += thread_stats[i].clock_dequeue;
 		//system_stats->clock_deq_lp         += thread_stats[i].clock_deq_lp;
-		system_stats->clock_loop           += thread_stats[i].clock_loop;
+		//system_stats->clock_loop           += thread_stats[i].clock_loop;
 		system_stats->clock_prune          += thread_stats[i].clock_prune;
 		system_stats->clock_loop           += thread_stats[i].clock_loop;
 		
@@ -329,7 +332,9 @@ void gather_statistics() {
 		system_stats->ipi_sended += thread_stats[i].ipi_sended;
 		system_stats->ipi_trampoline_received += thread_stats[i].ipi_trampoline_received;
 		system_stats->ipi_received += thread_stats[i].ipi_received;
+		system_stats->clock_exec_ipi_syscall_tot += thread_stats[i].clock_exec_ipi_syscall;
 		#endif
+		
 	}
 
 	system_stats->clock_prune /= system_stats->counter_prune;
@@ -436,6 +441,7 @@ void gather_statistics() {
 	system_stats->clock_silent       /= system_stats->events_silent;
 	system_stats->clock_safety_check /= system_stats->counter_safety_check;
 	system_stats->clock_rollback     /= system_stats->counter_rollbacks;
+	// TODO
 	system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
 	system_stats->clock_checkpoint   /= system_stats->counter_checkpoints;
 	system_stats->clock_recovery     /= system_stats->counter_recoveries;
@@ -590,6 +596,8 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->ipi_received_tot);
 	printf("IPI received per thread.........................: %12.2f\n",
 		stats->ipi_received);
+	printf("IPI sent sycall clocks....................................: %12lu\n",
+		(unsigned long)stats->clock_exec_ipi_syscall_tot);
 	printf("\n\n");
 	#endif
 

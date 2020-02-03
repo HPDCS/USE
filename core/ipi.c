@@ -40,6 +40,8 @@ void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
     unsigned int lck_tid;
     unsigned int lp_idx;
+    unsigned long long user_time = 0;
+	clock_timer_start(user_time);
     lp_idx=event->receiver_id;
     lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
     if(lck_tid==0)
@@ -48,6 +50,7 @@ void send_ipi_to_lp(msg_t*event){
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
         #if REPORT==1
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
+		statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(user_time));
         #endif
         if (syscall(174, lck_tid-1))
             printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");

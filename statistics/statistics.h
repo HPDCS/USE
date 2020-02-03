@@ -89,16 +89,17 @@
 #define STAT_INFOS_POSTED                   602
 #define STAT_INFOS_POSTED_ATTEMPT           603
 #define STAT_INFOS_POSTED_USEFUL            604
-#define STAT_SYNC_CHECK_SILENT             605
-#define STAT_SYNC_CHECK_FORWARD           606
+#define STAT_SYNC_CHECK_SILENT            	605
+#define STAT_SYNC_CHECK_FORWARD           	606
 #endif
 
 #if POSTING==1 || IPI_SUPPORT==1 && REPORT==1
-#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 607
-#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 608
-#define STAT_SYNC_CHECK_USEFUL              610
-#define STAT_EVENT_FORWARD_INTERRUPTED 611
-#define STAT_EVENT_SILENT_INTERRUPTED 612
+#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 	607
+#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 	608
+#define STAT_SYNC_CHECK_USEFUL              	610
+#define STAT_EVENT_FORWARD_INTERRUPTED 			611
+#define STAT_EVENT_SILENT_INTERRUPTED 			612
+#define STAT_IPI_SYSCALL_TIME					613
 #endif
 
 #define STAT_EVENTS_EXEC_AND_COMMITED 700
@@ -212,6 +213,8 @@ struct stats_t {
     stat64_t clock_exec_evt_inter_silent_exec_tot;
     stat64_t clock_exec_interruption_tot;
     stat64_t clock_exec_interruption;
+    stat64_t clock_exec_ipi_syscall; // per thread
+    stat64_t clock_exec_ipi_syscall_tot;
     #endif
 
     stat64_t events_exec_and_committed;//per LP
