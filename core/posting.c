@@ -222,7 +222,7 @@ bool post_information(msg_t*event,bool retry_loop){
                 bound_ts=LPS[lp_idx]->bound->timestamp;
             }
             event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
-            if(event_dest_LP==NULL){
+            /*if(event_dest_LP==NULL){
                 if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
                     (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
                     continue;
@@ -232,7 +232,8 @@ bool post_information(msg_t*event,bool retry_loop){
                 #endif
                 return true;//
             }
-            else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+            else */ 
+            if( event->timestamp<bound_ts && (event_dest_LP == NULL || event->timestamp < event_dest_LP->timestamp)
             {//msg_dest_LP!=NULL
                 if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
                     (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
@@ -252,7 +253,7 @@ bool post_information(msg_t*event,bool retry_loop){
                 bound_ts=LPS[lp_idx]->bound->timestamp;
         }
         event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
-        if(event_dest_LP==NULL){
+        /*if(event_dest_LP==NULL){
             if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
                 (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
                 return false;
@@ -262,7 +263,8 @@ bool post_information(msg_t*event,bool retry_loop){
             #endif
             return true;//
         }
-        else if( event->timestamp<bound_ts && event->timestamp < event_dest_LP->timestamp)
+        else*/
+        if( event->timestamp<bound_ts && (event_dest_LP == NULL || event->timestamp < event_dest_LP->timestamp)
         {//msg_dest_LP!=NULL
             if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
                     (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
