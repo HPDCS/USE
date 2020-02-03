@@ -28,11 +28,11 @@
 #define CHAN_FREE	0
 
 /* EVENT TYPES - PCS */
-#define START_CALL	20
-#define END_CALL	21
-#define HANDOFF_LEAVE	30
-#define HANDOFF_RECV	31
-#define FADING_RECHECK	40
+#define START_CALL		 1
+#define END_CALL		 2
+#define HANDOFF_LEAVE	 3
+#define HANDOFF_RECV	 4
+#define FADING_RECHECK	 5
 
 #define FADING_RECHECK_FREQUENCY	300	// Every 5 Minutes
 
