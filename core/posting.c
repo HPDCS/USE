@@ -233,7 +233,7 @@ bool post_information(msg_t*event,bool retry_loop){
                 return true;//
             }
             else */ 
-            if( event->timestamp<bound_ts && (event_dest_LP == NULL || event->timestamp < event_dest_LP->timestamp)
+            if( event->timestamp<bound_ts && (event_dest_LP == NULL || event->timestamp < event_dest_LP->timestamp))
             {//msg_dest_LP!=NULL
                 if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
                     (unsigned long)event_dest_LP,(unsigned long)event)==false)//CAS failed
