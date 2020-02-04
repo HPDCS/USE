@@ -39,10 +39,10 @@ cfv_trampoline:
 	/* %rcx <--- (&rt_data)->sizeof_stats (type: size_t)  */
 	/* %rcx <--- current_lp * (&rt_data)->sizeof_stats (type: size_t)  */
 	/* %rdx <--- &thread_stats[current_lp] (type: LP_state *) */
-	movq		thread_stats(%rip), %rdx
-	movq		48(%rax), %rcx
-	imulq		%rbx, %rcx
-	addq		%rcx, %rdx
+	// movq		thread_stats(%rip), %rdx
+	// movq		48(%rax), %rcx
+	// imulq		%rbx, %rcx
+	// addq		%rcx, %rdx
 
 	/* %rcx <--- (&rt_data)->in_stats_ipi_trampoline_received_offset (type: size_t)  */
 	/* %xmm0 <--- (&thread_stats[current_lp])->ipi_trampoline_received (type: double) */
@@ -50,13 +50,13 @@ cfv_trampoline:
 	/* %xmm0 <--- (&thread_stats[current_lp])->ipi_trampoline_received + 1.0 (type: double) */
 	/* %rcx <--- (&rt_data)->in_stats_ipi_trampoline_received_offset (type: size_t)  */
 	/* (&thread_stats[current_lp])->ipi_trampoline_received <--- (&thread_stats[current_lp])->ipi_trampoline_received + 1.0 (type: double) */
-	movq		40(%rax), %rcx
-	movsd		(%rdx, %rcx, 1), %xmm0
-	movq		$0x1, %rcx
-	cvtsi2sd	%rcx, %xmm1
-	addsd		%xmm1, %xmm0
-	movq		40(%rax), %rcx
-	movsd		%xmm0, (%rdx, %rcx, 1)
+	// movq		40(%rax), %rcx
+	// movsd		(%rdx, %rcx, 1), %xmm0
+	// movq		$0x1, %rcx
+	// cvtsi2sd	%rcx, %xmm1
+	// addsd		%xmm1, %xmm0
+	// movq		40(%rax), %rcx
+	// movsd		%xmm0, (%rdx, %rcx, 1)
 
 	/* %rdx <--- LPS[current_lp] (type: LP_state *) */
 	movq		LPS(%rip), %rdx
