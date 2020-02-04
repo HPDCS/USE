@@ -18,7 +18,12 @@ extern volatile bool stop;
 
 #if IPI_SUPPORT==1
 #include <ipi.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/capability.h>
+
 extern char program_name[MAX_LEN_PROGRAM_NAME];
+#define BYTES_TO_LOCK_PER_THREAD 4096
 #endif
 
 __thread struct drand48_data seedT;
@@ -40,7 +45,70 @@ void *start_thread(){
 	pthread_exit(NULL);
 
 }
+#if IPI_SUPPORT==1
+unsigned long get_max_bytes_lockable(){
+    struct rlimit curr_limit;
+    if(getrlimit(RLIMIT_MEMLOCK,&curr_limit)!=0){
+        printf("getrlimit failed\n");
+        perror("error:");
+        gdb_abort;
+    }
+    return curr_limit.rlim_cur;
+}
 
+bool pid_has_capability(pid_t pid,unsigned int type_capability,const char*cap_name){
+    //type_capability=={CAP_EFFECTIVE,CAP_PERMITTED,CAP_INHERITABLE}
+    cap_t cap;
+    cap_value_t cap_value;
+    cap_flag_value_t cap_flags_value;
+
+    cap = cap_get_pid(pid);
+    if (cap == NULL) {
+        perror("cap_get_pid");
+        exit(-1);
+    }
+    cap_value = CAP_CHOWN;
+    if (cap_set_flag(cap, CAP_EFFECTIVE, 1, &cap_value, CAP_SET) == -1) {
+        perror("cap_set_flag cap_chown");
+        cap_free(cap);
+        exit(-1);
+    }
+    
+    /* permitted cap */
+    cap_value = CAP_MAC_ADMIN;
+    if (cap_set_flag(cap, CAP_PERMITTED, 1, &cap_value, CAP_SET) == -1) {
+        perror("cap_set_flag cap_mac_admin");
+        cap_free(cap);
+        exit(-1);
+    }
+
+    /* inherit cap */
+    cap_value = CAP_SETFCAP;
+    if (cap_set_flag(cap, CAP_INHERITABLE, 1, &cap_value, CAP_SET) == -1) {
+        perror("cap_set_flag cap_setfcap");
+        cap_free(cap);
+        exit(-1);
+    }
+
+    cap_from_name(cap_name, &cap_value);
+    cap_get_flag(cap, cap_value, type_capability, &cap_flags_value);
+    cap_free(cap);
+    if (cap_flags_value == CAP_SET)
+        return true;
+    return false;
+}
+
+bool enough_memory_lockable(){
+    bool cap_ipc_lock = pid_has_capability(getpid(),CAP_EFFECTIVE,"cap_ipc_lock");
+    if(cap_ipc_lock)
+        return true;
+    unsigned long max_bytes_lockable=get_max_bytes_lockable();
+    if(max_bytes_lockable>=n_cores*BYTES_TO_LOCK_PER_THREAD)
+        return true;
+    return false;
+}
+
+#endif
 void start_simulation() {
 
     pthread_t p_tid[n_cores-1];//pthread_t p_tid[number_of_threads];//
@@ -103,7 +171,6 @@ void start_simulation() {
 //    printf("\t- CONSERVATIVE SIMULATION\n");
 //#endif
     printf("\n" COLOR_RESET);
-
     //Child thread
     for(i = 0; i < n_cores - 1; i++) {
         if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
@@ -143,6 +210,10 @@ int main(int argn, char *argv[]) {
     }
     memset(program_name,'\0',MAX_LEN_PROGRAM_NAME);
     memcpy(program_name,argv[0],len_string_arg0);
+    if(!enough_memory_lockable()){
+        printf("not enough memory lockable\n");
+        gdb_abort;
+    }
 #endif
     printf("***START SIMULATION***\n\n");
 

@@ -10,7 +10,7 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O0
 FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 
 INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
-LIBS=-pthread -lm
+LIBS=-pthread -lm -lcap
 ARCH_X86=1
 ARCH_X86_64=1
 

@@ -596,7 +596,7 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->ipi_received_tot);
 	printf("IPI received per thread.........................: %12.2f\n",
 		stats->ipi_received);
-	printf("IPI sent sycall clocks....................................: %12lu\n",
+	printf("IPI sent sycall clocks..........................: %12lu\n",
 		(unsigned long)stats->clock_exec_ipi_syscall_tot);
 	printf("\n\n");
 	#endif
