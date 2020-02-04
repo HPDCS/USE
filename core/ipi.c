@@ -41,7 +41,6 @@ void send_ipi_to_lp(msg_t*event){
     unsigned int lck_tid;
     unsigned int lp_idx;
     unsigned long long user_time = 0;
-	clock_timer_start(user_time);
     lp_idx=event->receiver_id;
     lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
     if(lck_tid==0)
@@ -49,11 +48,14 @@ void send_ipi_to_lp(msg_t*event){
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
         #if REPORT==1
+        clock_timer_start(user_time);
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
+        #endif
+        if (syscall(134, lck_tid-1))
+            printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+        #if REPORT==1
 		statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(user_time));
         #endif
-        if (syscall(174, lck_tid-1))
-            printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
     }
 }
 long get_sizeof_function(const char*function_name,char*path_program_name){
