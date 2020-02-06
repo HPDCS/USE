@@ -29,11 +29,13 @@ static inline __attribute__((always_inline)) int ipi_syscall(unsigned int syscal
 {
     int res = 0;
     asm volatile(
+        "movq %1, %%rax\n"
+        "movq %2, %%rdi\n"
         "syscall\n"
         "movq %%rcx, %0\n"
         : "=r" (res)
-        : "a" (syscall_number), "D" (core_id)
-        : "%rax", "%rdi"
+        : "r" (syscall_number), "r" (core_id)
+        : "%rax", "%rcx", "%rdi"
     );
     return res;
 }
