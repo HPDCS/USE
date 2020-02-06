@@ -25,9 +25,11 @@ char program_name[MAX_LEN_PROGRAM_NAME];
 
 struct run_time_data rt_data;
 
-static inline __attribute__((always_inline)) void ipi_syscall(unsigned int core_id)
+static inline __attribute__((always_inline)) int ipi_syscall(unsigned int core_id)
 {
-    asm volatile("syscall" : :"a" (134), "D" (core_id) : "%rax", "%rdi");
+    int res = 0;
+    asm volatile("syscall" : "=c" (res) :"a" (134), "D" (core_id) : "%rax", "%rdi");
+    return res;
 }
 
 void run_time_data_init (void)
