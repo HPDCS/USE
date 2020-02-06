@@ -25,6 +25,11 @@ char program_name[MAX_LEN_PROGRAM_NAME];
 
 struct run_time_data rt_data;
 
+static inline __attribute__((always_inline)) void ipi_syscall(unsigned int core_id)
+{
+    asm volatile("syscall" : :"a" (134), "D" (core_id) : "%rax", "%rdi");
+}
+
 void run_time_data_init (void)
 {
   rt_data.in_lpstate_priority_message_offset = offsetof(struct _LP_state, priority_message);
@@ -51,7 +56,7 @@ void send_ipi_to_lp(msg_t*event){
         clock_timer_start(user_time);
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif
-        if (syscall(134, lck_tid-1))
+        if (ipi_syscall(lck_tid-1))
             printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
         #if REPORT==1
 		statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(user_time));
