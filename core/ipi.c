@@ -32,7 +32,7 @@ static inline __attribute__((always_inline)) int ipi_syscall(unsigned int core_i
         "syscall\n"
         "movq %%rcx, %0\n"
         : "=r" (res)
-        : "a" (134), "D" (core_id)
+        : "a" ($134), "D" (core_id)
         : "%rax", "%rdi"
     );
     return res;
