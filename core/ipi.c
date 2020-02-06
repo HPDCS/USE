@@ -28,7 +28,13 @@ struct run_time_data rt_data;
 static inline __attribute__((always_inline)) int ipi_syscall(unsigned int core_id)
 {
     int res = 0;
-    asm volatile("syscall" : "=c" (res) :"a" (134), "D" (core_id) : "%rax", "%rdi");
+    asm volatile(
+        "syscall\n"
+        "movq %%rcx, %0\n"
+        : "=r" (res)
+        : "a" (134), "D" (core_id)
+        : "%rax", "%rdi"
+    );
     return res;
 }
 
