@@ -25,14 +25,14 @@ char program_name[MAX_LEN_PROGRAM_NAME];
 
 struct run_time_data rt_data;
 
-static inline __attribute__((always_inline)) int ipi_syscall(unsigned int core_id)
+static inline __attribute__((always_inline)) int ipi_syscall(unsigned int syscall_number, unsigned int core_id)
 {
     int res = 0;
     asm volatile(
         "syscall\n"
         "movq %%rcx, %0\n"
         : "=r" (res)
-        : "a" ($134), "D" (core_id)
+        : "a" (syscall_number), "D" (core_id)
         : "%rax", "%rdi"
     );
     return res;
@@ -64,7 +64,7 @@ void send_ipi_to_lp(msg_t*event){
         clock_timer_start(user_time);
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif
-        if (ipi_syscall(lck_tid-1))
+        if (ipi_syscall(134, lck_tid-1))
             printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
         #if REPORT==1
 		statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(user_time));
