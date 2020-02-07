@@ -204,6 +204,31 @@ ifdef P_HOTSPOT
 CFLAGS:= $(CFLAGS) -DP_HOTSPOT=$(P_HOTSPOT)
 endif
 
+#PHOLD_HOTSPOT_MIXED
+ifdef HOTSPOTS_PHASE1
+CFLAGS:= $(CFLAGS) -DHOTSPOTS_PHASE1=$(HOTSPOTS_PHASE1)
+endif
+
+#PHOLD_HOTSPOT_MIXED
+ifdef P_HOTSPOT_PHASE1
+CFLAGS:= $(CFLAGS) -DP_HOTSPOT_PHASE1=$(P_HOTSPOT_PHASE1)
+endif
+
+#PHOLD_HOTSPOT_MIXED
+ifdef HOTSPOTS_PHASE2
+CFLAGS:= $(CFLAGS) -DHOTSPOTS_PHASE2=$(HOTSPOTS_PHASE2)
+endif
+
+#PHOLD_HOTSPOT_MIXED
+ifdef P_HOTSPOT_PHASE2
+CFLAGS:= $(CFLAGS) -DP_HOTSPOT_PHASE2=$(P_HOTSPOT_PHASE2)
+endif
+
+#PHOLD_HOTSPOT_MIXED
+ifdef NUM_HOTSPOT_PHASES
+CFLAGS:= $(CFLAGS) -DNUM_HOTSPOT_PHASES=$(NUM_HOTSPOT_PHASES)
+endif
+
 ########################################################################
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
@@ -219,6 +244,8 @@ PHOLD_SOURCES=model/phold/application.c
 PHOLDCOUNT_SOURCES=model/phold_count/application.c
 
 PHOLDHOTSPOT_SOURCES=model/phold_hotspot/application.c
+
+PHOLDHOTSPOTMIXED_SOURCES=model/phold_hotspot_mixed/application.c
 
 HASH_SOURCES=model/hash/application.c\
 				 model/hash/functions.c
@@ -277,6 +304,7 @@ TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
+PHOLDHOTSPOTMIXED_OBJ=$(PHOLDHOTSPOTMIXED_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
@@ -303,6 +331,9 @@ pholdcount: clean  _pholdcount executable
 
 pholdhotspot: TARGET=pholdhotspot 
 pholdhotspot: clean  _pholdhotspot executable
+
+pholdhotspotmixed: TARGET=pholdhotspotmixed
+pholdhotspotmixed: clean  _pholdhotspotmixed executable
 
 robot_explore: TARGET=robot_explore 
 robot_explore: clean _robot_explore executable
@@ -370,6 +401,9 @@ _pholdcount: $(PHOLDCOUNT_OBJ)
 _pholdhotspot: $(PHOLDHOTSPOT_OBJ)
 	@ld -r -g $(PHOLDHOTSPOT_OBJ) -o model/__application.o
 
+_pholdhotspotmixed: $(PHOLDHOTSPOTMIXED_OBJ)
+	@ld -r -g $(PHOLDHOTSPOTMIXED_OBJ) -o model/__application.o
+
 _hash: $(HASH_OBJ)
 	@ld -r -g $(HASH_OBJ) -o model/__application.o
 
@@ -391,6 +425,7 @@ clean:
 	@find . -type f -name "phold" 		  -exec rm {} \;
 	@find . -type f -name "pholdcount" 	  -exec rm {} \;
 	@find . -type f -name "pholdhotspot"  -exec rm {} \;
+	@find . -type f -name "pholdhotspotmixed"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
 	

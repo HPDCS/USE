@@ -422,7 +422,7 @@ static void load_seed(void) {
 	FILE *fp;
 
 	// Get the path to the configuration file
-	sprintf(conf_file, "%s/.rootsim/numerical.conf", getenv("HOME"));
+	sprintf(conf_file, "%s/.htmpdes/numerical.conf", getenv("HOME"));
 
 	// Check if the file exists. If not, we have to create configuration
 	if ((fp = fopen(conf_file, "r+")) == NULL) {
