@@ -17,7 +17,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	volatile unsigned int i, j = 123;
 	//event_content_type new_event;
 	unsigned int loops;
-	event_content_type *payload;
+	event_content_type *payload = NULL;
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
 	(void) me;
@@ -82,7 +82,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			if (event_content != NULL)
 			{
 				loops = event_content->grain * LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
-				free(event_content);
+				// free(event_content);
 			}
 			else
 				loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
