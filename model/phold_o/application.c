@@ -94,15 +94,15 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			state_ptr->events++;
 
-			// delta = LOOKAHEAD + Expent(TAU);
-			// timestamp = now + delta;
+			delta = LOOKAHEAD + Expent(1);
+			timestamp = now + delta;
 #if DEBUG == 1
 			if(timestamp < now){
 				printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
 			}
 #endif
-			// if(event_type == LOOP)
-			// 	ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+			if(event_type == LOOP)
+				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 
 			if(event_type == LOOP )
 			{
@@ -115,7 +115,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 						}
 #endif
 						payload = (event_content_type *) malloc(sizeof(event_content_type));
-						payload->grain = (unsigned int) delta;
+						payload->grain = LOOP_COUNT + (unsigned int) delta;
 
 						ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, (void*)payload, sizeof(event_content_type));
 				}
