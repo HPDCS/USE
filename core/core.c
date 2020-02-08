@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sched.h>
 #include <pthread.h>
 #include <string.h>
@@ -106,21 +107,24 @@ __thread double previous_rollback_events = 0;
 
 /*
  * TODO: aggiungere le modalità di selezione del valore:
- * Attuale: Calcolo la mediana e scarto tutto quello che in basso ne è fuori del 10%. Butto se il max è fuori del 10%
- * Max: selezione sempre e solo il massimo
- * Max-filtrato: se non c'è troppa oscillazione, prendo il massimo
+ * 0-Classic: lavora sempre sulla media
+ * 1-Max: selezione sempre e solo il massimo
+ * 2-Max-filtrato: se non c'è troppa oscillazione, prendo il massimo
+ * 3-Attuale: Calcolo la mediana e scarto tutto quello che in basso ne è fuori del 10%. Butto se il max è fuori del 10%
 */
 
 static void powercap_gathering_stats(){
 	double tot=0, adv=0, com=0, rol=0, total_events=0, committed_events=0, advanced_events=0, rollback_events=0;
 	double median, max_from_median, min_from_median, sum_adv=0, sum_dur=0, sum_obs=0, sum_rol=0;
-
-	int skip_heuristic = 0;
 	unsigned int i;
+	long duration;
+	bool skip_heuristic = 0;
+
+	sample_average_powercap_violation();
 
 	//Check if is elapsed enough time from the last collection
 	clock_gettime(CLOCK_MONOTONIC, &time_interval_for_stats_end);
-	long duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec +
+	duration = time_interval_for_stats_end.tv_nsec - time_interval_for_stats_start.tv_nsec +
 	                    BILLION * (time_interval_for_stats_end.tv_sec - time_interval_for_stats_start.tv_sec);
 
 	if(duration > STATS_PERIOD_NS){
@@ -147,11 +151,11 @@ static void powercap_gathering_stats(){
 
         //Task to be executed at the end of the window
         if(window_phase % WINDOW_SIZE == 0) {
-            //Computing the median in order to filter result
-            //We have to work directly on the throughput?
+#if POWERCAP_SAMPLE_FILTERING == 2 || POWERCAP_SAMPLE_FILTERING == 3
             median = quick_select_median(window_adv, WINDOW_SIZE);
             max_from_median = median * (1 + PCAP_TOLLERANCE);
             min_from_median = median * (1 - PCAP_TOLLERANCE);
+#endif
 
 #if DEBUG_SMALL_SAMPLES == 1
             //TODO: if we shift from time to evt, we have to consider the time passed as reference
@@ -163,56 +167,55 @@ static void powercap_gathering_stats(){
                 printf("ADV: %f",window_adv[i]);
 #endif
 
+#if POWERCAP_SAMPLE_FILTERING == 0
+                sum_adv = window_adv[i];
+                sum_dur = window_dur[i];
+#endif
 
-#if POWERCAP_SAMPLE_FILTERING < 2 //0 or 1
+#if POWERCAP_SAMPLE_FILTERING == 1 || POWERCAP_SAMPLE_FILTERING == 2
                 if(window_adv[i] > sum_adv){
                     sum_adv = window_adv[i];
                     sum_dur = window_dur[i];
                 }
 #endif
 
-#if POWERCAP_SAMPLE_FILTERING > 0  //1 or 2
+#if POWERCAP_SAMPLE_FILTERING == 2 || POWERCAP_SAMPLE_FILTERING == 3
 
                 //If the median is far away from the max, this means that this run is corrupted
                 if(window_adv[i] > max_from_median){
-                    skip_heuristic = 1;
-
-#if DEBUG_SMALL_SAMPLES == 1
-                    printf(" *  KILL RUN");
-#endif
-
+                    skip_heuristic = true;
+                    #if DEBUG_SMALL_SAMPLES == 1
+                        printf(" *  KILL RUN");
+                    #endif
                 }
 #endif
 
-#if POWERCAP_SAMPLE_FILTERING == 2 // 2
+#if POWERCAP_SAMPLE_FILTERING == 3
                 //The results too low respect the median cannot be considered because affected by some housekeeping task
                 if(window_adv[i] > min_from_median){
                     sum_adv += window_adv[i];
                     sum_dur += window_dur[i];
                     sum_rol += window_rol[i];
                     sum_obs++;
-#if DEBUG_SMALL_SAMPLES == 1
-                    if(window_adv[i] == median)
-                        printf(" <> MEDIAN");
-#endif                    
+                    #if DEBUG_SMALL_SAMPLES == 1
+                        if(window_adv[i] == median)
+                            printf(" <> MEDIAN");
+                    #endif
                 } 
-#if DEBUG_SMALL_SAMPLES == 1
+                #if DEBUG_SMALL_SAMPLES == 1
                 else {
                     printf(" -  REMOVED");
                 }
-#endif                    
+                #endif
 #endif
 #if DEBUG_SMALL_SAMPLES == 1
                 printf("\n");
 #endif
             }
 
-            if(skip_heuristic == 0){
-                start_euristic(sum_adv*BILLION/sum_dur);
-            }
-            else
-                reset_euristic();
+            start_heuristic(sum_adv*BILLION/sum_dur, !skip_heuristic);
 
+#if DEBUG_SMALL_SAMPLES == 1
             adv = com = tot = duration = 0;
             for (i = 0; i < WINDOW_SIZE; i++) {
                 adv += window_adv[i];
@@ -222,7 +225,6 @@ static void powercap_gathering_stats(){
                 duration += window_dur[i];
             }
 
-#if DEBUG_SMALL_SAMPLES == 1
             if (skip_heuristic == 1)
                 printf("\033[0;31m");
             else if ((double)sum_obs/(double)WINDOW_SIZE < 0.8)
@@ -230,12 +232,13 @@ static void powercap_gathering_stats(){
             printf("Len(ms):%f Adv:%f Com:%f Diff:%f Tot:%f Eff1:%f Eff2:%f Roll:%f Obs:%f Tot_obs:%d\n", 
             	duration/((double)MILLION), adv, com, adv-com, tot, com/tot, adv/tot, rol, sum_obs, WINDOW_SIZE);
             printf("\033[0m");
-#endif
-
+/*
             previous_advanced_events = adv;
             previous_committed_events = com;
             previous_rollback_events = rol;
             previous_total_events = tot;
+*/
+#endif
         }
 
 		//Update fields required for the next computation

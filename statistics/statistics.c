@@ -4,6 +4,7 @@
 #include <core.h>
 #include <hpdcs_utils.h>
 #include <simtypes.h>
+#include <powercap.h>
 
 
 //Variabili da tunare durante l'esecuzione per throttling e threshold
@@ -387,7 +388,6 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("   Avg node traversed during fetch..............: %12.2f\n", stats->events_get_next_fetch);
 	
 	printf("\n");
-	
 
 	printf("Average time to process any event...............: %12.2f clocks\n", stats->clock_event);
 	printf("   Average time spent in standard execution.....: %12.2f clocks\n", stats->clock_safe);
@@ -417,6 +417,13 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Checkpoint mem..................................: %12u B\n", (unsigned int)stats->mem_checkpoint);
 	printf("Checkpoint recalculations.......................: %12llu\n", (unsigned long long)stats->counter_checkpoint_recalc);
 	printf("Checkpoint period...............................: %12llu\n", (unsigned long long)stats->checkpoint_period);
+
+#if POWERCAP == 1
+    printf("\n");
+    printf("Power consumption (net value)...................: %12.2f\n",  ( (double) net_energy_sum) / (( (double) net_time_sum) / 1000));
+	printf("Observetion time power consumption..............: %12.2f\n",   ( (double) net_time_sum) / 1000000000);
+	printf("Power exeeding cap..............................: %12.2f\n", net_error_accumulator);
+#endif
 	
 	printf("\n\n");
 	

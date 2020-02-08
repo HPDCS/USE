@@ -876,13 +876,9 @@
 		}
 	}
 
-
-	void start_euristic(double throughput){
+	void start_heuristic(double throughput, bool good_saple){
 	    long end_time_slot, end_energy_slot, time_interval, energy_interval;
         double power;
-
-	    //Possiamo applicare un approccio un cui se nn è passato abbastazna tempo,
-	    //rimandiamo questa fase?
 
 		end_time_slot = get_time();
 		end_energy_slot = get_energy();
@@ -894,20 +890,20 @@
 		if(power >= 0){
 		    net_time_sum += time_interval;
 		    net_energy_sum += energy_interval;
-
-		    heuristic(throughput, power, time_interval);
+            if(good_saple)
+		        heuristic(throughput, power, time_interval);
 		}
 
         heuristic_start_time_slot = end_time_slot;
         heuristic_start_energy_slot = end_energy_slot;
 	}
-
+/*
 	//Used to skip observation periods at the scope of the power management heuristic
 	void reset_euristic(){
 	    heuristic_start_time_slot = get_time();
         heuristic_start_energy_slot = get_energy();
 	}
-
+*/
 #include <heuristics.c>
 
 #endif
