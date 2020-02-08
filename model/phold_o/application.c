@@ -81,11 +81,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			if (event_content != NULL)
 			{
-				loops = event_content->grain * LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
+				loops = LOOP_COUNT * event_content->grain * (1 - VARIANCE) + 2 * (LOOP_COUNT * event_content->grain) * VARIANCE * Random();
 				// free(event_content);
 			}
 			else
-				loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
+				loops = LOOP_COUNT * 1 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 1) * VARIANCE * Random();
 
 			for(i = 0; i < loops ; i++) {
 					j = i*i;
