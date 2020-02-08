@@ -82,7 +82,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			if (event_content != NULL)
 			{
 				loops = event_content->grain * LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
-				// free(event_content);
+				free(event_content);
 			}
 			else
 				loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
@@ -113,10 +113,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 						if(timestamp < now){
 							printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
 						}
-
+#endif
 						payload = (event_content_type *) malloc(sizeof(event_content_type));
 						payload->grain = (unsigned int) delta;
-#endif
+
 						ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, (void*)payload, sizeof(event_content_type));
 				}
 			}
