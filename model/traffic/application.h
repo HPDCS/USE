@@ -22,6 +22,11 @@
 
 
 #include <ROOT-Sim.h>
+//#include <lookahead.h>
+
+#ifndef SIMPLE_TRAFFIC
+#define SIMPLE_TRAFFIC 0
+#endif
 
 
 #define YEAR 	31536000
@@ -31,7 +36,7 @@
 
 // Execution time must be specified in seconds
 #ifndef EXECUTION_TIME
-	#define EXECUTION_TIME	(1 * WEEK)
+	#define EXECUTION_TIME	(1 * DAY/8)
 #endif
 
 
@@ -49,7 +54,10 @@
 
 // A junction has no actual length, yet cars can be queued in it
 #ifndef CARS_PER_JUNCTION
-	#define	CARS_PER_JUNCTION	1000
+	#define	CARS_PER_JUNCTION	10000
+#endif
+#ifndef JUNCTION_LENGTH
+	#define JUNCTION_LENGTH 0.1
 #endif
 
 // A junction has no actual length, yet cars take some time to pass in it
@@ -57,7 +65,11 @@
 	#define	JUNCTION_TRAVERSE_TIME  600	// 10 minutes on average
 #endif
 
-#define MIN_SPEED		15//20
+#if SIMPLE_TRAFFIC !=0
+#define MIN_SPEED		AVERAGE_SPEED//15//20
+#else
+#define MIN_SPEED		20
+#endif
 
 // SIGMA is in Km/h
 #define SPEED_SIGMA		20.0
@@ -68,6 +80,7 @@
 #define ACCIDENT_SIGMA		30
 #define ACCIDENT_LEAVE_TIME	20	// Exponential mean to compute the time increment to leave after an accident
 
+#define KEEP_ALIVE_TIME		200 // Exponential mean of keep alive messages
 
 // EVENTI
 #define ARRIVAL		10
@@ -91,7 +104,7 @@
 // Allowed length for an LP's name
 #define NAME_LENGTH	32
 
-// <------ Togliere per il rilascio!
+// <------ to remove!
 #include <float.h>
 #define WORD_LENGTH (8 * sizeof(unsigned long))
 #define ROR(value, places) ((value << (places)) | (value >> (WORD_LENGTH - (places))));
@@ -130,6 +143,7 @@ typedef struct _car {
 	double				traveled;
 	unsigned long long	car_id;
 	struct _car 		*next;
+	double 				speed;
 } car_t;
 
 
@@ -141,7 +155,7 @@ typedef struct _lp_state_type {
 	char				name[NAME_LENGTH];	// Name of the cell
 	int					lp_type;		// Is it a junction or a segment?
 	double				segment_length;		// Length of this road segment. If set to 0, it's a junction
-	double				enter_prob;		// in realtà è una frequency!
+	double				enter_prob;		// it is a frequency!
 	double				leave_prob;
 	topology_t			*topology;		// Each node can have an arbitrary number of neighbours
 	unsigned int		queued_elements;
@@ -165,6 +179,7 @@ extern void cause_accident(lp_state_type *state, int me);
 extern void release_cars(unsigned int me, lp_state_type *state);
 extern void update_car_leave(lp_state_type *state, unsigned long long, simtime_t new);
 
+extern unsigned long long get_mark(unsigned int k1, unsigned int k2);
 
 #endif /* _TRAFFIC_APPLICATION_H */
 

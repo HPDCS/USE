@@ -1,0 +1,199 @@
+# Questo file permette di configurare la topologia 	 	 	
+# delle strade da simulare. Il grafo viene gestito 	 	 	
+# come una serie di nodi intersezione e una serie di 	 	 	
+# archi che rappresentano le varie strade. 	 	 	
+# Lunghezza massima di una riga: 127 caratteri 	 	 	
+# Lunghezza massima dei nomi: 31 caratteri
+
+
+# Una riga per ogni nodo di intersezione. 	 	 	
+# Formato: comma separated: 	 	 	
+#   nome, 	 	 	
+#   prob entrata, 	 	 	
+#   prob uscita, 	 	 	
+#   distr traffico, 	 	 	
+#   distr durata traffico 	 	 	
+
+# Topology info from http://www.automap.it/ 	 	 	
+# Traffic data from http://www.autostrade.it/studi/studi_traffico.html 	 	 	
+# Accident data from http://www.aci.it/?id=54 	 	 	
+
+[INTERSECTIONS]
+
+#nome 	fr.entr 	p(usc) 	
+alessandria, 	5, 	0.8 	
+ancona, 	5, 	0.8 	
+aosta, 	5, 	0.8 	
+ascoli, 	5, 	0.8 	
+bardonecchia, 	5, 	0.8 	
+bari, 	5, 	0.8 	
+belluno, 	5, 	0.8 	
+bologna, 	5, 	0.8 	
+bolzano, 	5, 	0.8 	
+brennero, 	5, 	0.8 	
+brescia, 	5, 	0.8 	
+canosa, 	5, 	0.8 	
+caserta, 	5, 	0.8 	
+catanzaro, 	5, 	0.8 	
+chiasso, 	5, 	0.8 	
+civitavecchia, 	5, 	0.8 	
+como, 	5, 	0.8 	
+conegliano, 	5, 	0.8 	
+cosenza, 	5, 	0.8 	
+ferrara, 	5, 	0.8 	
+fiera.roma, 	5, 	0.8 	
+firenze, 	5, 	0.8 	
+fiumicino, 	5, 	0.8 	
+foggia, 	5, 	0.8 	
+genova, 	5, 	0.8 	
+gravellona, 	5, 	0.8 	
+l'aquila, 	5, 	0.8 	
+lainate, 	5, 	0.8 	
+laspezia, 	5, 	0.8 	
+m.bianco, 	5, 	0.8 	
+milano, 	5, 	0.8 	
+modena, 	5, 	0.8 	
+napoli, 	5, 	0.8 	
+orvieto, 	5, 	0.8 	
+padova, 	5, 	0.8 	
+parma, 	5, 	0.8 	
+pescara, 	5, 	0.8 	
+piacenza, 	5, 	0.8 	
+piovene, 	5, 	0.8 	
+pisa, 	5, 	0.8 	
+portogruaro, 	5, 	0.8 	
+reggio, 	5, 	0.8 	
+rimini, 	5, 	0.8 	
+roma, 	5, 	0.8 	
+rosignano, 	5, 	0.8 	
+salerno, 	5, 	0.8 	
+savona, 	5, 	0.8 	
+taranto, 	5, 	0.8 	
+tarvisio, 	5, 	0.8 	
+teramo, 	5, 	0.8 	
+torano, 	-1 	-1 	
+torino, 	5, 	0.8 	
+tortona, 	5, 	0.8 	
+trento, 	5, 	0.8 	
+trieste, 	5, 	0.8 	
+udine, 	5, 	0.8 	
+varese, 	5, 	0.8 	
+venezia, 	5, 	0.8 	
+ventimiglia, 	5, 	0.8 	
+vercelli, 	5, 	0.8 	
+verona, 	5, 	0.8 	
+vicenza, 	5, 	0.8 	
+
+
+
+# Una riga per ogni strada.  	 	 	
+# Formato: comma separated: 	 	 	
+#   nome, 	 	 	
+#   da, 	 	 	
+#   a, 	 	 	
+#   lungh, 	 	 	
+
+[ROUTES]
+
+#name 	from 	to 	length
+RO-FI-roma-fiera.roma, 			roma, 			fiera.roma, 	21
+RO-FI-fiera.roma-fiumicino 		fiera.roma,		fiumicino, 		6
+A1-milano-piacenza, 			milano, 		piacenza, 		49
+A1-piacenza-parma, 				piacenza, 		parma, 			59
+A1-parma-modena, 				parma, 			modena, 		46
+A1-modena-firenze, 				modena, 		firenze,	 	61
+A1-firenze-orvieto,	 			firenze, 		A1-firenze-orvieto1, 		60
+A1-firenze-orvieto1,	 			A1-firenze-orvieto, 		orvieto, 		60
+A1-orvieto-roma, 				orvieto, 		A1-orvieto-roma1, 			52
+A1-orvieto-roma1, 				A1-orvieto-roma, 		roma, 			52
+A1-roma-caserta, 				roma, 			A1-roma-caserta1,	 	58
+A1-roma-caserta1, 				A1-roma-caserta, 			A1-roma-caserta2,	 	58
+A1-roma-caserta2, 				A1-roma-caserta1, 			caserta,	 	58
+A1-caserta-napoli,	 			caserta, 		napoli, 		20
+A3-napoli-salerno, 				napoli, 		salerno,	 	50
+A3-salerno-cosenza, 			salerno, 		A3-salerno-cosenza1, 		62
+A3-salerno-cosenza1, 			A3-salerno-cosenza, 	A3-salerno-cosenza2, 		62
+A3-salerno-cosenza2, 			A3-salerno-cosenza1, 	A3-salerno-cosenza3, 		62
+A3-salerno-cosenza3, 			A3-salerno-cosenza2, 	cosenza, 		62
+A3-cosenza-catanzaro,	 		cosenza, 		catanzaro,	 	64
+A3-catanzaro-reggio, 			catanzaro, 		A3-catanzaro-reggio1, 		60
+A3-catanzaro-reggio1, 			A3-catanzaro-reggio, 		reggio, 		60
+A4-torino-vercelli, 			torino, 		vercelli, 		68
+A4-vercelli-milano, 			vercelli, 		milano, 		55
+A4-milano-brescia,	 			milano, 		A4-milano-brescia1, 		47
+A4-milano-brescia1,	 			A4-milano-brescia, 		brescia, 		47
+A4-brescia-verona, 				brescia, 		verona, 		53
+A4-verona-vicenza, 				verona, 		vicenza,	 	61
+A4-vicenza-padova, 				vicenza, 		padova, 		29
+A4-padova-venezia,	 			padova, 		venezia,	 	29
+A4-venezia-portogruaro,		 	venezia, 		portogruaro, 	52
+A4-portrogruaro-udine,  		portogruaro, 	udine, 			38
+A4-udine-trieste, 				udine, 			trieste,	 	33
+A5-torino-aosta, 				torino, 		A5-torino-aosta1,		 	50
+A5-torino-aosta1, 				A5-torino-aosta, 		aosta,		 	50
+A5-aosta-m.bianco, 				aosta, 			m.bianco, 		23
+A6-torino-savona, 				torino, 		A6-torino-savona1, 		63
+A6-torino-savona1, 				A6-torino-savona, 		savona, 		63
+A7-milano-tortona, 				milano, 		tortona, 		62
+A7-tortona-genova, 				tortona,	 	genova, 		67
+A8-varese-lainate,	 			varese, 		lainate, 		38
+A8-lainate-milano, 				lainate, 		milano, 		12
+A9-chiasso-como, 				chiasso, 		como, 			32
+A9-como-lainate, 				como, 			lainate, 		18
+A10-genova-savona, 				genova, 		savona, 		44
+A10-savona-ventimiglia, 		savona, 		A10-savona-ventimiglia1, 	54
+A10-savona-ventimiglia1, 		A10-savona-ventimiglia, 		ventimiglia, 	54
+A11-firenze-pisa, 				firenze, 		A11-firenze-pisa1,		 	41
+A11-firenze-pisa1, 				A11-firenze-pisa, 		pisa,		 	41
+A12-genova-laspezia, 			genova, 		A12-genova-laspezia1, 		47
+A12-genova-laspezia1, 			A12-genova-laspezia, 		laspezia, 		47
+A12-laspezia-pisa, 				laspezia, 		pisa, 			58
+A12-pisa-rosignano, 			pisa, 			rosignano, 		58
+A12-civitavecchia-fiera.roma, 	civitavecchia, 	fiera.roma, 	65
+A13-bologna-ferrara, 			bologna, 		ferrara,	 	75
+A13-ferrara-padova, 			ferrara, 		padova, 		42
+A14-modena-bologna, 			modena, 		bologna, 		14
+A14-bologna-rimini, 			bologna, 		A14-bologna-rimini1, 		57
+A14-bologna-rimini1, 			A14-bologna-rimini, 		rimini, 		57
+A14-rimini-ancona,			 	rimini, 		A14-rimini-ancona1, 		43
+A14-rimini-ancona1,			 	A14-rimini-ancona, 		ancona, 		43
+A14-ancona-ascoli, 				ancona, 		A14-ancona-ascoli1, 		48
+A14-ancona-ascoli1, 				A14-ancona-ascoli, 		ascoli, 		48
+A14-ascoli-pescara, 			ascoli, 		pescara, 		67
+A14-pescara-foggia, 			pescara, 		A14-pescara-foggia1, 		44
+A14-pescara-foggia1, 			A14-pescara-foggia, 		A14-pescara-foggia2, 		44
+A14-pescara-foggia2, 			A14-pescara-foggia1, 		A14-pescara-foggia3, 		44
+A14-pescara-foggia3, 			A14-pescara-foggia2, 		foggia, 		44
+A14-foggia-canosa, 				foggia, 		canosa, 		56
+A14-canosa-bari, 				canosa,	 		bari, 			64
+A14-bari-taranto, 				bari, 			taranto,	 	69
+A15-parma-laspezia, 			parma,		 	A15-parma-laspezia1,	 	54
+A15-parma-laspezia1, 			A15-parma-laspezia,		 	laspezia,	 	54
+A16-napoli-caserta, 			napoli, 		caserta, 		30
+A16-caserta-canosa, 			caserta,	 	A16-caserta-canosa1, 		74
+A16-caserta-canosa1, 			A16-caserta-canosa,	 	canosa, 		74
+A21-torino-alessandria, 		torino, 		alessandria, 	65
+A21-alessandria-tortona, 		alessandria, 	tortona,	 	22
+A21-tortona-piacenza, 			tortona, 		piacenza, 		78
+A21-piacenza-brescia, 			piacenza,	 	brescia, 		73
+A22-brennero-bolzano, 			brennero,	 	bolzano, 		77
+A22-bolzano-trento, 			bolzano, 		trento, 		60
+A22-trento-verona, 				bolzano, 		verona, 		69
+A22-verona-modena, 				verona, 		A22-verona-modena1, 		53
+A22-verona-modena1, 				A22-verona-modena, 		modena, 		53
+A23-tarvisio-udine, 			tarvisio, 		A23-tarvisio-udine1,		 	60
+A23-tarvisio-udine1, 			A23-tarvisio-udine, 		udine,		 	60
+A24-roma-torano, 				roma, 			torano, 		72
+A24-torano-l'aquila, 			torano, 		l'aquila, 		29
+A24-l'aquila-teramo, 			l'aquila,	 	teramo, 		57
+A25-torano-pescara, 			torano, 		A25-torano-pescara1, 		57
+A25-torano-pescara1, 			A25-torano-pescara, 		pescara, 		57
+A26-genova-alessandria, 		genova, 		alessandria, 	65
+A26-alessandria-vercelli, 		alessandria, 	vercelli, 		63
+A26-vercelli-gravellona, 		vercelli, 		gravellona, 	79
+A27-venezia-belluno, 			venezia, 		A27-venezia-belluno1, 		41
+A27-venezia-belluno1, 			A27-venezia-belluno, 		belluno, 		41
+A28-portogruaro-conegliano, 	portogruaro, 	conegliano, 	35
+A30-caserta-salerno, 			caserta, 		salerno, 		55
+A31-vicenza-piovene, 			vicenza, 		piovene, 		36
+A32-torino-bardonecchia, 		torino, 		bardonecchia, 	73

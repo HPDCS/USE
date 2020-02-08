@@ -78,11 +78,9 @@ static void tokenize_intersection(char *line, lp_state_type *state) {
 			case 1: // Car leaving probability
 				state->enter_prob = parseDouble(token);
 				break;
-
 			case 2: // Car entering probability
 				state->leave_prob = parseDouble(token);
 				break;
-
 			default:
 				fprintf(stderr, "Too many parameters in intersection %s at pass %d\n", state->name, pass);
 				fflush(stderr);
@@ -162,6 +160,7 @@ static bool parse_topology_line(unsigned int me, unsigned int *line_counter, cha
 		if(*state == INTERSECT_S) {
 			sim_state->lp_type = JUNCTION;
 			tokenize_intersection(line, sim_state);
+			sim_state->segment_length = JUNCTION_LENGTH;
 		} else {
 			sim_state->lp_type = SEGMENT;
 			tokenize_route(line, sim_state, sim_state->name, from, to);
@@ -194,6 +193,8 @@ static void connect_junction(lp_state_type *sim_state, FILE *f) {
 	char from[NAME_LENGTH];
 	char name[NAME_LENGTH];
 	int state = NORMAL_S;
+	lp_state_type *tmp_state = malloc(sizeof(lp_state_type));
+	
 	
 	// Count all LPs which have a to/from as the current name
 	rewind(f);
@@ -214,7 +215,7 @@ static void connect_junction(lp_state_type *sim_state, FILE *f) {
 			continue;
 		
 		if(state == ROUTES_S) {
-			tokenize_route(line, sim_state, name, from, to);
+			tokenize_route(line, tmp_state, name, from, to);
 			
 			if(strcmp(from, sim_state->name) == 0) {
 				num_neighbours++;
@@ -250,10 +251,10 @@ static void connect_junction(lp_state_type *sim_state, FILE *f) {
 				
 			if(strcmp(line, INTERSECT_STR) == 0)
 				continue;
-			
+	
 			if(state == ROUTES_S) {
-				tokenize_route(line, sim_state, name, from, to);
-				
+				tokenize_route(line, tmp_state, name, from, to);
+					
 				if(strcmp(from, sim_state->name) == 0) {
 					sim_state->topology->neighbours[i++] = find_lp_by_name(name, f);
 				}
@@ -294,7 +295,7 @@ void init_my_state(int me, lp_state_type *sim_state) {
 			exit(EXIT_FAILURE);
 		}
 	}
-	
+		
 	// Make connections for junctions (1:N). Segments are already connected.
 	if(sim_state->lp_type == JUNCTION) {
 		connect_junction(sim_state, f);
@@ -302,7 +303,7 @@ void init_my_state(int me, lp_state_type *sim_state) {
 	
 	fclose(f);
 	
-	printf("LP %d (%s) is a%s with ", me, sim_state->name, ( sim_state->lp_type == JUNCTION ? "n intersection" : " route" ));
+	printf("LP %d (%s) is a%s of length %f with ", me, sim_state->name, ( sim_state->lp_type == JUNCTION ? "n intersection" : " route" ), sim_state->segment_length);
 	if(sim_state->topology != NULL)
 		printf("%d neighbours: ", sim_state->topology->num_neighbours);
 	else
