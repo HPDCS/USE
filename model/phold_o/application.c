@@ -70,7 +70,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			
 			for(i = 0; i < EVENTS_PER_LP; i++) {
 				timestamp = (simtime_t) LOOKAHEAD + (TAU * Random());
-				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+
+				payload = (event_content_type *) malloc(sizeof(event_content_type));
+				payload->grain = (unsigned int) timestamp;
+
+				ScheduleNewEvent(me, timestamp, LOOP, (void*)payload, sizeof(event_content_type));
 			}
 
 			break;
