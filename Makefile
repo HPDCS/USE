@@ -306,6 +306,8 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
+PHOLD_O_SOURCES=model/phold_o/application.c
+
 PHOLDCOUNT_SOURCES=model/phold_count/application.c
 
 PHOLDHOTSPOT_SOURCES=model/phold_hotspot/application.c
@@ -387,6 +389,7 @@ PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
 TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
+PHOLD_O_OBJ=$(PHOLD_O_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
@@ -409,6 +412,9 @@ tcar: clean _tcar executable
 
 phold: TARGET=phold 
 phold: clean  _phold executable
+
+phold_o: TARGET=phold_o
+phold_o: clean  _phold_o executable
 
 pholdcount: TARGET=pholdcount 
 pholdcount: clean  _pholdcount executable
@@ -483,6 +489,9 @@ _tcar: $(TCAR_OBJ)
 
 _phold: $(PHOLD_OBJ)
 	@ld -r -g $(PHOLD_OBJ) -o model/__application.o
+
+_phold_o: $(PHOLD_O_OBJ)
+	@ld -r -g $(PHOLD_O_OBJ) -o model/__application.o
 	
 _pholdcount: $(PHOLDCOUNT_OBJ)
 	@ld -r -g $(PHOLDCOUNT_OBJ) -o model/__application.o
@@ -509,6 +518,7 @@ clean:
 	@find . -type f -name "traffic "  	  -exec rm {} \;
 	@find . -type f -name "tcar" 		  -exec rm {} \;
 	@find . -type f -name "phold" 		  -exec rm {} \;
+	@find . -type f -name "phold_o"       -exec rm {} \;
 	@find . -type f -name "pholdcount" 	  -exec rm {} \;
 	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
