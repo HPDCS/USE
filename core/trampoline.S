@@ -30,26 +30,26 @@ cfv_trampoline:
 	/* %rax <--- &rt_data (type: struct run_time_data *) */
 	leaq		rt_data(%rip), %rax
 
-	/* %rbx <--- current_lp (type: unsigned int)  */
+	/* %rbx <--- tid (type: unsigned int)  */
 	movq		%fs:0, %rcx
-	addq		current_lp@gottpoff(%rip), %rcx
+	addq		tid@gottpoff(%rip), %rcx
 	movq		(%rcx), %rbx
 
 	/* %rdx <--- thread_stats (type: LP_state *) */
 	/* %rcx <--- (&rt_data)->sizeof_stats (type: size_t)  */
-	/* %rcx <--- current_lp * (&rt_data)->sizeof_stats (type: size_t)  */
-	/* %rdx <--- &thread_stats[current_lp] (type: LP_state *) */
+	/* %rcx <--- tid * (&rt_data)->sizeof_stats (type: size_t)  */
+	/* %rdx <--- &thread_stats[tid] (type: LP_state *) */
 	movq		thread_stats(%rip), %rdx
 	movq		48(%rax), %rcx
 	imulq		%rbx, %rcx
 	addq		%rcx, %rdx
 
 	/* %rcx <--- (&rt_data)->in_stats_ipi_trampoline_received_offset (type: size_t)  */
-	/* %xmm0 <--- (&thread_stats[current_lp])->ipi_trampoline_received (type: double) */
+	/* %xmm0 <--- (&thread_stats[tid])->ipi_trampoline_received (type: double) */
 	/* %xmm1 <--- 1.0 (type: double) */
-	/* %xmm0 <--- (&thread_stats[current_lp])->ipi_trampoline_received + 1.0 (type: double) */
+	/* %xmm0 <--- (&thread_stats[tid])->ipi_trampoline_received + 1.0 (type: double) */
 	/* %rcx <--- (&rt_data)->in_stats_ipi_trampoline_received_offset (type: size_t)  */
-	/* (&thread_stats[current_lp])->ipi_trampoline_received <--- (&thread_stats[current_lp])->ipi_trampoline_received + 1.0 (type: double) */
+	/* (&thread_stats[tid])->ipi_trampoline_received <--- (&thread_stats[tid])->ipi_trampoline_received + 1.0 (type: double) */
 	movq		40(%rax), %rcx
 	movsd		(%rdx, %rcx, 1), %xmm0
 	movq		$0x1, %rcx
@@ -57,6 +57,11 @@ cfv_trampoline:
 	addsd		%xmm1, %xmm0
 	movq		40(%rax), %rcx
 	movsd		%xmm0, (%rdx, %rcx, 1)
+
+	/* %rbx <--- current_lp (type: unsigned int)  */
+	movq		%fs:0, %rcx
+	addq		current_lp@gottpoff(%rip), %rcx
+	movq		(%rcx), %rbx
 
 	/* %rdx <--- LPS[current_lp] (type: LP_state *) */
 	movq		LPS(%rip), %rdx
