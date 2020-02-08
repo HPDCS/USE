@@ -363,7 +363,7 @@ void _mkdir(const char *path) {
 void set_affinity(unsigned int tid){
 	unsigned int id_cpu;
 	cpu_set_t mask;	
-	id_cpu = (tid % 8) * 4 + (tid/((unsigned int)8));
+	id_cpu = tid; // (tid % 8) * 4 + (tid/((unsigned int)8));
 	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
 	CPU_ZERO(&mask);
 	CPU_SET(id_cpu, &mask);
