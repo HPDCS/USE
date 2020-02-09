@@ -29,6 +29,7 @@ results*
 *.i*86
 *.x86_64
 *.hex
+*.idea
 
 .project
 .cproject
@@ -41,6 +42,7 @@ robot_explore
 hash 		 
 phold
 pholdcount
+phold_roll
 pcs
 /tcar
 log_test/*
