@@ -17,12 +17,11 @@ EPB_list="3"
 MAX_RETRY="10"
 TEST_DURATION="10"
 
-PSTATE_list="1 2 3 4 5 6 7 8 9 10 11 12 13 14"
-
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
 FOLDER="results/results_phold"
+PSTATE_list="1 2 3 4 5 6 7 8 9 10 11 12 13 14"
 HEURISTIC_MODE=8
 POWER_LIMIT=65.0
 STATIC_PSTATE=1
