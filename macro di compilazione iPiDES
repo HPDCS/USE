@@ -22,6 +22,12 @@ SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se risu
 POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP
 
 TODO:
+-fare un paio di esecuzioni del modello phold_roll e vedere valore medio,abilitare una macro dopo l'altra per vedere le differenze tra il codice originale e il codice modificato con macro default
+-rimuovere range di indirizzi interrompibile e fare in modo che il preemption counter faccia tutta la gestione delle interruzioni
+-allargare sempre di più la zona interrompibile, partire da una zona easy e poi estenderla man mano
+-metere le barriere di memoria su incremento e decremento
+-se su decremento il counter è 0 avviare check_sincrono
+
 
 -operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice es rollback_length.
 -varie statistiche non vengono calcolate adeguatamente anche nel caso in cui non ci siano interruzioni

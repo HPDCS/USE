@@ -7,21 +7,13 @@
 
 #include "application.h"
 
-static inline void looops()
-{
-	unsigned volatile int i,j = USELESS_INIT_NUMBER;
-	unsigned volatile int loops = MIN_LOOPS + COEFFICIENT_OF_RANDOM * Random();
-	for(i = 0; i < loops ; i++) {
-		j = i*i;
-	}
-	(void)j;
-}
-
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
-	simtime_t timestamp; 
+	simtime_t timestamp;
+	unsigned volatile int i,j = USELESS_INIT_NUMBER;
+	unsigned volatile int loops;
+
 	lp_state_type *state_ptr = (lp_state_type*)state;
-	unsigned volatile int i;
 	(void) me;
 	(void) event_content;
 	(void) size;
@@ -57,7 +49,12 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case NORMAL_EVT:
 
 			//TODO debug ts is integer
-			looops();
+			
+			loops= MIN_LOOPS + COEFFICIENT_OF_RANDOM * Random();
+			for(i = 0; i < loops ; i++) {
+				j = i*i;
+			}
+			(void)j;
 
 			state_ptr->events++;//num NORMAL_EVT executed
 
@@ -76,7 +73,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			//TODO debug ts-SHIFT is integer
 
-			looops();
+			loops= MIN_LOOPS + COEFFICIENT_OF_RANDOM * Random();
+			for(i = 0; i < loops ; i++) {
+				j = i*i;
+			}
+			(void)j;
 
 			break;
 

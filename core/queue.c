@@ -148,8 +148,8 @@ void queue_clean(){
             list_insert_tail_by_content(freed_local_evts, current);
             _thr_pool.messages[i].father = NULL;
             #if POSTING==1
-            int index_in_hash_table=current->id_in_thread_pool_hash_table;
-            _thr_pool.collision_list[index_in_hash_table]=NULL;
+            //int index_in_hash_table=current->id_in_thread_pool_hash_table;
+            //_thr_pool.collision_list[index_in_hash_table]=NULL;
             
             #if REPORT==1
             statistics_post_lp_data(father_lp_idx,STAT_EVENT_NOT_FLUSHED,1);
