@@ -34,6 +34,7 @@ HEURISTIC_MODE=8
 POWER_LIMIT=65.0
 STATIC_PSTATE=1
 CORES=40
+DURATION=120
 
 
 #for max_lp in $MAX_SKIPPED_LP_list
@@ -71,7 +72,7 @@ do
 						for threads in $(seq $CORES) #$THREAD_list
 						do
 							./create_config.sh $threads $pstate $HEURISTIC_MODE $POWER_LIMIT
-							EX="sudo ./traffic $CORES $lp"
+							EX="sudo ./traffic $CORES $lp $DURATION"
 							FILE="${FOLDER}/traffic_${threads}-p$pstate-${lp}_ol${op}_${fn}_${run}.dat"
 							touch $FILE
 							
