@@ -17,7 +17,7 @@ EPB_list="3"
 MAX_RETRY="10"
 TEST_DURATION="10"
 
-PSTATE_LIST="1 2 3 4 5 6 7 8 9 10"
+PSTATE_list="1 2 3 4 5 6 7 8 9 10"
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
@@ -53,26 +53,29 @@ do
 		do
 			for lp in $LP_list
 				do
-					for threads in $THREAD_list
+					for pstate in $PSTATE_list
 					do
-					
-						./create_config.sh $threads $pstate $HEURISTIC_MODE $POWER_LIMIT
-						EX="./${test}_lf_hi $threads $lp $TEST_DURATION"
-						FILE="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-p$state-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
-												
-						N=0 
-						while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
+						for threads in $THREAD_list
 						do
-							echo $BEGIN
-							echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
-							echo $FILE
-							#1> $FILE 2>&1 time $EX
-							(time $EX) &> $FILE
-							if test $N -ge $MAX_RETRY ; then echo break; break; fi
-							N=$(( N+1 ))
-						done  
 						
-						  
+							./create_config.sh $threads $pstate $HEURISTIC_MODE $POWER_LIMIT
+							EX="./${test}_lf_hi $threads $lp $TEST_DURATION"
+							FILE="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-p$state-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
+													
+							N=0 
+							while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
+							do
+								echo $BEGIN
+								echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
+								echo $FILE
+								#1> $FILE 2>&1 time $EX
+								(time $EX) &> $FILE
+								if test $N -ge $MAX_RETRY ; then echo break; break; fi
+								N=$(( N+1 ))
+							done  
+							
+							  
+						done  
 					done
 				done
 		done
