@@ -229,6 +229,21 @@ ifdef NUM_HOTSPOT_PHASES
 CFLAGS:= $(CFLAGS) -DNUM_HOTSPOT_PHASES=$(NUM_HOTSPOT_PHASES)
 endif
 
+#TRAFFIC
+ifdef ENTER_PROB
+CFLAGS:= $(CFLAGS) -DENTER_PROB=$(ENTER_PROB)
+endif
+
+#TRAFFIC
+ifdef LEAVE_PROB
+CFLAGS:= $(CFLAGS) -DLEAVE_PROB=$(LEAVE_PROB)
+endif
+
+#TRAFFIC
+ifdef SIMPLE_TRAFFIC
+CFLAGS:= $(CFLAGS) -DSIMPLE_TRAFFIC=$(SIMPLE_TRAFFIC)
+endif
+
 ########################################################################
 
 PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
