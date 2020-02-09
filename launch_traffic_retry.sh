@@ -3,7 +3,7 @@
 #MAX_SKIPPED_LP_list="1000000"
 LP_list="137"					#number of lps:137 for small topology; 163 for medium tobology
 THREAD_list="32 16 8 4 2" #"4 8 16 24 32"	#number of threads
-RUN_list="1 2 3"					#run number list
+RUN_list="1"					#run number list
 
 #LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"	#lookahead
 
@@ -45,8 +45,8 @@ do
 
 for fn in $INPUT_list 
 do
-	for op in $OP_list
-	do
+#	for op in $OP_list
+#	do
 #		for enp in $ENTERP_list
 #		do
 #			for lvp in $LEAVEP_list
@@ -78,7 +78,7 @@ do
 						done  
 					done
 				done
-			done
+			#done
 #		done
 #	done
 done
