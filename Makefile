@@ -306,6 +306,8 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
+PHOLD_ROLL_SOURCES=model/phold_roll/application.c
+
 PHOLD_O_SOURCES=model/phold_o/application.c
 
 PHOLDCOUNT_SOURCES=model/phold_count/application.c
@@ -390,6 +392,7 @@ TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLD_O_OBJ=$(PHOLD_O_SOURCES:.c=.o)
+PHOLD_ROLL_OBJ=$(PHOLD_ROLL_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
@@ -415,6 +418,9 @@ phold: clean  _phold executable
 
 phold_o: TARGET=phold_o
 phold_o: clean  _phold_o executable
+
+phold_roll: TARGET=phold_roll
+phold_roll: clean _phold_roll executable
 
 pholdcount: TARGET=pholdcount 
 pholdcount: clean  _pholdcount executable
@@ -492,7 +498,10 @@ _phold: $(PHOLD_OBJ)
 
 _phold_o: $(PHOLD_O_OBJ)
 	@ld -r -g $(PHOLD_O_OBJ) -o model/__application.o
-	
+
+_phold_roll: $(PHOLD_ROLL_OBJ)
+	@ld -r -g $(PHOLD_ROLL_OBJ) -o model/__application.o
+
 _pholdcount: $(PHOLDCOUNT_OBJ)
 	@ld -r -g $(PHOLDCOUNT_OBJ) -o model/__application.o
 

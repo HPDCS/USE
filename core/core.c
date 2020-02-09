@@ -1189,6 +1189,8 @@ end_loop:
 #endif
 
 #if IPI_SUPPORT==1
+	if(tid==0)
+		ipi_print_and_reset_counters();
 	ipi_unregister();
 #endif
 	

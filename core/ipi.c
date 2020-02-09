@@ -71,6 +71,7 @@ void send_ipi_to_lp(msg_t*event){
         #endif
     }
 }
+
 long get_sizeof_function(const char*function_name,char*path_program_name){
     //get size in byte of function_name present in executable program_name
     FILE *fp;
@@ -143,4 +144,9 @@ void register_thread_to_ipi_module(unsigned int thread_id,const char* function_n
 void ipi_unregister(){
     ipi_unregister_thread(&alternate_stack, alternate_stack_area);
 }
+
+void ipi_print_and_reset_counters(){
+    ipi_print_and_reset_counters_ipi_module();
+}
+
 #endif

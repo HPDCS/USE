@@ -17,6 +17,7 @@
 #define IPI_REGISTER_SAFE_MEM_SIZE  (1U << 5)
 #define IPI_SET_TEXT_START          (1U << 6)
 #define IPI_SET_TEXT_END            (1U << 7)
+#define IPI_PRINT_AND_RESET_COUNTERS (1U << 8)
 
 int ipi_register_thread(int, unsigned long, void **, unsigned long long **,
         unsigned long long **, unsigned long, unsigned long, unsigned long);
@@ -27,6 +28,7 @@ static __thread int fd;
 static __thread int cpu;
 static __thread cpu_set_t oldset;
 
+int ipi_print_and_reset_counters_ipi_module(void);
 
 static inline int alloc_alternate_stack_area(void ** stack, unsigned long stack_size)
 {
@@ -267,5 +269,16 @@ int ipi_unregister_thread(void ** alternate_stack, unsigned long alternate_stack
         res = 1;
     }
 
+    return res;
+}
+
+int ipi_print_and_reset_counters_ipi_module(){
+    int res = 0;
+
+    if (ioctl(fd, IPI_PRINT_AND_RESET_COUNTERS) < 0)
+    {
+        printf("Unable to print_and_reset_counter %d.\n", cpu);
+        res = 1;
+    }
     return res;
 }

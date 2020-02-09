@@ -5,5 +5,5 @@
 extern int ipi_register_thread(int, unsigned long, void **, unsigned long long **,
 				unsigned long long **, unsigned long, unsigned long, unsigned long);
 extern int ipi_unregister_thread(void **, unsigned long);
-
+extern void ipi_print_and_reset_counters_ipi_module();
 #endif
