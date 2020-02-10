@@ -29,17 +29,20 @@ do
 			
 			for pl in $POWER_LIMIT_list
 			do
-				for hmode in $HEURISTIC_MODE
+echo $pl
+				for hmode in $HEURISTIC_MODE_list
 				do
+echo $hmode
 					for run in $RUN_list
 					do
+echo $run
 						for lp in $LP_list
 						do
 							for pstate in $PSTATE_list
 							do
 								for threads in $CORES
 								do
-								
+								echo $threads
 									./create_config.sh $threads $pstate $hmode $pl
 									EX="sudo ./${test}_lf_hi $CORES $lp $TEST_DURATION"
 									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf$filtering-w$pl-h$hmode-$threads-p$pstate-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
