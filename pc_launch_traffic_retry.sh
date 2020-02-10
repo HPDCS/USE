@@ -1,40 +1,8 @@
 #!/bin/bash
 
-#MAX_SKIPPED_LP_list="1000000"
-LP_list="137"					#number of lps:137 for small topology; 163 for medium tobology
-THREAD_list="32 16 8 4 2" #"4 8 16 24 32"	#number of threads
-RUN_list="1"					#run number list
-
-#LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"	#lookahead
-
-#OP_list="1 2" #2
-
-#CKP_PER_list="50" #"10 50 100"
-
-#PUB_list="0.33"
-#EPB_list="3"
-
-MAX_RETRY="10"
-
-#TEST_DURATION="20"
-
-FOLDER="results/results_traffic" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
-
-INPUT_list="03_08" # 05_08 10_08 04_08 07_08" #04_08 07_08
-#ENTERP_list="30 60"
-#LEAVEP_list="01 05"
-
-
-BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
-CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
+source ./pc_traffic_config.sh
 
 mkdir -p ${FOLDER}
-PSTATE_list="1 2 3 4 5 6 7 8 9 10 11 12 13 14"
-HEURISTIC_MODE=8
-POWER_LIMIT=65.0
-STATIC_PSTATE=1
-CORES=40
-DURATION=120
 
 
 #for max_lp in $MAX_SKIPPED_LP_list
