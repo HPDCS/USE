@@ -1,0 +1,22 @@
+PROGRAMMA ORIGINALE: Il programma non prevede meccanismi per interrompere un thread dal suo lavoro, ne in modo sincrono ne in modo asincrono.
+
+CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo tale da aggiungere il predicato "il padre dovrà eventually essere rieseguito?" che quindi permette l'invalidazione degli eventi figli sia nel caso in cui il padre è già stato ri-eseguito(la sua epoca è aumentata rispetto alla precedente esecuzione) e sia nel caso in cui il padre dovrà essere rieseguito.
+
+PREEMPT_COUNTER: macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo(sincrona/asincrona), può accadere. L'interruzione può avvenire solo quando il preemption_counter è 0.Aumentare il preemption counter assicura che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
+Il programma non è ancora in grado di interrompersi.
+
+
+LONG_JMP: macro che dà la possibilità al programma di fare delle long_jmp in qualsiasi scenario,ma solo quando il preempt_counter è 0.In alcuni punti critici del codice,fare long_jmp non è safe.Di fatto con questa macro abilitata il programma supporta il meccanismo delle interruzioni sincrone.
+Lasciare il valore di counter a 0 se si vuole chiamare la long_jmp come se fosse una normale funzione.
+
+HANDLE_INTERRUPT: macro che implementa il supporto per settare un LP come valido/invalido,utile per permettere l'interruzione asincrona/sincrona in scenari critici,quando il preemption counter è 0.
+Grazie a questa macro è possibile in seguito all'interruzione settare un LP come invalido per poterlo ripristinare correttamente appena possibile.
+Si preoccupa di invalidare e ripristinare lo stato dell'LP in seguito a qualsiasi interruzione asincrona/sincrona.
+Non si preoccupa di gestire l'evento current_msg interrotto(aumentare numero frame,inserirlo in coda locale,settarlo come interrotto,farlo apparire nel futuro ecc),deve essere fatto esplicitamente da altre macro.
+
+IPI_SUPPORT: macro che dà la possibilità al programma di inviare e ricevere interruzioni asincrone, in modo safe.
+Le interruzioni possono essere inviate da un thread ad un altro in qualsiasi scenario. Le interruzioni vengono effettivamente catturate quando il thread destinatario ha preemption counter pari a 0 e sta eseguendo una ProcessEvent.
+
+SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se risultano veri, fanno eseguire una interruzione sincrona.Prima di eseguire l'interruzione sincrona è necessario settare l'LP come invalido e gestire correttamente current_msg interrotto.
+
+POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP
