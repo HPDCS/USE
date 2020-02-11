@@ -353,7 +353,7 @@ seed_type sanitize_seed(seed_type cur_seed) {
 * @author Alessandro Pellegrini
 * @return The master seed
 */
-static void load_seed(void) {
+/*static void load_seed(void) {
 
 	seed_type new_seed;
 	char conf_file[512];
@@ -407,8 +407,63 @@ static void load_seed(void) {
 //	fprintf(fp, "%llu\n", (unsigned long long)new_seed);
 
 	fclose(fp);
-}
+}*/
 
+//not present in original version
+static void load_seed(void) {
+
+	seed_type new_seed;
+	char conf_file[512];
+	FILE *fp;
+
+	// Get the path to the configuration file
+	sprintf(conf_file, "%s/.rootsim/numerical.conf", getenv("HOME"));
+
+	// Check if the file exists. If not, we have to create configuration
+	if ((fp = fopen(conf_file, "r+")) == NULL) {
+		printf("%s not exist,creating config file\n",conf_file);
+		// Try to build the path to the configuration folder.
+		sprintf(conf_file, "%s/.rootsim", getenv("HOME"));
+		_mkdir(conf_file);
+
+		// Create and initialize the file
+		sprintf(conf_file, "%s/.rootsim/numerical.conf", getenv("HOME"));
+		if ((fp = fopen(conf_file, "w")) == NULL) {
+			rootsim_error(true, "Unable to create the numerical library configuration file %s. Aborting...", conf_file);
+		}
+		printf("created config file %s\n",conf_file);
+		// We now initialize the first long random number. Thanks Unix!
+		// TODO: THIS IS NOT PORTABLE!
+		int fd;
+		if ((fd = open("/dev/random", O_RDONLY)) == -1) {
+			rootsim_error(true, "Unable to initialize the numerical library configuration file %s. Aborting...", conf_file);
+
+		}
+		printf("opened random number device from path /dev/random\n");
+		read(fd, &new_seed, sizeof(seed_type));
+		printf("readed random number from path /dev/random\n");
+		close(fd);
+		fprintf(fp, "%llu\n", (unsigned long long)new_seed); // We cast, so that we get an integer representing just a bit sequence
+		fclose(fp);
+
+	}
+
+	// Load the configuration for the numerical library
+	if ((fp = fopen(conf_file, "r+")) == NULL) {
+		rootsim_error(true, "Unable to load numerical distribution configuration: %s. Aborting...", conf_file);
+	}
+
+	// Load the initial seed
+	fscanf(fp, "%llu", (unsigned long long *)&master_seed);
+
+
+	rewind(fp);
+	srandom(master_seed);
+//	new_seed = random();
+//	fprintf(fp, "%llu\n", (unsigned long long)new_seed);
+
+	fclose(fp);
+}
 
 // TODO: con un (non tanto) alto numero di processi logici (> numero di bit di un intero!!), lo shift
 // circolare restituisce a due LP differenti lo stesso seme iniziale. Questo fa sì che, se la logica di
