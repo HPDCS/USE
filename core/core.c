@@ -394,6 +394,9 @@ void insert_current_msg_after_given_event(msg_t*given_event){
 // può diventare una macro?
 // [D] no, non potrebbe più essere invocata lato modello altrimenti
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
+	#if HANDLE_INTERRUPT==1
+	enter_in_unpreemptable_zone();
+	#endif
 	if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
     	#if DEBUG==1//not present in original version
 		check_ScheduleNewEventFuture();
@@ -484,6 +487,10 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 			}
 		}
 	}
+	#endif
+
+	#if HANDLE_INTERRUPT==1
+	exit_from_unpreemptable_zone();
 	#endif
 }
 
@@ -760,10 +767,16 @@ stat64_t execute_time;
 		#if HANDLE_INTERRUPT==1
 		LPS[current_lp]->msg_curr_executed=event;
 		#endif
+		#if HANDLE_INTERRUPT==1
+		enter_in_preemptable_zone();
+		#endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
 		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
+		#if HANDLE_INTERRUPT==1
+		exit_from_preemptable_zone();
+		#endif
 		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_FORWARD==1
@@ -780,6 +793,7 @@ stat64_t execute_time;
 			#endif
 			#endif
 		}
+
 
 #if IPI_SUPPORT==1
 		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, event->execution_mode, event_type, RDTSC()-event->evt_start_time);
@@ -840,7 +854,7 @@ void thread_loop(unsigned int thread_id) {
 	//register thread in order to send and to receive IPI
 	register_thread_to_ipi_module(thread_id,"ProcessEvent",(unsigned long)ProcessEvent);
 #endif
-	initialize_preempt_counter(thread_id);//init counter
+	initialize_preemptability();
 	init_simulation(thread_id);
 
 #if REPORT == 1 
@@ -869,6 +883,7 @@ void thread_loop(unsigned int thread_id) {
 			//INCONSISTENT AFTER "longjmp" CALL. 	
 		#if DEBUG==1
 			check_CFV_TO_HANDLE();
+			reset_variables_nesting_zone();
 		#endif
 			
 		#if VERBOSE>0
@@ -938,7 +953,9 @@ void thread_loop(unsigned int thread_id) {
 				) 
 				&& !sim_error
 		) {
-		
+		#if HANDLE_INTERRUPT==1//remove this block of code
+		set_default_preemptability();
+		#endif
 		// FETCH //
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);

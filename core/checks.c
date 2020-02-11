@@ -87,6 +87,7 @@ void check_CFV_ALREADY_HANDLED(){
 	}
 	#endif
 }
+
 void check_thread_loop_before_fetch(){
 	#if PREEMPT_COUNTER==1
 	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
@@ -115,8 +116,8 @@ void check_CFV_TO_HANDLE(){
 				gdb_abort;
 	}
 	#if PREEMPT_COUNTER==1
-	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-			printf("interrupt code not interruptible\n");
+	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_NOT_INTERRUPTIBLE){
+			printf("CHECK_CFV_TO_HANDLE:code is interruptible before main loop\n");
 			gdb_abort;
 	}
 	#endif

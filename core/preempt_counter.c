@@ -4,31 +4,41 @@
 #include <hpdcs_utils.h>
 
 #if PREEMPT_COUNTER==1
+
+#if DEBUG==1
+__thread unsigned long nesting_zone_preemptable=0;
+__thread unsigned long nesting_zone_unpreemptable=0;
+#endif
+
 #define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",*preempt_count_ptr,thread_id)
-#if IPI_SUPPORT==1
+
 __thread unsigned long long * preempt_count_ptr = NULL;
 __thread unsigned long long * standing_ipi_ptr = NULL;
-	void initialize_preempt_counter(){
-		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+
+void set_default_preemptability(){
+	*preempt_count_ptr=PREEMPT_COUNT_INIT;
+}
+
+#if IPI_SUPPORT==1
+
+	void initialize_preemptability(){
+		set_default_preemptability();
 	}
 	void initialize_standing_ipi(){
-		*standing_ipi_ptr=STANDING_IPI_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+		*standing_ipi_ptr=STANDING_IPI_INIT;
 	}
 #else
 	__thread unsigned long long preempt_count = INVALID_PREEMPT_COUNTER;
-	__thread unsigned long long * preempt_count_ptr = NULL;
-
 	__thread unsigned long long standing_ipi = INVALID_STANDING_IPI;
-	__thread unsigned long long * standing_ipi_ptr = NULL;
 
-	void initialize_preempt_counter(){
+	void initialize_preemptability(){
 		preempt_count_ptr=&preempt_count;
-		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+		set_default_preemptability();
 	}
 
 	void initialize_standing_ipi(){
 		standing_ipi_ptr=&standing_ipi;
-		*standing_ipi_ptr=STANDING_IPI_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+		*standing_ipi_ptr=STANDING_IPI_INIT;
 	}
 #endif
 
@@ -59,5 +69,53 @@ unsigned long increment_preempt_counter(){
 	#endif
 	return __sync_add_and_fetch(preempt_count_ptr, 1);
 }
+unsigned long enter_in_preemptable_zone(){
+	#if DEBUG==1
+	if(nesting_zone_preemptable>=MAX_NESTING_PREEMPTABLE_ZONE){
+		printf("nesting preemptable zone unfeasible on enter,max_nesting=%d\n",MAX_NESTING_PREEMPTABLE_ZONE);
+		gdb_abort;
+	}
+	nesting_zone_preemptable++;
+	#endif
+	return decrement_preempt_counter();
+}
+unsigned long exit_from_preemptable_zone(){
+	#if DEBUG==1
+	if(nesting_zone_preemptable==NO_NESTING){
+		printf("nesting preemptable zone unfeasible on exit\n");
+		gdb_abort;
+	}
+	nesting_zone_preemptable--;
+	#endif
+	return increment_preempt_counter();
+}
+
+unsigned long enter_in_unpreemptable_zone(){
+	#if DEBUG==1
+	if(nesting_zone_unpreemptable>=MAX_NESTING_UNPREEMPTABLE_ZONE){
+		printf("nesting unpreemptable zone unfeasible on enter,max_nesting=%d\n",MAX_NESTING_UNPREEMPTABLE_ZONE);
+		gdb_abort;
+	}
+	nesting_zone_unpreemptable++;
+	#endif
+	return increment_preempt_counter();
+}
+
+unsigned long exit_from_unpreemptable_zone(){
+	#if DEBUG==1
+	if(nesting_zone_unpreemptable==NO_NESTING){
+		printf("nesting unpreemptable zone unfeasible on exit\n");
+		gdb_abort;
+	}
+	nesting_zone_unpreemptable--;
+	#endif
+	return decrement_preempt_counter();
+}
+#if DEBUG==1
+void reset_variables_nesting_zone(){
+	nesting_zone_unpreemptable=0;
+	nesting_zone_preemptable=0;
+}
+#endif
 
 #endif //PREEMPT_COUNTER

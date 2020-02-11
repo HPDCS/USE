@@ -51,8 +51,13 @@ static seed_type master_seed;
 * @return A random number, in between (0,1)
 * @date 05 sep 2013
 */
+#if HANDLE_INTERRUPT==1
+#include <preempt_counter.h>
+#endif
 double Random(void) {
-
+	#if HANDLE_INTERRUPT==1
+	enter_in_unpreemptable_zone();
+	#endif
 	uint32_t *seed1;
 	uint32_t *seed2;
 
@@ -78,6 +83,9 @@ double Random(void) {
 
 	// The magic number below is 1/(2^32 + 2).
     	// The result is strictly between 0 and 1.
+	#if HANDLE_INTERRUPT==1
+	exit_from_unpreemptable_zone();
+	#endif
 	return (((*seed1 << 16u) + (*seed1 >> 16u) + *seed2) + 1.0) * 2.328306435454494e-10;
 }
 

@@ -88,7 +88,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			break;
 
 		default:
-			printf("[ERR] Requested to process an event neither ALLOC, nor DEALLOC, nor INIT\n");
+			printf("[ERR] Requested to process an event neither NORMAL, nor ABNORMAL, nor INIT\n");
 			abort();
 			break;
 	}
