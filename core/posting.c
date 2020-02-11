@@ -176,6 +176,7 @@ bool post_info_event_invalid(msg_t*event){
 }
 
 msg_t* flag_as_posted(msg_t*event,bool* flagged){
+    //event to flush on calqueue.now it is in thread_pool so it is thread_local
     unsigned int lp_idx=event->receiver_id;
     simtime_t bound_ts;
     if(LPS[lp_idx]->bound!=NULL){
@@ -200,7 +201,10 @@ bool post_info_with_oldval(msg_t*event,msg_t*old_priority_message){
     if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
                 (unsigned long)old_priority_message,(unsigned long)event)==false)//CAS failed
         return post_information(event,true);
-    return false;
+    #if REPORT==1
+    statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+    #endif
+    return true;
 }
 
 bool post_information(msg_t*event,bool retry_loop){

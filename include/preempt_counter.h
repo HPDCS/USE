@@ -8,7 +8,7 @@
 #define PREEMPT_COUNT_INIT_CODE_INTERRUPTIBLE 0
 #define PREEMPT_COUNT_INIT_CODE_NOT_INTERRUPTIBLE 1
 
-#define PREEMPT_COUNT_INIT PREEMPT_COUNT_INIT_CODE_NOT_INTERRUPTIBLE
+#define PREEMPT_COUNT_INIT PREEMPT_COUNT_INIT_CODE_INTERRUPTIBLE
 #define INVALID_PREEMPT_COUNTER (-1)
 
 #if INTERRUPT_SILENT!=1
@@ -31,8 +31,8 @@
 
 void initialize_preempt_counter();
 void initialize_standing_ipi();
-void increment_preempt_counter();
-void decrement_preempt_counter();
+unsigned long increment_preempt_counter();
+unsigned long decrement_preempt_counter();
 
 extern __thread unsigned long long * preempt_count_ptr;
 extern __thread unsigned long long * standing_ipi_ptr;

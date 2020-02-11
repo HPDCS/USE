@@ -25,7 +25,7 @@
 #define COMPLETE_EVENTS 5000
 
 #ifndef LOOP_COUNT
-#define LOOP_COUNT 150
+#define LOOP_COUNT 100
 #endif
 
 #define MIN_LOOPS (LOOP_COUNT * 29 * (1 - VARIANCE))

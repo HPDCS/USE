@@ -32,7 +32,7 @@ __thread unsigned long long * standing_ipi_ptr = NULL;
 	}
 #endif
 
-void decrement_preempt_counter(){
+unsigned long decrement_preempt_counter(){
 	#if DEBUG==1
 	if((*preempt_count_ptr)==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
 		printf("impossible decrement preempt_counter,it is already zero\n");
@@ -43,10 +43,10 @@ void decrement_preempt_counter(){
 			gdb_abort;
 	}
 	#endif
-	__sync_sub_and_fetch(preempt_count_ptr, 1);
+	return __sync_sub_and_fetch(preempt_count_ptr, 1);
 }
 
-void increment_preempt_counter(){
+unsigned long increment_preempt_counter(){
 	#if DEBUG==1
 	if((*preempt_count_ptr)>=MAX_NESTING_PREEMPT_COUNTER){
 		printf("preempt_count is equals to MAX_NESTING %d in increment_preempt_counter\n",MAX_NESTING_PREEMPT_COUNTER);
@@ -57,7 +57,7 @@ void increment_preempt_counter(){
 			gdb_abort;
 	}
 	#endif
-	__sync_add_and_fetch(preempt_count_ptr, 1);
+	return __sync_add_and_fetch(preempt_count_ptr, 1);
 }
 
 #endif //PREEMPT_COUNTER

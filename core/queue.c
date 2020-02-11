@@ -234,12 +234,12 @@ void queue_deliver_msgs(void) {
 
         msg_t*old_priority_message = flag_as_posted(new_hole,&flagged);
 
+
         _thr_pool.messages[i].father = NULL;
 
         #if REPORT == 1
         clock_timer_start(queue_op);
         #endif
-
         nbc_enqueue(nbcalqueue, new_hole->timestamp,new_hole, new_hole->receiver_id);
         
         #if REPORT == 1

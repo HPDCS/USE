@@ -62,12 +62,12 @@ void send_ipi_to_lp(msg_t*event){
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
         #if REPORT==1
         clock_timer_start(user_time);
-        statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif
         if (ipi_syscall(lck_tid-1))
             printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
         #if REPORT==1
 		statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(user_time));
+        statistics_post_th_data(tid,STAT_IPI_SENDED,1);
         #endif
     }
 }
