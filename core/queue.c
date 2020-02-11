@@ -37,6 +37,19 @@ extern __thread cntx_buf cntx_loop;
 
 #if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
+//wrap memcpy to interrupt also library function "memcpy"
+#define memcpy(d, s, n) ({ \
+    void *res; \
+    asm volatile ( \
+        "cld\n" \
+        "rep\n" \
+        "movsb\n" \
+        : "=r" (res) \
+        : "0" (d), "c" (n), "S" (s), "D" (d) \
+        : "cc", "memory" \
+    ); \
+    res; \
+})
 #endif
 //used to take locks on LPs
 volatile unsigned int *lp_lock;
@@ -186,7 +199,7 @@ void queue_deliver_msgs(void) {
                 if(evt!=NULL){
                     make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
                 }
-            }
+        }
         #endif //POSTING_SYNC_CHECK_FORWARD
 
         new_hole = _thr_pool.messages[i].father;
@@ -365,7 +378,7 @@ bool is_valid(msg_t * event){
 
     if(LP_rollback_ts<event->father->timestamp) //father will be re-executed
         return false;
-    
+
     return validity;
 }
 

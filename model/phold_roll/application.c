@@ -61,7 +61,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			ScheduleNewEvent(me, now+n_prc_tot, NORMAL_EVT, NULL, 0);//it generates my next evt
 			
 			for(i = 0; i < n_prc_tot; i++){
-				if(i!=(unsigned int)me && THRESOLD_PROB_NORMAL >= Random() ){
+				if(i!=(unsigned int)me && THR_PROB_NORMAL >= Random() ){
 					timestamp=(simtime_t)(now+SHIFT);
 					ScheduleNewEvent(i, timestamp, ABNORMAL_EVT, NULL, 0);
 				}
@@ -79,6 +79,12 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			}
 			(void)j;
 
+			for(i = 0; i < n_prc_tot; i++){
+				if(i!=(unsigned int)me && THR_PROB_ABNORMAL >= Random() ){
+					timestamp=(simtime_t)(now+SHIFT);
+					ScheduleNewEvent(i, timestamp, ABNORMAL_EVT, NULL, 0);
+				}
+			}
 			break;
 
 		default:

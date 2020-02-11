@@ -43,8 +43,7 @@ void decrement_preempt_counter(){
 			gdb_abort;
 	}
 	#endif
-
-	(*preempt_count_ptr)=(*preempt_count_ptr)-1;
+	__sync_sub_and_fetch(preempt_count_ptr, 1);
 }
 
 void increment_preempt_counter(){
@@ -58,7 +57,7 @@ void increment_preempt_counter(){
 			gdb_abort;
 	}
 	#endif
-	(*preempt_count_ptr)=(*preempt_count_ptr)+1;
+	__sync_add_and_fetch(preempt_count_ptr, 1);
 }
 
 #endif //PREEMPT_COUNTER
