@@ -111,6 +111,7 @@ unsigned long exit_from_unpreemptable_zone(){
 	#endif
 	return decrement_preempt_counter();
 }
+
 #if DEBUG==1
 void reset_variables_nesting_zone(){
 	nesting_zone_unpreemptable=0;

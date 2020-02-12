@@ -24,6 +24,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	switch (event_type) {
 
 		case INIT:
+			//called for each LP
 			//TODO check all parameters
             state_ptr = malloc(sizeof(lp_state_type));
 			if(state_ptr == NULL) {

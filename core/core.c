@@ -768,14 +768,18 @@ stat64_t execute_time;
 		LPS[current_lp]->msg_curr_executed=event;
 		#endif
 		#if HANDLE_INTERRUPT==1
-		enter_in_preemptable_zone();
+		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
+			enter_in_preemptable_zone();
+		}
 		#endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
 		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
 		#if HANDLE_INTERRUPT==1
-		exit_from_preemptable_zone();
+		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
+			exit_from_preemptable_zone();
+		}
 		#endif
 		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
 			#if PREEMPT_COUNTER==1
@@ -955,6 +959,9 @@ void thread_loop(unsigned int thread_id) {
 		) {
 		#if HANDLE_INTERRUPT==1//remove this block of code
 		set_default_preemptability();
+		#if DEBUG==1
+		reset_variables_nesting_zone();
+		#endif
 		#endif
 		// FETCH //
 #if REPORT == 1
