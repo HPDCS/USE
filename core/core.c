@@ -1203,6 +1203,19 @@ end_loop:
 		ipi_print_and_reset_counters();
 	ipi_unregister();
 #endif
+
+	printf( "Thread %u\n"
+			"\tTrampoline Count 1: %llu\n"
+			"\tTrampoline Count 2: %llu\n"
+			"\tTrampoline Count 3: %llu\n"
+			"\tTrampoline Count 4: %llu\n"
+			"\tTrampoline Count 5: %llu\n"
+			"\tTrampoline Count 6: %llu\n"
+			"\tTrampoline Count 7: %llu\n",
+			tid, trampoline_count1, trampoline_count2,
+			trampoline_count3, trampoline_count4,
+			trampoline_count5, trampoline_count6,
+			trampoline_count7);
 	
 	// __sync_fetch_and_add(&ended_wt, 1);
 	// __sync_synchronize();
