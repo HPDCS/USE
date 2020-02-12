@@ -14,6 +14,11 @@
 #include <hpdcs_utils.h>
 #include <queue.h>
 #include <ipi.h>
+
+extern void ipi_start_limit(void);
+extern void ipi_end_limit(void);
+
+
 __thread int ipi_registration_error = 0;
 
 __thread void * alternate_stack = NULL;
@@ -111,7 +116,7 @@ long get_sizeof_function(const char*function_name,char*path_program_name){
     }
     return -1;
 }
-void register_thread_to_ipi_module(unsigned int thread_id,const char* function_name,unsigned long address_function){
+/*void register_thread_to_ipi_module(unsigned int thread_id,const char* function_name,unsigned long address_function){
     long function_size=get_sizeof_function(function_name,program_name);
     if(function_size<0){
         printf("Impossible to retrieve function size of \n");
@@ -124,6 +129,37 @@ void register_thread_to_ipi_module(unsigned int thread_id,const char* function_n
     #endif
     interruptible_section_start = address_function;
     interruptible_section_end = address_function+function_size-1;
+    if(thread_id==0)
+        printf("Register thread,code_interruptible_start=%lu,code_interruptible_end=%lu\n",interruptible_section_start,interruptible_section_end);
+
+    //mettere cfv_trampoline al posto di ProcessEvent
+    ipi_registration_error = ipi_register_thread(thread_id, (unsigned long)cfv_trampoline, &alternate_stack,
+        &preempt_count_ptr,&standing_ipi_ptr,alternate_stack_area, interruptible_section_start, interruptible_section_end);
+    if(ipi_registration_error!=0){
+        printf("Impossible register_thread %d\n",thread_id);
+        gdb_abort;
+    }
+    if(thread_id==0)
+        printf("Thread %d finish registration to IPI module\n",thread_id);
+    #if VERBOSE > 0
+    else
+        printf("Thread %d finish registration to IPI module\n",thread_id);
+    #endif
+}*/
+
+void register_thread_to_ipi_module(unsigned int thread_id/*,const char* function_name,unsigned long address_function*/){
+    // long function_size=get_sizeof_function(function_name,program_name);
+    // if(function_size<0){
+    //     printf("Impossible to retrieve function size of \n");
+    //     gdb_abort;
+    // }
+    // #if VERBOSE>0
+    // else if(thread_id==0){
+    //     printf("ProcessEvent has size=%ld\n",function_size);
+    // }
+    // #endif
+    interruptible_section_start = (unsigned long) ipi_start_limit;
+    interruptible_section_end = (unsigned long) ipi_end_limit;
     if(thread_id==0)
         printf("Register thread,code_interruptible_start=%lu,code_interruptible_end=%lu\n",interruptible_section_start,interruptible_section_end);
 
