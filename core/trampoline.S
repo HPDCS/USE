@@ -1,6 +1,18 @@
 .file	"trampoline.S"
 .text
 
+.macro countoccurrences varname
+	pushq		%rsi
+	pushq		%rdi
+	movq		%fs:0, %rsi
+	addq		\varname@gottpoff(%rip), %rsi
+	movq		(%rsi), %rdi
+	addq		$1, %rdi
+	movq		%rdi, (%rsi)
+	popq		%rdi
+	popq		%rsi
+.endm
+
 .align 4
 .globl cfv_trampoline
 .type cfv_trampoline, @function
@@ -67,6 +79,8 @@ cfv_trampoline:
 	movq		LPS(%rip), %rdx
 	movq		(%rdx, %rbx, 8), %rdx
 
+	countoccurrences trampoline_count1
+
 	/* %rcx <--- (&rt_data)->in_lpstate_priority_message_offset (type: size_t) */
 	/* %rbx <--- LPS[current_lp]->priority_message (type: msg_t *) */
 	/* ( LPS[current_lp]->priority_message == NULL ) ? */
@@ -74,6 +88,8 @@ cfv_trampoline:
 	movq		(%rdx, %rcx, 1), %rbx
 	testq		%rbx, %rbx
 	jz			.L1
+
+	countoccurrences trampoline_count2
 
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->state (type: unsigned int) */
@@ -83,6 +99,8 @@ cfv_trampoline:
 	cmpq		$0x3, %rcx
 	jnz			.L2
 
+	countoccurrences trampoline_count3
+
 	/* %rcx <--- (&rt_data)->in_msg_monitor_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->monitor (type: unsigned int) */
 	/* ( LPS[current_lp]->priority_message->monitor == 0xBA4A4A ) ? */
@@ -90,6 +108,8 @@ cfv_trampoline:
 	movq		(%rbx, %rcx, 1), %rcx
 	cmpq		$0xBA4A4A, %rcx
 	jz			.L1
+
+	countoccurrences trampoline_count4
 
 .L2:
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
@@ -100,6 +120,8 @@ cfv_trampoline:
 	testq		%rcx, %rcx
 	jnz			.L1
 
+	countoccurrences trampoline_count5
+
 	/* %rcx <--- (&rt_data)->in_lpstate_bound_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->bound (type: msg_t *) */
 	/* ( LPS[current_lp]->bound == NULL ) ? */
@@ -107,6 +129,8 @@ cfv_trampoline:
 	movq		(%rdx, %rcx, 1), %rcx
 	testq		%rcx, %rcx
 	jz			.L1
+
+	countoccurrences trampoline_count6
 
 	/* %rdx <--- (&rt_data)->in_msg_timestamp_offset (type: size_t) */
 	/* %xmm1 <--- LPS[current_lp]->bound->timestamp (type: double) */
@@ -117,6 +141,8 @@ cfv_trampoline:
 	movsd		(%rbx, %rdx, 1), %xmm0
 	comisd		%xmm1, %xmm0
 	jae			.L1
+
+	countoccurrences trampoline_count7
 
 /*      PREAMBLE END      */
 /**************************/

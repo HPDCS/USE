@@ -86,6 +86,15 @@ __thread unsigned int check_ongvt_period = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
 
+__thread unsigned long long trampoline_count1 = 0;
+__thread unsigned long long trampoline_count2 = 0;
+__thread unsigned long long trampoline_count3 = 0;
+__thread unsigned long long trampoline_count4 = 0;
+__thread unsigned long long trampoline_count5 = 0;
+__thread unsigned long long trampoline_count6 = 0;
+__thread unsigned long long trampoline_count7 = 0;
+
+
 //timer
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzione sul singolo core...superflup
