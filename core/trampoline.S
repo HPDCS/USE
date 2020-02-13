@@ -97,7 +97,7 @@ cfv_trampoline:
 	movq		16(%rax), %rcx
 	movl		(%rbx, %rcx, 1), %ecx
 	cmpl		$0x3, %ecx
-	jnz			.L2
+	jnz			.L3
 
 	// countoccurrences trampoline_count3
 
@@ -108,10 +108,11 @@ cfv_trampoline:
 	movq		(%rbx, %rcx, 1), %rcx
 	cmpq		$0xBA4A4A, %rcx
 	jz			.L1
+	jmp			.L2
 
 	// countoccurrences trampoline_count4
 
-.L2:
+.L3:
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->state (type: unsigned int) */
 	/* ( LPS[current_lp]->priority_message->state != NEW_EVT ) ? */
@@ -122,6 +123,7 @@ cfv_trampoline:
 
 	// countoccurrences trampoline_count5
 
+.L2:
 	/* %rcx <--- (&rt_data)->in_lpstate_bound_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->bound (type: msg_t *) */
 	/* ( LPS[current_lp]->bound == NULL ) ? */
