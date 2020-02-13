@@ -4,6 +4,7 @@
 #include <ROOT-Sim.h>
 
 #include "application.h"
+#include <preempt_counter.h>
 
 bool pcs_statistics = false;
 unsigned int complete_calls = COMPLETE_CALLS;
