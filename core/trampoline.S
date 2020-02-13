@@ -147,6 +147,15 @@ cfv_trampoline:
 /*      PREAMBLE END      */
 /**************************/
 
+	/* %rbx <--- preempt_count_ptr (type: unsigned long long *)  */
+	movq		%fs:0, %rax
+	addq		preempt_count_ptr@gottpoff(%rip), %rax
+	movq		(%rax), %rbx
+
+	/* preempt_count_ptr <--- preempt_count_ptr + 1 (type: unsigned long long)  */
+	movq		$0x1, %rax
+	lock xaddq	%rax, (%rbx)
+
 	/* %rsi <--- 1 */
 	movq		$0x1, %rsi
 

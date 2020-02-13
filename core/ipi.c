@@ -15,9 +15,6 @@
 #include <queue.h>
 #include <ipi.h>
 
-extern void ipi_start_limit(void);
-extern void ipi_end_limit(void);
-
 
 __thread int ipi_registration_error = 0;
 
@@ -147,19 +144,19 @@ long get_sizeof_function(const char*function_name,char*path_program_name){
     #endif
 }*/
 
-void register_thread_to_ipi_module(unsigned int thread_id/*,const char* function_name,unsigned long address_function*/){
-    // long function_size=get_sizeof_function(function_name,program_name);
-    // if(function_size<0){
-    //     printf("Impossible to retrieve function size of \n");
-    //     gdb_abort;
-    // }
-    // #if VERBOSE>0
-    // else if(thread_id==0){
-    //     printf("ProcessEvent has size=%ld\n",function_size);
-    // }
-    // #endif
-    interruptible_section_start = (unsigned long) ipi_start_limit;
-    interruptible_section_end = (unsigned long) ipi_end_limit;
+void register_thread_to_ipi_module(unsigned int thread_id, const char* function_name, unsigned long address_function){
+    long function_size=get_sizeof_function(function_name,program_name);
+    if(function_size<0){
+        printf("Impossible to retrieve function size of \n");
+        gdb_abort;
+    }
+    #if VERBOSE>0
+    else if(thread_id==0){
+        printf("ProcessEvent has size=%ld\n",function_size);
+    }
+    #endif
+    interruptible_section_start = address_function;
+    interruptible_section_end = (address_function + function_size);
     if(thread_id==0)
         printf("Register thread,code_interruptible_start=%lu,code_interruptible_end=%lu\n",interruptible_section_start,interruptible_section_end);
 

@@ -854,7 +854,7 @@ void thread_loop(unsigned int thread_id) {
 		run_time_data_init();
 	//register thread in order to send and to receive IPI
 	//register_thread_to_ipi_module(thread_id,"ProcessEvent",(unsigned long)ProcessEvent);
-	register_thread_to_ipi_module(thread_id/*,"ProcessEvent",(unsigned long)ProcessEvent*/);
+	register_thread_to_ipi_module(thread_id,"cfv_trampoline",(unsigned long)cfv_trampoline);
 #endif
 	initialize_preempt_counter(thread_id);//init counter
 	init_simulation(thread_id);

@@ -24,6 +24,9 @@ int ipi_register_thread(int, unsigned long, void **, unsigned long long **,
 int ipi_unregister_thread(void **, unsigned long);
 int ipi_print_and_reset_counters_ipi_module(void);
 
+extern char _start;
+extern char _fini;
+
 static __thread int fd;
 static __thread int cpu;
 static __thread cpu_set_t oldset;
@@ -209,10 +212,10 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
     else
         (*standing_ipi_ptr_addr) = (*preempt_count_ptr_addr) + (size_t) l1_dcache_linesize;
 
-    if (ioctl(fd, IPI_SET_TEXT_START, text_start) < 0)
+    if (ioctl(fd, IPI_SET_TEXT_START, &_start) < 0)
     {
-        printf("Unable to set text_start with address 0x%lx. "
-                "Thread will work with no IPI support.\n", (unsigned long)text_start);
+        printf("Unable to set first range's text_start with address 0x%lx. "
+                "Thread will work with no IPI support.\n", (unsigned long)_start);
 
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
@@ -226,10 +229,44 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         return 1;
     }
 
-    if (ioctl(fd, IPI_SET_TEXT_END, text_end) < 0)
+    if (ioctl(fd, IPI_SET_TEXT_END, text_start) < 0)
     {
-        printf("Unable to set text_end with address 0x%lx. "
-                "Thread will work with no IPI support.\n",(unsigned long) text_end);
+        printf("Unable to set first range's text_end with address 0x%lx. "
+                "Thread will work with no IPI support.\n",(unsigned long) text_start);
+
+        ioctl(fd, IPI_UNREGISTER_THREAD);
+        close(fd);
+
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
+            printf("Unable to free the \"alternate_stack\" memory area.\n");
+
+        if (remove_thread_pinning())
+            printf("Unable to remove thread pinning from core %d.\n", cpu);
+
+        return 1;
+    }
+
+    if (ioctl(fd, IPI_SET_TEXT_START, text_end) < 0)
+    {
+        printf("Unable to set second range's text_start with address 0x%lx. "
+                "Thread will work with no IPI support.\n", (unsigned long)text_end);
+
+        ioctl(fd, IPI_UNREGISTER_THREAD);
+        close(fd);
+
+        if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
+            printf("Unable to free the \"alternate_stack\" memory area.\n");
+
+        if (remove_thread_pinning())
+            printf("Unable to remove thread pinning from core %d.\n", cpu);
+
+        return 1;
+    }
+
+    if (ioctl(fd, IPI_SET_TEXT_END, &_fini) < 0)
+    {
+        printf("Unable to set second range's text_end with address 0x%lx. "
+                "Thread will work with no IPI support.\n",(unsigned long) _fini);
 
         ioctl(fd, IPI_UNREGISTER_THREAD);
         close(fd);
