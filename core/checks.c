@@ -114,12 +114,12 @@ void check_CFV_TO_HANDLE(){
 				printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 				gdb_abort;
 	}
-	/*#if PREEMPT_COUNTER==1
-	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
+	#if PREEMPT_COUNTER==1
+	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
 			printf("interrupt code not interruptible\n");
 			gdb_abort;
 	}
-	#endif*/
+	#endif
 	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->old_valid_bound==NULL){
 		printf("old_valid_bound is NULL CFV_TO_HANDLE\n");

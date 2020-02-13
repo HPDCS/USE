@@ -770,14 +770,14 @@ stat64_t execute_time;
 		LPS[current_lp]->msg_curr_executed=event;
 		#endif
 		#if HANDLE_INTERRUPT==1
-		// decrement_preempt_counter();
+		decrement_preempt_counter();
 		#endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
 		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
 		#if HANDLE_INTERRUPT==1
-		// increment_preempt_counter();
+		increment_preempt_counter();
 		#endif
 		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
 			#if PREEMPT_COUNTER==1
