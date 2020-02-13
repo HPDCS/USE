@@ -26,7 +26,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		case INIT:
 			#if HANDLE_INTERRUPT==1
-			increment_preempt_counter();
+			// increment_preempt_counter();
 			#endif
 			//TODO check all parameters
             state_ptr = malloc(sizeof(lp_state_type));
@@ -48,7 +48,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			timestamp =  (simtime_t)(me + n_prc_tot) ;// ts normal_evt==i+NUM_LP,ts is integer
 			ScheduleNewEvent(me, timestamp, NORMAL_EVT, NULL, 0);
 			#if HANDLE_INTERRUPT==1
-			decrement_preempt_counter();
+			// decrement_preempt_counter();
 			#endif
 			break;
 
@@ -65,31 +65,31 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			state_ptr->events++;//num NORMAL_EVT executed
 
 			#if HANDLE_INTERRUPT==1
-			increment_preempt_counter();
+			// increment_preempt_counter();
 			#endif
 
 			ScheduleNewEvent(me, now+n_prc_tot, NORMAL_EVT, NULL, 0);//it generates my next evt
 			
 			#if HANDLE_INTERRUPT==1
-			decrement_preempt_counter();
+			// decrement_preempt_counter();
 			#endif
 
 			for(i = 0; i < n_prc_tot; i++){
 				#if HANDLE_INTERRUPT==1
-				increment_preempt_counter();
+				// increment_preempt_counter();
 				#endif
 				random_num=Random();
 				#if HANDLE_INTERRUPT==1
-				decrement_preempt_counter();
+				// decrement_preempt_counter();
 				#endif
 				if(i!=(unsigned int)me && THR_PROB_NORMAL >= random_num ){
 					timestamp=(simtime_t)(now+SHIFT);
 					#if HANDLE_INTERRUPT==1
-					increment_preempt_counter();
+					// increment_preempt_counter();
 					#endif
 					ScheduleNewEvent(i, timestamp, ABNORMAL_EVT, NULL, 0);
 					#if HANDLE_INTERRUPT==1
-					decrement_preempt_counter();
+					// decrement_preempt_counter();
 					#endif
 				}
 			}
@@ -100,11 +100,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			//TODO debug ts-SHIFT is integer
 			#if HANDLE_INTERRUPT==1
-			increment_preempt_counter();
+			// increment_preempt_counter();
 			#endif
 			random_num= Random();
 			#if HANDLE_INTERRUPT==1
-			decrement_preempt_counter();
+			// decrement_preempt_counter();
 			#endif
 			loops= MIN_LOOPS + COEFFICIENT_OF_RANDOM * random_num;
 			for(i = 0; i < loops ; i++) {
@@ -116,12 +116,12 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		default:
 			#if HANDLE_INTERRUPT==1
-			increment_preempt_counter();
+			// increment_preempt_counter();
 			#endif
 			printf("[ERR] Requested to process an event neither ALLOC, nor DEALLOC, nor INIT\n");
 			abort();
 			#if HANDLE_INTERRUPT==1
-			decrement_preempt_counter();
+			// decrement_preempt_counter();
 			#endif
 			break;
 	}

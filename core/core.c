@@ -541,12 +541,12 @@ void check_OnGVT(unsigned int lp_idx){
 		LPS[current_lp]->old_valid_bound=LPS[current_lp]->bound;
 		#endif
 		#if PREEMPT_COUNTER==1
-		increment_preempt_counter();
+		// increment_preempt_counter();
 		#endif
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		#if PREEMPT_COUNTER==1
-		decrement_preempt_counter();
+		// decrement_preempt_counter();
 		#endif
 		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
@@ -670,12 +670,12 @@ void init_simulation(unsigned int thread_id){
 			current_msg->evt_start_time = 0ULL;//event INIT does not require to be monitored
 #endif
 #if PREEMPT_COUNTER==1
-			increment_preempt_counter();
+			// decrement_preempt_counter();
 #endif
 
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 #if PREEMPT_COUNTER==1
-			decrement_preempt_counter();
+			// increment_preempt_counter();
 #endif
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 			LPS[current_lp]->bound = current_msg;
@@ -754,7 +754,7 @@ stat64_t execute_time;
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_FORWARD==1
 			#else
-			increment_preempt_counter();
+			// increment_preempt_counter();
 			#endif
 			#endif
 		}
@@ -762,7 +762,7 @@ stat64_t execute_time;
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_SILENT==1
 			#else
-			increment_preempt_counter();
+			// increment_preempt_counter();
 			#endif
 			#endif
 		}
@@ -770,20 +770,20 @@ stat64_t execute_time;
 		LPS[current_lp]->msg_curr_executed=event;
 		#endif
 		#if HANDLE_INTERRUPT==1
-		decrement_preempt_counter();
+		// decrement_preempt_counter();
 		#endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
 		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
 		#if HANDLE_INTERRUPT==1
-		increment_preempt_counter();
+		// increment_preempt_counter();
 		#endif
 		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_FORWARD==1
 			#else
-			decrement_preempt_counter();
+			// decrement_preempt_counter();
 			#endif
 			#endif
 		}
@@ -791,7 +791,7 @@ stat64_t execute_time;
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_SILENT==1
 			#else
-			decrement_preempt_counter();
+			// decrement_preempt_counter();
 			#endif
 			#endif
 		}
@@ -1105,12 +1105,12 @@ void thread_loop(unsigned int thread_id) {
 		// FLUSH // 
 		#if INTERRUPT_FORWARD==1
 		#else
-		increment_preempt_counter();
+		// increment_preempt_counter();
 		#endif
 		queue_deliver_msgs();
 		#if INTERRUPT_FORWARD==1
 		#else
-		decrement_preempt_counter();
+		// decrement_preempt_counter();
 		#endif
 
 #if DEBUG==1//not present in original version
@@ -1518,14 +1518,14 @@ void thread_loop(unsigned int thread_id) {
 		#if PREEMPT_COUNTER==1
 		#if INTERRUPT_FORWARD==1
 		#else
-		increment_preempt_counter();
+		// increment_preempt_counter();
 		#endif
 		#endif
 		queue_deliver_msgs();
 		#if PREEMPT_COUNTER==1
 		#if INTERRUPT_FORWARD==1
 		#else
-		decrement_preempt_counter();
+		// decrement_preempt_counter();
 		#endif
 		#endif
 #if DEBUG==1//not present in original version
