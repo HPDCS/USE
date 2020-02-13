@@ -229,7 +229,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         return 1;
     }
 
-    if (ioctl(fd, IPI_SET_TEXT_END, text_start) < 0)
+    if (ioctl(fd, IPI_SET_TEXT_END, (text_start - 1)) < 0)
     {
         printf("Unable to set first range's text_end with address 0x%lx. "
                 "Thread will work with no IPI support.\n",(unsigned long) text_start);
@@ -263,7 +263,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         return 1;
     }
 
-    if (ioctl(fd, IPI_SET_TEXT_END, &_fini) < 0)
+    if (ioctl(fd, IPI_SET_TEXT_END, (&_fini - 1)) < 0)
     {
         printf("Unable to set second range's text_end with address 0x%lx. "
                 "Thread will work with no IPI support.\n",(unsigned long) _fini);
