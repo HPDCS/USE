@@ -115,10 +115,10 @@ cfv_trampoline:
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->state (type: unsigned int) */
 	/* ( LPS[current_lp]->priority_message->state != NEW_EVT ) ? */
-	// movq		16(%rax), %rcx
-	// movq		(%rbx, %rcx, 1), %rcx
-	// testq		%rcx, %rcx
-	// jnz			.L1
+	movq		16(%rax), %rcx
+	movq		(%rbx, %rcx, 1), %rcx
+	cmpq		$0x0, %rcx
+	jnz			.L1
 
 	// countoccurrences trampoline_count5
 

@@ -869,8 +869,6 @@ void thread_loop(unsigned int thread_id) {
 			break;//CFV_INIT
 		#if IPI_SUPPORT==1
 		case CFV_TO_HANDLE :
-			if (LPS[current_lp]->priority_message->state == NEW_EVT)
-				printf("Te sto a pijà per culo!!!\n");
 			 //We will return to this point in the
 			 //execution upon a longjmp invocation
 			 //with same "jmp_buf" data.
