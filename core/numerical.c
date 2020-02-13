@@ -37,6 +37,7 @@
 #include <dymelor.h>
 #include <core.h>
 #include <numerical.h>
+#include <preempt_counter.h>
 
 
 static seed_type master_seed;
@@ -73,8 +74,16 @@ double Random(void) {
 		seed2 = (uint32_t *)((char *)&(LPS[current_lp]->seed) + (sizeof(uint32_t)));
 	}
 
+	#if HANDLE_INTERRUPT==1
+	increment_preempt_counter();
+	#endif
+
 	*seed1 = 36969u * (*seed1 & 0xFFFFu) + (*seed1 >> 16u);
 	*seed2 = 18000u * (*seed2 & 0xFFFFu) + (*seed2 >> 16u);
+
+	#if HANDLE_INTERRUPT==1
+	decrement_preempt_counter();
+	#endif
 
 	// The magic number below is 1/(2^32 + 2).
     	// The result is strictly between 0 and 1.
