@@ -155,12 +155,12 @@ void queue_clean(){
                 father_lp_idx=current->sender_id;
             }
             #endif
-            // #if DEBUG==1
-            // if(father_lp_idx!=current->sender_id){//check if father_lp_idx is the same for each child
-            //     printf("cleaning queue containing events with different lp_idx\n");
-            //     gdb_abort;
-            // }
-            // #endif
+            #if DEBUG==1
+            if(father_lp_idx!=current->sender_id){//check if father_lp_idx is the same for each child
+                printf("cleaning queue containing events with different lp_idx\n");
+                gdb_abort;
+            }
+            #endif
             list_node_clean_by_content(current); 
             current->state = -1;
             current->data_size = tid+1;
@@ -241,9 +241,9 @@ void queue_deliver_msgs(void) {
 
         msg_t*old_priority_message = flag_as_posted(new_hole,&flagged);
 
-        #if HANDLE_INTERRUPT==1
-        increment_preempt_counter();
-        #endif
+        // #if HANDLE_INTERRUPT==1
+        // increment_preempt_counter();
+        // #endif
 
         _thr_pool.messages[i].father = NULL;
 
@@ -258,9 +258,9 @@ void queue_deliver_msgs(void) {
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
         #endif
 
-        #if HANDLE_INTERRUPT==1
-        decrement_preempt_counter();
-        #endif
+        // #if HANDLE_INTERRUPT==1
+        // decrement_preempt_counter();
+        // #endif
 
         #if DEBUG==1//not present in original version
         check_tie_breaker_not_zero(new_hole->tie_breaker);
