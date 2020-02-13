@@ -93,10 +93,10 @@ cfv_trampoline:
 
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->state (type: unsigned int) */
-	/* ( LPS[current_lp]->priority_message->state == ANTI_MSG ) ? */
+	/* ( LPS[current_lp]->priority_message->state != ANTI_MSG ) ? */
 	movq		16(%rax), %rcx
-	movq		(%rbx, %rcx, 1), %rcx
-	cmpq		$0x3, %rcx
+	movl		(%rbx, %rcx, 1), %ecx
+	cmpl		$0x3, %ecx
 	jnz			.L2
 
 	// countoccurrences trampoline_count3
@@ -116,8 +116,8 @@ cfv_trampoline:
 	/* %rcx <--- LPS[current_lp]->priority_message->state (type: unsigned int) */
 	/* ( LPS[current_lp]->priority_message->state != NEW_EVT ) ? */
 	movq		16(%rax), %rcx
-	movq		(%rbx, %rcx, 1), %rcx
-	cmpq		$0x0, %rcx
+	movl		(%rbx, %rcx, 1), %ecx
+	testl		%ecx, %ecx
 	jnz			.L1
 
 	// countoccurrences trampoline_count5
