@@ -70,15 +70,15 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			state_ptr->events++;//num NORMAL_EVT executed
 
-			#if HANDLE_INTERRUPT==1
-			increment_preempt_counter();
-			#endif
+			// #if HANDLE_INTERRUPT==1
+			// increment_preempt_counter();
+			// #endif
 
 			ScheduleNewEvent(me, now+n_prc_tot, NORMAL_EVT, NULL, 0);//it generates my next evt
 			
-			#if HANDLE_INTERRUPT==1
-			decrement_preempt_counter();
-			#endif
+			// #if HANDLE_INTERRUPT==1
+			// decrement_preempt_counter();
+			// #endif
 
 			for(i = 0; i < n_prc_tot; i++){
 				#if HANDLE_INTERRUPT==1
@@ -90,13 +90,13 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				#endif
 				if(i!=(unsigned int)me && THR_PROB_NORMAL >= random_num ){
 					timestamp=(simtime_t)(now+SHIFT);
-					#if HANDLE_INTERRUPT==1
-					increment_preempt_counter();
-					#endif
+					// #if HANDLE_INTERRUPT==1
+					// increment_preempt_counter();
+					// #endif
 					ScheduleNewEvent(i, timestamp, ABNORMAL_EVT, NULL, 0);
-					#if HANDLE_INTERRUPT==1
-					decrement_preempt_counter();
-					#endif
+					// #if HANDLE_INTERRUPT==1
+					// decrement_preempt_counter();
+					// #endif
 				}
 			}
 

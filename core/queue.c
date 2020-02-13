@@ -109,12 +109,19 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         abort();
     }
 
+    #if HANDLE_INTERRUPT==1
+    increment_preempt_counter();
+    #endif
 
     msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
     list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
 
 	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
 	_thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
+
+    #if HANDLE_INTERRUPT==1
+    decrement_preempt_counter();
+    #endif
 
     msg_ptr->sender_id = current_lp;
     msg_ptr->receiver_id = receiver;
