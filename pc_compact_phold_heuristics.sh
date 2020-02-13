@@ -1,0 +1,67 @@
+#!/bin/bash
+
+source ./pc_phold_heuristic.config
+
+
+mkdir -p ${FOLDER}
+
+for max_lp in $MAX_SKIPPED_LP_list
+do
+for ck in $CKP_PER_list
+do
+for pub in $PUB_list
+do
+for epb in $EPB_list
+do
+for loop_count in $LOOP_COUNT_list
+do
+for fan_out in $FAN_OUT_list
+do
+for lookahead in $LOOKAHEAD_list
+do
+	for filtering in $POWERCAP_SAMPLE_FILTERING_list
+	do
+		for test in $TEST_list 
+		do
+			echo make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
+			make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
+			mv $test ${test}_lf_hi
+			
+			for pl in $POWER_LIMIT_list
+			do
+echo $pl
+				for hmode in $HEURISTIC_MODE_list
+				do
+echo $hmode
+						for lp in $LP_list
+						do
+							for pstate in $PSTATE_list
+							do
+								for threads in $CORES
+								do
+					for run in $RUN_list
+					do
+echo $run
+								echo $threads
+									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf$filtering-w$pl-h$hmode-$threads-p$pstate-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
+									th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
+									po=`grep "Power consumption (net value)"  $FILE | cut -f2 -d':'`
+									th=`python -c "print '$th'.strip()"`
+									po=`python -c "print '$po'.strip()"`
+									echo F$fitering PL$pl H$hmode $th $po
+								done  
+							done
+						done
+					done
+				done
+			done
+			rm ${test}_lf_hi
+		done
+	done
+done
+done
+done
+done
+done
+done
+done
