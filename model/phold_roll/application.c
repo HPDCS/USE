@@ -55,8 +55,14 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case NORMAL_EVT:
 
 			//TODO debug ts is integer
-			
-			loops= MIN_LOOPS + COEFFICIENT_OF_RANDOM * Random();
+			#if HANDLE_INTERRUPT==1
+			// increment_preempt_counter();
+			#endif
+			random_num = Random();
+			#if HANDLE_INTERRUPT==1
+			// decrement_preempt_counter();
+			#endif
+			loops= MIN_LOOPS + COEFFICIENT_OF_RANDOM * random_num;
 			for(i = 0; i < loops ; i++) {
 				j = i*i;
 			}
