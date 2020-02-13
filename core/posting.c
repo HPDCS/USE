@@ -273,8 +273,18 @@ msg_t* LP_info_is_good(int lp_idx){
     }
     #endif
     unsigned int info_state = LP_info->state;
-    if( (info_state==ANTI_MSG && (LP_info->monitor==(void*)0xBA4A4A)) || info_state!=NEW_EVT)
-        return NULL;
+    if( (info_state==ANTI_MSG){
+        //anti_msg 
+        if(LP_info->monitor==(void*)0xBA4A4A){
+            return NULL;//anti_msg+banana
+        }
+        //anti_msg not banana
+    }
+    else{//not anti_msg
+        if(info_state!=NEW_EVT)
+            return NULL;
+        
+    //case1:anti_msg not banana case2:new_evt
     simtime_t bound_ts=0.0;
     if(LPS[lp_idx]->bound!=NULL){
         bound_ts=LPS[lp_idx]->bound->timestamp;
