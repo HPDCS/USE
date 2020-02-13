@@ -86,13 +86,13 @@ __thread unsigned int check_ongvt_period = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
 
-__thread unsigned long long trampoline_count1 = 0;
-__thread unsigned long long trampoline_count2 = 0;
-__thread unsigned long long trampoline_count3 = 0;
-__thread unsigned long long trampoline_count4 = 0;
-__thread unsigned long long trampoline_count5 = 0;
-__thread unsigned long long trampoline_count6 = 0;
-__thread unsigned long long trampoline_count7 = 0;
+// __thread unsigned long long trampoline_count1 = 0;
+// __thread unsigned long long trampoline_count2 = 0;
+// __thread unsigned long long trampoline_count3 = 0;
+// __thread unsigned long long trampoline_count4 = 0;
+// __thread unsigned long long trampoline_count5 = 0;
+// __thread unsigned long long trampoline_count6 = 0;
+// __thread unsigned long long trampoline_count7 = 0;
 
 
 //timer
@@ -1210,18 +1210,18 @@ end_loop:
 	ipi_unregister();
 #endif
 
-	printf( "Thread %u\n"
-			"\tTrampoline Count 1: %llu\n"
-			"\tTrampoline Count 2: %llu\n"
-			"\tTrampoline Count 3: %llu\n"
-			"\tTrampoline Count 4: %llu\n"
-			"\tTrampoline Count 5: %llu\n"
-			"\tTrampoline Count 6: %llu\n"
-			"\tTrampoline Count 7: %llu\n",
-			tid, trampoline_count1, trampoline_count2,
-			trampoline_count3, trampoline_count4,
-			trampoline_count5, trampoline_count6,
-			trampoline_count7);
+	// printf( "Thread %u\n"
+	// 		"\tTrampoline Count 1: %llu\n"
+	// 		"\tTrampoline Count 2: %llu\n"
+	// 		"\tTrampoline Count 3: %llu\n"
+	// 		"\tTrampoline Count 4: %llu\n"
+	// 		"\tTrampoline Count 5: %llu\n"
+	// 		"\tTrampoline Count 6: %llu\n"
+	// 		"\tTrampoline Count 7: %llu\n",
+	// 		tid, trampoline_count1, trampoline_count2,
+	// 		trampoline_count3, trampoline_count4,
+	// 		trampoline_count5, trampoline_count6,
+	// 		trampoline_count7);
 	
 	// __sync_fetch_and_add(&ended_wt, 1);
 	// __sync_synchronize();
