@@ -155,12 +155,12 @@ void queue_clean(){
                 father_lp_idx=current->sender_id;
             }
             #endif
-            #if DEBUG==1
-            if(father_lp_idx!=current->sender_id){//check if father_lp_idx is the same for each child
-                printf("cleaning queue containing events with different lp_idx\n");
-                gdb_abort;
-            }
-            #endif
+            // #if DEBUG==1
+            // if(father_lp_idx!=current->sender_id){//check if father_lp_idx is the same for each child
+            //     printf("cleaning queue containing events with different lp_idx\n");
+            //     gdb_abort;
+            // }
+            // #endif
             list_node_clean_by_content(current); 
             current->state = -1;
             current->data_size = tid+1;
