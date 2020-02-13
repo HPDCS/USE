@@ -541,12 +541,12 @@ void check_OnGVT(unsigned int lp_idx){
 		LPS[current_lp]->old_valid_bound=LPS[current_lp]->bound;
 		#endif
 		#if PREEMPT_COUNTER==1
-		// increment_preempt_counter();
+		increment_preempt_counter();
 		#endif
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		#if PREEMPT_COUNTER==1
-		// decrement_preempt_counter();
+		decrement_preempt_counter();
 		#endif
 		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
@@ -669,14 +669,7 @@ void init_simulation(unsigned int thread_id){
 #if HANDLE_INTERRUPT==1
 			current_msg->evt_start_time = 0ULL;//event INIT does not require to be monitored
 #endif
-#if PREEMPT_COUNTER==1
-			// decrement_preempt_counter();
-#endif
-
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-#if PREEMPT_COUNTER==1
-			// increment_preempt_counter();
-#endif
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
 			LPS[current_lp]->bound = current_msg;
 			LPS[current_lp]->num_executed_frames++;
@@ -698,7 +691,6 @@ void init_simulation(unsigned int thread_id){
 		printf("EXECUTED ALL INIT EVENTS\n");
 
 	}
-
 
 	//wait all threads to end the init phase to start togheter
 
@@ -754,7 +746,7 @@ stat64_t execute_time;
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_FORWARD==1
 			#else
-			// increment_preempt_counter();
+			increment_preempt_counter();
 			#endif
 			#endif
 		}
@@ -762,7 +754,7 @@ stat64_t execute_time;
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_SILENT==1
 			#else
-			// increment_preempt_counter();
+			increment_preempt_counter();
 			#endif
 			#endif
 		}
@@ -783,7 +775,7 @@ stat64_t execute_time;
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_FORWARD==1
 			#else
-			// decrement_preempt_counter();
+			decrement_preempt_counter();
 			#endif
 			#endif
 		}
@@ -791,7 +783,7 @@ stat64_t execute_time;
 			#if PREEMPT_COUNTER==1
 			#if INTERRUPT_SILENT==1
 			#else
-			// decrement_preempt_counter();
+			decrement_preempt_counter();
 			#endif
 			#endif
 		}
@@ -1104,13 +1096,11 @@ void thread_loop(unsigned int thread_id) {
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 		// FLUSH // 
 		#if INTERRUPT_FORWARD==1
-		#else
-		// increment_preempt_counter();
+		// decrement_preempt_counter();
 		#endif
 		queue_deliver_msgs();
 		#if INTERRUPT_FORWARD==1
-		#else
-		// decrement_preempt_counter();
+		// increment_preempt_counter();
 		#endif
 
 #if DEBUG==1//not present in original version
