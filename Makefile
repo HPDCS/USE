@@ -316,59 +316,37 @@ endif
 
 ########################################################################
 
-PCS_PREALLOC_SOURCES=ipilim/ipi_start_limit.c\
-			model/pcs-prealloc/application.c\
+PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
 		    model/pcs-prealloc/functions_app.c\
-		    model/pcs-prealloc/topology.c\
-		    ipilim/ipi_end_limit.c
+		    model/pcs-prealloc/topology.c
 
 
-PCS_SOURCES=ipilim/ipi_start_limit.c\
-			model/pcs/application.c\
-		    model/pcs/functions_app.c\
-		    ipilim/ipi_end_limit.c
+PCS_SOURCES=model/pcs/application.c\
+		    model/pcs/functions_app.c
 
-PHOLD_SOURCES=ipilim/ipi_start_limit.c\
-				model/phold/application.c\
-				ipilim/ipi_end_limit.c
+PHOLD_SOURCES=model/phold/application.c
 
-PHOLD_ROLL_SOURCES=ipilim/ipi_start_limit.c\
-					model/phold_roll/application.c\
-					ipilim/ipi_end_limit.c
+PHOLD_ROLL_SOURCES=model/phold_roll/application.c
 
-PHOLD_O_SOURCES=ipilim/ipi_start_limit.c\
-	model/phold_o/application.c\
-	ipilim/ipi_end_limit.c
+PHOLD_O_SOURCES=model/phold_o/application.c
 
-PHOLDCOUNT_SOURCES=ipilim/ipi_start_limit.c\
-				model/phold_count/application.c\
-				ipilim/ipi_end_limit.c
+PHOLDCOUNT_SOURCES=model/phold_count/application.c
 
-PHOLDHOTSPOT_SOURCES=ipilim/ipi_start_limit.c\
-				model/phold_hotspot/application.c\
-				ipilim/ipi_end_limit.c
+PHOLDHOTSPOT_SOURCES=model/phold_hotspot/application.c
 
-HASH_SOURCES=ipilim/ipi_start_limit.c\
-				model/hash/application.c\
-				 model/hash/functions.c\
-				 ipilim/ipi_end_limit.c
+HASH_SOURCES=model/hash/application.c\
+			 model/hash/functions.c
 
-TCAR_SOURCES=ipilim/ipi_start_limit.c\
-				model/tcar/application.c\
-	            model/tcar/neighbours.c\
-	            ipilim/ipi_end_limit.c
+TCAR_SOURCES=model/tcar/application.c\
+			 model/tcar/neighbours.c
 
-TRAFFIC_SOURCES=ipilim/ipi_start_limit.c\
-				model/traffic/application.c\
+TRAFFIC_SOURCES=model/traffic/application.c\
 				model/traffic/functions.c\
 				model/traffic/init.c\
-				model/traffic/normal_cdf.c\
-				ipilim/ipi_end_limit.c
+				model/traffic/normal_cdf.c
 
-ROBOT_EXPLORE_SOURCES=ipilim/ipi_start_limit.c\
-			model/robot_explore/application.c\
-		    model/robot_explore/neighbours.c\
-		    ipilim/ipi_end_limit.c
+ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
+		    		  model/robot_explore/neighbours.c
 
 
 TARGET=phold
