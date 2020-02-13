@@ -241,17 +241,25 @@ void queue_deliver_msgs(void) {
 
         msg_t*old_priority_message = flag_as_posted(new_hole,&flagged);
 
+        #if HANDLE_INTERRUPT==1
+        increment_preempt_counter();
+        #endif
 
         _thr_pool.messages[i].father = NULL;
 
         #if REPORT == 1
         clock_timer_start(queue_op);
         #endif
+
         nbc_enqueue(nbcalqueue, new_hole->timestamp,new_hole, new_hole->receiver_id);
         
         #if REPORT == 1
         statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
+        #endif
+
+        #if HANDLE_INTERRUPT==1
+        decrement_preempt_counter();
         #endif
 
         #if DEBUG==1//not present in original version
