@@ -1095,13 +1095,13 @@ void thread_loop(unsigned int thread_id) {
 		// PROCESS //
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 		// FLUSH // 
-		// #if INTERRUPT_FORWARD==1 && HANDLE_INTERRUPT==1
-		// decrement_preempt_counter();
-		// #endif
+		#if INTERRUPT_FORWARD==1 && HANDLE_INTERRUPT==1
+		decrement_preempt_counter();
+		#endif
 		queue_deliver_msgs();
-		// #if INTERRUPT_FORWARD==1 && HANDLE_INTERRUPT==1
-		// increment_preempt_counter();
-		// #endif
+		#if INTERRUPT_FORWARD==1 && HANDLE_INTERRUPT==1
+		increment_preempt_counter();
+		#endif
 
 #if DEBUG==1//not present in original version
 	    check_thread_loop_after_executeEvent();

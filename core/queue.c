@@ -113,12 +113,18 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     increment_preempt_counter();
     #endif
 
-    msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-    list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
-
-	//TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
-	_thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
-
+    if(_thr_pool.messages[_thr_pool._thr_pool_count].father!=NULL){//re-use event
+        msg_ptr=_thr_pool.messages[_thr_pool._thr_pool_count++].father;//get message
+        list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE
+    }
+    else{//extract event from free_list and connect to thread_pool
+        msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+        list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE    
+        //TODO: slaballoc al posto della malloc per creare il descrittore dell'evento
+        _thr_pool.messages[_thr_pool._thr_pool_count++].father = msg_ptr;
+        
+    }
+    
     #if HANDLE_INTERRUPT==1
     decrement_preempt_counter();
     #endif
@@ -139,6 +145,11 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     #endif//POSTING*/
 }
 
+#if HANDLE_INTERRUPT==1
+void queue_clean(){//this function is interruptible,because this is the first function called before any ProcessEvent
+    _thr_pool._thr_pool_count = 0;
+}
+#else
 void queue_clean(){ 
     unsigned int i = 0;
     msg_t* current;
@@ -181,6 +192,7 @@ void queue_clean(){
     }
 	_thr_pool._thr_pool_count = 0;
 }
+#endif
 
 #if POSTING==1
 void queue_deliver_msgs(void) {
@@ -241,9 +253,9 @@ void queue_deliver_msgs(void) {
 
         msg_t*old_priority_message = flag_as_posted(new_hole,&flagged);
 
-        // #if HANDLE_INTERRUPT==1
-        // increment_preempt_counter();
-        // #endif
+        #if HANDLE_INTERRUPT==1
+        increment_preempt_counter();
+        #endif
 
         _thr_pool.messages[i].father = NULL;
 
@@ -258,9 +270,9 @@ void queue_deliver_msgs(void) {
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
         #endif
 
-        // #if HANDLE_INTERRUPT==1
-        // decrement_preempt_counter();
-        // #endif
+        #if HANDLE_INTERRUPT==1
+        decrement_preempt_counter();
+        #endif
 
         #if DEBUG==1//not present in original version
         check_tie_breaker_not_zero(new_hole->tie_breaker);
@@ -276,7 +288,7 @@ void queue_deliver_msgs(void) {
         (void)posted;
         #endif
     }
-    _thr_pool._thr_pool_count=0;
+    _thr_pool._thr_pool_count=0;//if we are not been interrupted we have implicit called queue_clean
 }
 
 #else//POSTING
