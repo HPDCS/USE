@@ -236,11 +236,14 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 		#endif
 
-		#if POSTING==1 && REPORT==1
-
+		#if HANDLE_INTERRUPT==1 && REPORT==1
 		case STAT_EVENT_NOT_FLUSHED:
 			stats[idx].event_not_flushed += value;
 			break;
+		#endif
+
+		#if POSTING==1 && REPORT==1
+
 		case STAT_INFOS_POSTED:
 			stats[idx].infos_posted += value;
 			break;
@@ -405,8 +408,12 @@ void gather_statistics() {
 		
 		system_stats->total_frames         += LPS[i]->num_executed_frames;
 
+	#if HANDLE_INTERRUPT==1 && REPORT==1
+		system_stats->event_not_flushed  += lp_stats[i].event_not_flushed;//per lp event that lp father doesn't flush
+	#endif
+
 	#if POSTING==1 && REPORT==1
-    	system_stats->event_not_flushed  += lp_stats[i].event_not_flushed;//per lp event that lp father doesn't flush
+    	
     	system_stats->infos_posted_useful += lp_stats[i].infos_posted_useful;//per lp num info useful for lp
     	system_stats->sync_check_silent += lp_stats[i].sync_check_silent;//per lp num sync_check in past maded by lp
     	system_stats->sync_check_forward += lp_stats[i].sync_check_forward;//per lp num sync_check in future maded by lp
@@ -458,11 +465,13 @@ void gather_statistics() {
 	system_stats->mem_checkpoint /= system_stats->counter_checkpoints;
 	system_stats->checkpoint_period /= n_prc_tot;
 
+	#if HANDLE_INTERRUPT==1 && REPORT==1
+	system_stats->event_not_flushed_tot = system_stats->event_not_flushed;//per lp event that lp father doesn't flush
+    system_stats->event_not_flushed/= n_prc_tot;
+    #endif
+
 	#if POSTING==1 && REPORT==1
 	//calculate in gather_statistics()
-    system_stats->event_not_flushed_tot = system_stats->event_not_flushed;//per lp event that lp father doesn't flush
-    system_stats->event_not_flushed/= n_prc_tot;
-
     system_stats->infos_posted_useful_tot = system_stats->infos_posted_useful;//per lp num info useful for lp
     system_stats->infos_posted_useful/= n_prc_tot;
 
@@ -601,13 +610,16 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n\n");
 	#endif
 
-	#if POSTING==1 && REPORT==1
+	#if HANDLE_INTERRUPT==1 && REPORT==1
+	
 	printf("Event not flushed tot...........................: %12lu\n",
 		(unsigned long)stats->event_not_flushed_tot);
 	printf("Event not flushed per LP........................: %12.2f\n",
 		stats->event_not_flushed);
-
     printf("\n");
+    #endif
+
+	#if POSTING==1 && REPORT==1
 
     printf("Num attempts Info posted tot....................: %12lu\n",
 		(unsigned long)stats->infos_posted_attempt_tot);

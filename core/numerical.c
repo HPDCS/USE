@@ -38,11 +38,44 @@
 #include <core.h>
 #include <numerical.h>
 #include <preempt_counter.h>
-
+#include <hpdcs_utils.h>
+#include <checks.h>
 
 static seed_type master_seed;
 //static __thread seed_type thread_seed = 0;
 
+/**
+* This function returns a number in between (0,1), according to a Uniform Distribution.
+* It is based on Multiply with Carry by George Marsaglia
+*
+* @author Cristian Milia
+* @return A random number, in between (0,1)
+* @date 13 feb 2020
+*/
+double RandomNotPreemptable(void) {
+	//use this function with INIT events,when code is already not preemptable
+	uint32_t *seed1;
+	uint32_t *seed2;
+
+	#if HANDLE_INTERRUPT==1 && DEBUG==1
+	check_random_unpreemptability();
+	#endif
+
+	if(rootsim_config.serial) {
+		seed1 = (uint32_t *)&master_seed;
+		seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
+	} else {
+		seed1 = (uint32_t *)&(LPS[current_lp]->seed);
+		seed2 = (uint32_t *)((char *)&(LPS[current_lp]->seed) + (sizeof(uint32_t)));
+	}
+
+	*seed1 = 36969u * (*seed1 & 0xFFFFu) + (*seed1 >> 16u);
+	*seed2 = 18000u * (*seed2 & 0xFFFFu) + (*seed2 >> 16u);
+
+	// The magic number below is 1/(2^32 + 2).
+    	// The result is strictly between 0 and 1.
+	return (((*seed1 << 16u) + (*seed1 >> 16u) + *seed2) + 1.0) * 2.328306435454494e-10;
+}
 
 /**
 * This function returns a number in between (0,1), according to a Uniform Distribution.
@@ -65,6 +98,9 @@ double Random(void) {
 	//
 	//seed1 = (uint32_t *)&thread_seed;
 	//seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
+	#if HANDLE_INTERRUPT==1 && DEBUG==1
+	check_random_preemptability();
+	#endif
 
 	if(rootsim_config.serial) {
 		seed1 = (uint32_t *)&master_seed;

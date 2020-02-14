@@ -99,12 +99,12 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				state->channel_state[w] = 0;
 
 			// Start the simulation
-			timestamp = (simtime_t) (20 * Random());
+			timestamp = (simtime_t) (20 * RandomNotPreemptable());
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
 
 			// If needed, start the first fading recheck
 			//if (state->fading_recheck) {
-				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * Random());
+				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * RandomNotPreemptable());
 				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
 		//	}
 
@@ -121,13 +121,13 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 				state->channel_counter--;
 
-				#if HANDLE_INTERRUPT==1
-				increment_preempt_counter();
-				#endif
+				//#if HANDLE_INTERRUPT==1
+				//increment_preempt_counter();
+				//#endif
 				new_event_content.channel = allocation(state);
-				#if HANDLE_INTERRUPT==1
-				decrement_preempt_counter();
-				#endif
+				//#if HANDLE_INTERRUPT==1
+				//decrement_preempt_counter();
+				//#endif
 				new_event_content.from = me;
 				new_event_content.sent_at = now;
 
@@ -201,13 +201,13 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			state->channel_counter++;
 			state->complete_calls++;
-			#if HANDLE_INTERRUPT==1
-			increment_preempt_counter();
-			#endif
+			//#if HANDLE_INTERRUPT==1
+			//increment_preempt_counter();
+			//#endif
 			deallocation(me, state, event_content->channel, now);
-			#if HANDLE_INTERRUPT==1
-			decrement_preempt_counter();
-			#endif
+			//#if HANDLE_INTERRUPT==1
+			//decrement_preempt_counter();
+			//#endif
 
 			break;
 
@@ -215,13 +215,13 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			state->channel_counter++;
 			state->leaving_handoffs++;
-			#if HANDLE_INTERRUPT==1
-			increment_preempt_counter();
-			#endif
+			//#if HANDLE_INTERRUPT==1
+			//increment_preempt_counter();
+			//#endif
 			deallocation(me, state, event_content->channel, now);
-			#if HANDLE_INTERRUPT==1
-			decrement_preempt_counter();
-			#endif
+			//#if HANDLE_INTERRUPT==1
+			//decrement_preempt_counter();
+			//#endif
 
 			new_event_content.call_term_time =  event_content->call_term_time;
 			new_event_content.from = me;
@@ -245,13 +245,13 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			else {
 				state->channel_counter--;
 
-				#if HANDLE_INTERRUPT==1
-				increment_preempt_counter();
-				#endif
+				//#if HANDLE_INTERRUPT==1
+				//increment_preempt_counter();
+				//#endif
 				new_event_content.channel = allocation(state);
-				#if HANDLE_INTERRUPT==1
-				decrement_preempt_counter();
-				#endif
+				//#if HANDLE_INTERRUPT==1
+				//decrement_preempt_counter();
+				//#endif
 				new_event_content.call_term_time = event_content->call_term_time;
 
 

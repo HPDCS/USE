@@ -133,6 +133,7 @@ void __trace_input_queue(char *, int, unsigned int);
 
 // Expose to the application level the rollbackable numerical library
 double Random(void);
+double RandomNotPreemptable(void);
 int RandomRange(int min, int max);
 int RandomRangeNonUniform(int x, int min, int max);
 double Expent(double mean);

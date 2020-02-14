@@ -83,9 +83,13 @@
 #define STAT_IPI_RECEIVED           501
 #endif
 
-#if POSTING==1 && REPORT==1
+#if HANDLE_INTERRUPT==1 && REPORT==1
 #define STAT_EVENT_FLUSHED                  600
 #define STAT_EVENT_NOT_FLUSHED              601
+#endif
+
+#if POSTING==1 && REPORT==1
+
 #define STAT_INFOS_POSTED                   602
 #define STAT_INFOS_POSTED_ATTEMPT           603
 #define STAT_INFOS_POSTED_USEFUL            604
@@ -173,8 +177,13 @@ struct stats_t {
     stat64_t ipi_received_tot;
     #endif
 
-    #if POSTING==1 && REPORT==1
+    #if HANDLE_INTERRUPT==1 && REPORT==1
     stat64_t event_not_flushed;//per lp event that lp father doesn't flush
+    stat64_t event_not_flushed_tot;
+    #endif
+
+    #if POSTING==1 && REPORT==1
+    
     stat64_t infos_posted;//per thread num info posted by thread
     stat64_t infos_posted_attempt;//per thread num tries to post info by thread
     stat64_t infos_posted_useful;//per lp num info useful for lp
@@ -184,7 +193,7 @@ struct stats_t {
     
     
     //calculated in gather_statistics()
-    stat64_t event_not_flushed_tot;
+    
     stat64_t infos_posted_tot;
     stat64_t infos_posted_attempt_tot;
     stat64_t infos_posted_anti_msg_tot;

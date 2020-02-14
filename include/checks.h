@@ -20,5 +20,6 @@ void check_CFV_TO_HANDLE();
 void check_CFV_ALREADY_HANDLED();
 void check_thread_loop_before_fetch();
 void check_after_rollback();
-
+void check_random_preemptability();
+void check_random_unpreemptability();
 #endif
