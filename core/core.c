@@ -85,7 +85,7 @@ __thread unsigned int check_ongvt_period = 0;
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
-
+//#if IPI_SUPPORT==1
 // __thread unsigned long long trampoline_count1 = 0;
 // __thread unsigned long long trampoline_count2 = 0;
 // __thread unsigned long long trampoline_count3 = 0;
@@ -93,7 +93,7 @@ __thread unsigned int check_ongvt_period = 0;
 // __thread unsigned long long trampoline_count5 = 0;
 // __thread unsigned long long trampoline_count6 = 0;
 // __thread unsigned long long trampoline_count7 = 0;
-
+//#endif
 
 //timer
 #if REPORT == 1
@@ -540,7 +540,7 @@ void check_OnGVT(unsigned int lp_idx){
 		current_msg=NULL;
 		LPS[current_lp]->old_valid_bound=LPS[current_lp]->bound;
 		#endif
-		#if PREEMPT_COUNTER==1
+		#if PREEMPT_COUNTER==1 //make this code not interruptible
 		increment_preempt_counter();
 		#endif
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
@@ -657,7 +657,7 @@ void init_simulation(unsigned int thread_id){
        		current_msg->receiver_id 	= current_lp;//
        		current_msg->timestamp 		= 0.0;//
        		current_msg->type 			= INIT;//
-       		current_msg->state 			= 0x0;//
+       		current_msg->state 			= NEW_EVT;//
        		current_msg->father 		= NULL;//
 #if CONSTANT_CHILD_INVALIDATION==1
        		current_msg->epoch= get_epoch_of_LP(current_lp);
@@ -849,6 +849,7 @@ void thread_loop(unsigned int thread_id) {
 	register_thread_to_ipi_module(thread_id,"cfv_trampoline",(unsigned long)cfv_trampoline);
 #endif
 	initialize_preempt_counter(thread_id);//init counter
+	//INIT with section not interruptible!!!
 	init_simulation(thread_id);
 
 #if REPORT == 1 
@@ -856,6 +857,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 	int res=set_jmp(&cntx_loop);
+	//this switch is not interruptible!!!
 	switch (res){
 		case CFV_INIT :
 			#if DEBUG==1
@@ -939,6 +941,7 @@ void thread_loop(unsigned int thread_id) {
 	check_thread_loop_before_fetch();
 	#endif
 
+	//after this line code may became interruptible!!
 	// START SIMULATION //
 	while (  
 				(
@@ -1142,10 +1145,6 @@ void thread_loop(unsigned int thread_id) {
 		}
 	#endif
 
-#if REPORT == 1
-		//clock_timer_start(queue_op);
-#endif
-
 		//COMMIT SAFE EVENT
 		if(safe) {
 			#if REPORT==1
@@ -1155,7 +1154,6 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 #if REPORT == 1
-		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
 		//statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
 #endif
 		

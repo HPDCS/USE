@@ -37,7 +37,7 @@ extern __thread cntx_buf cntx_loop;
 
 #if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
-//wrap memcpy to interrupt also library function "memcpy"
+//wrap memcpy to interrupt "library" function "memcpy"
 #define memcpy(d, s, n) ({ \
     void *res; \
     asm volatile ( \
@@ -113,9 +113,14 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     increment_preempt_counter();
     #endif
 
+    //branch if not present in original version because _thr_pool.messages[_thr_pool._thr_pool_count].father==NULL 
+    //because previous call are queue_clean and queue_deliver_msgs not interruptible
     if(_thr_pool.messages[_thr_pool._thr_pool_count].father!=NULL){//re-use event
         msg_ptr=_thr_pool.messages[_thr_pool._thr_pool_count++].father;//get message
         list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE
+        #if REPORT==1
+        statistics_post_lp_data(current_lp,STAT_EVENT_NOT_FLUSHED,1);
+        #endif
     }
     else{//extract event from free_list and connect to thread_pool
         msg_ptr = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
@@ -140,54 +145,28 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
 #endif
 
     memcpy(msg_ptr->data, event_content, event_size);
-    /*#if POSTING==1
-    insert_msg_in_hash_table(msg_ptr);
-    #endif//POSTING*/
 }
 
 #if HANDLE_INTERRUPT==1
 void queue_clean(){//this function is interruptible,because this is the first function called before any ProcessEvent
     _thr_pool._thr_pool_count = 0;
 }
+
 #else
 void queue_clean(){ 
     unsigned int i = 0;
     msg_t* current;
-    #if POSTING==1 || DEBUG==1
-    unsigned int father_lp_idx=n_prc_tot;//invalid lp_idx
-    #endif
     for (; i<_thr_pool._thr_pool_count; i++)
     {
         current = _thr_pool.messages[i].father;
         if(current != NULL)
         {
-            #if POSTING==1 || DEBUG==1
-            if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
-                father_lp_idx=current->sender_id;
-            }
-            #endif
-            #if DEBUG==1
-            if(father_lp_idx!=current->sender_id){//check if father_lp_idx is the same for each child
-                printf("cleaning queue containing events with different lp_idx\n");
-                gdb_abort;
-            }
-            #endif
             list_node_clean_by_content(current); 
             current->state = -1;
             current->data_size = tid+1;
             current->max_outgoing_ts = 0;
             list_insert_tail_by_content(freed_local_evts, current);
             _thr_pool.messages[i].father = NULL;
-            #if POSTING==1
-            //int index_in_hash_table=current->id_in_thread_pool_hash_table;
-            //_thr_pool.collision_list[index_in_hash_table]=NULL;
-            
-            #if REPORT==1
-            statistics_post_lp_data(father_lp_idx,STAT_EVENT_NOT_FLUSHED,1);
-            #endif
-
-            #endif
-
         }
     }
 	_thr_pool._thr_pool_count = 0;
@@ -198,6 +177,9 @@ void queue_clean(){
 void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
+    #if DEBUG==1 //not present in original version
+    unsigned int father_lp_idx=n_prc_tot;//invalid lp_idx
+    #endif
     bool flagged=false,posted=false;//if flagged is true,then event is flagged POSTED_VALID,if posted is true then event is posted successfully
 #if REPORT == 1
         clock_timer queue_op;
@@ -226,6 +208,15 @@ void queue_deliver_msgs(void) {
             printf("Out of memory in %s:%d", __FILE__, __LINE__);
             abort();
         }
+        #if DEBUG==1//not present in original version
+            if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
+                father_lp_idx=new_hole->sender_id;
+            }
+            if(father_lp_idx!=new_hole->sender_id){//check if father_lp_idx is the same for each child
+                printf("queue_deliver_msgs is flushing events with different father->lp_idx\n");
+                gdb_abort;
+            }
+        #endif
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
         #if CONSTANT_CHILD_INVALIDATION==1
@@ -248,8 +239,6 @@ void queue_deliver_msgs(void) {
 
         if(current_msg->max_outgoing_ts < new_hole->timestamp)
             current_msg->max_outgoing_ts = new_hole->timestamp;
-
-        //post_information_with_straggler(new_hole);
 
         msg_t*old_priority_message = flag_as_posted(new_hole,&flagged);
 
@@ -301,6 +290,7 @@ void queue_deliver_msgs(void) {
         clock_timer queue_op;
 #endif
 #if DEBUG==1//not present in original version
+        unsigned int father_lp_idx=n_prc_tot;//invalid lp_idx
         if(LPS[current_lp]->state != LP_STATE_READY){
             printf("LP state is not ready in queue_deliver_msgs\n");
             gdb_abort;
@@ -322,6 +312,15 @@ void queue_deliver_msgs(void) {
             printf("Out of memory in %s:%d", __FILE__, __LINE__);
             abort();        
         }
+        #if DEBUG==1//not present in original version
+            if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
+                father_lp_idx=new_hole->sender_id;
+            }
+            if(father_lp_idx!=new_hole->sender_id){//check if father_lp_idx is the same for each child
+                printf("queue_deliver_msgs is flushing events with different father->lp_idx\n");
+                gdb_abort;
+            }
+        #endif
         //memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;
@@ -360,9 +359,6 @@ void queue_deliver_msgs(void) {
 #if REPORT == 1
         statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
-#endif
-#if IPI_SUPPORT==1
-        send_ipi_to_lp(new_hole);
 #endif
     }
 

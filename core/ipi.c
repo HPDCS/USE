@@ -65,11 +65,24 @@ void send_ipi_to_lp(msg_t*event){
         #if REPORT==1
         clock_timer_start(user_time);
         #endif
-        if (ipi_syscall(lck_tid-1))
+        if (ipi_syscall(lck_tid-1)){
             printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+            gdb_abort;
+        }
+
         #if REPORT==1
+
+        #if HANDLE_INTERRUPT==1 //protect correlated statistics
+        increment_preempt_counter();
+        #endif
+
 		statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(user_time));
         statistics_post_th_data(tid,STAT_IPI_SENDED,1);
+
+        #if HANDLE_INTERRUPT==1
+        decrement_preempt_counter();
+        #endif
+
         #endif
     }
 }
@@ -113,36 +126,6 @@ long get_sizeof_function(const char*function_name,char*path_program_name){
     }
     return -1;
 }
-/*void register_thread_to_ipi_module(unsigned int thread_id,const char* function_name,unsigned long address_function){
-    long function_size=get_sizeof_function(function_name,program_name);
-    if(function_size<0){
-        printf("Impossible to retrieve function size of \n");
-        gdb_abort;
-    }
-    #if VERBOSE>0
-    else if(thread_id==0){
-        printf("ProcessEvent has size=%ld\n",function_size);
-    }
-    #endif
-    interruptible_section_start = address_function;
-    interruptible_section_end = address_function+function_size-1;
-    if(thread_id==0)
-        printf("Register thread,code_interruptible_start=%lu,code_interruptible_end=%lu\n",interruptible_section_start,interruptible_section_end);
-
-    //mettere cfv_trampoline al posto di ProcessEvent
-    ipi_registration_error = ipi_register_thread(thread_id, (unsigned long)cfv_trampoline, &alternate_stack,
-        &preempt_count_ptr,&standing_ipi_ptr,alternate_stack_area, interruptible_section_start, interruptible_section_end);
-    if(ipi_registration_error!=0){
-        printf("Impossible register_thread %d\n",thread_id);
-        gdb_abort;
-    }
-    if(thread_id==0)
-        printf("Thread %d finish registration to IPI module\n",thread_id);
-    #if VERBOSE > 0
-    else
-        printf("Thread %d finish registration to IPI module\n",thread_id);
-    #endif
-}*/
 
 void register_thread_to_ipi_module(unsigned int thread_id, const char* function_name, unsigned long address_function){
     long function_size=get_sizeof_function(function_name,program_name);
@@ -156,11 +139,10 @@ void register_thread_to_ipi_module(unsigned int thread_id, const char* function_
     }
     #endif
     interruptible_section_start = address_function;
-    interruptible_section_end = (address_function + function_size);
+    interruptible_section_end = (address_function + function_size);//this is an address,if function has size func_size and start from start,then range [start,start+func_size] contains func_size+1 addresses
     if(thread_id==0)
         printf("Register thread,code_interruptible_start=%lu,code_interruptible_end=%lu\n",interruptible_section_start,interruptible_section_end);
 
-    //mettere cfv_trampoline al posto di ProcessEvent
     ipi_registration_error = ipi_register_thread(thread_id, (unsigned long)cfv_trampoline, &alternate_stack,
         &preempt_count_ptr,&standing_ipi_ptr,alternate_stack_area, interruptible_section_start, interruptible_section_end);
     if(ipi_registration_error!=0){
