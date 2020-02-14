@@ -66,4 +66,17 @@ unsigned long increment_preempt_counter(){
 	return value;
 }
 
+void check_preemptability(){
+	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
+		printf("code is unpreemptable\n");
+		gdb_abort;
+	}
+}
+void check_unpreemptability(){
+	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
+		printf("code is preemptable\n");
+		gdb_abort;
+	}
+}
+
 #endif //PREEMPT_COUNTER

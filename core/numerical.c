@@ -58,7 +58,7 @@ double RandomNotPreemptable(void) {
 	uint32_t *seed2;
 
 	#if HANDLE_INTERRUPT==1 && DEBUG==1
-	check_random_unpreemptability();
+	check_unpreemptability();
 	#endif
 
 	if(rootsim_config.serial) {
@@ -99,7 +99,7 @@ double Random(void) {
 	//seed1 = (uint32_t *)&thread_seed;
 	//seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
 	#if HANDLE_INTERRUPT==1 && DEBUG==1
-	check_random_preemptability();
+	check_preemptability();
 	#endif
 
 	if(rootsim_config.serial) {

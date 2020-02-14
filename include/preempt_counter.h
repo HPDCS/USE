@@ -33,6 +33,8 @@ void initialize_preempt_counter();
 void initialize_standing_ipi();
 unsigned long increment_preempt_counter();
 unsigned long decrement_preempt_counter();
+void check_preemptability();
+void check_unpreemptability();
 
 extern __thread unsigned long long * preempt_count_ptr;
 extern __thread unsigned long long * standing_ipi_ptr;

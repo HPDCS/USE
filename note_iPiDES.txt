@@ -1,14 +1,20 @@
 TODO:
--constant_child_invalidation da debuggare,degrada le performance ma non a causa delle istruzioni atomiche
+-inserire contatore di debug kernel mode
+-inserire check_trampoline_asynch
+-rimuovere interrupt_silent,interrupt_forward
+-ristrutturare la modularità delle macro
+-vedere la parte dei seed come viene ripristinata per capire perché le 2 scritture della random non sono interrompibili.(gdb restituisce seed2=null segmentation fault)
+
 -rendere la rollback completamente interrompibile
--rendere la gestione dell'evento completamente interrompibile con pubblicazione dell'evento eseguito prima della process event,reset della pubblicazione dopo la gestione dell'evento
+-rendere la gestione dell'evento completamente interrompibile con pubblicazione dell'evento eseguito prima della processevent,reset della pubblicazione dopo la gestione dell'evento
 -le statistiche vanno prese per tutto il rollback e non solo il singolo evento
--rimuovere i range di indirizzi interrompibili e rifarsi semplicemente al preemption_counter
--memcpy da rendere interrompibile
--barriera sul preemption_counter
+-alcune statistiche vanno estese a tutta la gestione dell'evento anche in forward
 -aumentare range di interrompibilità step by step
--preemption_counter sulla enqueue della coda globale
+-rilassare preemption_counter sulla enqueue della coda globale in queue_deliver_msgs
 -check sincrono se decremento porta counter a 0
+-check sincrono chiama una funzione con parametri che fa tutto ed internamente controlla e gestisce tutti i casi(se current_msg not null non inserirlo,inserire a prescindere evento in coda locale)
+-rafforzare check in fetch.c su delivery degli ipi?
+-constant_child_invalidation da debuggare,degrada le performance ma non a causa delle istruzioni atomiche
 
 -operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice es rollback_length.
 -varie statistiche non vengono calcolate adeguatamente anche nel caso in cui non ci siano interruzioni

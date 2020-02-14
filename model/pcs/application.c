@@ -41,6 +41,9 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 		case INIT:
 
+			#if HANDLE_INTERRUPT==1 && DEBUG==1
+			check_unpreemptability();
+			#endif
 			// Initialize the LP's state
 			state = (lp_state_type *)malloc(sizeof(lp_state_type));
 			if (state == NULL){

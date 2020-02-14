@@ -30,37 +30,6 @@ extern __thread void* current_evt_monitor;
 
 
 #if HANDLE_INTERRUPT==1
-
-void check_random_preemptability(){
-#if INTERRUPT_FORWARD==1
-	if(LPS[current_lp]->state==LP_STATE_READY && *preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is not preemptable inside Random()\n");
-		gdb_abort;
-	}
-	#endif
-	#if INTERRUPT_SILENT==1
-	if(LPS[current_lp]->state==LP_STATE_SILENT_EXEC && *preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is not preemptable inside Random()\n");
-		gdb_abort;
-	}
-	#endif
-}
-
-void check_random_unpreemptability(){
-#if INTERRUPT_FORWARD==1
-	if(LPS[current_lp]->state==LP_STATE_READY && *preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is preemptable inside RandomNotPreemptable()\n");
-		gdb_abort;
-	}
-	#endif
-	#if INTERRUPT_SILENT==1
-	if(LPS[current_lp]->state==LP_STATE_SILENT_EXEC && *preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is preemptable inside RandomNotPreemptable()\n");
-		gdb_abort;
-	}
-	#endif
-}
-
 void check_after_rollback(){
 	if(current_msg->timestamp<LPS[current_lp]->old_valid_bound->timestamp
 	|| ((current_msg->timestamp==LPS[current_lp]->old_valid_bound->timestamp) && (current_msg->tie_breaker<=LPS[current_lp]->old_valid_bound->tie_breaker)) ){
