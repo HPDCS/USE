@@ -34,6 +34,9 @@ extern __thread cntx_buf cntx_loop;
 #if PREEMPT_COUNTER==1
 #include <preempt_counter.h>
 #endif
+#if HANDLE_INTERRUPT_WITH_CHECK==1
+#include <handle_interrupt_with_check.h>
+#endif
 
 #if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
@@ -109,8 +112,8 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         abort();
     }
 
-    #if HANDLE_INTERRUPT==1
-    increment_preempt_counter();
+    #if HANDLE_INTERRUPT_WITH_CHECK==1
+    enter_in_unpreemptable_zone();
     #endif
 
     //branch if not present in original version because _thr_pool.messages[_thr_pool._thr_pool_count].father==NULL 
@@ -130,8 +133,8 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         
     }
     
-    #if HANDLE_INTERRUPT==1
-    decrement_preempt_counter();
+    #if HANDLE_INTERRUPT_WITH_CHECK==1
+    exit_from_unpreemptable_zone();
     #endif
 
     msg_ptr->sender_id = current_lp;
@@ -226,7 +229,7 @@ void queue_deliver_msgs(void) {
         #endif
 
         new_hole->monitor = (void *)0x0;
-        new_hole->state = 0;
+        new_hole->state = NEW_EVT;
         new_hole->epoch = 0;
         new_hole->frame = 0;
         new_hole->tie_breaker = 0;
@@ -242,8 +245,8 @@ void queue_deliver_msgs(void) {
 
         msg_t*old_priority_message = flag_as_posted(new_hole,&flagged);
 
-        #if HANDLE_INTERRUPT==1
-        increment_preempt_counter();
+        #if HANDLE_INTERRUPT_WITH_CHECK==1
+        enter_in_unpreemptable_zone();
         #endif
 
         _thr_pool.messages[i].father = NULL;
@@ -259,8 +262,8 @@ void queue_deliver_msgs(void) {
         statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);
         #endif
 
-        #if HANDLE_INTERRUPT==1
-        decrement_preempt_counter();
+        #if HANDLE_INTERRUPT_WITH_CHECK==1
+        exit_from_unpreemptable_zone();
         #endif
 
         #if DEBUG==1//not present in original version

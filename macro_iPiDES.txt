@@ -1,22 +1,48 @@
 PROGRAMMA ORIGINALE: Il programma non prevede meccanismi per interrompere un thread dal suo lavoro, ne in modo sincrono ne in modo asincrono.
 
-CONSTANT_CHILD_INVALIDATION:se abilitato,modifica la funzione is_valid in modo tale da aggiungere il predicato "il padre dovrà eventually essere rieseguito?" che quindi permette l'invalidazione degli eventi figli sia nel caso in cui il padre è già stato ri-eseguito(la sua epoca è aumentata rispetto alla precedente esecuzione) e sia nel caso in cui il padre dovrà essere rieseguito.
+CONSTANT_CHILD_INVALIDATION:Non richiede l'ausilio di nessun altra feature.
+Se abilitata,modifica la funzione is_valid in modo tale da aggiungere il predicato "il padre dovrà eventually essere rieseguito?" che quindi permette l'invalidazione degli eventi figli sia nel caso in cui il padre è già stato ri-eseguito(la sua epoca è aumentata rispetto alla precedente esecuzione) e sia nel caso in cui il padre dovrà essere rieseguito rispetto al wall clock time.
 
-PREEMPT_COUNTER: macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo(sincrona/asincrona), può accadere. L'interruzione può avvenire solo quando il preemption_counter è 0.Aumentare il preemption counter assicura che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
-Il programma non è ancora in grado di interrompersi.
+POSTING:Non richiede l'ausilio di nessun altra feature.
+Macro che se abilitata permette ad altri thread in modo concorrente di postare informazioni prioritarie per un determinato LP sotto forma di pointer ad evento, le quali possono essere lette da tutti i thread senza preoccuparsi della garbage collection e riuso eventuale di memoria.
+
+PREEMPT_COUNTER: Non richiede l'ausilio di nessun altra feature. 
+Macro che dà la possibilità al programma di scegliere in modo sincrono i punti del codice in cui una interruzione,di qualsiasi tipo(sincrona/asincrona), può avvenire.
+
+Definisce 2 concetti: codice potenzialmente interrompibile,codice sicuramente non interrompibile.
+
+Codice potenzialmente interrompibile:è un codice in cui una feature di livello superiore sa per certo che non deve essere gestita opportunatamente l'interruzione e quindi si può tranquillamente interrompere in modo safe,oppure è un codice in cui la feature di livello superiore deve necessariamente fare delle pre-operazioni per rendere il codice interrompibile in modo safe.
+
+Codice sicuramente non interrompibile: è un codice in cui una feature di livello superiore deve garantire che l'interruzione sicuramente non accada.
+
+Il preemption_counter è inizialmente 1.
+L'interruzione è potenzialmente interrompibile quando il preemption_counter è 0,quindi nello stato iniziale è sicuramente unsafe avere interruzioni.
+
+Le operazioni che vengono fatte sul preemption counter vanno sempre a coppia e sono
+(increment,decrement) ossia prima increment poi decrement oppure (decrement,increment) ossia prima decrement poi increment.
+Incrementare il preemption counter prima della decrement deve assicurare che in tutte le funzioni innestate che vengono chiamate non ci siano interruzioni.
+Diminuire il preemption counter prima della increment dà la possibilità al codice di entrare in una zona potenzialmente interrompibile(se preemption counter diventa 0).
+La logica per avere interruzioni e gestirle in modo safe quindi è:se è stata eseguita una increment prima di una decrement su una coppia di operazioni (increment,decrement) in cui non è ancora stata chiamata la rispettiva decrement, non è possibile interrompere il codice anche se vengono chiamate n decrement (n coppie di operazioni innestate (decrement,increment) in cui non viene chiamata la rispettiva increment di queste n operazioni). Quindi per garantire questa proprietà il livello massimo di nesting su coppie (decrement,increment) deve essere 1, altrimenti si rischia che se avviene almeno una increment di una coppia (increment,decrement) e poi 2 o più decrement di una coppia (decrement,increment) il counter diventi 0 o negativo dando la possibilità al codice di una potenziale interruzione.
+Il programma non è ancora in grado di interrompersi e gestire quindi l'interruzione.Per avere questa possibilità servono feature di livello superiore.
 
 
-LONG_JMP: macro che dà la possibilità al programma di fare delle long_jmp in qualsiasi scenario,ma solo quando il preempt_counter è 0.In alcuni punti critici del codice,fare long_jmp non è safe.Di fatto con questa macro abilitata il programma supporta il meccanismo delle interruzioni sincrone.
-Lasciare il valore di counter a 0 se si vuole chiamare la long_jmp come se fosse una normale funzione.
+LONG_JMP: Richiede la feature PREEMPTION_COUNTER,perché di fatto una long_jmp viene intesa come una interruzione sincrona. 
+Macro che dà la possibilità al programma di fare delle long_jmp in qualsiasi scenario,ma solo quando il preempt_counter è 0.In alcuni punti critici del codice,fare long_jmp non è safe.Di fatto con questa macro abilitata il programma supporta il meccanismo delle interruzioni sincrone.
+Lasciare il valore di counter a 0 se si vuole chiamare la long_jmp come se fosse una normale funzione.Il programma è quindi in grado di interrompersi in modo sicnrono ma non safe, per essere reso safe è necessaria una feature di livello superiore.
 
-HANDLE_INTERRUPT: macro che implementa il supporto per settare un LP come valido/invalido,utile per permettere l'interruzione asincrona/sincrona in scenari critici,quando il preemption counter è 0.
+HANDLE_INTERRUPT: Richiede la feature LONG_JMP.
+Richiede POSTING per inserire sync_check?
+Macro che se abilitata implementa il supporto per settare un LP come valido/invalido,utile per permettere l'interruzione asincrona/sincrona in scenari critici,quando il preemption counter è 0.
 Grazie a questa macro è possibile in seguito all'interruzione settare un LP come invalido per poterlo ripristinare correttamente appena possibile.
 Si preoccupa di invalidare e ripristinare lo stato dell'LP in seguito a qualsiasi interruzione asincrona/sincrona.
+
+//TODO fargli fare anche questo
 Non si preoccupa di gestire l'evento current_msg interrotto(aumentare numero frame,inserirlo in coda locale,settarlo come interrotto,farlo apparire nel futuro ecc),deve essere fatto esplicitamente da altre macro.
 
-IPI_SUPPORT: macro che dà la possibilità al programma di inviare e ricevere interruzioni asincrone, in modo safe.
-Le interruzioni possono essere inviate da un thread ad un altro in qualsiasi scenario. Le interruzioni vengono effettivamente catturate quando il thread destinatario ha preemption counter pari a 0 e sta eseguendo una ProcessEvent.
+
+IPI_SUPPORT: Richiede le feature POSTING e HANDLE_INTERRUPT.
+Macro che dà la possibilità al programma di inviare e ricevere interruzioni asincrone, in modo safe.
+Le interruzioni possono essere inviate da un thread ad un altro in qualsiasi scenario. Le interruzioni vengono effettivamente catturate quando il thread destinatario ha preemption counter pari a 0 e sta eseguendo in un range di indirizzi interrompibile(kernel mode viene definito questo range di indirizzi).
 
 SYNC_CHECK:macro che se abilitata,esegue dei check in modo sincrono che, se risultano veri, fanno eseguire una interruzione sincrona.Prima di eseguire l'interruzione sincrona è necessario settare l'LP come invalido e gestire correttamente current_msg interrotto.
 
-POSTING:posta informazioni prioritarie per LP che possono essere lette in modo safe quando si ha il lock sull'LP

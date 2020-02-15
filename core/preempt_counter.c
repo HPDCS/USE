@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <preempt_counter.h>
 #include <hpdcs_utils.h>
-
 #if PREEMPT_COUNTER==1
 #define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",*preempt_count_ptr,thread_id)
 #if IPI_SUPPORT==1
@@ -52,8 +51,8 @@ unsigned long decrement_preempt_counter(){
 unsigned long increment_preempt_counter(){
 	unsigned long value;
 	#if DEBUG==1
-	if((*preempt_count_ptr)>=MAX_NESTING_PREEMPT_COUNTER){
-		printf("preempt_count is equals to MAX_NESTING %d in increment_preempt_counter\n",MAX_NESTING_PREEMPT_COUNTER);
+	if((*preempt_count_ptr)>=MAX_PREEMPT_COUNTER){
+		printf("preempt_count is equals to MAX_PREEMPT_COUNTER %d in increment_preempt_counter\n",MAX_PREEMPT_COUNTER);
 		gdb_abort;
 	}
 	if(*preempt_count_ptr==(unsigned long long)INVALID_PREEMPT_COUNTER){
@@ -64,19 +63,6 @@ unsigned long increment_preempt_counter(){
 	value = __sync_add_and_fetch(preempt_count_ptr, 1);
 	__asm__ __volatile__("": : :"memory");
 	return value;
-}
-
-void check_preemptability(){
-	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is unpreemptable\n");
-		gdb_abort;
-	}
-}
-void check_unpreemptability(){
-	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is preemptable\n");
-		gdb_abort;
-	}
 }
 
 #endif //PREEMPT_COUNTER

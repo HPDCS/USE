@@ -484,19 +484,9 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		gdb_abort;
 	}
 	#endif
-	#if PREEMPT_COUNTER==1
-	#if INTERRUPT_SILENT==1
-	#else
-	// increment_preempt_counter();
-	#endif
-	#endif
+
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
-	#if PREEMPT_COUNTER==1
-	#if INTERRUPT_SILENT==1
-	#else
-	// decrement_preempt_counter();
-	#endif
-	#endif
+
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);
 

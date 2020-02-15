@@ -1,7 +1,8 @@
+#if LONG_JMP==1
 #pragma once
 #ifndef __SET_JMP_H__
 #define __SET_JMP_H__
-
+#include <preempt_counter.h>
 /* Preamble for the *setjmp* function that resolves
    caller-save/non-callee-save mismatch. */
 #define set_jmp(cntx_ptr)		({\
@@ -63,4 +64,5 @@ typedef struct __context_buffer {
 extern long long _set_jmp(cntx_buf *);
 extern void _long_jmp(cntx_buf *, long long) __attribute__ ((__noreturn__));
 
+#endif
 #endif

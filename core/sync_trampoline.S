@@ -1,4 +1,4 @@
-.file	"trampoline.S"
+.file	"sync_tramp.S"
 .text
 
  .macro countoccurrences varname
@@ -14,9 +14,9 @@
 .endm
 
 .align 4
-.globl cfv_trampoline
-.type cfv_trampoline, @function
-cfv_trampoline:
+.globl sync_trampoline
+.type sync_trampoline, @function
+sync_trampoline:
 
 /**************************/
 /*     PREAMBLE START     */
@@ -149,24 +149,9 @@ cfv_trampoline:
 /*      PREAMBLE END      */
 /**************************/
 
-	/* %rbx <--- preempt_count_ptr (type: unsigned long long *)  */
-	movq		%fs:0, %rax
-	addq		preempt_count_ptr@gottpoff(%rip), %rax
-	movq		(%rax), %rbx
-
-	/* preempt_count_ptr <--- preempt_count_ptr + 1 (type: unsigned long long)  */
-	movq		$0x1, %rax
-	lock xaddq	%rax, (%rbx)
-
-	/* %rsi <--- 1 */
-	movq		$0x1, %rsi
-
-	/* %rdi <--- context_buffer */
-	movq		%fs:0, %rdi
-	addq		cntx_loop@gottpoff(%rip), %rdi
-
-	/* RESTORES CURRENT CONTEXT */
-	call		_long_jmp
+//nop
+//nop
+//nop
 
 /**************************/
 /*    POSTAMBLE START     */
@@ -183,26 +168,17 @@ cfv_trampoline:
 
 	/* New Stack-Frame creation on top
 	   of the old Stack-Pointer */
-	movq		32(%rsp), %rax
-	subq		$32, %rax
+	//nop
+
 
 	/* Copy content of the Alternate-Stack
 	   into the new Stack-Frame */
+	 //nop
 
-	movq		(%rsp), %rbx
-	movq		%rbx, (%rax)
-
-	movq		8(%rsp), %rbx
-	movq		%rbx, 8(%rax)
-
-	movq		16(%rsp), %rbx
-	movq		%rbx, 16(%rax)
-
-	movq		24(%rsp), %rbx
-	movq		%rbx, 24(%rax)
 
 	/* Stack-Switch occurs here */
-	movq		%rax, %rsp
+	//nop
+
 
 	/* restore FLAGS */
 	popq		%rax
@@ -218,4 +194,4 @@ cfv_trampoline:
 
 	retq
 
-.size cfv_trampoline, .-cfv_trampoline
+.size sync_trampoline, .-sync_trampoline

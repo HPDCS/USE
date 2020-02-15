@@ -1,28 +1,23 @@
 #if HANDLE_INTERRUPT==1
 
 #include <stdio.h>
-#include <core.h>
 #include <handle_interrupt.h>
 #include <hpdcs_utils.h>
-#include <queue.h>
-#include <prints.h>
-
-#include <jmp.h>
-#include <preempt_counter.h>
 
 #if DEBUG==1
 #include <checks.h>
 #endif
 
-#if POSTING==1
+
+/*#if POSTING==1
 #include <posting.h>
-#endif
+#endif*/
 
 extern __thread cntx_buf cntx_loop;
 
-msg_t* allocate_dummy_bound(int lp_idx){
+msg_t* allocate_dummy_bound(unsigned int lp_idx){
 	//alloc an event dummy. it won't be never connected to calqueue or localqueue,so it's possible change its state and it's possible set bound to dummy_bound with care.
-	msg_t*dummy_bound=list_allocate_node_buffer_from_list(lp_idx, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+	msg_t*dummy_bound = allocate_event(lp_idx);
 	dummy_bound->sender_id 		= -1;//don't care
 	dummy_bound->receiver_id 	= lp_idx;
 	dummy_bound->timestamp 		= 0.0;
@@ -101,27 +96,6 @@ void change_bound_with_current_msg(){
 	check_current_msg_is_in_future(current_lp);
 	#endif
 }
-
-#if POSTING==1
-void reset_info_and_change_bound(unsigned int lid,msg_t*event){
-	#if DEBUG==1
-	check_tie_breaker_not_zero(event->tie_breaker);
-	#endif
-
-	reset_priority_message(lid,LPS[lid]->priority_message);
-
-	LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
-	LPS[lid]->dummy_bound->timestamp=event->timestamp;
-	LPS[lid]->dummy_bound->tie_breaker=event->tie_breaker;
-	LPS[lid]->bound=LPS[lid]->dummy_bound;//modify bound,now priority message must be smaller than this bound
-}
-
-void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event){
-	//modify until_ts and tie_breaker
-	reset_info_and_change_bound(lid,event);
-	change_dest_ts(lid,until_ts,tie_breaker);
-}
-#endif
 
 
 #endif

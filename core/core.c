@@ -58,6 +58,10 @@
 #include <lp_stats.h>
 #endif
 
+#if HANDLE_INTERRUPT_WITH_CHECK==1
+#include <handle_interrupt_with_check.h>
+#endif
+
 //id del processo principale
 #define MAIN_PROCESS		0
 #define PRINT_REPORT_RATE	1000000000000000
@@ -84,16 +88,6 @@ __thread unsigned int check_ongvt_period = 0;
 
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
-
-//#if IPI_SUPPORT==1
-// __thread unsigned long long trampoline_count1 = 0;
-// __thread unsigned long long trampoline_count2 = 0;
-// __thread unsigned long long trampoline_count3 = 0;
-// __thread unsigned long long trampoline_count4 = 0;
-// __thread unsigned long long trampoline_count5 = 0;
-// __thread unsigned long long trampoline_count6 = 0;
-// __thread unsigned long long trampoline_count7 = 0;
-//#endif
 
 //timer
 #if REPORT == 1
@@ -400,6 +394,18 @@ void insert_current_msg_after_given_event(msg_t*given_event){
 		#endif
 	}
 }
+void deallocate_event(msg_t*event){
+	list_node_clean_by_content(event); 
+	list_insert_tail_by_content(freed_local_evts, event);
+	return;
+}
+
+msg_t *allocate_event(unsigned int lp_idx){
+	msg_t*event=list_allocate_node_buffer_from_list(lp_idx, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+	list_node_clean_by_content(event);
+	return event;
+}
+
 // può diventare una macro?
 // [D] no, non potrebbe più essere invocata lato modello altrimenti
 void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
@@ -540,13 +546,14 @@ void check_OnGVT(unsigned int lp_idx){
 		current_msg=NULL;
 		LPS[current_lp]->old_valid_bound=LPS[current_lp]->bound;
 		#endif
-		#if PREEMPT_COUNTER==1 //make this code not interruptible
-		increment_preempt_counter();
+
+		#if HANDLE_INTERRUPT_WITH_CHECK==1 //make this code not interruptible
+		enter_in_unpreemptable_zone();
 		#endif
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
-		#if PREEMPT_COUNTER==1
-		decrement_preempt_counter();
+		#if HANDLE_INTERRUPT_WITH_CHECK==1
+		exit_from_unpreemptable_zone();
 		#endif
 		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
@@ -651,6 +658,11 @@ void init_simulation(unsigned int thread_id){
 		nodes_init();
 		printf("Nodes_init finished\n");
 		//process_init_event
+		#if IPI_SUPPORT==1 && DEBUG==1
+		current_lp = 0;//make current_lp valid value,it will be reset to 0 in the next for loop
+		check_trampoline_function();
+		printf("all checks passed on trampoline function\n");
+		#endif
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
        		current_msg->sender_id 		= -1;//
@@ -739,60 +751,28 @@ stat64_t execute_time;
 		}
 #endif
 #if HANDLE_INTERRUPT==1
-		event->evt_start_time = RDTSC();//event starting time sampled just before updating preemption_counter
+		clock_timer_start(event->evt_start_time);//event starting time sampled just before updating preemption_counter
 		event->execution_mode=LPS[LP]->state;
-#endif
-		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
-			#if PREEMPT_COUNTER==1
-			#if INTERRUPT_FORWARD==1
-			#else
-			increment_preempt_counter();
-			#endif
-			#endif
-		}
-		else{
-			#if PREEMPT_COUNTER==1
-			#if INTERRUPT_SILENT==1
-			#else
-			increment_preempt_counter();
-			#endif
-			#endif
-		}
-		#if HANDLE_INTERRUPT==1
+		//start exposition of current_msg
 		LPS[current_lp]->msg_curr_executed=event;
-		#endif
-		#if HANDLE_INTERRUPT==1
-		decrement_preempt_counter();
+#endif
+		#if HANDLE_INTERRUPT_WITH_CHECK==1
+		enter_in_preemptable_zone();
 		#endif
 		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
 		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
-		#if HANDLE_INTERRUPT==1
-		increment_preempt_counter();
+		#if HANDLE_INTERRUPT_WITH_CHECK==1
+		exit_from_preemptable_zone();
 		#endif
-		if(LPS[LP]->state!=LP_STATE_SILENT_EXEC){
-			#if PREEMPT_COUNTER==1
-			#if INTERRUPT_FORWARD==1
-			#else
-			decrement_preempt_counter();
-			#endif
-			#endif
-		}
-		else{
-			#if PREEMPT_COUNTER==1
-			#if INTERRUPT_SILENT==1
-			#else
-			decrement_preempt_counter();
-			#endif
-			#endif
-		}
 
 #if IPI_SUPPORT==1
-		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, event->execution_mode, event_type, RDTSC()-event->evt_start_time);
+		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, event->execution_mode, event_type, clock_timer_value(event->evt_start_time));
 #endif
 
 		#if HANDLE_INTERRUPT==1
+		//reset exposition of current_msg in execution
 		LPS[current_lp]->msg_curr_executed=NULL;
 		#endif
 
@@ -916,6 +896,9 @@ void thread_loop(unsigned int thread_id) {
 				#endif
 				make_LP_state_invalid(LPS[current_lp]->old_valid_bound);
 			}
+			#if DEBUG==1
+			reset_nesting_counters();
+			#endif
 			unlock(current_lp);
 			break;
 		#endif
@@ -1098,12 +1081,12 @@ void thread_loop(unsigned int thread_id) {
 		// PROCESS //
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 		// FLUSH // 
-		#if INTERRUPT_FORWARD==1 && HANDLE_INTERRUPT==1
-		decrement_preempt_counter();
+		#if HANDLE_INTERRUPT_WITH_CHECK==1
+		enter_in_preemptable_zone();
 		#endif
 		queue_deliver_msgs();
-		#if INTERRUPT_FORWARD==1 && HANDLE_INTERRUPT==1
-		increment_preempt_counter();
+		#if HANDLE_INTERRUPT_WITH_CHECK==1
+		exit_from_preemptable_zone();
 		#endif
 
 #if DEBUG==1//not present in original version
@@ -1198,22 +1181,6 @@ end_loop:
 	ipi_unregister();
 #endif
 
-	// printf( "Thread %u\n"
-	// 		"\tTrampoline Count 1: %llu\n"
-	// 		"\tTrampoline Count 2: %llu\n"
-	// 		"\tTrampoline Count 3: %llu\n"
-	// 		"\tTrampoline Count 4: %llu\n"
-	// 		"\tTrampoline Count 5: %llu\n"
-	// 		"\tTrampoline Count 6: %llu\n"
-	// 		"\tTrampoline Count 7: %llu\n",
-	// 		tid, trampoline_count1, trampoline_count2,
-	// 		trampoline_count3, trampoline_count4,
-	// 		trampoline_count5, trampoline_count6,
-	// 		trampoline_count7);
-	
-	// __sync_fetch_and_add(&ended_wt, 1);
-	// __sync_synchronize();
-
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} 
@@ -1224,18 +1191,9 @@ end_loop:
 			pthread_join(sleeper, NULL);
 		}
 	}
-
-// 	while(ended_wt!=n_cores);
-
-// 	if (tid==0) {
-// #if IPI_SUPPORT==1
-// 		fini_lp_stats(LPS, n_prc_tot);//LP-0 is in charge of removing allocated structs
-// #endif
-// 		statistics_fini();
-// 	}
 }
 
-#else
+#else//HANDLE_INTERRUPT
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state=0;
 #if ONGVT_PERIOD != -1

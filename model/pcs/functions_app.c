@@ -6,8 +6,6 @@
 
 #include "application.h"
 
-#include <preempt_counter.h>
-
 #define HOUR			3600
 #define DAY				(24 * HOUR)
 #define WEEK			(7 * DAY)
@@ -97,17 +95,9 @@ void deallocation(unsigned int me, lp_state_type *pointer, int ch, simtime_t lvt
 		}
 		RESET_CHANNEL(pointer, ch);
 
-		#if HANDLE_INTERRUPT==1
-		increment_preempt_counter();
-		#endif
-
 		free(c->sir_data);
 
 		free(c);
-
-		#if HANDLE_INTERRUPT==1
-		decrement_preempt_counter();
-		#endif
 
 	} else {
 		printf("(%d) Unable to deallocate on %p, channel is %d at time %f\n", me, c, ch, lvt);
@@ -147,35 +137,21 @@ int allocation(lp_state_type *pointer) {
 
 		SET_CHANNEL(pointer,index);
 
-		#if HANDLE_INTERRUPT==1
-		increment_preempt_counter();
-		#endif
-
 		c = (channel*)malloc(sizeof(channel));
 		if(c == NULL){
 			printf("malloc error: unable to allocate channel!\n");
 			exit(-1);
 		}
 
-		#if HANDLE_INTERRUPT==1
-		decrement_preempt_counter();
-		#endif
-
 		c->next = NULL;
 		c->prev = pointer->channels;
 		c->channel_id = index;
 
-		#if HANDLE_INTERRUPT==1
-		increment_preempt_counter();
-		#endif
 		c->sir_data = (sir_data_per_cell*)malloc(sizeof(sir_data_per_cell));
 		if(c->sir_data == NULL){
 			printf("malloc error: unable to allocate SIR data!\n");
 			exit(-1);
 		}
-		#if HANDLE_INTERRUPT==1
-		decrement_preempt_counter();
-		#endif
 
 		if(pointer->channels != NULL)
 			pointer->channels->next = c;

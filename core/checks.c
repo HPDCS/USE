@@ -22,9 +22,14 @@
 #include <handle_interrupt.h>
 #endif
 
+#if HANDLE_INTERRUPT==1
+#include <handle_interrupt_with_check.h>
+#endif
+
 #if PREEMPT_COUNTER==1
 #include <preempt_counter.h>
 #endif
+
 extern __thread unsigned long long current_evt_state;
 extern __thread void* current_evt_monitor;
 
@@ -62,7 +67,9 @@ void check_CFV_ALREADY_HANDLED(){
 				gdb_abort;
 	}
 	#endif
-
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	check_unpreemptability();
+	#endif
 	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
 		printf("dummy bound is not NEW_EVT CFV_ALREADY_HANDLED\n");
@@ -95,6 +102,19 @@ void check_thread_loop_before_fetch(){
 		gdb_abort;
 	}
 	#endif
+
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	if(nesting_zone_preemptable!=NO_NESTING){
+		printf("nesting preemptable different than NO_NESTING in thread_loop_before_fetch\n");
+		gdb_abort;
+	}
+	if(nesting_zone_unpreemptable!=NO_NESTING){
+		printf("nesting unpreemptable different than NO_NESTING in thread_loop_before_fetch\n");
+		gdb_abort;
+	}
+	check_unpreemptability();
+	#endif
+
 	for(unsigned int lp_idx=0;lp_idx<n_prc_tot;lp_idx++){
 		if (haveLock(lp_idx)){
 			printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
@@ -115,18 +135,17 @@ void check_CFV_TO_HANDLE(){
 				printf(RED("[%u] Sto operando senza lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 				gdb_abort;
 	}
-	#if PREEMPT_COUNTER==1
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	check_unpreemptability();
+	#endif
 	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
 			printf("interrupt code not interruptible\n");
 			gdb_abort;
 	}
-	#endif
-	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->old_valid_bound==NULL){
 		printf("old_valid_bound is NULL CFV_TO_HANDLE\n");
 		gdb_abort;
 	}
-	#endif
 }
 
 void check_thread_loop_after_fetch(){
@@ -139,6 +158,20 @@ void check_thread_loop_after_fetch(){
 		printf("LP state is not ready\n");
 		gdb_abort;
 	}
+
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	if(nesting_zone_preemptable!=NO_NESTING){
+		printf("nesting preemptable different than NO_NESTING in thread_loop_before_fetch\n");
+		gdb_abort;
+	}
+	if(nesting_zone_unpreemptable!=NO_NESTING){
+		printf("nesting unpreemptable different than NO_NESTING in thread_loop_before_fetch\n");
+		gdb_abort;
+	}
+	check_unpreemptability();
+	#endif
+
+
 	#if HANDLE_INTERRUPT==1
 	if(LPS[current_lp]->dummy_bound->state!=NEW_EVT){
 		printf("dummy bound is not NEW_EVT\n");
@@ -319,6 +352,8 @@ void check_thread_loop_after_executeEvent(){
         printf("not empty pool count,tid=%d\n",tid);
         gdb_abort;
     }
+
+    
 #if POSTING==1
     for(unsigned int i=0;i<MAX_THR_HASH_TABLE_SIZE;i++){
         if(_thr_pool.collision_list[i]!=NULL){

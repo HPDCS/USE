@@ -129,10 +129,21 @@ size_t get_log_size(malloc_state *logged_state){
 * @return A pointer to the allocated memory
 *
 */
+#if HANDLE_INTERRUPT_WITH_CHECK==1
+#include <handle_interrupt_with_check.h>
+#endif
 void *__wrap_malloc(size_t size) {
 	void *ptr;
 
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	enter_in_unpreemptable_zone();
+	#endif
+
 	ptr = do_malloc(current_lp, recoverable_state[current_lp], size);
+
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	exit_from_unpreemptable_zone();
+	#endif
 
 	return ptr;
 }
@@ -156,7 +167,16 @@ void *__wrap_malloc(size_t size) {
 *
 */
 void __wrap_free(void *ptr) {
+
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	enter_in_unpreemptable_zone();
+	#endif
+
 	do_free(current_lp, recoverable_state[current_lp], ptr);
+
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	exit_from_unpreemptable_zone();
+	#endif
 }
 
 
@@ -177,6 +197,10 @@ void *__wrap_realloc(void *ptr, size_t size){
 	void *new_buffer;
 	size_t old_size;
 	malloc_area *m_area;
+
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	enter_in_unpreemptable_zone();
+	#endif
 
 	// If ptr is NULL realloc is equivalent to the malloc
 	if (ptr == NULL) {
@@ -203,6 +227,10 @@ void *__wrap_realloc(void *ptr, size_t size){
 	memcpy(new_buffer, ptr, size > old_size ? size : old_size);
 	__wrap_free(ptr);
 
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	exit_from_unpreemptable_zone();
+	#endif
+
 	return new_buffer;
 }
 
@@ -222,6 +250,10 @@ void *__wrap_calloc(size_t nmemb, size_t size){
 
 	void *buffer;
 
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	enter_in_unpreemptable_zone();
+	#endif
+
 	if (nmemb == 0 || size == 0)
 		return NULL;
 
@@ -231,6 +263,10 @@ void *__wrap_calloc(size_t nmemb, size_t size){
 
 	bzero(buffer, nmemb * size);
 
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	exit_from_unpreemptable_zone();
+	#endif
+	
 	return buffer;
 }
 

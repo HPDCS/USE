@@ -3,10 +3,12 @@
 
 void send_ipi_to_lp(msg_t*event);
 void ipi_unregister();
+void check_trampoline_function();
 void ipi_print_and_reset_counters();
 //void register_thread_to_ipi_module(unsigned int thread_id,const char* function_name,unsigned long address_function);
 void register_thread_to_ipi_module(unsigned int thread_id, const char* function_name, unsigned long address_function);
 extern void cfv_trampoline(void);
+extern void sync_trampoline(void);
 #define MAX_LEN_PROGRAM_NAME 64 //this len includes string terminator
 
 extern __thread void * alternate_stack;

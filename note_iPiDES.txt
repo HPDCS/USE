@@ -1,8 +1,13 @@
 TODO:
--inserire contatore di debug kernel mode
--inserire check_trampoline_asynch
--rimuovere interrupt_silent,interrupt_forward
--ristrutturare la modularità delle macro
+-esposizione dell'evento a carico della macro handle_interrupt,così non è necessario avere supporto ipi per avere questa informazione per gli altri thread
+-macro ipi support calcola modello decisionale
+-pointer a funzione per i check su decrement,se parametro è NULL viene chiamata solo la funzione di default,la funzione passata deve essere una preoperazione per la gestione dell'interrupt.
+-in pcs ipi sent << ipi_gestiti trampoline, ./pcs 8 9 10sec con macro POSTING=1 IPI_SUPPORT=1 HANDLE_INTERRUPT_WITH_CHECK=1 CHECKPOINT_PERIOD=2
+
+-check sincrono se decremento porta counter a 0
+-check sincrono chiama una funzione con parametri che fa tutto ed internamente controlla e gestisce tutti i casi(se current_msg not null non inserirlo,inserire a prescindere evento in coda locale)
+-rafforzare check in fetch.c su delivery degli ipi?
+
 -vedere la parte dei seed come viene ripristinata per capire perché le 2 scritture della random non sono interrompibili.(gdb restituisce seed2=null segmentation fault)
 
 -rendere la rollback completamente interrompibile
@@ -10,10 +15,8 @@ TODO:
 -le statistiche vanno prese per tutto il rollback e non solo il singolo evento
 -alcune statistiche vanno estese a tutta la gestione dell'evento anche in forward
 -aumentare range di interrompibilità step by step
+
 -rilassare preemption_counter sulla enqueue della coda globale in queue_deliver_msgs
--check sincrono se decremento porta counter a 0
--check sincrono chiama una funzione con parametri che fa tutto ed internamente controlla e gestisce tutti i casi(se current_msg not null non inserirlo,inserire a prescindere evento in coda locale)
--rafforzare check in fetch.c su delivery degli ipi?
 -constant_child_invalidation da debuggare,degrada le performance ma non a causa delle istruzioni atomiche
 
 -operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice es rollback_length.

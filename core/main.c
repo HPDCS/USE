@@ -141,17 +141,14 @@ void start_simulation() {
 #if PREEMPT_COUNTER==1
     printf("\t- PREEMPT_COUNTER enabled.\n");
 #endif
-#if INTERRUPT_SILENT==1
-    printf("\t- INTERRUPT_SILENT enabled.\n");
-#endif
-#if INTERRUPT_FORWARD==1
-    printf("\t- INTERRUPT_FORWARD enabled.\n");
-#endif
 #if LONG_JMP==1
     printf("\t- LONG_JMP enabled.\n");
 #endif
 #if HANDLE_INTERRUPT==1
     printf("\t- HANDLE_INTERRUPT enabled.\n");
+#endif
+#if HANDLE_INTERRUPT_WITH_CHECK==1
+    printf("\t- HANDLE_INTERRUPT_WITH_CHECK enabled.\n");
 #endif
 #if POSTING==1
     printf("\t- POSTING enabled.\n");
