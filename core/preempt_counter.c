@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <preempt_counter.h>
 #include <hpdcs_utils.h>
+
 #if PREEMPT_COUNTER==1
 #define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",*preempt_count_ptr,thread_id)
 #if IPI_SUPPORT==1
@@ -43,6 +44,7 @@ unsigned long decrement_preempt_counter(){
 			gdb_abort;
 	}
 	#endif
+	//this barrier before decrement follows implementation of preempt_enable() function in the linux kernel v 5.0
 	__asm__ __volatile__("": : :"memory");
 	value = __sync_sub_and_fetch(preempt_count_ptr, 1);
 	return value;
@@ -61,6 +63,7 @@ unsigned long increment_preempt_counter(){
 	}
 	#endif
 	value = __sync_add_and_fetch(preempt_count_ptr, 1);
+	//this barrier after increment follows implementation of preempt_disable() function in the linux kernel v 5.0
 	__asm__ __volatile__("": : :"memory");
 	return value;
 }

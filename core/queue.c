@@ -116,7 +116,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     enter_in_unpreemptable_zone();
     #endif
 
-    //branch if not present in original version because _thr_pool.messages[_thr_pool._thr_pool_count].father==NULL 
+    //branch "if" not present in original version because _thr_pool.messages[_thr_pool._thr_pool_count].father==NULL 
     //because previous call are queue_clean and queue_deliver_msgs not interruptible
     if(_thr_pool.messages[_thr_pool._thr_pool_count].father!=NULL){//re-use event
         msg_ptr=_thr_pool.messages[_thr_pool._thr_pool_count++].father;//get message
@@ -143,7 +143,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->data_size = event_size;
     msg_ptr->type = event_type;
 
-#if IPI_SUPPORT==1
+#if HANDLE_INTERRUPT==1
     msg_ptr->evt_start_time = 0ULL;//event starting time initialization
 #endif
 
@@ -155,7 +155,9 @@ void queue_clean(){//this function is interruptible,because this is the first fu
     _thr_pool._thr_pool_count = 0;
 }
 
-#else
+#else//original version of queue_clean
+//TODO modify queue_clean queue_insert queue_deliver_msg in order to follows implementation present in HANDLE_INTERRUPT macro,with cleaning in o(1)
+//and buffer reusage in queue_insert
 void queue_clean(){ 
     unsigned int i = 0;
     msg_t* current;
@@ -397,12 +399,13 @@ bool is_valid(msg_t * event){
     unsigned int father_LP_epoch=get_epoch(father_epoch_and_ts);
     unsigned int father_epoch=event->father->epoch;
 
-    if(father_LP_epoch==father_epoch)
+    if(father_LP_epoch==father_epoch)//we don't know if father will be re-executed
         return validity;
 
+    //father_LP_epoch is greater than father_epoch,maybe father will be re-executed(if (LP_rollback_ts < event->father->timestamp))
     simtime_t LP_rollback_ts=get_timestamp(father_epoch_and_ts);
 
-    if(LP_rollback_ts<event->father->timestamp) //father will be re-executed
+    if(LP_rollback_ts < event->father->timestamp) //father will be re-executed
         return false;
 
     return validity;

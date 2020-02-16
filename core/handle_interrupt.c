@@ -8,11 +8,6 @@
 #include <checks.h>
 #endif
 
-
-/*#if POSTING==1
-#include <posting.h>
-#endif*/
-
 extern __thread cntx_buf cntx_loop;
 
 msg_t* allocate_dummy_bound(unsigned int lp_idx){

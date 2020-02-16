@@ -100,6 +100,10 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 				,stm_event_processing_time
 				,stm_safety_wait
 #endif
+
+#if HANDLE_INTERRUPT==1	
+				,event_handler_timer
+#endif
 				;
 #endif
 
@@ -541,7 +545,7 @@ void check_OnGVT(unsigned int lp_idx){
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
 		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
 		#if HANDLE_INTERRUPT==1
-		//overwrite current_lp and current_msg
+		//overwrite current_lp and current_msg,because this function is called in round_robin manner,function nested starting from these can take decision reading current_lp and current_msg!
 		current_lp=lp_idx;
 		current_msg=NULL;
 		LPS[current_lp]->old_valid_bound=LPS[current_lp]->bound;
@@ -759,10 +763,9 @@ stat64_t execute_time;
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		enter_in_preemptable_zone();
 		#endif
-		//TODO insert memory barrier here, update counter must be done before execution of ProcessEvent
+		
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
-		//TODO insert memory barrier here, update counter must be done after ProcessEvent completion
-		//these three "instructions" have a causality order: update counter,ProcessEvent,update counter
+		
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		exit_from_preemptable_zone();
 		#endif
@@ -808,11 +811,6 @@ stat64_t execute_time;
 	return; //non serve tornare gli eventi prodotti, sono già visibili al thread
 }
 
-
-#if IPI_SUPPORT==1
-extern struct run_time_data rt_data;
-#endif
-
 #if HANDLE_INTERRUPT==1
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state=0;
@@ -825,11 +823,10 @@ void thread_loop(unsigned int thread_id) {
 	if(thread_id==0)
 		run_time_data_init();
 	//register thread in order to send and to receive IPI
-	//register_thread_to_ipi_module(thread_id,"ProcessEvent",(unsigned long)ProcessEvent);
 	register_thread_to_ipi_module(thread_id,"cfv_trampoline",(unsigned long)cfv_trampoline);
 #endif
 	initialize_preempt_counter(thread_id);//init counter
-	//INIT with section not interruptible!!!
+	//init with section not interruptible!!!
 	init_simulation(thread_id);
 
 #if REPORT == 1 
@@ -837,7 +834,11 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 	int res=set_jmp(&cntx_loop);
-	//this switch is not interruptible!!!
+
+	#if HANDLE_INTERRUPT_WITH_CHECK==1 && DEBUG==1
+	check_unpreemptability();
+	#endif
+	//this switch is not interruptible in every case!!!
 	switch (res){
 		case CFV_INIT :
 			#if DEBUG==1
@@ -870,11 +871,11 @@ void thread_loop(unsigned int thread_id) {
         #endif
         	if(LPS[current_lp]->state==LP_STATE_READY){
         		statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
-        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC,clock_timer_value(event_processing_timer));
+        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC,clock_timer_value(event_handler_timer));
         	}
         	else{
         		statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
-        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
+        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_handler_timer));
         	}
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
@@ -971,7 +972,7 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH_SUCC, (double)clock_timer_value(fetch_timer));
 #endif
 		change_bound_with_current_msg();
-		
+		//now bound is current_msg-epsilon,current_msg appares in future in respect of other threads
 		//now bound is corrupted,remember to restore it before next fetch!!
 
 		if ((current_lvt < LPS[current_lp]->old_valid_bound->timestamp || 
@@ -994,10 +995,6 @@ void thread_loop(unsigned int thread_id) {
 			old_state = LPS[current_lp]->state;
 			LPS[current_lp]->state = LP_STATE_ROLLBACK;
 
-#if REPORT == 1 
-			//clock_timer_start(rollback_timer);
-#endif
-
 		#if DEBUG == 1
 			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
 			#if CONSTANT_CHILD_INVALIDATION==1
@@ -1010,14 +1007,13 @@ void thread_loop(unsigned int thread_id) {
 #if VERBOSE > 0
 			printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
 				LPS[current_lp]->old_valid_bound->timestamp, 	LPS[current_lp]->old_valid_bound->tie_breaker,	LPS[current_lp]->old_valid_bound , 
-				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
+				current_msg->timestamp,current_msg->tie_breaker,current_msg);
 #endif		
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
 			
 			LPS[current_lp]->state = old_state;
 			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
-			if(LPS[current_lp]->LP_state_is_valid==true){
-				//event was in past before rollback
+			if(LPS[current_lp]->LP_state_is_valid==true){//if event was in past before rollback
 				if(current_evt_state != ANTI_MSG) {
 					statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 				}
@@ -1030,8 +1026,8 @@ void thread_loop(unsigned int thread_id) {
 				LPS[current_lp]->dummy_bound->state=NEW_EVT;
 				LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
 				LPS[current_lp]->old_valid_bound=NULL;
-				unlock(current_lp);
-				continue;
+				unlock(current_lp);//release lock
+				continue;//this event cannot be processed,rollback was used only to restore state,so give up this event and fetch another event
 			}
 		}
 
@@ -1046,8 +1042,8 @@ void thread_loop(unsigned int thread_id) {
 			delete(nbcalqueue, current_node);
 			LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
 			LPS[current_lp]->old_valid_bound=NULL;
-			unlock(current_lp);
-			continue;
+			unlock(current_lp);//release lock
+			continue;//
 		}
 		
 	#if DEBUG==1

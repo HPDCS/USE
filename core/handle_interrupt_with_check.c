@@ -8,12 +8,14 @@
 #if DEBUG==1
 __thread unsigned int nesting_zone_preemptable=0;
 __thread unsigned int nesting_zone_unpreemptable=0;
-#endif
+
 
 void reset_nesting_counters(){
 	nesting_zone_preemptable=0;
 	nesting_zone_unpreemptable=0;
 }
+#endif
+
 unsigned long enter_in_unpreemptable_zone(){
 	#if DEBUG==1
 	if(nesting_zone_unpreemptable>=MAX_NESTING_ZONE_UNPREEMPTABLE){

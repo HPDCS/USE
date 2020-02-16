@@ -7,6 +7,13 @@
 #define POSTED_VALID 0x1
 #define POSTED_INVALID 0x2
 
+//MAX_THR_HASH_TABLE_SIZE must be min(MAX_LPs,THR_POOL_SIZE)
+#if THR_POOL_SIZE<=MAX_LPs
+    #define MAX_THR_HASH_TABLE_SIZE (THR_POOL_SIZE)
+#else
+    #define MAX_THR_HASH_TABLE_SIZE (MAX_LPs)
+#endif
+
 void post_information_with_straggler(msg_t*new_hole);
 void insert_msg_in_hash_table(msg_t*msg_ptr);
 

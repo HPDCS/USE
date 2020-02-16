@@ -7,9 +7,8 @@
  * MACRO "IPI_SUPPORT" MUST BE *
  * DEFINED AND SET TO 1.       *
  *******************************/
+#if IPI_SUPPORT==1
 
-
-#if HANDLE_INTERRUPT==1
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,7 +16,7 @@
 #include <core.h>
 #include <simtypes.h>
 
-#ifndef RDTSC
+/*#ifndef RDTSC
 #define RDTSC() ({ \
 	unsigned int cycles_low; \
 	unsigned int cycles_high; \
@@ -33,10 +32,7 @@
 	); \
 	(((unsigned long long int) cycles_high << 32) | cycles_low); \
 })
-#endif
-#endif
-
-# if IPI_SUPPORT==1
+#endif*/
 
 #define ALPHA				0.3
 #define NUMBER_OF_TYPES		30
@@ -99,5 +95,6 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 	}
 }
 
-# endif
+#endif//IPI_SUPPORT
+
 #endif

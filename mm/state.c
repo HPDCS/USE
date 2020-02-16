@@ -58,7 +58,6 @@
 
 #if PREEMPT_COUNTER==1
 #include <preempt_counter.h>
-extern __thread unsigned long long * preempt_count_ptr;
 #endif
 
 #if HANDLE_INTERRUPT==1
@@ -498,6 +497,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		rollback_lenght = LPS[lid]->num_executed_frames; 
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		rollback_lenght -= LPS[lid]->num_executed_frames;
+
 		#if CONSTANT_CHILD_INVALIDATION==1
 		double new_epoch=get_epoch_of_LP(lid)+1;
 		atomic_epoch_and_ts temp;
@@ -507,6 +507,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		#else
 		LPS[lid]->epoch++;
 		#endif
+		
 		LPS[lid]->from_last_ckpt = reprocessed_events%CHECKPOINT_PERIOD; // TODO
 		// TODO
 		//LPS[lid]->from_last_ckpt = ??;
