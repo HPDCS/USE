@@ -19,15 +19,6 @@
 
 #define THR_POOL_SIZE		128
 
-#if POSTING==1
-//MAX_THR_HASH_TABLE_SIZE must be min(MAX_LPs,THR_POOL_SIZE)
-#if THR_POOL_SIZE<=MAX_LPs
-	#define MAX_THR_HASH_TABLE_SIZE (THR_POOL_SIZE)
-#else
-	#define MAX_THR_HASH_TABLE_SIZE (MAX_LPs)
-#endif
-#endif
-
 #define MODE_SAF	1
 #define MODE_STM	2
 
