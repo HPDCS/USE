@@ -484,7 +484,15 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	}
 	#endif
 
+	#if HANDLE_INTERRUPT==1
+	start_exposition_of_current_event(current_msg);
+	#endif
+
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
+
+	#if HANDLE_INTERRUPT==1
+	end_exposition_of_current_event(current_msg);
+	#endif
 
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);

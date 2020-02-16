@@ -1,6 +1,8 @@
 TODO:
--esposizione dell'evento a carico della macro handle_interrupt,così non è necessario avere supporto ipi per avere questa informazione per gli altri thread
--macro ipi support calcola modello decisionale
+-ricontrollare tutte le statistiche nuove e vecchie
+-aggiungere altre statistiche che vengono in mente
+-testare nuove modifiche su macchina 58
+
 -pointer a funzione per i check su decrement,se parametro è NULL viene chiamata solo la funzione di default,la funzione passata deve essere una preoperazione per la gestione dell'interrupt.
 -in pcs ipi sent << ipi_gestiti trampoline, ./pcs 8 9 10sec con macro POSTING=1 IPI_SUPPORT=1 HANDLE_INTERRUPT_WITH_CHECK=1 CHECKPOINT_PERIOD=2
 
@@ -10,53 +12,19 @@ TODO:
 
 -vedere la parte dei seed come viene ripristinata per capire perché le 2 scritture della random non sono interrompibili.(gdb restituisce seed2=null segmentation fault)
 
--rendere la rollback completamente interrompibile
--rendere la gestione dell'evento completamente interrompibile con pubblicazione dell'evento eseguito prima della processevent,reset della pubblicazione dopo la gestione dell'evento
--le statistiche vanno prese per tutto il rollback e non solo il singolo evento
--alcune statistiche vanno estese a tutta la gestione dell'evento anche in forward
--aumentare range di interrompibilità step by step
-
 -rilassare preemption_counter sulla enqueue della coda globale in queue_deliver_msgs
 -constant_child_invalidation da debuggare,degrada le performance ma non a causa delle istruzioni atomiche
 
--operazioni che dipendono dalle statistiche potrebbero funzionare meglio se le statistiche vengo calcolate come si deve,a volte vengono calcolate male nel codice es rollback_length.
--varie statistiche non vengono calcolate adeguatamente anche nel caso in cui non ci siano interruzioni
--MAX_LP 2048 non viene gestito correttamente,se viene passato un numero più grande il programma non termina con errore,as expected!!
--se si vedono i riferimenti alla macro MAX_LPS si vede che non viene utilizzata adeguatamente, per la macro MAX_SOBJS viene allocata troppa memoria,basterebbe n_prc_tot?(force full mai utilizzata,allocazione globale statica)
--rivedere il calcolo delle statistiche,rinominare alcuni campi della struct in modo tale da suddividerle per thread per LP e da calcolare in modo ordinato rispetto alla struct stat64_t il tempo medio o numero medio deve avere mean nel nome.
--counter_rollbacks_length viene sommata 2 volte in gather_statistics
--la probabilità che su interruzione venga interrotto un altro thread dell'applicazione in un sistema scarico è bassa,in ogni caso se succede possiamo sempre sfruttare lo standing_ipi
--la read dal device dev/random può essere bloccante e fa si che il programma impieghi molto tempo per finire di completare,tutto il tempo è dedicato a leggere dal dev/random,utilizzare dev/urandom che non è bloccante,ma restituisce una sequenza di byte randomici di minore qualità rispetto alla dev/random, in alternativa creare a mano il file di configurazione in modo tale che legga sempre lo stesso numero
--righe 403,404 non necessarie in numerical.c
--nel programma originale mettere volatile alla variabile ready_wt
--nel programma originale modificare il node->counter(preso dall'evento precedente) nella fetch con event->tiebreaker(preso dall'evento corrente)
-
--inserire barriera leggera di memoria a tutti gli aggiornamenti del counter(+1 -1). Altrimenti un riordino delle istruzioni crea problemi!!
--micro bug in ONGVT_PERIOD legato all'aggiornamento del commit_ts e commit_tb horizon è possibile impostare il tb non correlato con il timestamp e per questo si vede la fine simulazione su un evento non safe!!
-
-
--idea:
--rimuovere father frame,attualmente non utilizzato e se si utilizza la CONSTANT_CHILD_INVALIDATION non serve più father frame
-
 Osservazioni:
+-la probabilità che su interruzione venga interrotto un altro thread dell'applicazione in un sistema scarico è bassa,in ogni caso se succede possiamo sempre sfruttare lo standing_ipi
 -se nella simulazione il master seed è sempre lo stesso e tutti gli eventi hanno ts diverso(tb=1) la simulazione termina sempre con lo stesso stato finale e stato transitorio?
 -se vengono generati eventi con lo stesso ts (tb>1), è impossibile avere che la simulazione finisca sempre alla stessa maniera, o ciò è valido solo se vengono generati almeno 1 volta 2 eventi con lo stesso ts per lo stesso LP?(se vengono generati eventi con stesso ts su diversi LP la simulazione può finire allo stesso modo)
 -in base alle risposte delle precedenti domande potrebbe essere utile calcolare il numero di volte che i ts sono uguali(per LP o in generale),se con un certo seme iniziale stessi thread e stesso numero di LP si ottiene che i ts sono tutti diversi allora essi saranno sempre tutti diversi e ci permette di ottenere simulazioni testabili.
 -se viene generato un nodo con ts x e successivamente rimosso e poi viene generato un altro nodo con ts x risulta che hanno diverso tb o no?
 -tra 2 nbc_prune gli eventi non vengono collezionati
 -la variabile safe può avere valori diversi tra i thread(il thread che esegue un evento e ha il lock potrebbe vedere quell'evento come non safe)
--checkpoint recalculation capace che funziona male perché il rollback lenght è lungo attualmente,siccome arriva sempre al destination ts e non si ferma al primo evento invalido.(inoltre non è necessario ricalcolarlo se è stata attivata la modalità LP_STATE_ON_GVT è un rollback spontaneo)
-
--prune localqueue with ts old è dead code,mai chiamato da nessuno.
--rimuovere stop silent e tutto ciò che dipende da essa in silent exec
 -a volte macro innestate sono necessarie se la macro inner ha un else
--counter inizialmente è 0,se voglio essere interrompibile non faccio niente,se non voglio essere interrompibile aumento il counter eseguo e poi decremento.
--hash su LP_state
--restore state non viene chiamata da nessuno.
--l'indirizzo current_base_pointer è sempre lo stesso e non serve riaggiornalo(confusione,diminuisce la leggibilità del codice)
--check di integrità su LP_state e checkpoint per essere sicuri che non siano corrotti e che siano coerenti(tramite hash o altro)
 -current_base_pointer è null,viene allocato una sola volta con l'evento INIT nella ProcessEvent
--checkpoint recalculation non è attivo di default,dipende dal rollback length,ma quest'ultimo viene calcolato male.
 -i checkpoint vengono buttati durante il rollback se LP è nello stato LP_STATE_ROLLBACK, non vengono buttati in LP_STATE_ONGVT
 -l'evento init viene allocato normalmente,inizializzato e passato alla processEvent con init come parametro,l'evento init non viene mai committato ma non è un problema perché non appare in coda globale,inoltre successivamente alla sua esecuzione e incremento dei frame dell'LP viene forzato un checkpoint,quindi è sempre possibile ritornare ad un punto iniziale con evento init eseguito.Questo fa pensare che è safe spostare il log_state dopo l'incremento dei frame dell'LP
 

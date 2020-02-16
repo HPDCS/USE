@@ -75,7 +75,7 @@ typedef struct __msg_t
 	bool collectionable;//used for garbage collection
 #endif
 #if HANDLE_INTERRUPT==1
-	unsigned int execution_mode;
+	unsigned int execution_mode;//e.g. LP_STATE_READY,LP_STATE_SILENT_EXEC ecc
 	unsigned long long int evt_start_time;//set to the event starting time when executed, 0 otherwise
 #endif
 } msg_t;

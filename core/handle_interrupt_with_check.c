@@ -59,12 +59,15 @@ unsigned long exit_from_preemptable_zone(){
 	return increment_preempt_counter();
 }
 
+#if DEBUG==1
 void check_preemptability(){
-	if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is unpreemptable\n");
+	if(nesting_zone_preemptable==0){
+		printf("region of code unpreemptable\n");
 		gdb_abort;
 	}
 }
+#endif
+
 void check_unpreemptability(){
 	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
 		printf("code is preemptable\n");

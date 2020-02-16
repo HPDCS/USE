@@ -233,12 +233,27 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_IPI_RECEIVED:
 			stats[idx].ipi_received += value;
 			break;
+		case STAT_IPI_SYSCALL_TIME:
+			stats[idx].clock_exec_ipi_syscall += value;
+			break;
 
 		#endif
 
 		#if HANDLE_INTERRUPT==1 && REPORT==1
 		case STAT_EVENT_NOT_FLUSHED:
 			stats[idx].event_not_flushed += value;
+			break;
+		case STAT_CLOCK_EXPOSITION_FORWARD:
+			stats[idx].clock_exposition_forward += value;
+			break;
+		case STAT_CLOCK_EXPOSITION_SILENT:
+			stats[idx].clock_exposition_silent += value;
+			break;
+		case STAT_EVENT_EXPOSITION_FORWARD:
+			stats[idx].event_exposition_forward += value;
+			break;
+		case STAT_EVENT_EXPOSITION_SILENT:
+			stats[idx].event_exposition_silent += value;
 			break;
 		#endif
 
@@ -277,9 +292,6 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			break;
 		case STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC:
 			stats[idx].clock_exec_evt_inter_silent_exec += value;
-			break;
-		case STAT_IPI_SYSCALL_TIME:
-			stats[idx].clock_exec_ipi_syscall += value;
 			break;
 		#endif
 
@@ -410,6 +422,10 @@ void gather_statistics() {
 
 	#if HANDLE_INTERRUPT==1 && REPORT==1
 		system_stats->event_not_flushed  += lp_stats[i].event_not_flushed;//per lp event that lp father doesn't flush
+		system_stats->clock_exposition_silent += lp_stats[i].clock_exposition_silent;
+		system_stats->clock_exposition_forward += lp_stats[i].clock_exposition_forward;
+		system_stats->event_exposition_silent += lp_stats[i].event_exposition_silent;
+		system_stats->event_exposition_forward += lp_stats[i].event_exposition_forward;
 	#endif
 
 	#if POSTING==1 && REPORT==1
@@ -448,7 +464,7 @@ void gather_statistics() {
 	system_stats->clock_silent       /= system_stats->events_silent;
 	system_stats->clock_safety_check /= system_stats->counter_safety_check;
 	system_stats->clock_rollback     /= system_stats->counter_rollbacks;
-	// TODO
+	// TODO rivedere questa statistica, perché incrementa su lp_stats[i] è già stata calcolata dentro il for degli lp
 	system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
 	system_stats->clock_checkpoint   /= system_stats->counter_checkpoints;
 	system_stats->clock_recovery     /= system_stats->counter_recoveries;
@@ -468,6 +484,19 @@ void gather_statistics() {
 	#if HANDLE_INTERRUPT==1 && REPORT==1
 	system_stats->event_not_flushed_tot = system_stats->event_not_flushed;//per lp event that lp father doesn't flush
     system_stats->event_not_flushed/= n_prc_tot;
+    
+    system_stats->event_exposition_forward_tot=system_stats->event_exposition_forward;
+    system_stats->event_exposition_forward /= n_prc_tot;
+
+    system_stats->event_exposition_silent_tot=system_stats->event_exposition_silent;
+    system_stats->event_exposition_silent /= n_prc_tot;
+
+    system_stats->clock_exposition_forward_tot=system_stats->clock_exposition_forward;
+    system_stats->clock_exposition_forward /= system_stats->event_exposition_forward_tot;
+
+    system_stats->clock_exposition_silent_tot=system_stats->clock_exposition_silent;
+    system_stats->clock_exposition_silent /= system_stats->event_exposition_silent_tot;
+    
     #endif
 
 	#if POSTING==1 && REPORT==1
@@ -605,7 +634,7 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->ipi_received_tot);
 	printf("IPI received per thread.........................: %12.2f\n",
 		stats->ipi_received);
-	printf("IPI sent sycall clocks..........................: %12lu\n",
+	printf("IPI sent syscall................................: %12lu clocks\n",
 		(unsigned long)stats->clock_exec_ipi_syscall_tot);
 	printf("\n\n");
 	#endif
@@ -616,6 +645,17 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->event_not_flushed_tot);
 	printf("Event not flushed per LP........................: %12.2f\n",
 		stats->event_not_flushed);
+
+	printf("Exposition forward Time tot.....................: %12lu clocks\n",
+		(unsigned long)stats->clock_exposition_forward_tot);
+	printf("Exposition forward Time per event...............: %12.2f clocks\n",
+		stats->clock_exposition_forward);
+
+	printf("Exposition silent Time tot......................: %12lu clocks\n",
+		(unsigned long)stats->clock_exposition_silent_tot);
+	printf("Exposition silent Time per event................: %12.2f clocks\n",
+		stats->clock_exposition_silent);
+
     printf("\n");
     #endif
 

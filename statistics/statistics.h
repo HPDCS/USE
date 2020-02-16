@@ -81,33 +81,41 @@
 #if IPI_SUPPORT && REPORT==1
 #define STAT_IPI_SENDED             500
 #define STAT_IPI_RECEIVED           501
+#define STAT_IPI_SYSCALL_TIME       502
 #endif
 
 #if HANDLE_INTERRUPT==1 && REPORT==1
 #define STAT_EVENT_FLUSHED                  600
 #define STAT_EVENT_NOT_FLUSHED              601
+#define STAT_CLOCK_EXPOSITION_FORWARD       602
+#define STAT_CLOCK_EXPOSITION_SILENT        603
+#define STAT_EVENT_EXPOSITION_FORWARD       604
+#define STAT_EVENT_EXPOSITION_SILENT        605
 #endif
 
 #if POSTING==1 && REPORT==1
 
-#define STAT_INFOS_POSTED                   602
-#define STAT_INFOS_POSTED_ATTEMPT           603
-#define STAT_INFOS_POSTED_USEFUL            604
-#define STAT_SYNC_CHECK_SILENT            	605
-#define STAT_SYNC_CHECK_FORWARD           	606
+#define STAT_INFOS_POSTED                   700       
+#define STAT_INFOS_POSTED_ATTEMPT           701
+#define STAT_INFOS_POSTED_USEFUL            702
+
+//TODO refactor this define
+#define STAT_SYNC_CHECK_SILENT            	703
+#define STAT_SYNC_CHECK_FORWARD           	704
 #endif
 
 #if POSTING==1 || IPI_SUPPORT==1 && REPORT==1
-#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 	607
-#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 	608
-#define STAT_SYNC_CHECK_USEFUL              	610
-#define STAT_EVENT_FORWARD_INTERRUPTED 			611
-#define STAT_EVENT_SILENT_INTERRUPTED 			612
-#define STAT_IPI_SYSCALL_TIME					613
+//TODO refactor this define
+#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 	800
+#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 	801
+#define STAT_SYNC_CHECK_USEFUL              	802
+#define STAT_EVENT_FORWARD_INTERRUPTED 			803
+#define STAT_EVENT_SILENT_INTERRUPTED 			804
 #endif
 
-#define STAT_EVENTS_EXEC_AND_COMMITED 700
-#define STAT_CLOCK_FORWARD 701
+//statistics without any particular macro enabled
+#define STAT_EVENTS_EXEC_AND_COMMITED 900
+#define STAT_CLOCK_FORWARD 901
 
 typedef double stat64_t;
 
@@ -180,6 +188,18 @@ struct stats_t {
     #if HANDLE_INTERRUPT==1 && REPORT==1
     stat64_t event_not_flushed;//per lp event that lp father doesn't flush
     stat64_t event_not_flushed_tot;
+
+    stat64_t event_exposition_forward;//per LP
+    stat64_t event_exposition_silent;//per LP
+
+    stat64_t event_exposition_forward_tot;
+    stat64_t event_exposition_silent_tot;
+
+    stat64_t clock_exposition_forward;//per event
+    stat64_t clock_exposition_silent;//per event
+
+    stat64_t clock_exposition_forward_tot;
+    stat64_t clock_exposition_silent_tot;
     #endif
 
     #if POSTING==1 && REPORT==1

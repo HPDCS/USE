@@ -8,7 +8,54 @@
 #include <checks.h>
 #endif
 
+#if HANDLE_INTERRUPT_WITH_CHECK==1
+#include <handle_interrupt_with_check.h>
+#include <timer.h>
+#endif
+
+#if IPI_SUPPORT==1
+#include <ipi.h>
+#include <lp_stats.h>
+
+#endif
+
 extern __thread cntx_buf cntx_loop;
+
+void end_exposition_of_current_event(msg_t*event){
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	check_unpreemptability();
+	#endif
+	if(event!=NULL){
+		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
+		#if IPI_SUPPORT==1
+		store_lp_stats((lp_evt_stats *) LPS[current_lp]->lp_statistics, event->execution_mode, event->type, exposition_timer);
+		#endif
+		#if REPORT==1
+		if(event->execution_mode==LP_STATE_READY){
+			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD,1);
+			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD,exposition_timer);
+		}
+		else{
+			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT,1);
+			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT,exposition_timer);
+		}
+		#endif
+		//reset exposition of current_msg in execution
+		LPS[current_lp]->msg_curr_executed=NULL;
+	}
+}
+
+void start_exposition_of_current_event(msg_t*event){
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	check_unpreemptability();
+	#endif
+	if(event!=NULL){
+		clock_timer_start(event->evt_start_time);//event starting time sampled just before updating preemption_counter
+		event->execution_mode=LPS[current_lp]->state;
+		//start exposition of current_msg
+		LPS[current_lp]->msg_curr_executed=event;
+	}
+}
 
 msg_t* allocate_dummy_bound(unsigned int lp_idx){
 	//alloc an event dummy. it won't be never connected to calqueue or localqueue,so it's possible change its state and it's possible set bound to dummy_bound with care.

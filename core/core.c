@@ -754,29 +754,24 @@ stat64_t execute_time;
 			gdb_abort;
 		}
 #endif
-#if HANDLE_INTERRUPT==1
-		clock_timer_start(event->evt_start_time);//event starting time sampled just before updating preemption_counter
-		event->execution_mode=LPS[LP]->state;
-		//start exposition of current_msg
-		LPS[current_lp]->msg_curr_executed=event;
-#endif
+
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
-		enter_in_preemptable_zone();
+		if(LPS[current_lp]->state==LP_STATE_SILENT_EXEC){
+			enter_in_preemptable_zone();
+		}//in forward mode preemptability is already actived in thread_loop
+
+		#if DEBUG==1
+		check_preemptability();
+		#endif
+
 		#endif
 		
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
-		exit_from_preemptable_zone();
-		#endif
-
-#if IPI_SUPPORT==1
-		store_lp_stats((lp_evt_stats *) LPS[LP]->lp_statistics, event->execution_mode, event_type, clock_timer_value(event->evt_start_time));
-#endif
-
-		#if HANDLE_INTERRUPT==1
-		//reset exposition of current_msg in execution
-		LPS[current_lp]->msg_curr_executed=NULL;
+		if(LPS[current_lp]->state==LP_STATE_SILENT_EXEC){
+			exit_from_preemptable_zone();
+		}//in forward mode preemptability remains actived,it ends after queu_deliver_msgs
 		#endif
 
 #if REPORT == 1
@@ -1074,15 +1069,25 @@ void thread_loop(unsigned int thread_id) {
 			gdb_abort;				
 		}
 #endif
-		// PROCESS //
-		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
-		// FLUSH // 
+		#if HANDLE_INTERRUPT==1
+		start_exposition_of_current_event(current_msg);
+		#endif
+
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		enter_in_preemptable_zone();
 		#endif
+		// PROCESS //
+		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
+		// FLUSH // 
+		
 		queue_deliver_msgs();
+
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		exit_from_preemptable_zone();
+		#endif
+
+		#if HANDLE_INTERRUPT==1
+		end_exposition_of_current_event(current_msg);
 		#endif
 
 #if DEBUG==1//not present in original version
