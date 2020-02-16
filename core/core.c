@@ -83,7 +83,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 #include <time.h>
 #define MILLION 1000000
 #define BILLION 1000000000
-#define STATS_PERIOD_NS (50*MILLION)
+#define STATS_PERIOD_NS (25*MILLION)
 #define EVENTS_BEFORE_STATS_PERIOD_NS (100)
 #define WINDOW_SIZE (10)
 #define PCAP_TOLLERANCE (0.10)

@@ -19,43 +19,67 @@ for fan_out in $FAN_OUT_list
 do
 for lookahead in $LOOKAHEAD_list
 do
+                                                for lp in $LP_list
+                                                do
+  
+                      for pl in $POWER_LIMIT_list
+                        do
+
 	for filtering in $POWERCAP_SAMPLE_FILTERING_list
 	do
 		for test in $TEST_list 
 		do
-			echo make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
-			make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
-			mv $test ${test}_lf_hi
+			#echo make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
+			#make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
+			#mv $test ${test}_lf_hi
+
+#                                                for lp in $LP_list
+ #                                               do
 			
-			for pl in $POWER_LIMIT_list
-			do
-echo $pl
+#			for pl in $POWER_LIMIT_list
+#			do
+#echo $pl
 				for hmode in $HEURISTIC_MODE_list
 				do
-echo $hmode
-						for lp in $LP_list
-						do
+#echo $hmode
+#						for lp in $LP_list
+#						do
+
+#                        for pl in $POWER_LIMIT_list
+ #                       do
 							for pstate in $PSTATE_list
 							do
 								for threads in $CORES
 								do
+rth=0
+rpo=0
+c=0
 					for run in $RUN_list
 					do
-echo $run
-								echo $threads
-									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf$filtering-w$pl-h$hmode-$threads-p$pstate-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
+#echo $run
+#								echo $threads
+									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf$filtering-w$pl-h$hmode-$threads-p$pstate-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; 
+#touch $FILE
 									th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
 									po=`grep "Power consumption (net value)"  $FILE | cut -f2 -d':'`
 									th=`python -c "print '$th'.strip()"`
 									po=`python -c "print '$po'.strip()"`
-									echo F$fitering PL$pl H$hmode $th $po
-								done  
+						rth=`python -c "print $th+$rth"`
+						rpo=`python -c "print $po+$rpo"`
+c=$(($c+1))
+								#	echo F$filtering PL$pl H$hmode $th $po
+								done
+                                                rth=`python -c "print $rth/$c"`
+                                                rpo=`python -c "print $rpo/$c"`
+
+echo LP$lp F$filtering PL$pl H$hmode $rth $rpo
+
 							done
 						done
 					done
 				done
 			done
-			rm ${test}_lf_hi
+#			rm ${test}_lf_hi
 		done
 	done
 done
