@@ -1,8 +1,12 @@
 TODO:
--rivedere tutti i check se sono coerenti con la possibile interruzione, specialmente ongvt
+-rivedere tutti i punti in cui avviene la enter/exit preemptable/unpreemptable e vedere se ci sono problemi ad interrompere prima/dopo aver incrementato/decrementato specialmente ongvt
+
 -ritardare tutte le statistiche che possono essere interrotte sia clock che numeri
+-preservare le statistiche originali che potrebbero essere alterate con le interruzioni
+-preservare anche le statistiche aggiunte successivamente
 -ricontrollare tutte le statistiche nuove e vecchie, soprattutto quelle interrompibili che sono correlate
--aggiungere altre statistiche che vengono in mente
+
+
 -rimuovere standing ipi
 -pointer a funzione per i check su decrement,se parametro è NULL viene chiamata solo la funzione di default,la funzione passata deve essere una preoperazione per la gestione dell'interrupt.
 
@@ -12,6 +16,17 @@ TODO:
 
 -rilassare preemption_counter sulla enqueue della coda globale in queue_deliver_msgs
 -constant_child_invalidation da debuggare,degrada le performance ma non a causa delle istruzioni atomiche
+
+
+
+
+
+
+
+
+
+
+
 
 Osservazioni:
 -la probabilità che su interruzione venga interrotto un altro thread dell'applicazione in un sistema scarico è bassa,in ogni caso se succede possiamo sempre sfruttare lo standing_ipi
@@ -25,6 +40,17 @@ Osservazioni:
 -current_base_pointer è null,viene allocato una sola volta con l'evento INIT nella ProcessEvent
 -i checkpoint vengono buttati durante il rollback se LP è nello stato LP_STATE_ROLLBACK, non vengono buttati in LP_STATE_ONGVT
 -l'evento init viene allocato normalmente,inizializzato e passato alla processEvent con init come parametro,l'evento init non viene mai committato ma non è un problema perché non appare in coda globale,inoltre successivamente alla sua esecuzione e incremento dei frame dell'LP viene forzato un checkpoint,quindi è sempre possibile ritornare ad un punto iniziale con evento init eseguito.Questo fa pensare che è safe spostare il log_state dopo l'incremento dei frame dell'LP
+
+
+
+
+
+
+
+
+
+
+
 
 Osservazioni su fine simulazione/onGVT
 -non generare più eventi se la simulazione è finita per un LP,se un altro LP non può finire la simulazione in questo modo, la simulazione dovrebbe finire per quell'LP se non trova più eventi in coda??Ipotizzare in questo caso che LP che finisce generi degli eventi prodotti con ts molto grande e successivo all'istante di completamento dell'altro LP,in questo modo LP o non ha eventi entro la sua condizione di fine oppure esegue un evento con ts infinito per finirla,e prima o poi andrà in rollback

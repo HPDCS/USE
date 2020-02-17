@@ -68,7 +68,7 @@ void run_time_data_init (void)
   rt_data.in_msg_state_offset = offsetof(struct __msg_t, state);
   rt_data.in_msg_monitor_offset = offsetof(struct __msg_t, tie_breaker);
   rt_data.in_msg_timestamp_offset = offsetof(struct __msg_t, timestamp);
-  rt_data.in_stats_ipi_trampoline_received_offset = offsetof(struct stats_t, ipi_trampoline_received);
+  rt_data.in_stats_ipi_trampoline_received_offset = offsetof(struct stats_t, ipi_trampoline_received_tid);
   rt_data.sizeof_stats = sizeof(struct stats_t);
 }
 
@@ -327,13 +327,13 @@ void call_trampoline_and_check_arrays_counters(char*string_to_print_on_error,uns
     if(preemption_counter_incremented){
         expected_preemption_counter+=1;
     }
-    if(!check_arrays_counters(expected_counters,trampoline_counters) || (thread_stats[0].ipi_trampoline_received!=1) || get_preemption_counter()!=expected_preemption_counter){
+    if(!check_arrays_counters(expected_counters,trampoline_counters) || (thread_stats[0].ipi_trampoline_received_tid!=1) || get_preemption_counter()!=expected_preemption_counter){
         print_counters("expected",expected_counters);
         print_counters("result\n",trampoline_counters);
         printf("%s\n",string_to_print_on_error);
         gdb_abort;
     }
-    thread_stats[0].ipi_trampoline_received=0;
+    thread_stats[0].ipi_trampoline_received_tid=0;
     reset_preemption_counter();
     reset_all_trampoline_counters();
 }

@@ -78,10 +78,18 @@
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
 
-#if IPI_SUPPORT && REPORT==1
-#define STAT_IPI_SENDED             500
-#define STAT_IPI_RECEIVED           501 
-#define STAT_IPI_SYSCALL_TIME       502
+#if STATISTICS_ADDED==1
+//statistics without any particular macro enabled
+#define STAT_EVENTS_EXEC_AND_COMMITED 900
+#define STAT_CLOCK_FORWARD 901
+
+#endif
+
+#if POSTING==1 && REPORT==1
+
+#define STAT_INFOS_POSTED                   700       
+#define STAT_INFOS_POSTED_ATTEMPT           701
+#define STAT_INFOS_POSTED_USEFUL            702
 #endif
 
 #if HANDLE_INTERRUPT==1 && REPORT==1
@@ -92,32 +100,26 @@
 
 #define STAT_EVENT_EXPOSITION_FORWARD       604
 #define STAT_EVENT_EXPOSITION_SILENT        605
+
+#define STAT_CLOCK_EXPOSITION_FORWARD_INTERRUPTED  606
+#define STAT_CLOCK_EXPOSITION_SILENT_INTERRUPTED   607
+
+#define STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED  608
+#define STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED   609
 #endif
 
-#if POSTING==1 && REPORT==1
-
-#define STAT_INFOS_POSTED                   700       
-#define STAT_INFOS_POSTED_ATTEMPT           701
-#define STAT_INFOS_POSTED_USEFUL            702
-
-//TODO refactor this define
-#define STAT_SYNC_CHECK_SILENT            	703
-#define STAT_SYNC_CHECK_FORWARD           	704
+#if HANDLE_INTERRUPT_WITH_CHECK==1
+#define STAT_SYNC_CHECK_SILENT            	800
+#define STAT_SYNC_CHECK_FORWARD           	801
+#define STAT_SYNC_CHECK_USEFUL              802
 #endif
 
-#if POSTING==1 || IPI_SUPPORT==1 && REPORT==1
-//TODO refactor this define
-#define STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC 	800
-#define STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC 	801
-
-#define STAT_SYNC_CHECK_USEFUL              	802
-#define STAT_EVENT_FORWARD_INTERRUPTED 			803
-#define STAT_EVENT_SILENT_INTERRUPTED 			804
+#if IPI_SUPPORT && REPORT==1
+#define STAT_IPI_SENDED             500
+#define STAT_IPI_RECEIVED           501 
+#define STAT_IPI_SYSCALL_TIME       502
+#define STAT_IPI_TRAMPOLINE_RECEIVED 503 //this statistic is not used explicitly, it is used in trampoline.S
 #endif
-
-//statistics without any particular macro enabled
-#define STAT_EVENTS_EXEC_AND_COMMITED 900
-#define STAT_CLOCK_FORWARD 901
 
 typedef double stat64_t;
 
@@ -176,85 +178,82 @@ struct stats_t {
     stat64_t clock_safe_tot;
     stat64_t clock_frame_tot;
 
+    #if STATISTICS_ADDED==1
+    //new statistics added
+    stat64_t clock_forward_exec_lp;//per LP
+    stat64_t clock_forward_exec_per_event;//per event
+    stat64_t clock_forward_exec_tot;
+
+    stat64_t events_exec_and_committed_lp;//per LP
+    stat64_t events_exec_and_committed_tot;
+    #endif
+
+    #if POSTING==1 && REPORT==1
+    
+    stat64_t infos_posted_tid;//per thread num info posted by thread
+    stat64_t infos_posted_attempt_tid;//per thread num tries to post info by thread
+    stat64_t infos_posted_useful_tid;//per thread num info useful for lp
+    
+    stat64_t infos_posted_tot;
+    stat64_t infos_posted_attempt_tot;
+    stat64_t infos_posted_useful_tot;
+    
+    #endif
+    #if HANDLE_INTERRUPT==1 && REPORT==1
+    stat64_t event_not_flushed_lp;//per lp, event that lp father doesn't flush
+    stat64_t event_not_flushed_tot;
+
+    stat64_t event_exposition_forward_lp;//per LP
+    stat64_t event_exposition_silent_lp;//per LP
+
+    stat64_t event_exposition_forward_tot;
+    stat64_t event_exposition_silent_tot;
+
+    stat64_t clock_exposition_forward_per_event;//per event
+    stat64_t clock_exposition_silent_per_event;//per event
+
+    stat64_t clock_exposition_forward_tot;
+    stat64_t clock_exposition_silent_tot;
+
+    //statistics related to interruptions
+    stat64_t event_exposition_forward_interrupted_lp;//per LP
+    stat64_t event_exposition_silent_interrupted_lp;//per LP
+
+    stat64_t event_exposition_forward_interrupted_tot;
+    stat64_t event_exposition_silent_interrupted_tot;
+
+    stat64_t clock_exposition_forward_interrupted_per_event;//per event
+    stat64_t clock_exposition_silent_interrupted_per_event;//per event
+
+    stat64_t clock_exposition_forward_interrupted_tot;
+    stat64_t clock_exposition_silent_interrupted_tot;
+    #endif
+
+    #if HANDLE_INTERRUPT_WITH_CHECK==1
+    stat64_t sync_check_silent_lp;//per lp, num sync_check in past maded by lp
+    stat64_t sync_check_forward_lp;//per lp, num sync_check in future maded by lp
+
+    stat64_t sync_check_silent_tot;
+    stat64_t sync_check_forward_tot;
+
+    stat64_t sync_check_useful_lp;//per lp num sync_check useful maded by lp
+    stat64_t sync_check_useful_tot;
+    #endif
+
     #if IPI_SUPPORT==1 && REPORT==1
-    stat64_t ipi_sended;//per thread num of ipis sended by target thread
-    stat64_t ipi_trampoline_received;//per thread num of ipis handled in trampoline
-    stat64_t ipi_received;//per thread num of ipis received by target thread
+    stat64_t ipi_sended_tid;//per thread, num of ipis sended by target thread
+    stat64_t ipi_trampoline_received_tid;//per thread, num of ipis handled in trampoline
+    stat64_t ipi_received_tid;//per thread, num of ipis received by target thread
 
     //calculated in gather statistics
     stat64_t ipi_sended_tot;
     stat64_t ipi_trampoline_received_tot;
     stat64_t ipi_received_tot;
-    #endif
 
-    #if HANDLE_INTERRUPT==1 && REPORT==1
-    stat64_t event_not_flushed;//per lp event that lp father doesn't flush
-    stat64_t event_not_flushed_tot;
-
-    stat64_t event_exposition_forward;//per LP
-    stat64_t event_exposition_silent;//per LP
-
-    stat64_t event_exposition_forward_tot;
-    stat64_t event_exposition_silent_tot;
-
-    stat64_t clock_exposition_forward;//per event
-    stat64_t clock_exposition_silent;//per event
-
-    stat64_t clock_exposition_forward_tot;
-    stat64_t clock_exposition_silent_tot;
-    #endif
-
-    #if POSTING==1 && REPORT==1
-    
-    stat64_t infos_posted;//per thread num info posted by thread
-    stat64_t infos_posted_attempt;//per thread num tries to post info by thread
-    stat64_t infos_posted_useful;//per lp num info useful for lp
-    stat64_t sync_check_silent;//per lp num sync_check in past maded by lp
-    stat64_t sync_check_forward;//per lp num sync_check in future maded by lp
-    
-    
-    
-    //calculated in gather_statistics()
-    
-    stat64_t infos_posted_tot;
-    stat64_t infos_posted_attempt_tot;
-    stat64_t infos_posted_anti_msg_tot;
-    stat64_t infos_posted_useful_tot;
-    stat64_t sync_check_silent_tot;
-    stat64_t sync_check_forward_tot;
-    #endif
-
-    #if IPI_SUPPORT==1 || POSTING==1 && REPORT==1
-    stat64_t sync_check_useful;//per lp num sync_check useful maded by lp
-
-    stat64_t event_forward_interrupted;//per LP
-    stat64_t event_silent_interrupted;//per LP
-    stat64_t event_interrupted;//per LP
-
-    //calculated in gather_statistics()
-    stat64_t sync_check_useful_tot;
-    stat64_t event_forward_interrupted_tot;
-    stat64_t event_silent_interrupted_tot;
-    stat64_t event_interrupted_tot;
-
-    stat64_t clock_exec_evt_inter_forward_exec;//per lp num clock cycles between start of ProcessEvent (with event in future) and relative interruption
-    stat64_t clock_exec_evt_inter_silent_exec;//per lp num clock cycles between start of ProcessEvent (with event in past) and relative interruption
-
-    stat64_t clock_exec_evt_inter_forward_exec_tot;
-    stat64_t clock_exec_evt_inter_silent_exec_tot;
-    stat64_t clock_exec_interruption_tot;
-    stat64_t clock_exec_interruption;
-    stat64_t clock_exec_ipi_syscall; // per thread
+    stat64_t clock_exec_ipi_syscall_tid; //per thread
     stat64_t clock_exec_ipi_syscall_tot;
+
     #endif
-
-    stat64_t events_exec_and_committed;//per LP
-    
-    stat64_t clock_forward_exec;//per LP
-    stat64_t clock_forward_exec_per_event;//per event
-    stat64_t clock_forward_exec_tot;
-
-    stat64_t events_exec_and_committed_tot;
     
 } __attribute__((aligned (64)));
 

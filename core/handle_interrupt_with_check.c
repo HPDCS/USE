@@ -37,7 +37,7 @@ void*default_handler(void*arg){
             }
             else{//current_msg not null
                 insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
-                statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
+                statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED,1);
                 make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
             }
         }
@@ -52,7 +52,7 @@ void*default_handler(void*arg){
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             //no need of insert current_msg
-            statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
+            statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED,1);
             make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
         }
     }

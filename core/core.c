@@ -814,12 +814,10 @@ void thread_loop(unsigned int thread_id) {
         	statistics_post_th_data(tid,STAT_IPI_RECEIVED,1);
         #endif
         	if(LPS[current_lp]->state==LP_STATE_READY){
-        		statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
-        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC,clock_timer_value(event_handler_timer));
+        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED,1);
         	}
         	else{
-        		statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
-        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_handler_timer));
+        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED,1);
         	}
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
@@ -856,7 +854,7 @@ void thread_loop(unsigned int thread_id) {
 		#if VERBOSE > 0
 			printf("cfv already handled,tid=%d\n",tid);
 		#endif
-		#if POSTING==1 || IPI_SUPPORT==1 && REPORT==1
+		#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
 			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_USEFUL,1);
 		#endif
 			#if DEBUG==1
@@ -1207,9 +1205,6 @@ void thread_loop(unsigned int thread_id) {
 			#if VERBOSE > 0
 			printf("cfv already handled,tid=%d\n",tid);
 			#endif
-#if POSTING==1 && REPORT==1
-			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_USEFUL,1);
-#endif
 			unlock(current_lp);
 			break;
 		default ://error
