@@ -24,7 +24,7 @@ void*default_handler(void*arg){
     check_unpreemptability();
     if (LPS[current_lp]->state==LP_STATE_SILENT_EXEC){
         #if REPORT==1
-        statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_SILENT,1);
+        statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_SILENT_LP,1);
 
         #endif
         #if VERBOSE >0
@@ -37,14 +37,14 @@ void*default_handler(void*arg){
             }
             else{//current_msg not null
                 insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
-                statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED,1);
+                statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP,1);
                 make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
             }
         }
     }   
     else if (LPS[current_lp]->state==LP_STATE_READY){
         #if REPORT==1 
-        statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_FORWARD,1);
+        statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_FORWARD_LP,1);
         #endif
         #if VERBOSE >0
         printf("sync_check_forward\n");
@@ -52,12 +52,13 @@ void*default_handler(void*arg){
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             //no need of insert current_msg
-            statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED,1);
+            statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP,1);
             make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
         }
     }
     else{
         printf("LP_STATE not valid\n");
+        gdb_abort;
     }
     return NULL;//never reached
 }

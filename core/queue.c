@@ -122,7 +122,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         msg_ptr=_thr_pool.messages[_thr_pool._thr_pool_count++].father;//get message
         list_node_clean_by_content(msg_ptr); //NON DOVREBBE SERVIRE
         #if REPORT==1 && HANDLE_INTERRUPT==1
-        statistics_post_lp_data(current_lp,STAT_EVENT_NOT_FLUSHED,1);
+        statistics_post_lp_data(current_lp,STAT_EVENT_NOT_FLUSHED_LP,1);
         #endif
     }
     else{//extract event from free_list and connect to thread_pool

@@ -18,48 +18,6 @@
 #include <ipi.h>
 #endif
 
-/*void post_information_with_straggler(msg_t*new_hole){
-    int index_in_hash_table=new_hole->id_in_thread_pool_hash_table;
-    msg_t*event_in_list=_thr_pool.collision_list[index_in_hash_table];
-    if(event_in_list!=NULL && event_in_list==new_hole){
-        //post information
-        simtime_t bound_ts=0.0;
-        unsigned int lp_id=event_in_list->receiver_id;
-        
-        while(1){
-            //father event is safe?
-            event_in_list->posted_valid=POSTED;
-            if(LPS[lp_id]->bound!=NULL){
-                bound_ts=LPS[lp_id]->bound->timestamp;
-            }
-            msg_t*event_dest_LP=(msg_t *)LPS[lp_id]->priority_message;
-            if(event_dest_LP==NULL || event_dest_LP->posted_valid==UNPOSTED || event_dest_LP->receiver_id!=lp_id){
-                if(CAS_x86((unsigned long long*)&(LPS[lp_id]->priority_message),
-                    (unsigned long)event_dest_LP,(unsigned long)event_in_list)==false)//CAS failed
-                    continue;
-                //information modified
-                #if REPORT==1
-                statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
-                #endif
-                break;//break with posted=POSTED
-            }
-            else if( event_in_list->timestamp<bound_ts && event_in_list->timestamp < event_dest_LP->timestamp)
-            {//msg_dest_LP!=NULL
-                if(CAS_x86((unsigned long long*)&(LPS[lp_id]->priority_message),
-                        (unsigned long)event_dest_LP,(unsigned long)event_in_list)==false)//CAS failed
-                    continue;
-                //information modified
-                #if REPORT==1
-                statistics_post_lp_data(current_lp,STAT_INFOS_POSTED,1);
-                #endif
-                break;//break with posted=POSTED
-            }
-            event_in_list->posted_valid=UNPOSTED;
-            break;//timestamp is greater,exit
-        }
-        _thr_pool.collision_list[index_in_hash_table]=NULL;
-    }
-}*/
 
 /*void insert_msg_in_hash_table(msg_t*msg_ptr){//open addressing
     unsigned int hash_table_size=MAX_THR_HASH_TABLE_SIZE;
@@ -91,18 +49,10 @@
     }
 }*/
 
-/*void reset_LP_info(msg_t*event,int lp_idx){
-    //I don't know if event is reliable or unreliable
-    msg_t *evt;
-    evt=LPS[lp_idx]->priority_message;
-    if(event!=NULL && evt==event)
-        CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
-        (unsigned long)event,(unsigned long)NULL);
-}*/
-
 #if REPORT==1
 void update_statistics(int lp_idx){
-    statistics_post_lp_data(lp_idx,STAT_INFOS_POSTED_USEFUL,1);
+    (void)lp_idx;
+    statistics_post_th_data(tid,STAT_INFOS_POSTED_USEFUL_TID,1);
     return;
 }
 #endif
@@ -156,7 +106,7 @@ bool post_info_event_valid(msg_t*event){
     if(value_posted==NEVER_POSTED && CAS_x86((unsigned long long*)&(event->posted),
         (unsigned long)NEVER_POSTED,(unsigned long)POSTED_VALID)==true){
         #if REPORT==1
-        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT,1);
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
         #endif
         return post_information(event,true);
     }
@@ -168,7 +118,7 @@ bool post_info_event_invalid(msg_t*event){
     if(value_posted!=POSTED_INVALID && CAS_x86((unsigned long long*)&(event->posted),
         (unsigned long)value_posted,(unsigned long)POSTED_INVALID)==true){
         #if REPORT==1
-        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT,1);
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
         #endif
         return post_information(event,true);
     }
@@ -188,7 +138,7 @@ msg_t* flag_as_posted(msg_t*event,bool* flagged){
         event->posted=POSTED_VALID;
         *flagged=true;
         #if REPORT==1
-        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT,1);
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
         #endif
         return event_dest_LP;
     }
@@ -202,7 +152,7 @@ bool post_info_with_oldval(msg_t*event,msg_t*old_priority_message){
                 (unsigned long)old_priority_message,(unsigned long)event)==false)//CAS failed
         return post_information(event,true);
     #if REPORT==1
-    statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+    statistics_post_th_data(tid,STAT_INFOS_POSTED_TID,1);
     #endif
     return true;
 }
@@ -224,7 +174,7 @@ bool post_information(msg_t*event,bool retry_loop){
                     continue;
                 //information modified
                 #if REPORT==1
-                statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+                statistics_post_th_data(tid,STAT_INFOS_POSTED_TID,1);
                 #endif
                 return true;
             }
@@ -244,7 +194,7 @@ bool post_information(msg_t*event,bool retry_loop){
                 return false;
             //information modified
             #if REPORT==1
-            statistics_post_th_data(tid,STAT_INFOS_POSTED,1);
+            statistics_post_th_data(tid,STAT_INFOS_POSTED_TID,1);
             #endif
             return true;
         }

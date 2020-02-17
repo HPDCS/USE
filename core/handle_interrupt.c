@@ -32,12 +32,12 @@ void end_exposition_of_current_event(msg_t*event){
 		#endif
 		#if REPORT==1
 		if(event->execution_mode==LP_STATE_READY){
-			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD,1);
-			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD,exposition_timer);
+			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_LP,1);
+			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD_TOT_LP,exposition_timer);
 		}
 		else{
-			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT,1);
-			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT,exposition_timer);
+			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_LP,1);
+			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT_TOT_LP,exposition_timer);
 		}
 		#endif
 		//reset exposition of current_msg in execution

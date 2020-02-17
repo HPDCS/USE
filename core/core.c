@@ -741,7 +741,7 @@ stat64_t execute_time;
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
 		}
 		else{
-			statistics_post_lp_data(LP, STAT_CLOCK_FORWARD, execute_time);
+			statistics_post_lp_data(LP, STAT_CLOCK_FORWARD_LP, execute_time);
 		}
 #endif
 
@@ -811,13 +811,13 @@ void thread_loop(unsigned int thread_id) {
 		#endif
 
 		#if REPORT==1
-        	statistics_post_th_data(tid,STAT_IPI_RECEIVED,1);
+        	statistics_post_th_data(tid,STAT_IPI_RECEIVED_TID,1);
         #endif
         	if(LPS[current_lp]->state==LP_STATE_READY){
-        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED,1);
+        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP,1);
         	}
         	else{
-        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED,1);
+        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP,1);
         	}
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
@@ -855,7 +855,7 @@ void thread_loop(unsigned int thread_id) {
 			printf("cfv already handled,tid=%d\n",tid);
 		#endif
 		#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
-			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_USEFUL,1);
+			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_USEFUL_LP,1);
 		#endif
 			#if DEBUG==1
 			check_CFV_ALREADY_HANDLED();
@@ -1090,7 +1090,7 @@ void thread_loop(unsigned int thread_id) {
 		//COMMIT SAFE EVENT
 		if(safe) {
 			#if REPORT==1
-			statistics_post_lp_data(current_lp,STAT_EVENTS_EXEC_AND_COMMITED,1);
+			statistics_post_lp_data(current_lp,STAT_EVENTS_EXEC_AND_COMMITED_LP,1);
 			#endif
 			commit_event(current_msg, current_node, current_lp);
 		}

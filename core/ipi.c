@@ -185,8 +185,8 @@ void send_ipi_to_lp(msg_t*event){
             }
 
             #if REPORT==1 //protect correlated statistics
-            statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(syscall_time));
-            statistics_post_th_data(tid,STAT_IPI_SENDED,1);
+            statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME_TID,clock_timer_value(syscall_time));
+            statistics_post_th_data(tid,STAT_IPI_SENDED_TID,1);
 
             #endif
 

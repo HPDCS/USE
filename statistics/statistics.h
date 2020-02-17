@@ -80,45 +80,45 @@
 
 #if STATISTICS_ADDED==1
 //statistics without any particular macro enabled
-#define STAT_EVENTS_EXEC_AND_COMMITED 900
-#define STAT_CLOCK_FORWARD 901
+#define STAT_EVENTS_EXEC_AND_COMMITED_LP 900
+#define STAT_CLOCK_FORWARD_LP 901
 
 #endif
 
 #if POSTING==1 && REPORT==1
 
-#define STAT_INFOS_POSTED                   700       
-#define STAT_INFOS_POSTED_ATTEMPT           701
-#define STAT_INFOS_POSTED_USEFUL            702
+#define STAT_INFOS_POSTED_TID                 700       
+#define STAT_INFOS_POSTED_ATTEMPT_TID         701
+#define STAT_INFOS_POSTED_USEFUL_TID          702
 #endif
 
 #if HANDLE_INTERRUPT==1 && REPORT==1
-#define STAT_EVENT_NOT_FLUSHED              601
+#define STAT_EVENT_NOT_FLUSHED_LP              601
 
-#define STAT_CLOCK_EXPOSITION_FORWARD       602
-#define STAT_CLOCK_EXPOSITION_SILENT        603
+#define STAT_CLOCK_EXPOSITION_FORWARD_TOT_LP       602
+#define STAT_CLOCK_EXPOSITION_SILENT_TOT_LP      603
 
-#define STAT_EVENT_EXPOSITION_FORWARD       604
-#define STAT_EVENT_EXPOSITION_SILENT        605
+#define STAT_EVENT_EXPOSITION_FORWARD_LP       604
+#define STAT_EVENT_EXPOSITION_SILENT_LP       605
 
-#define STAT_CLOCK_EXPOSITION_FORWARD_INTERRUPTED  606
-#define STAT_CLOCK_EXPOSITION_SILENT_INTERRUPTED   607
+#define STAT_CLOCK_EXPOSITION_FORWARD_INTERRUPTED_LP  606
+#define STAT_CLOCK_EXPOSITION_SILENT_INTERRUPTED_LP  607
 
-#define STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED  608
-#define STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED   609
+#define STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP  608
+#define STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP  609
 #endif
 
 #if HANDLE_INTERRUPT_WITH_CHECK==1
-#define STAT_SYNC_CHECK_SILENT            	800
-#define STAT_SYNC_CHECK_FORWARD           	801
-#define STAT_SYNC_CHECK_USEFUL              802
+#define STAT_SYNC_CHECK_SILENT_LP           	800
+#define STAT_SYNC_CHECK_FORWARD_LP          	801
+#define STAT_SYNC_CHECK_USEFUL_LP             802
 #endif
 
 #if IPI_SUPPORT && REPORT==1
-#define STAT_IPI_SENDED             500
-#define STAT_IPI_RECEIVED           501 
-#define STAT_IPI_SYSCALL_TIME       502
-#define STAT_IPI_TRAMPOLINE_RECEIVED 503 //this statistic is not used explicitly, it is used in trampoline.S
+#define STAT_IPI_SENDED_TID            500
+#define STAT_IPI_RECEIVED_TID          501 
+#define STAT_IPI_SYSCALL_TIME_TID       502
+#define STAT_IPI_TRAMPOLINE_RECEIVED_TID 503 //this statistic is not used explicitly, it is used in trampoline.S
 #endif
 
 typedef double stat64_t;
@@ -212,8 +212,8 @@ struct stats_t {
     stat64_t clock_exposition_forward_per_event;//per event
     stat64_t clock_exposition_silent_per_event;//per event
 
-    stat64_t clock_exposition_forward_tot;
-    stat64_t clock_exposition_silent_tot;
+    stat64_t clock_exposition_forward_tot_lp;
+    stat64_t clock_exposition_silent_tot_lp;
 
     //statistics related to interruptions
     stat64_t event_exposition_forward_interrupted_lp;//per LP
@@ -225,8 +225,8 @@ struct stats_t {
     stat64_t clock_exposition_forward_interrupted_per_event;//per event
     stat64_t clock_exposition_silent_interrupted_per_event;//per event
 
-    stat64_t clock_exposition_forward_interrupted_tot;
-    stat64_t clock_exposition_silent_interrupted_tot;
+    stat64_t clock_exposition_forward_interrupted_tot_lp;
+    stat64_t clock_exposition_silent_interrupted_tot_lp;
     #endif
 
     #if HANDLE_INTERRUPT_WITH_CHECK==1
@@ -251,6 +251,7 @@ struct stats_t {
     stat64_t ipi_received_tot;
 
     stat64_t clock_exec_ipi_syscall_tid; //per thread
+    stat64_t clock_exec_ipi_syscall_per_syscall;
     stat64_t clock_exec_ipi_syscall_tot;
 
     #endif

@@ -238,73 +238,76 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 		//new_statistics added
 		#if STATISTICS_ADDED==1
-		case STAT_EVENTS_EXEC_AND_COMMITED:
+		case STAT_EVENTS_EXEC_AND_COMMITED_LP:
 			stats[idx].events_exec_and_committed_lp += value;//per LP
 			break;
-		case STAT_CLOCK_FORWARD:
-			stats[idx].clock_forward_exec_lp += value;
+		case STAT_CLOCK_FORWARD_LP:
+			stats[idx].clock_forward_exec_per_event += value;
 			break;
 		#endif
 
 		#if POSTING==1 && REPORT==1
 
-		case STAT_INFOS_POSTED:
+		case STAT_INFOS_POSTED_TID:
 			stats[idx].infos_posted_tid += value;
 			break;
-		case STAT_INFOS_POSTED_ATTEMPT:
+		case STAT_INFOS_POSTED_ATTEMPT_TID:
 			stats[idx].infos_posted_attempt_tid += value;
 			break;
-		case STAT_INFOS_POSTED_USEFUL:
+		case STAT_INFOS_POSTED_USEFUL_TID:
 			stats[idx].infos_posted_useful_tid += value;
 			break;
 		#endif
 
 
 		#if HANDLE_INTERRUPT==1 && REPORT==1
-		case STAT_EVENT_NOT_FLUSHED:
+		case STAT_EVENT_NOT_FLUSHED_LP:
 			stats[idx].event_not_flushed_lp += value;
 			break;
-		case STAT_CLOCK_EXPOSITION_FORWARD:
-			stats[idx].clock_exposition_forward_per_event += value;
+
+		case STAT_CLOCK_EXPOSITION_FORWARD_TOT_LP:
+			stats[idx].clock_exposition_forward_tot_lp += value;
 			break;
-		case STAT_CLOCK_EXPOSITION_SILENT:
-			stats[idx].clock_exposition_silent_per_event += value;
+		case STAT_CLOCK_EXPOSITION_SILENT_TOT_LP:
+			stats[idx].clock_exposition_silent_tot_lp += value;
 			break;
-		case STAT_EVENT_EXPOSITION_FORWARD:
+
+		case STAT_EVENT_EXPOSITION_FORWARD_LP:
 			stats[idx].event_exposition_forward_lp += value;
 			break;
-		case STAT_EVENT_EXPOSITION_SILENT:
+		case STAT_EVENT_EXPOSITION_SILENT_LP:
 			stats[idx].event_exposition_silent_lp += value;
 			break;
-		case STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED:
+
+		case STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP:
 			stats[idx].event_exposition_forward_interrupted_lp += value;
 			break;
-		case STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED:
+		case STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP:
 			stats[idx].event_exposition_silent_interrupted_lp += value;
 			break;
 		#endif
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
-		case STAT_SYNC_CHECK_SILENT:
+		case STAT_SYNC_CHECK_SILENT_LP:
 			stats[idx].sync_check_silent_lp += value;
 			break;
-		case STAT_SYNC_CHECK_FORWARD:
+		case STAT_SYNC_CHECK_FORWARD_LP:
 			stats[idx].sync_check_forward_lp += value;
 			break;
-		case STAT_SYNC_CHECK_USEFUL:
+		case STAT_SYNC_CHECK_USEFUL_LP:
 			stats[idx].sync_check_useful_lp += value;
 			break;
 		#endif
 
 		#if IPI_SUPPORT==1 && REPORT==1
 
-		case STAT_IPI_SENDED:
+		case STAT_IPI_SENDED_TID:
 			stats[idx].ipi_sended_tid += value;
 			break;
-		case STAT_IPI_RECEIVED:
+		case STAT_IPI_RECEIVED_TID:
 			stats[idx].ipi_received_tid += value;
 			break;
-		case STAT_IPI_SYSCALL_TIME:
+		case STAT_IPI_SYSCALL_TIME_TID:
 			stats[idx].clock_exec_ipi_syscall_tid += value;
 			break;
 		#endif
@@ -388,6 +391,7 @@ void gather_statistics() {
 
 	system_stats->clock_exec_ipi_syscall_tot=system_stats->clock_exec_ipi_syscall_tid;
 	system_stats->clock_exec_ipi_syscall_tid/=n_cores;
+	system_stats->clock_exec_ipi_syscall_per_syscall=system_stats->clock_exec_ipi_syscall_tot/system_stats->ipi_sended_tot;
 	#endif
 
 	
@@ -446,8 +450,8 @@ void gather_statistics() {
 	#if HANDLE_INTERRUPT==1 && REPORT==1
 		system_stats->event_not_flushed_lp  += lp_stats[i].event_not_flushed_lp;//per lp event that lp father doesn't flush
 		
-		system_stats->clock_exposition_silent_per_event += lp_stats[i].clock_exposition_silent_per_event;
-		system_stats->clock_exposition_forward_per_event += lp_stats[i].clock_exposition_forward_per_event;
+		system_stats->clock_exposition_silent_tot_lp += lp_stats[i].clock_exposition_silent_tot_lp;
+		system_stats->clock_exposition_forward_tot_lp += lp_stats[i].clock_exposition_forward_tot_lp;
 		
 		system_stats->event_exposition_silent_lp += lp_stats[i].event_exposition_silent_lp;
 		system_stats->event_exposition_forward_lp += lp_stats[i].event_exposition_forward_lp;
@@ -519,11 +523,10 @@ void gather_statistics() {
     system_stats->event_exposition_silent_tot=system_stats->event_exposition_silent_lp;
     system_stats->event_exposition_silent_lp /= n_prc_tot;
 
-    system_stats->clock_exposition_forward_tot=system_stats->clock_exposition_forward_per_event;
-    system_stats->clock_exposition_forward_per_event /= system_stats->event_exposition_forward_tot;
+    system_stats->clock_exposition_forward_per_event = system_stats->clock_exposition_forward_tot_lp/ system_stats->event_exposition_forward_tot;
 
-    system_stats->clock_exposition_silent_tot=system_stats->clock_exposition_silent_per_event;
-    system_stats->clock_exposition_silent_per_event /= system_stats->event_exposition_silent_tot;
+    system_stats->clock_exposition_silent_per_event=system_stats->clock_exposition_silent_tot_lp/system_stats->event_exposition_silent_tot;
+    
     
     //interruption
     system_stats->event_exposition_forward_interrupted_tot= system_stats->event_exposition_forward_interrupted_lp;
@@ -531,6 +534,8 @@ void gather_statistics() {
     
     system_stats->event_exposition_silent_interrupted_tot= system_stats->event_exposition_silent_interrupted_lp;
     system_stats->event_exposition_silent_interrupted_lp /= n_prc_tot;
+
+    //insert here clock on interruption
     #endif
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
@@ -539,7 +544,10 @@ void gather_statistics() {
     system_stats->sync_check_silent_lp/= n_prc_tot;
 
     system_stats->sync_check_forward_tot  =  system_stats->sync_check_forward_lp;//per lp num sync_check in future maded by lp
-    system_stats->sync_check_forward_lp/= n_prc_tot;
+    system_stats->sync_check_forward_lp /= n_prc_tot;
+
+    system_stats->sync_check_useful_tot = system_stats->sync_check_useful_lp;
+    system_stats->sync_check_useful_lp /= n_prc_tot;
     #endif
 
 }
@@ -668,6 +676,8 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->clock_exec_ipi_syscall_tot);
 	printf("IPI sent syscall time per thread................: %12.2f clocks\n",
 		stats->clock_exec_ipi_syscall_tid);
+	printf("IPI sent syscall time per 1 syscall.............: %12.2f clocks\n",
+		stats->clock_exec_ipi_syscall_per_syscall);
 	printf("\n\n");
 	#endif
 
@@ -679,19 +689,28 @@ static void _print_statistics(struct stats_t *stats) {
 		stats->event_not_flushed_lp);
 
 	printf("Exposition forward Time tot.....................: %12lu clocks\n",
-		(unsigned long)stats->clock_exposition_forward_tot);
+		(unsigned long)stats->clock_exposition_forward_tot_lp);
 	printf("Exposition forward Time per event...............: %12.2f clocks\n",
 		stats->clock_exposition_forward_per_event);
 
 	printf("Exposition silent Time tot......................: %12lu clocks\n",
-		(unsigned long)stats->clock_exposition_silent_tot);
+		(unsigned long)stats->clock_exposition_silent_tot_lp);
 	printf("Exposition silent Time per event................: %12.2f clocks\n",
 		stats->clock_exposition_silent_per_event);
 
-    printf("\n");
-    #endif
+	printf("Events forward interrupted tot..................: %12lu\n",
+		(unsigned long)stats->event_exposition_forward_interrupted_tot);
+	printf("Events forward interrupted per LP...............: %12.2f\n",
+		stats->event_exposition_forward_interrupted_lp);
 
-	
+	printf("Events silent interrupted tot...................: %12lu\n",
+		(unsigned long)stats->event_exposition_silent_interrupted_tot);
+	printf("Events silent interrupted per LP................: %12.2f\n",
+		stats->event_exposition_silent_interrupted_lp);
+
+	printf("\n\n");
+
+    #endif
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
 	printf("Sync check Silent Execution tot.................: %12lu\n",
@@ -709,21 +728,6 @@ static void _print_statistics(struct stats_t *stats) {
 		stats->sync_check_useful_lp);
 
 	printf("\n");
-	#endif
-
-	#if IPI_SUPPORT==1 && REPORT==1
-	
-	printf("Events forward interrupted tot..................: %12lu\n",
-		(unsigned long)stats->event_exposition_forward_interrupted_tot);
-	printf("Events forward interrupted per LP...............: %12.2f\n",
-		stats->event_exposition_forward_interrupted_lp);
-
-	printf("Events silent interrupted tot...................: %12lu\n",
-		(unsigned long)stats->event_exposition_silent_interrupted_tot);
-	printf("Events silent interrupted per LP................: %12.2f\n",
-		stats->event_exposition_silent_interrupted_lp);
-
-	printf("\n\n");
 	#endif
 
 	printf("Total Clock.....................................: %12llu clocks\n", 
