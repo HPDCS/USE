@@ -56,6 +56,9 @@
 #define ONGVT_PERIOD 10000000
 #endif
 
+//not present in original version
+#define INVALID_LP_IDX (-1) 
+
 struct __bucket_node;
 
 typedef struct _simulation_configuration {

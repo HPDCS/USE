@@ -447,6 +447,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 
 
 void check_OnGVT(unsigned int lp_idx){
+	//we have lock on lp_idx
 	unsigned int old_state;
 	current_lp = lp_idx;
 	LPS[lp_idx]->until_ongvt = 0;
@@ -476,7 +477,14 @@ void check_OnGVT(unsigned int lp_idx){
 		#if HANDLE_INTERRUPT_WITH_CHECK==1 //make this code not interruptible
 		enter_in_unpreemptable_zone();
 		#endif
+
+		#if HANDLE_INTERRUPT==1
+		//with tb+1 we can use the same "check_to_stop_rollback" on silent_execution,so we have not need to discriminate on LP_STATE_ONGVT or LP_STATE_ROLLBACK and code is more clear
+		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb+1);
+		#else
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
+		#endif
+
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		exit_from_unpreemptable_zone();
@@ -637,10 +645,15 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->msg_curr_executed=NULL;
 #endif
 		}
+
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 
 	}
+
+	#if DEBUG==1
+	current_lp=INVALID_LP_IDX;
+	#endif
 
 	//wait all threads to end the init phase to start togheter
 
@@ -671,6 +684,16 @@ stat64_t execute_time;
 	(void)safety;
 	(void)event;
 
+#if DEBUG==1//this is not present in original version
+	//ProcessEvent requires that current_lp and current_msg are corrected set(e.g. ProcessEvent internally call Random that use current_lp)
+	//this means that LP and current_lp must be equals.
+	//LP and current_lp can be different in case we have lock on lp x and we called this function with value lp y.
+	//this scenario can happen for example if we lock lp x and we don't reset current_lp with instruction current_lp=x
+	if(current_lp!=LP){
+		printf("current_lp different from LP_idx function argument\n");
+		gdb_abort;
+	}
+#endif
 	//IF evt.LP.localNext != NULL //RELATIVO AL FRAME
 	// marcare in qualche modo evt.LP.localNext…non sono sicurissimo sia da marcare come da eliminare…se è da rieseguire che si fa? Collegato ai frame
 
@@ -690,7 +713,7 @@ stat64_t execute_time;
 #endif
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
-		if(LPS[current_lp]->state==LP_STATE_SILENT_EXEC){
+		if(LPS[LP]->state==LP_STATE_SILENT_EXEC){
 			enter_in_preemptable_zone();
 		}//in forward mode preemptability is already actived in thread_loop
 
@@ -703,7 +726,7 @@ stat64_t execute_time;
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 		
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
-		if(LPS[current_lp]->state==LP_STATE_SILENT_EXEC){
+		if(LPS[LP]->state==LP_STATE_SILENT_EXEC){
 			exit_from_preemptable_zone();
 		}//in forward mode preemptability remains actived,it ends after queu_deliver_msgs
 		#endif
@@ -822,6 +845,11 @@ void thread_loop(unsigned int thread_id) {
 			reset_nesting_counters();
 			#endif
 			unlock(current_lp);
+
+			#if DEBUG==1
+			current_lp=INVALID_LP_IDX;
+			#endif
+
 			break;
 		#endif
 		case CFV_ALREADY_HANDLED ://nop to do
@@ -835,6 +863,9 @@ void thread_loop(unsigned int thread_id) {
 			check_CFV_ALREADY_HANDLED();
 			#endif
 			unlock(current_lp);
+			#if DEBUG==1
+			current_lp=INVALID_LP_IDX;
+			#endif
 			break;
 		default ://error
 			printf("invalid return value in set_jmp,long_jmp called with value %d\n",res);
@@ -854,7 +885,10 @@ void thread_loop(unsigned int thread_id) {
 				) 
 				&& !sim_error
 		) {
-		
+
+		#if DEBUG==1
+		current_lp=INVALID_LP_IDX;
+		#endif
 		// FETCH //
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
@@ -1062,10 +1096,6 @@ void thread_loop(unsigned int thread_id) {
 			#endif
 			commit_event(current_msg, current_node, current_lp);
 		}
-
-#if REPORT == 1
-		//statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
-#endif
 		
 end_loop:
 		//CHECK END SIMULATION
@@ -1073,6 +1103,12 @@ end_loop:
 		if(start_periodic_check_ongvt){
 			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
 				if(tryLock(last_checked_lp)){
+
+					#if DEBUG==1 //this is clearly a lose o locality on current_lp and current_msg variables
+					current_lp=INVALID_LP_IDX;
+					current_msg=NULL;
+					#endif
+
 					check_OnGVT(last_checked_lp);
 					unlock(last_checked_lp);
 					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
@@ -1080,13 +1116,26 @@ end_loop:
 			}
 		}
 #endif
-		if(is_end_sim(current_lp)){
+		#if DEBUG==1 //not present in original version
+		if(current_lp==(unsigned int)INVALID_LP_IDX){
+			if(is_end_sim(last_checked_lp)){//current_lp can be uninitialized here !!!
+			//idea:use last_checked_lp and increment mod num_Lp instead.
+				if(check_termination()){
+					__sync_bool_compare_and_swap(&stop, false, true);
+				}
+			}
+			last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+		}
+		#else
+		if(is_end_sim(current_lp)){//current_lp can be uninitialized here !!!
+			//idea:use last_checked_lp and increment mod num_Lp instead.
 			if(check_termination()){
 				__sync_bool_compare_and_swap(&stop, false, true);
 			}
 		}
+		#endif
 
-		//LOCAL LISTS PRUNING
+		//LOCAL LISTS PRUNING,no need to have current_lp and current_msg set.
 		nbc_prune();
 		
 		//PRINT REPORT

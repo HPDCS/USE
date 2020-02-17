@@ -252,19 +252,14 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		local_next_evt = list_next(evt);
 		
 		evt = local_next_evt;
-		if(old_state != LP_STATE_ONGVT){
-			if(evt == NULL || 
-				evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
-				break;
-		}
-		else{
-			if(evt == NULL || 
-			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
-				break;
-		}
+		//condition1 stop rollback:stop to point immediately previous of "ts" pair (dest_ts,dest_tb)
+		if(evt == NULL || 
+			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
+			break;
+
 		#if HANDLE_INTERRUPT==1
 		if( (evt != NULL) && !is_valid(evt)){
-			//stop rollback!!
+			//condition2 stop rollback!!
 			#if DEBUG==1
 			check_stop_rollback(old_state,lid);
 			#endif
@@ -546,7 +541,16 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		rootsim_error(false, "I'm asked to roll back LP %d's execution, but rollback_bound is not set. Ignoring...\n", lid);
 		return;
 	}
-
+	#if DEBUG==1//this is not present in original version
+	//ProcessEvent requires that current_lp and current_msg are corrected set(e.g. ProcessEvent internally call Random that use current_lp)
+	//this means that LP and current_lp must be equals.
+	//LP and current_lp can be different in case we have lock on lp x and we called this function with value lp y.
+	//this scenario can happen for example if we lock lp x and we don't reset current_lp with instruction current_lp=x
+	if(current_lp!=lid){
+		printf("current_lp different from LP_idx function argument\n");
+		gdb_abort;
+	}
+	#endif
 	//printf("ROLLBACK of LP%lu on time %.5f, %lu\n", lid, destination_time, tie_breaker);
 
 	if(destination_time == INFTY){
@@ -605,6 +609,10 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);
 
+	//TODO
+	//con questo check si vogliono tenere in conto sia gli eventi silent in mode ONGVT per riportarsi ad una simulazione commit,
+	// sia gli eventi after mode ONGVT ossia LP_STATE_ROLLBACK necessaria per riportarsi nel punto in cui si era della simulazione
+	//ma destination time potrebbe essere sovrascritto col list_next(bound), quindi sfalsa la statistica
 	if(LPS[lid]->state == LP_STATE_ONGVT || destination_time == INFTY)
 		statistics_post_lp_data(lid, STAT_EVENT_SILENT_FOR_GVT, (double)reprocessed_events);
 
@@ -629,6 +637,10 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		//LPS[lid]->from_last_ckpt = ??;
 
 		//statistics_post_lp_data(lid, STAT_ROLLBACK, 1);
+
+		//TODO
+		//con questo check si vogliono tenere in conto il numero di eventi in un rollback che non sia quello forzato tramite la modalità ONGVT
+		//ma destination time potrebbe essere sovrascritto col list_next(bound), quindi sfalsa la statistica tenendo in considerazione anche quelli nella modalità ONGVT
 		if(destination_time < INFTY)
 			statistics_post_lp_data(lid, STAT_ROLLBACK_LENGTH, (double)rollback_lenght);
 

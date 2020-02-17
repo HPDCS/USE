@@ -183,7 +183,7 @@ void queue_deliver_msgs(void) {
     msg_t *new_hole;
     unsigned int i;
     #if DEBUG==1 //not present in original version
-    unsigned int father_lp_idx=n_prc_tot;//invalid lp_idx
+    unsigned int father_lp_idx=(unsigned int)INVALID_LP_IDX;//invalid lp_idx
     #endif
     bool flagged=false,posted=false;//if flagged is true,then event is flagged POSTED_VALID,if posted is true then event is posted successfully
 #if REPORT == 1
@@ -200,7 +200,7 @@ void queue_deliver_msgs(void) {
             abort();
         }
         #if DEBUG==1//not present in original version
-        if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
+        if(father_lp_idx==(unsigned int)INVALID_LP_IDX){//first time set father_lp_idx with child_lp_idx
             father_lp_idx=new_hole->sender_id;
         }
         if(father_lp_idx!=new_hole->sender_id){//check if father_lp_idx is the same for each child
