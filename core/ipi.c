@@ -153,39 +153,45 @@ void check_ipi_capability(){
     printf("program has ipi_capability\n");
 }
 
+bool decision_model(){
+    return true;
+}
+
 void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
     unsigned int lck_tid;
     unsigned int lp_idx;
-    unsigned long long user_time = 0;
+    unsigned long long syscall_time = 0;
+    bool ipi_useful=false;
     lp_idx=event->receiver_id;
     lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
     if(lck_tid==0)
         return;
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
-        #if REPORT==1
-        clock_timer_start(user_time);
-        #endif
-        if (ipi_syscall(lck_tid-1)){
-            printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
-            gdb_abort;
+        ipi_useful = decision_model();
+        if(ipi_useful){
+            //this unpreemptable barrier can be relaxed to contains only correlated statistics,no need to protect instructions before "syscall",
+            //but in this way the number of syscalls must be coherent with kernel module counters!!
+            enter_in_unpreemptable_zone();
+
+            #if REPORT==1
+            clock_timer_start(syscall_time);
+            #endif
+
+            if (ipi_syscall(lck_tid-1)){
+                printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
+                gdb_abort;
+            }
+
+            #if REPORT==1 //protect correlated statistics
+            statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(syscall_time));
+            statistics_post_th_data(tid,STAT_IPI_SENDED,1);
+
+            #endif
+
+            exit_from_unpreemptable_zone();
         }
-
-        #if REPORT==1
-
-        #if HANDLE_INTERRUPT_WITH_CHECK==1 //protect correlated statistics
-        enter_in_unpreemptable_zone();
-        #endif
-
-		statistics_post_th_data(tid,STAT_IPI_SYSCALL_TIME,clock_timer_value(user_time));
-        statistics_post_th_data(tid,STAT_IPI_SENDED,1);
-
-        #if HANDLE_INTERRUPT_WITH_CHECK==1
-        exit_from_unpreemptable_zone();
-        #endif
-
-        #endif
     }
 }
 
@@ -258,6 +264,7 @@ void register_thread_to_ipi_module(unsigned int thread_id, const char* function_
         printf("Thread %d finish registration to IPI module\n",thread_id);
     #endif
 }
+
 void ipi_unregister(){
     ipi_unregister_thread(&alternate_stack, alternate_stack_area);
 }
@@ -312,39 +319,43 @@ void reset_counters(unsigned long*expected_counters){
         expected_counters[i]=0;
     }
 }
-void call_trampoline_and_check_arrays_counters(char*string_to_print_on_error,unsigned long*expected_counters){
+void call_trampoline_and_check_arrays_counters(char*string_to_print_on_error,unsigned long*expected_counters,bool preemption_counter_incremented){
     sync_trampoline();
-
     unsigned long trampoline_counters[7]={0};
     initialize_trampoline_counters(trampoline_counters);
-    if(!check_arrays_counters(expected_counters,trampoline_counters) || (thread_stats[0].ipi_trampoline_received!=1)){
+    unsigned long expected_preemption_counter=PREEMPT_COUNT_INIT;
+    if(preemption_counter_incremented){
+        expected_preemption_counter+=1;
+    }
+    if(!check_arrays_counters(expected_counters,trampoline_counters) || (thread_stats[0].ipi_trampoline_received!=1) || get_preemption_counter()!=expected_preemption_counter){
         print_counters("expected",expected_counters);
         print_counters("result\n",trampoline_counters);
         printf("%s\n",string_to_print_on_error);
         gdb_abort;
     }
     thread_stats[0].ipi_trampoline_received=0;
+    reset_preemption_counter();
     reset_all_trampoline_counters();
 }
 
 void check_priority_msg_null(){
     //no one pre operation
     unsigned long expected_counters[7]={1,0,0,0,0,0,0};
-    call_trampoline_and_check_arrays_counters("check_priority_msg_null failed",expected_counters);
+    call_trampoline_and_check_arrays_counters("check_priority_msg_null failed",expected_counters,false);
 }
 
 void check_priority_msg_not_null_state_extracted(msg_t*priority_message){
     priority_message->state=EXTRACTED;
     LPS[current_lp]->priority_message=priority_message;
     unsigned long expected_counters[7]={1,1,0,0,0,0,0};
-    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_extracted failed",expected_counters);
+    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_extracted failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
 void check_priority_msg_not_null_state_eliminated(msg_t*priority_message){
     priority_message->state=ELIMINATED;
     LPS[current_lp]->priority_message=priority_message;
     unsigned long expected_counters[7]={1,1,0,0,0,0,0};
-    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_eliminated failed",expected_counters);
+    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_eliminated failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
 void check_priority_msg_not_null_state_anti_msg_banana(msg_t*priority_message){
@@ -352,7 +363,7 @@ void check_priority_msg_not_null_state_anti_msg_banana(msg_t*priority_message){
     priority_message->monitor=(void*)0xBA4A4A;
     LPS[current_lp]->priority_message=priority_message;
     unsigned long expected_counters[7]={1,1,1,0,0,0,0};
-    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_anti_msg_banana failed",expected_counters);
+    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_anti_msg_banana failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
 
@@ -361,14 +372,14 @@ void check_priority_msg_not_null_state_anti_msg_not_banana(msg_t*priority_messag
     priority_message->monitor=(void*)0x0;
     LPS[current_lp]->priority_message=priority_message;
     unsigned long expected_counters[7]={1,1,1,0,0,0,0};
-    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_anti_msg_not_banana failed",expected_counters);
+    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_anti_msg_not_banana failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
 void check_priority_msg_not_null_state_new_evt(msg_t*priority_message){
     priority_message->state=NEW_EVT;
     LPS[current_lp]->priority_message=priority_message;
     unsigned long expected_counters[7]={1,1,0,0,1,0,0};
-    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_new_evt failed",expected_counters);
+    call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_new_evt failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
 void check_priority_msg_not_null_state_anti_msg_not_banana_bound_not_null(msg_t*priority_message,msg_t*bound){
@@ -377,7 +388,7 @@ void check_priority_msg_not_null_state_anti_msg_not_banana_bound_not_null(msg_t*
     LPS[current_lp]->priority_message=priority_message;
     LPS[current_lp]->bound=bound;
     unsigned long expected_counters[7]={0};
-
+    bool preemption_counter_must_be_incremented=false;
     for(int i=0;i<10000;i++){
         reset_counters(expected_counters);
         double random_double1,random_double2;
@@ -385,11 +396,13 @@ void check_priority_msg_not_null_state_anti_msg_not_banana_bound_not_null(msg_t*
         random_double2=randfrom(0.0, 10000.0);
         priority_message->timestamp=random_double1;
         bound->timestamp=random_double2;
+        preemption_counter_must_be_incremented=false;
         if(priority_message->timestamp>=bound->timestamp){
             expected_counters[0]=1;
             expected_counters[1]=1;
             expected_counters[2]=1;
             expected_counters[5]=1;
+            preemption_counter_must_be_incremented=false;
         }
         else{
             expected_counters[0]=1;
@@ -397,8 +410,9 @@ void check_priority_msg_not_null_state_anti_msg_not_banana_bound_not_null(msg_t*
             expected_counters[2]=1;
             expected_counters[5]=1;
             expected_counters[6]=1;
+            preemption_counter_must_be_incremented=true;
         }
-        call_trampoline_and_check_arrays_counters("check_priority_msg_not_null_state_anti_msg_not_banana_bound_not_null failed",expected_counters);
+        call_trampoline_and_check_arrays_counters("check_priority_msg_not_null_state_anti_msg_not_banana_bound_not_null failed",expected_counters,preemption_counter_must_be_incremented);
     }
     LPS[current_lp]->priority_message=NULL;
     LPS[current_lp]->bound=NULL;
@@ -409,6 +423,8 @@ void check_priority_msg_not_null_state_new_evt_bound_not_null(msg_t*priority_mes
     LPS[current_lp]->priority_message=priority_message;
     LPS[current_lp]->bound=bound;
     unsigned long expected_counters[7]={0};
+    bool preemption_counter_must_be_incremented=false;
+
     for(int i=0;i<10000;i++){
         reset_counters(expected_counters);
         double random_double1,random_double2;
@@ -416,12 +432,14 @@ void check_priority_msg_not_null_state_new_evt_bound_not_null(msg_t*priority_mes
         random_double2=randfrom(0.0, 10000.0);
         priority_message->timestamp=random_double1;
         bound->timestamp=random_double2;
+        preemption_counter_must_be_incremented=false;
 
         if(priority_message->timestamp>=bound->timestamp){
             expected_counters[0]=1;
             expected_counters[1]=1;
             expected_counters[4]=1;
             expected_counters[5]=1;
+            preemption_counter_must_be_incremented=false;
         }
         else{
             expected_counters[0]=1;
@@ -429,8 +447,9 @@ void check_priority_msg_not_null_state_new_evt_bound_not_null(msg_t*priority_mes
             expected_counters[4]=1;
             expected_counters[5]=1;
             expected_counters[6]=1;
+            preemption_counter_must_be_incremented=true;
         }
-        call_trampoline_and_check_arrays_counters("check_priority_msg_not_null_state_new_evt_bound_not_null failed",expected_counters);
+        call_trampoline_and_check_arrays_counters("check_priority_msg_not_null_state_new_evt_bound_not_null failed",expected_counters,preemption_counter_must_be_incremented);
     }
     LPS[current_lp]->priority_message=NULL;
     LPS[current_lp]->bound=NULL;
@@ -473,6 +492,8 @@ void check_trampoline_function(){
 
     deallocate_event(evt1);
     deallocate_event(evt2);
+
+    //in case this check will be modified remember to delete all side-effects created with calls to sync_trampoline(), or with the setting of bound,priority_msg ecc
 }
 
 #endif

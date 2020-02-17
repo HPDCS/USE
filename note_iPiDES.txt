@@ -1,14 +1,12 @@
 TODO:
--ricontrollare tutte le statistiche nuove e vecchie
+-rivedere tutti i check se sono coerenti con la possibile interruzione, specialmente ongvt
+-ritardare tutte le statistiche che possono essere interrotte sia clock che numeri
+-ricontrollare tutte le statistiche nuove e vecchie, soprattutto quelle interrompibili che sono correlate
 -aggiungere altre statistiche che vengono in mente
--testare nuove modifiche su macchina 58
-
+-rimuovere standing ipi
 -pointer a funzione per i check su decrement,se parametro è NULL viene chiamata solo la funzione di default,la funzione passata deve essere una preoperazione per la gestione dell'interrupt.
--in pcs ipi sent << ipi_gestiti trampoline, ./pcs 8 9 10sec con macro POSTING=1 IPI_SUPPORT=1 HANDLE_INTERRUPT_WITH_CHECK=1 CHECKPOINT_PERIOD=2
 
--check sincrono se decremento porta counter a 0
--check sincrono chiama una funzione con parametri che fa tutto ed internamente controlla e gestisce tutti i casi(se current_msg not null non inserirlo,inserire a prescindere evento in coda locale)
--rafforzare check in fetch.c su delivery degli ipi?
+-rafforzare check in fetch.c per deliverare gli ipi?
 
 -vedere la parte dei seed come viene ripristinata per capire perché le 2 scritture della random non sono interrompibili.(gdb restituisce seed2=null segmentation fault)
 

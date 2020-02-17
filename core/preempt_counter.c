@@ -40,7 +40,9 @@ unsigned long get_preemption_counter(){
 	return *preempt_count_ptr;
 }
 
-
+void reset_preemption_counter(){
+	set_preemption_counter(PREEMPT_COUNT_INIT);
+}
 unsigned long decrement_preempt_counter(){
 	unsigned long value;
 	#if DEBUG==1

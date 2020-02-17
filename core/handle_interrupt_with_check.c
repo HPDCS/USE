@@ -71,6 +71,7 @@ unsigned long enter_in_unpreemptable_zone(){
 	}
 	nesting_zone_unpreemptable++;
 	#endif
+	//counter can became 1 from 0,after increment do_check
 	preemption_counter=increment_preempt_counter();
 	if(preemption_counter==PREEMPT_COUNT_INIT)
 		default_handler(NULL);
@@ -84,6 +85,7 @@ unsigned long exit_from_unpreemptable_zone(){
 	}
 	nesting_zone_unpreemptable--;
 	#endif
+	//counter can became 0 from 1,before decrement do_check
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
 		default_handler(NULL);
 	return decrement_preempt_counter();
@@ -97,6 +99,7 @@ unsigned long enter_in_preemptable_zone(){
 	}
 	nesting_zone_preemptable++;
 	#endif
+	//counter can became 0 from 1,before decrement do_check
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)
 		default_handler(NULL);
 	return decrement_preempt_counter();
@@ -112,6 +115,7 @@ unsigned long exit_from_preemptable_zone(){
 	nesting_zone_preemptable--;
 	#endif
 	preemption_counter=increment_preempt_counter();
+	//counter can became 1 from 0,after increment do_check
 	if(preemption_counter==PREEMPT_COUNT_INIT)
 		default_handler(NULL);
 	return preemption_counter;

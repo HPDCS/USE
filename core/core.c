@@ -559,6 +559,15 @@ void init_simulation(unsigned int thread_id){
 	to_remove_local_evts_old = new_list(tid, msg_t);
 	freed_local_evts = new_list(tid, msg_t);
 
+#if IPI_SUPPORT==1
+	//register thread in order to send and to receive IPI
+	register_thread_to_ipi_module(tid,"cfv_trampoline",(unsigned long)cfv_trampoline);
+#endif
+
+#if PREEMPT_COUNTER==1
+	initialize_preempt_counter(tid);//init counter
+#endif
+
 #if POSTING==1
     //initialize collision_list
     for (int i=0; i<MAX_THR_HASH_TABLE_SIZE; i++)
@@ -583,6 +592,9 @@ void init_simulation(unsigned int thread_id){
 		printf("Numerical_init finished\n");
 		nodes_init();
 		printf("Nodes_init finished\n");
+		#if IPI_SUPPORT==1
+		run_time_data_init();////register helpful data available only at run-time,main thread do run_time_data_init
+		#endif
 		//process_init_event
 		#if IPI_SUPPORT==1 && DEBUG==1
 		current_lp = 0;//make current_lp valid value,it will be reset to 0 in the next for loop
@@ -735,14 +747,6 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int empty_fetch = 0;
 #endif
 
-#if IPI_SUPPORT==1
-	//register helpful data available only at run-time
-	if(thread_id==0)
-		run_time_data_init();
-	//register thread in order to send and to receive IPI
-	register_thread_to_ipi_module(thread_id,"cfv_trampoline",(unsigned long)cfv_trampoline);
-#endif
-	initialize_preempt_counter(thread_id);//init counter
 	//init with section not interruptible!!!
 	init_simulation(thread_id);
 
