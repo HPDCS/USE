@@ -62,7 +62,7 @@ void check_CFV_ALREADY_HANDLED(){
 		gdb_abort;
 	}
 	#if PREEMPT_COUNTER==1
-	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+	if(get_preemption_counter()!=PREEMPT_COUNT_INIT){
 				printf("preempt counter is not INIT in CFV_ALREADY_HANDLED\n");
 				gdb_abort;
 	}
@@ -97,7 +97,7 @@ void check_CFV_ALREADY_HANDLED(){
 }
 void check_thread_loop_before_fetch(){
 	#if PREEMPT_COUNTER==1
-	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+	if(get_preemption_counter()!=PREEMPT_COUNT_INIT){
 		printf("preempt counter is not INIT before simulation loop\n");
 		gdb_abort;
 	}
@@ -124,7 +124,7 @@ void check_thread_loop_before_fetch(){
 }
 void check_CFV_INIT(){
 	#if PREEMPT_COUNTER==1
-	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+	if(get_preemption_counter()!=PREEMPT_COUNT_INIT){
 				printf("preempt counter is not INIT in CFV_INIT\n");
 				gdb_abort;
 	}
@@ -138,7 +138,7 @@ void check_CFV_TO_HANDLE(){
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
 	check_unpreemptability();
 	#endif
-	if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){
+	if(get_preemption_counter()!=PREEMPT_COUNT_INIT){
 			printf("interrupt code not interruptible\n");
 			gdb_abort;
 	}
@@ -376,6 +376,10 @@ void check_thread_loop_after_executeEvent(){
 		printf("invalid epoch number in event,epoch_bound=%d,epoch_current_msg=%d\n",LPS[current_lp]->old_valid_bound->epoch,current_msg->epoch);
 		gdb_abort;
 	}
+	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	check_unpreemptability();
+	#endif
+	
 	#endif
 }
 

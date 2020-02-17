@@ -29,9 +29,13 @@ void initialize_preempt_counter();
 void initialize_standing_ipi();
 unsigned long increment_preempt_counter();
 unsigned long decrement_preempt_counter();
+unsigned long get_preemption_counter();
+
+#define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",get_preemption_counter(),thread_id)
+
 
 extern __thread unsigned long long * preempt_count_ptr;
 extern __thread unsigned long long * standing_ipi_ptr;
 
 #endif
-//
+

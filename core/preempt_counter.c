@@ -4,12 +4,16 @@
 #include <hpdcs_utils.h>
 
 #if PREEMPT_COUNTER==1
-#define	print_preemption_counter(thread_id) printf("preempt_counter=%llu,tid=%d\n",*preempt_count_ptr,thread_id)
+//this function is module private
+void set_preemption_counter(unsigned long value){
+	*preempt_count_ptr=value;
+}
+
 #if IPI_SUPPORT==1
 __thread unsigned long long * preempt_count_ptr = NULL;
 __thread unsigned long long * standing_ipi_ptr = NULL;
 	void initialize_preempt_counter(){
-		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+		set_preemption_counter(PREEMPT_COUNT_INIT);//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
 	}
 	void initialize_standing_ipi(){
 		*standing_ipi_ptr=STANDING_IPI_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
@@ -23,7 +27,7 @@ __thread unsigned long long * standing_ipi_ptr = NULL;
 
 	void initialize_preempt_counter(){
 		preempt_count_ptr=&preempt_count;
-		*preempt_count_ptr=PREEMPT_COUNT_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+		set_preemption_counter(PREEMPT_COUNT_INIT);//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
 	}
 
 	void initialize_standing_ipi(){
@@ -31,6 +35,11 @@ __thread unsigned long long * standing_ipi_ptr = NULL;
 		*standing_ipi_ptr=STANDING_IPI_INIT;//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
 	}
 #endif
+
+unsigned long get_preemption_counter(){
+	return *preempt_count_ptr;
+}
+
 
 unsigned long decrement_preempt_counter(){
 	unsigned long value;

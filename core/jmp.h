@@ -18,7 +18,7 @@
 //#define long_jmp(cntx_ptr, val)	_long_jmp(cntx_ptr, val)
 #if DEBUG==1
 #define wrap_long_jmp(cntx_ptr, val) ({\
-              if(*preempt_count_ptr!=PREEMPT_COUNT_CODE_INTERRUPTIBLE){\
+              if(*preempt_count_ptr!=PREEMPT_COUNT_INIT){\
                 printf("invalid preempt_counter value in long_jmp\n");\
                 gdb_abort;\
               }\

@@ -20,7 +20,11 @@ unsigned long exit_from_unpreemptable_zone();
 
 unsigned long enter_in_preemptable_zone();
 unsigned long exit_from_preemptable_zone();
+
+#if DEBUG==1
 void check_preemptability();
+#endif
+
 void check_unpreemptability();
 #endif
 

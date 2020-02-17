@@ -123,6 +123,7 @@ bool pid_has_capability(pid_t pid,unsigned int type_capability,const char*cap_na
         return true;
     return false;
 }
+
 void set_program_name(char*program_name_to_set){
     //copy program_name in variable program_name
     unsigned int len_string_arg0=strlen(program_name_to_set);
@@ -133,6 +134,7 @@ void set_program_name(char*program_name_to_set){
     memset(program_name,'\0',MAX_LEN_PROGRAM_NAME);
     memcpy(program_name,program_name_to_set,len_string_arg0);
 }
+
 bool enough_memory_lockable(){
     bool cap_ipc_lock = pid_has_capability(getpid(),CAP_EFFECTIVE,"cap_ipc_lock");
     if(cap_ipc_lock)
@@ -142,6 +144,7 @@ bool enough_memory_lockable(){
         return true;
     return false;
 }
+
 void check_ipi_capability(){
     if(!enough_memory_lockable()){
         printf("not enough memory lockable\n");
@@ -314,12 +317,13 @@ void call_trampoline_and_check_arrays_counters(char*string_to_print_on_error,uns
 
     unsigned long trampoline_counters[7]={0};
     initialize_trampoline_counters(trampoline_counters);
-    if(!check_arrays_counters(expected_counters,trampoline_counters)){
+    if(!check_arrays_counters(expected_counters,trampoline_counters) || (thread_stats[0].ipi_trampoline_received!=1)){
         print_counters("expected",expected_counters);
         print_counters("result\n",trampoline_counters);
         printf("%s\n",string_to_print_on_error);
         gdb_abort;
     }
+    thread_stats[0].ipi_trampoline_received=0;
     reset_all_trampoline_counters();
 }
 

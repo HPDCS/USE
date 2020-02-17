@@ -193,20 +193,6 @@ void queue_deliver_msgs(void) {
         check_queue_deliver_msgs();
 #endif
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
-        #if POSTING_SYNC_CHECK_FORWARD==1 && INTERRUPT_FORWARD==1
-            if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-                #if REPORT==1
-                statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_FORWARD,1);
-                #endif
-                #if VERBOSE>0
-                printf("sync check future queue_deliver_msgs\n");
-                #endif
-                msg_t*evt=get_best_LP_info_good(current_lp);
-                if(evt!=NULL){
-                    make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
-                }
-        }
-        #endif //POSTING_SYNC_CHECK_FORWARD
 
         new_hole = _thr_pool.messages[i].father;
         if(new_hole == NULL){
@@ -214,13 +200,13 @@ void queue_deliver_msgs(void) {
             abort();
         }
         #if DEBUG==1//not present in original version
-            if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
-                father_lp_idx=new_hole->sender_id;
-            }
-            if(father_lp_idx!=new_hole->sender_id){//check if father_lp_idx is the same for each child
-                printf("queue_deliver_msgs is flushing events with different father->lp_idx\n");
-                gdb_abort;
-            }
+        if(father_lp_idx==n_prc_tot){//first time set father_lp_idx with child_lp_idx
+            father_lp_idx=new_hole->sender_id;
+        }
+        if(father_lp_idx!=new_hole->sender_id){//check if father_lp_idx is the same for each child
+            printf("queue_deliver_msgs is flushing events with different father->lp_idx\n");
+            gdb_abort;
+        }
         #endif
         new_hole->father = current_msg;
         new_hole->fatherFrame = LPS[current_lp]->num_executed_frames;

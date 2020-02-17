@@ -217,6 +217,112 @@ unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
 *
 * @return The number of events re-processed during the silent execution
 */
+
+#if HANDLE_INTERRUPT==1
+//cleaned version of silent execution,inside it we have macro HANDLE_INTERRUPT==1 to check differencies with original version not cleaned.
+unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, simtime_t until_ts, unsigned int tie_breaker) {
+	unsigned int events = 0;
+	unsigned short int old_state;
+	
+	msg_t * local_next_evt, * last_executed_event;
+	// current state can be either idle READY, or ROLLBACK, so we save it and then put it back in place
+	old_state = LPS[lid]->state;
+	LPS[lid]->state = LP_STATE_SILENT_EXEC;
+
+	#if DEBUG==1//not present in original version
+	unsigned int last_frame_event,local_next_frame_event,last_epoch_event,local_next_epoch_event;
+	check_silent_execution(old_state);
+	#endif
+
+	// Reprocess events. Outgoing messages are explicitly discarded, as this part of
+	// the simulation has been already executed at least once
+
+	last_executed_event = evt;
+
+	#if DEBUG==1//not present in original version
+	last_frame_event = evt->frame;
+	last_epoch_event=evt->epoch;
+	#endif
+
+	#if HANDLE_INTERRUPT==1
+	LPS[lid]->last_silent_exec_evt = evt;
+	#endif
+
+	while(1){
+		local_next_evt = list_next(evt);
+		
+		evt = local_next_evt;
+		if(old_state != LP_STATE_ONGVT){
+			if(evt == NULL || 
+				evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker >= tie_breaker)  ) 
+				break;
+		}
+		else{
+			if(evt == NULL || 
+			evt->timestamp > until_ts || (evt->timestamp == until_ts && evt->tie_breaker > tie_breaker)  ) 
+				break;
+		}
+		#if HANDLE_INTERRUPT==1
+		if( (evt != NULL) && !is_valid(evt)){
+			//stop rollback!!
+			#if DEBUG==1
+			check_stop_rollback(old_state,lid);
+			#endif
+			
+			LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
+			break;
+		}
+		#endif
+
+		//evt is the next event to Process
+
+		#if DEBUG==1//not present in original version
+		local_next_frame_event=local_next_evt->frame;
+		local_next_epoch_event=local_next_evt->epoch;
+		check_epoch_and_frame(last_frame_event,local_next_frame_event,last_epoch_event,local_next_epoch_event);
+		check_events_state(old_state,evt,local_next_evt);
+		#endif
+
+		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
+		events++;
+
+		last_executed_event = evt;
+
+		#if DEBUG==1//not present in original version
+		last_frame_event = evt->frame;
+		last_epoch_event = evt->epoch;
+		#endif
+
+		#if HANDLE_INTERRUPT==1
+		LPS[lid]->last_silent_exec_evt = evt;
+		#endif
+
+	}
+	
+	#if HANDLE_INTERRUPT==1
+	insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);
+	#endif
+
+	#if HANDLE_INTERRUPT==1
+	if(old_state != LP_STATE_ONGVT){//we don't change bound in LP_STATE_ONGVT
+		LPS[lid]->old_valid_bound = last_executed_event;
+	}
+	#else
+	if(old_state != LP_STATE_ONGVT){
+		LPS[lid]->bound = last_executed_event;
+	}
+	#endif
+
+	#if HANDLE_INTERRUPT==1
+	LPS[lid]->last_silent_exec_evt = last_executed_event;
+	#endif
+	
+	LPS[lid]->state = old_state;
+	return events;
+}
+
+
+#else
 unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, simtime_t until_ts, unsigned int tie_breaker) {
 	unsigned int events = 0;
 	unsigned short int old_state;
@@ -407,6 +513,8 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	LPS[lid]->state = old_state;
 	return events;
 }
+#endif
+
 
 
 /**

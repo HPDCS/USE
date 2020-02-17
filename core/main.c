@@ -17,11 +17,7 @@ extern volatile bool stop_timer;
 extern volatile bool stop;
 
 #if IPI_SUPPORT==1
-
 #include <ipi.h>
-
-//extern char program_name[MAX_LEN_PROGRAM_NAME];
-
 #endif
 
 __thread struct drand48_data seedT;

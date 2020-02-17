@@ -16,7 +16,54 @@ void reset_nesting_counters(){
 }
 #endif
 
+void*default_handler(void*arg){
+    //this function assume current_lp and current_msg are set.
+    //this function works only with LP->state LP_STATE_READY or LP_STATE_SILENT_EXEC
+    //set these variable from caller before call this function
+    (void)arg;
+    check_unpreemptability();
+    if (LPS[current_lp]->state==LP_STATE_SILENT_EXEC){
+        #if REPORT==1
+        statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_SILENT,1);
+
+        #endif
+        #if VERBOSE >0
+        printf("sync_check_silent\n");
+        #endif
+        msg_t*evt=get_best_LP_info_good(current_lp);
+        if(evt!=NULL){
+            if(current_msg==NULL){
+            make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
+            }
+            else{//current_msg not null
+                insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
+                statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
+                make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
+            }
+        }
+    }   
+    else if (LPS[current_lp]->state==LP_STATE_READY){
+        #if REPORT==1 
+        statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_FORWARD,1);
+        #endif
+        #if VERBOSE >0
+        printf("sync_check_forward\n");
+        #endif
+        msg_t*evt=get_best_LP_info_good(current_lp);
+        if(evt!=NULL){
+            //no need of insert current_msg
+            statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
+            make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
+        }
+    }
+    else{
+        printf("LP_STATE not valid\n");
+    }
+    return NULL;//never reached
+}
+
 unsigned long enter_in_unpreemptable_zone(){
+	unsigned int preemption_counter;
 	#if DEBUG==1
 	if(nesting_zone_unpreemptable>=MAX_NESTING_ZONE_UNPREEMPTABLE){
 		printf("error in enter_in_unpreemptable_zone\n");
@@ -24,7 +71,10 @@ unsigned long enter_in_unpreemptable_zone(){
 	}
 	nesting_zone_unpreemptable++;
 	#endif
-	return increment_preempt_counter();
+	preemption_counter=increment_preempt_counter();
+	if(preemption_counter==PREEMPT_COUNT_INIT)
+		default_handler(NULL);
+	return preemption_counter;
 }
 unsigned long exit_from_unpreemptable_zone(){
 	#if DEBUG==1
@@ -34,6 +84,8 @@ unsigned long exit_from_unpreemptable_zone(){
 	}
 	nesting_zone_unpreemptable--;
 	#endif
+	if(get_preemption_counter()==PREEMPT_COUNT_INIT)//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
+		default_handler(NULL);
 	return decrement_preempt_counter();
 }
 
@@ -45,10 +97,13 @@ unsigned long enter_in_preemptable_zone(){
 	}
 	nesting_zone_preemptable++;
 	#endif
+	if(get_preemption_counter()==PREEMPT_COUNT_INIT)
+		default_handler(NULL);
 	return decrement_preempt_counter();
 }
 
 unsigned long exit_from_preemptable_zone(){
+	unsigned int preemption_counter;
 	#if DEBUG==1
 	if(nesting_zone_preemptable==NO_NESTING){
 		printf("error in exit_from_preemptable_zone\n");
@@ -56,21 +111,25 @@ unsigned long exit_from_preemptable_zone(){
 	}
 	nesting_zone_preemptable--;
 	#endif
-	return increment_preempt_counter();
+	preemption_counter=increment_preempt_counter();
+	if(preemption_counter==PREEMPT_COUNT_INIT)
+		default_handler(NULL);
+	return preemption_counter;
 }
 
 #if DEBUG==1
 void check_preemptability(){
+	//check if code enters at least once time in code preemptable
 	if(nesting_zone_preemptable==0){
-		printf("region of code unpreemptable\n");
+		printf("region of code unpreemptable in check_preemptability\n");
 		gdb_abort;
 	}
 }
 #endif
 
 void check_unpreemptability(){
-	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-		printf("code is preemptable\n");
+	if(get_preemption_counter()==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
+		printf("code is preemptable in check_unpreemptability function\n");
 		gdb_abort;
 	}
 }

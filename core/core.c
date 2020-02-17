@@ -336,6 +336,8 @@ bool check_termination(void) {
 }
 
 void insert_ordered_in_list(unsigned int lid,struct rootsim_list_node* queue_in,msg_t*starting_event,msg_t*event_to_insert){
+	if(event_to_insert==NULL)
+		return;//don't insert NULL messagges
 	if(!list_is_connected(queue_in, event_to_insert)) {
 		msg_t *bound_t, *next_t,*prev_t;
 		bound_t = starting_event;
@@ -417,91 +419,11 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
     	#if DEBUG==1//not present in original version
 		check_ScheduleNewEventFuture();
     	#endif
-		#if POSTING_SYNC_CHECK_FORWARD==1 && INTERRUPT_FORWARD==1
-        if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-        	#if REPORT==1
-    		statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_FORWARD,1);
-			#endif
-        	#if VERBOSE >0
-        	printf("sync_check_future ScheduleNewEvent\n");
-        	#endif
-			msg_t*evt=get_best_LP_info_good(current_lp);
-	        if(evt!=NULL){
-	        	#if REPORT==1
-	        	statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_FORWARD_EXEC,clock_timer_value(event_processing_timer));
-	        	#endif
-	        	make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
-	        	//messagges already inserted in thread_pool will be cleaned with queue_clean
-	        }
-    	}
-    	#endif
 		queue_insert(receiver, timestamp, event_type, event_content, event_size);
 	}
-	#if POSTING_SYNC_CHECK_SILENT==1 && INTERRUPT_SILENT==1
+	#if DEBUG==1
 	else{
-		#if DEBUG==1
 		check_ScheduleNewEventPast();
-		#endif
-    	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-    		#if REPORT==1
-    		statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_SILENT,1);
-			#endif
-			#if VERBOSE >0
-        	printf("sync_check_past ScheduleNewEvent\n");
-        	#endif
-	    	msg_t*evt=get_best_LP_info_good(current_lp);
-	    	if(evt!=NULL){//exist priority message
-	    		if(current_msg==NULL){//rollback with LP state LP_STATE_ONGVT,there is no current_msg
-	    			if( (evt->timestamp<LPS[current_lp]->last_silent_exec_evt->timestamp)
-			    		|| ( (evt->timestamp==LPS[current_lp]->last_silent_exec_evt->timestamp) 
-			    			&& (evt->tie_breaker<LPS[current_lp]->last_silent_exec_evt->tie_breaker) )){
-	    				#if REPORT==1
-	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
-	        			#endif
-	    				make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
-		            }
-		            //here priority message is after last_silent_exec,we don't need to do a rollback
-	    			else if((evt->timestamp<LPS[current_lp]->msg_curr_executed->timestamp)
-			    		|| ( (evt->timestamp==LPS[current_lp]->msg_curr_executed->timestamp) 
-			    			&& (evt->tie_breaker<LPS[current_lp]->msg_curr_executed->tie_breaker) ))
-	    			{
-						#if REPORT==1
-	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
-	        			#endif
-	    				make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
-	    			}
-	    			else{
-	    				reset_info_and_change_bound(current_lp,evt);
-	    			}
-	    		}
-	    		else{//current_msg not null
-	    			if( (evt->timestamp<LPS[current_lp]->last_silent_exec_evt->timestamp)
-			    		|| ( (evt->timestamp==LPS[current_lp]->last_silent_exec_evt->timestamp) && (evt->tie_breaker<LPS[current_lp]->last_silent_exec_evt->tie_breaker) )){
-	    				//priority message is before last_silent_exec,we must to do a rollback,but before insert current_msg ordered in localqueue
-	    				insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
-						#if REPORT==1
-	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
-	        			#endif
-						make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
-			            //messagges already inserted in thread_pool will be cleaned with queue_clean
-			        }
-			        //here priority message is after last_silent_exec,we don't need to do a rollback
-	    			else if((evt->timestamp<LPS[current_lp]->msg_curr_executed->timestamp)
-			    		|| ( (evt->timestamp==LPS[current_lp]->msg_curr_executed->timestamp) 
-			    			&& (evt->tie_breaker<LPS[current_lp]->msg_curr_executed->tie_breaker) ))
-	    			{
-	    				insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
-						#if REPORT==1
-	        			statistics_post_lp_data(current_lp,STAT_CLOCK_EXEC_EVT_INTER_SILENT_EXEC,clock_timer_value(event_processing_timer));
-	        			#endif
-	    				make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
-	    			}
-	    			else{
-	    				reset_info_and_change_bound(current_lp,evt);
-	    			}
-	    		}
-			}
-		}
 	}
 	#endif
 }

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <handle_interrupt.h>
 #include <hpdcs_utils.h>
+#include <timer.h>
 
 #if DEBUG==1
 #include <checks.h>
@@ -10,7 +11,6 @@
 
 #if HANDLE_INTERRUPT_WITH_CHECK==1
 #include <handle_interrupt_with_check.h>
-#include <timer.h>
 #endif
 
 #if IPI_SUPPORT==1
@@ -112,13 +112,8 @@ void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker
 }
 
 void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound){
-	#if REPORT==1 && IPI_POSTING==1 || IPI_SUPPORT==1
-	if(LPS[current_lp]->state==LP_STATE_READY){
-        statistics_post_lp_data(current_lp,STAT_EVENT_FORWARD_INTERRUPTED,1);
-    }
-    else{
-       	statistics_post_lp_data(current_lp,STAT_EVENT_SILENT_INTERRUPTED,1);
-    }
+	#if DEBUG==1 && HANDLE_INTERRUPT_WITH_CHECK==1
+	reset_nesting_counters();
 	#endif
 	make_LP_state_invalid(restore_bound);
     wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
