@@ -1,9 +1,7 @@
 TODO:
 -rivedere tutti i punti in cui avviene la enter/exit preemptable/unpreemptable e vedere se ci sono problemi ad interrompere prima/dopo aver incrementato/decrementato specialmente ongvt
+-togliere check su increment del preemption counter
 
--ritardare tutte le statistiche che possono essere interrotte sia clock che numeri
--preservare le statistiche originali che potrebbero essere alterate con le interruzioni
--preservare anche le statistiche aggiunte successivamente
 -ricontrollare tutte le statistiche nuove e vecchie, soprattutto quelle interrompibili che sono correlate
 
 

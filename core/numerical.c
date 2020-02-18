@@ -73,16 +73,8 @@ double Random(void) {
 		seed2 = (uint32_t *)((char *)&(LPS[current_lp]->seed) + (sizeof(uint32_t)));
 	}
 
-	#if HANDLE_INTERRUPT_WITH_CHECK==1
-	enter_in_unpreemptable_zone();
-	#endif
-
 	*seed1 = 36969u * (*seed1 & 0xFFFFu) + (*seed1 >> 16u);
 	*seed2 = 18000u * (*seed2 & 0xFFFFu) + (*seed2 >> 16u);
-
-	#if HANDLE_INTERRUPT_WITH_CHECK==1
-	exit_from_unpreemptable_zone();
-	#endif
 
 	// The magic number below is 1/(2^32 + 2).
     	// The result is strictly between 0 and 1.
