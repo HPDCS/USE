@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <core.h>
 #include <simtypes.h>
+#include <timer.h>
 
 /*#ifndef RDTSC
 #define RDTSC() ({ \
@@ -36,10 +37,10 @@
 
 #define ALPHA				0.3
 #define NUMBER_OF_TYPES		30
-#define NUMBER_OF_STATES	2
+#define NUMBER_OF_LP_STATES	2
 
 struct _lp_state_type_stats {
-	double avg_exec_time;
+	clock_timer avg_exec_time;
 };
 
 struct _lp_state_stats {
@@ -47,7 +48,7 @@ struct _lp_state_stats {
 };
 
 typedef struct _lp_stats {
-	struct _lp_state_stats lp_state[NUMBER_OF_STATES];
+	struct _lp_state_stats lp_state[NUMBER_OF_LP_STATES];
 } lp_evt_stats;
 
 static inline __attribute__((always_inline))
@@ -68,10 +69,10 @@ void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 }
 
 static inline __attribute__((always_inline))
-void store_lp_stats(lp_evt_stats *lps, unsigned int s, unsigned int t, unsigned long long time)
+void store_lp_stats(lp_evt_stats *lps, unsigned int s, unsigned int t, clock_timer time)
 {
 	s = (s == LP_STATE_SILENT_EXEC) ? 1 : 0;
-	lps->lp_state[s].evt_type[t].avg_exec_time += ALPHA * (((double) time) - lps->lp_state[s].evt_type[t].avg_exec_time);
+	lps->lp_state[s].evt_type[t].avg_exec_time += (clock_timer) (ALPHA * (double) (((clock_timer) time) - lps->lp_state[s].evt_type[t].avg_exec_time));
 }
 
 static inline __attribute__((always_inline))
@@ -83,7 +84,7 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 		if (LPS[index]->lp_statistics != NULL)
 		{
 			unsigned int s, t;
-			for (s=0; s<NUMBER_OF_STATES; s++)
+			for (s=0; s<NUMBER_OF_LP_STATES; s++)
 				for (t=0; t<NUMBER_OF_TYPES; t++)
 					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != 0.0)
 						printf("LP-ID: %u - LP-Exe-State: %s - EVENT-Type: %u - Avg-Exe-Time: %llu\n",

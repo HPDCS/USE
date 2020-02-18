@@ -162,18 +162,17 @@ void check_ipi_capability(){
 }
 
 bool decision_model(LP_state*lp_ptr){
-    msg_t*event_dest_in_execution=lp_ptr->msg_curr_executed;
-    clock_timer start_processing_timer=event_dest_in_execution->evt_start_time;
-    unsigned int execution_mode=event_dest_in_execution->execution_mode;
-    unsigned int event_type=event_dest_in_execution->type;
-    clock_timer avg_timer=(clock_timer)((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[execution_mode].evt_type[event_type].avg_exec_time;
-    clock_timer residual_time;
-    if(avg_timer>=TR){
-        clock_timer diff=clock_timer_value(start_processing_timer);
-        residual_time=avg_timer-diff;
-        if(residual_time>=TR_PRIME)
+    msg_t *event_dest_in_execution = lp_ptr->msg_curr_executed;
+    clock_timer start_processing_timer = event_dest_in_execution->evt_start_time;
+    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[event_dest_in_execution->execution_mode].evt_type[event_dest_in_execution->type].avg_exec_time;
+    
+    if (avg_timer >= TR)
+    {
+        clock_timer residual_time = avg_timer - clock_timer_value(start_processing_timer);
+        if (residual_time >= TR_PRIME)
             return true;
     }
+
     return false;
 }
 
