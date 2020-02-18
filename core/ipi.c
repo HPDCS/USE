@@ -166,9 +166,10 @@ static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_pt
     
     if (avg_timer >= TR)
     {
-        clock_timer residual_time = avg_timer - clock_timer_value(event_dest_in_execution->evt_start_time);
-        if (residual_time >= TR_PRIME)
-            return true;
+        clock_timer executed_time = clock_timer_value(event_dest_in_execution->evt_start_time);
+        if (executed_time < avg_timer)
+            if ((avg_timer - executed_time) >= TR_PRIME)
+                return true;
     }
 
     return false;
