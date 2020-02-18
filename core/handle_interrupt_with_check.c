@@ -74,8 +74,8 @@ unsigned long enter_in_unpreemptable_zone(){
 	#endif
 	//counter can became 1 from 0,after increment do_check
 	preemption_counter=increment_preempt_counter();
-	if(preemption_counter==PREEMPT_COUNT_INIT)
-		default_handler(NULL);
+	// if(preemption_counter==PREEMPT_COUNT_INIT)
+	// 	default_handler(NULL);
 	return preemption_counter;
 }
 unsigned long exit_from_unpreemptable_zone(){
@@ -117,8 +117,8 @@ unsigned long exit_from_preemptable_zone(){
 	#endif
 	preemption_counter=increment_preempt_counter();
 	//counter can became 1 from 0,after increment do_check
-	if(preemption_counter==PREEMPT_COUNT_INIT)
-		default_handler(NULL);
+	// if(preemption_counter==PREEMPT_COUNT_INIT)
+	// 	default_handler(NULL);
 	return preemption_counter;
 }
 
