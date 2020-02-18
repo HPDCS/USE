@@ -161,14 +161,12 @@ void check_ipi_capability(){
     printf("program has ipi_capability\n");
 }
 
-bool decision_model(LP_state*lp_ptr){
-    msg_t *event_dest_in_execution = lp_ptr->msg_curr_executed;
-    clock_timer start_processing_timer = event_dest_in_execution->evt_start_time;
+static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution){
     clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[event_dest_in_execution->execution_mode].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
     
     if (avg_timer >= TR)
     {
-        clock_timer residual_time = avg_timer - clock_timer_value(start_processing_timer);
+        clock_timer residual_time = avg_timer - clock_timer_value(event_dest_in_execution->evt_start_time);
         if (residual_time >= TR_PRIME)
             return true;
     }
@@ -188,7 +186,7 @@ void send_ipi_to_lp(msg_t*event){
         return;
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
-        ipi_useful = decision_model(LPS[lp_idx]);
+        ipi_useful = decision_model(LPS[lp_idx], event_dest_in_execution);
         if(ipi_useful){
             //this unpreemptable barrier can be relaxed to contains only correlated statistics,no need to protect instructions before "syscall",
             //but in this way the number of syscalls must be coherent with kernel module counters!!
