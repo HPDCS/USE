@@ -86,10 +86,23 @@ typedef unsigned long long clock_timer;
 
 #define clock_timer_start(timer) (timer = CLOCK_READ())
 
+#if DEBUG==1 //not present in original version
+#define clock_timer_value(timer) ({ \
+		unsigned long long value = CLOCK_READ(); \
+		if(value<timer){\
+			printf("error in clock_timer_value,invalid timer argument\n");\
+			gdb_abort;\
+		}\
+		value -= (unsigned long long)(timer); \
+		value; \
+		})
+#else
 #define clock_timer_value(timer) ({ \
 		unsigned long long value = CLOCK_READ(); \
 		value -= (unsigned long long)(timer); \
 		value; \
 		})
+
+#endif
 
 #endif /* _TIMER_H */

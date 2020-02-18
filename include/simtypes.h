@@ -134,7 +134,7 @@ typedef struct _LP_state {
 #endif
 
 #if IPI_SUPPORT==1
-	void *lp_statistics;//used to keep track of per-LP event's statistics
+	void*lp_statistics;//used to keep track of per-LP event's statistics
 #endif
 
 } LP_state;

@@ -28,7 +28,11 @@ void end_exposition_of_current_event(msg_t*event){
 	if(event!=NULL){
 		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
 		#if IPI_SUPPORT==1
-		store_lp_stats((lp_evt_stats *) LPS[current_lp]->lp_statistics, event->execution_mode, event->type, exposition_timer);
+		if(current_lp!=event->receiver_id){
+			printf("invalid current_lp\n");
+			gdb_abort;
+		}
+		store_lp_stats((lp_evt_stats *) LPS[4]->lp_statistics, event->execution_mode, event->type, exposition_timer);
 		#endif
 		#if REPORT==1
 		if(event->execution_mode==LP_STATE_READY){

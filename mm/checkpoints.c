@@ -37,7 +37,7 @@
 #include <state.h>
 #include <statistics.h>
 
-
+#include <hpdcs_utils.h>
 /**
 * This function creates a full log of the current simulation states and returns a pointer to it.
 * The algorithm behind this function is based on packing of the really allocated memory chunks into
