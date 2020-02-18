@@ -19,6 +19,14 @@
 #include <sys/resource.h>
 #include <sys/capability.h>
 
+#include <lp_stats.h>
+#define IPI_ARRIVAL_TIME 2000ULL//in clock cycles
+#define FACTOR_IPI 10
+#define TR (IPI_ARRIVAL_TIME*FACTOR_IPI)
+#define BETA 1//greather or equals than 1
+#define TR_PRIME (BETA*TR)
+
+
 /* generate a random floating point number from min to max */
 double randfrom(double min, double max) 
 {
@@ -153,8 +161,20 @@ void check_ipi_capability(){
     printf("program has ipi_capability\n");
 }
 
-bool decision_model(){
-    return true;
+bool decision_model(LP_state*lp_ptr){
+    msg_t*event_dest_in_execution=lp_ptr->msg_curr_executed;
+    clock_timer start_processing_timer=event_dest_in_execution->evt_start_time;
+    unsigned int execution_mode=event_dest_in_execution->execution_mode;
+    unsigned int event_type=event_dest_in_execution->type;
+    clock_timer avg_timer=(clock_timer)((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[execution_mode].evt_type[event_type].avg_exec_time;
+    clock_timer residual_time;
+    if(avg_timer>=TR){
+        clock_timer diff=clock_timer_value(start_processing_timer);
+        residual_time=avg_timer-diff;
+        if(residual_time>=TR_PRIME)
+            return true;
+    }
+    return false;
 }
 
 void send_ipi_to_lp(msg_t*event){
@@ -169,7 +189,7 @@ void send_ipi_to_lp(msg_t*event){
         return;
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
-        ipi_useful = decision_model();
+        ipi_useful = decision_model(LPS[lp_idx]);
         if(ipi_useful){
             //this unpreemptable barrier can be relaxed to contains only correlated statistics,no need to protect instructions before "syscall",
             //but in this way the number of syscalls must be coherent with kernel module counters!!
