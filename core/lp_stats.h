@@ -81,7 +81,10 @@ static inline __attribute__((always_inline))
 void store_lp_stats(lp_evt_stats *lps, unsigned int s, unsigned int t, clock_timer time)
 {
 	s = (s != LP_STATE_READY) ? 1 : 0;
-	lps->lp_state[s].evt_type[t].avg_exec_time = (clock_timer) ((ALPHA * (double) time) + ((1.0 - ALPHA) * (double) lps->lp_state[s].evt_type[t].avg_exec_time));
+	if (lps->lp_state[s].evt_type[t].avg_exec_time == NO_TIMER)
+		lps->lp_state[s].evt_type[t].avg_exec_time = time;
+	else
+		lps->lp_state[s].evt_type[t].avg_exec_time = (clock_timer) ((ALPHA * (double) time) + ((1.0 - ALPHA) * (double) lps->lp_state[s].evt_type[t].avg_exec_time));
 }
 
 static inline __attribute__((always_inline))
