@@ -164,7 +164,7 @@ void check_ipi_capability(){
 bool decision_model(LP_state*lp_ptr){
     msg_t *event_dest_in_execution = lp_ptr->msg_curr_executed;
     clock_timer start_processing_timer = event_dest_in_execution->evt_start_time;
-    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[event_dest_in_execution->execution_mode].evt_type[event_dest_in_execution->type].avg_exec_time;
+    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[event_dest_in_execution->execution_mode].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
     
     if (avg_timer >= TR)
     {
