@@ -35,12 +35,12 @@
 })
 #endif*/
 
-#define ALPHA				0.3
+#define ALPHA				0.1
 #define NUMBER_OF_TYPES		30
 #define NUMBER_OF_LP_STATES	2
 
 
-#define NO_TIMER 0
+#define NO_TIMER 0ULL
 
 struct _lp_state_type_stats {
 	clock_timer avg_exec_time;
@@ -80,7 +80,7 @@ void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 static inline __attribute__((always_inline))
 void store_lp_stats(lp_evt_stats *lps, unsigned int s, unsigned int t, clock_timer time)
 {
-	s = (s == LP_STATE_SILENT_EXEC) ? 1 : 0;
+	s = (s != LP_STATE_READY) ? 1 : 0;
 	lps->lp_state[s].evt_type[t].avg_exec_time = (clock_timer) ((ALPHA * (double) time) + ((1.0 - ALPHA) * (double) lps->lp_state[s].evt_type[t].avg_exec_time));
 }
 
@@ -95,7 +95,7 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 			unsigned int s, t;
 			for (s=0; s<NUMBER_OF_LP_STATES; s++)
 				for (t=0; t<NUMBER_OF_TYPES; t++)
-					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != 0.0)
+					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != NO_TIMER)
 						printf("LP-ID: %u - LP-Exe-State: %s - EVENT-Type: %u - Avg-Exe-Time: %llu\n",
 							index, (s == 0) ? "Forward" : "Silent", t, (unsigned long long int) ((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time);
 

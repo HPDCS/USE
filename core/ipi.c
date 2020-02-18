@@ -21,7 +21,7 @@
 
 #include <lp_stats.h>
 #define IPI_ARRIVAL_TIME 2000ULL//in clock cycles
-#define FACTOR_IPI 10
+#define FACTOR_IPI 2
 #define TR (IPI_ARRIVAL_TIME*FACTOR_IPI)
 #define BETA 1//greather or equals than 1
 #define TR_PRIME (BETA*TR)
@@ -162,9 +162,9 @@ void check_ipi_capability(){
 }
 
 static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution){
-    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[( (event_dest_in_execution->execution_mode==LP_STATE_READY) ? 0 : 1)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
+    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[( (event_dest_in_execution->execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
     if(avg_timer==NO_TIMER) //if avg_timer è 0 ossia non popolato manda ipi ossia no valore==no decision_model ==si manda ipi
-        return true;
+        return false;
     
     if (avg_timer >= TR)
     {

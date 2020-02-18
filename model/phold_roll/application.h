@@ -3,8 +3,8 @@
 #include <stdlib.h>
 
 // Event types
-#define NORMAL_EVT	0
-#define ABNORMAL_EVT 1
+#define NORMAL_EVT	1
+#define ABNORMAL_EVT 2
 
 #define USELESS_INIT_NUMBER 123 //this is initial value of variables i,j but it's useless,because i,j will be overwrited
 
