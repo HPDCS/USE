@@ -18,6 +18,7 @@ extern volatile bool stop;
 
 #if IPI_SUPPORT==1
 #include <ipi.h>
+#include <lp_stats.h>
 #endif
 
 __thread struct drand48_data seedT;
@@ -145,6 +146,10 @@ int main(int argn, char *argv[]) {
     double simduration = (double)timer_value_seconds(exec_time);
 
     print_statistics();
+    
+    #if IPI_SUPPORT==1
+    fini_lp_stats(LPS, n_prc_tot);
+    #endif
 
     printf("Simulation ended (seconds): %12.2f\n", simduration);
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));

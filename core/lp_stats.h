@@ -39,6 +39,9 @@
 #define NUMBER_OF_TYPES		30
 #define NUMBER_OF_LP_STATES	2
 
+
+#define NO_TIMER 0
+
 struct _lp_state_type_stats {
 	clock_timer avg_exec_time;
 };
@@ -59,12 +62,18 @@ void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 		return;
 	for (index=0; index<n_prc_tot; index++)
 	{
-		if (LPS[index] == NULL)
-			continue;
-		if (LPS[index]->lp_statistics == NULL)
-			if ((LPS[index]->lp_statistics = malloc(sizeof(lp_evt_stats))) == NULL)
-				continue;
-		memset((void *) LPS[index]->lp_statistics, 0, sizeof(lp_evt_stats));
+		if (LPS[index] == NULL){
+			printf("LPS is null\n");
+			gdb_abort;
+		}
+		if (LPS[index]->lp_statistics == NULL){
+			if ((LPS[index]->lp_statistics = malloc(sizeof(lp_evt_stats))) == NULL){
+				printf("no memory available to allocate lp_stats\n");
+				gdb_abort;
+			}
+			memset((void *) LPS[index]->lp_statistics, NO_TIMER, sizeof(lp_evt_stats));
+		}
+		
 	}
 }
 
@@ -72,6 +81,7 @@ static inline __attribute__((always_inline))
 void store_lp_stats(lp_evt_stats *lps, unsigned int s, unsigned int t, clock_timer time)
 {
 	s = (s == LP_STATE_SILENT_EXEC) ? 1 : 0;
+	//TODO rivedere maggiore minore di 0
 	lps->lp_state[s].evt_type[t].avg_exec_time += (clock_timer) (ALPHA * (double) (((clock_timer) time) - lps->lp_state[s].evt_type[t].avg_exec_time));
 }
 
