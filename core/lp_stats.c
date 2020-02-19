@@ -35,6 +35,7 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 	unsigned int index;
 	for (index=0; index<n_prc_tot; index++)
 	{
+
 		if (LPS[index]->lp_statistics != NULL)
 		{
 			unsigned int s, t;
@@ -43,7 +44,7 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != NO_TIMER)
 						printf("LP-ID: %u - LP-Exe-State: %s - EVENT-Type: %u - Avg-Exe-Time: %llu\n",
 							index, (s == 0) ? "Forward" : "Silent", t, (unsigned long long int) ((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time);
-
+			printf("LP-ID: %u max_timer=%llu\n",index,(unsigned long long)((lp_evt_stats*)LPS[index]->lp_statistics)->max_timer);
 			free((void *) LPS[index]->lp_statistics);
 			LPS[index]->lp_statistics = NULL;
 		}
