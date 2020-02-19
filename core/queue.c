@@ -144,7 +144,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
 #if HANDLE_INTERRUPT==1
-    msg_ptr->evt_start_time = 0ULL;//event starting time initialization
+    msg_ptr->evt_start_time = NO_TIMER;//event starting time initialization
 #endif
 
     memcpy(msg_ptr->data, event_content, event_size);

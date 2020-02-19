@@ -22,17 +22,21 @@
 extern __thread cntx_buf cntx_loop;
 
 void end_exposition_of_current_event(msg_t*event){
-	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	#if HANDLE_INTERRUPT_WITH_CHECK==1 && DEBUG==1
 	check_unpreemptability();
 	#endif
+
+	#if DEBUG==1
+	if(current_lp!=event->receiver_id){
+		printf("invalid current_lp\n");
+		gdb_abort;
+	}
+	#endif
+
 	if(event!=NULL){
 		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
 		#if IPI_SUPPORT==1
-		if(current_lp!=event->receiver_id){
-			printf("invalid current_lp\n");
-			gdb_abort;
-		}
-		store_lp_stats((lp_evt_stats *) LPS[4]->lp_statistics, event->execution_mode, event->type, exposition_timer);
+		store_lp_stats(current_lp, event->execution_mode, event->type, exposition_timer);
 		#endif
 		#if REPORT==1
 		if(event->execution_mode==LP_STATE_READY){
@@ -52,6 +56,12 @@ void end_exposition_of_current_event(msg_t*event){
 void start_exposition_of_current_event(msg_t*event){
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
 	check_unpreemptability();
+	#endif
+	#if DEBUG==1
+	if(event->receiver_id!=current_lp){
+		printf("invalid lp_idx\n");
+		gdb_abort;
+	}
 	#endif
 	if(event!=NULL){
 		clock_timer_start(event->evt_start_time);//event starting time sampled just before updating preemption_counter

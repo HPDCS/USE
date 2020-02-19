@@ -586,10 +586,6 @@ void init_simulation(unsigned int thread_id){
 	if(tid == 0){
 		LPs_metada_init();
 		printf("LP_metada init finished\n");
-#if IPI_SUPPORT==1
-		init_lp_stats(LPS, n_prc_tot);//allocation of lp_stats structs for all LPs
-		printf("LP_stats init finished\n");
-#endif
 		dymelor_init();
 		printf("Dymelor_init finished\n");
 		statistics_init();
@@ -609,6 +605,10 @@ void init_simulation(unsigned int thread_id){
 		check_trampoline_function();
 		printf("all checks passed on trampoline function\n");
 		#endif
+		#if IPI_SUPPORT==1
+		init_lp_stats(LPS, n_prc_tot);//allocation of lp_stats structs for all LPs
+		printf("LP_stats init finished\n");
+		#endif
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
        		current_msg->sender_id 		= -1;//
@@ -625,7 +625,7 @@ void init_simulation(unsigned int thread_id){
        		current_msg->monitor 		= 0x0;//
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
 #if HANDLE_INTERRUPT==1
-			current_msg->evt_start_time = 0ULL;//event INIT does not require to be monitored
+			current_msg->evt_start_time = NO_TIMER;//event INIT does not require to be monitored
 #endif
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo

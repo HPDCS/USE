@@ -20,6 +20,7 @@
 #include <sys/capability.h>
 
 #include <lp_stats.h>
+
 #define IPI_ARRIVAL_TIME 2000ULL//in clock cycles
 #define FACTOR_IPI 2
 #define TR (IPI_ARRIVAL_TIME*FACTOR_IPI)
@@ -56,6 +57,8 @@ char program_name[MAX_LEN_PROGRAM_NAME];
 
 struct run_time_data rt_data;
 
+#define SYSCALL_IPI_INDEX 134
+
 static inline __attribute__((always_inline)) int ipi_syscall(unsigned int core_id)
 {
     int ret = 0;
@@ -63,7 +66,7 @@ static inline __attribute__((always_inline)) int ipi_syscall(unsigned int core_i
     (
         "syscall"
         : "=a" (ret)
-        : "0"(134), "D"(core_id)
+        : "0"(SYSCALL_IPI_INDEX), "D"(core_id)
         : "rcx", "r11", "memory"
     );
     return ret;
@@ -168,6 +171,7 @@ static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_pt
     
     if (avg_timer >= TR)
     {
+        //possibile interruzione e riuso di event execution crea problemi??
         clock_timer executed_time = clock_timer_value(event_dest_in_execution->evt_start_time);
         if (executed_time < avg_timer)
             if ((avg_timer - executed_time) >= TR_PRIME)
