@@ -90,7 +90,7 @@ typedef unsigned long long clock_timer;
 #define clock_timer_value(timer) ({ \
 		unsigned long long value = CLOCK_READ(); \
 		if(value<timer){\
-			printf("error in clock_timer_value,invalid timer argument\n");\
+			printf("Old timer: %llu - New timer: %llu\n", (unsigned long long int) timer, value);\
 			gdb_abort;\
 		}\
 		value -= (unsigned long long)(timer); \

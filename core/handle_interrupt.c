@@ -26,14 +26,13 @@ void end_exposition_of_current_event(msg_t*event){
 	check_unpreemptability();
 	#endif
 
-	#if DEBUG==1
-	if(current_lp!=event->receiver_id){
-		printf("invalid current_lp\n");
-		gdb_abort;
-	}
-	#endif
-
 	if(event!=NULL){
+		#if DEBUG==1
+		if(current_lp!=event->receiver_id){
+			printf("invalid current_lp\n");
+			gdb_abort;
+		}
+		#endif
 		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
 		#if IPI_SUPPORT==1
 		store_lp_stats(current_lp, event->execution_mode, event->type, exposition_timer);
@@ -57,13 +56,13 @@ void start_exposition_of_current_event(msg_t*event){
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
 	check_unpreemptability();
 	#endif
-	#if DEBUG==1
-	if(event->receiver_id!=current_lp){
-		printf("invalid lp_idx\n");
-		gdb_abort;
-	}
-	#endif
 	if(event!=NULL){
+		#if DEBUG==1
+		if(event->receiver_id!=current_lp){
+			printf("invalid lp_idx\n");
+			gdb_abort;
+		}
+		#endif
 		clock_timer_start(event->evt_start_time);//event starting time sampled just before updating preemption_counter
 		event->execution_mode=LPS[current_lp]->state;
 		//start exposition of current_msg
