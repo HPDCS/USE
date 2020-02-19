@@ -75,8 +75,12 @@ void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_t
 			gdb_abort;
 		}
 		#endif
+		printf("max timer=%llu,old_max=%llu,old_mean=%llu,actual_time=%llu\n",
+				(unsigned long long)lps->max_timer,(unsigned long long )old_max,
+				(unsigned long long)old_mean,(unsigned long long)time);
 
 		//lps->lp_state[s].evt_type[t].avg_exec_time = (clock_timer) ((ALPHA * ((double) time)) + ((1.0 - ALPHA) * ((double) lps->lp_state[s].evt_type[t].avg_exec_time)));
+		//lps->lp_state[s].evt_type[t].avg_exec_time = time; // (clock_timer) ((ALPHA * ((double) time)) + ((1.0 - ALPHA) * ((double) lps->lp_state[s].evt_type[t].avg_exec_time)));
 		
 		lps->lp_state[s].evt_type[t].avg_exec_time=time;//TODO comment this line and decomment line above 
 
