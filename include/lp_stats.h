@@ -18,7 +18,7 @@
 #include <hpdcs_utils.h>
 #include <handle_interrupt.h>
 
-#define ALPHA				(0.1)
+#define ALPHA				(0.5)
 #define NUMBER_OF_TYPES		30
 #define NUMBER_OF_LP_STATES	2
 

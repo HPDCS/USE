@@ -171,8 +171,13 @@ static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_pt
     
     if (avg_timer >= TR)
     {
-        //possibile interruzione e riuso di event execution crea problemi??
-        clock_timer executed_time = clock_timer_value(event_dest_in_execution->evt_start_time);
+        clock_timer executed_time = CLOCK_READ();
+
+        if (event_dest_in_execution->evt_start_time > executed_time)
+            executed_time = 0ULL;
+        else
+            executed_time -= event_dest_in_execution->evt_start_time;
+
         if (executed_time < avg_timer)
             if ((avg_timer - executed_time) >= TR_PRIME)
                 return true;
