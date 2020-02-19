@@ -8,8 +8,15 @@
  * DEFINED AND SET TO 1.       *
  *******************************/
 #if IPI_SUPPORT==1
-#include <core.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <pthread.h>
 #include <timer.h>
+#include <core.h>
+#include <simtypes.h>
+#include <hpdcs_utils.h>
+#include <handle_interrupt.h>
 
 #define ALPHA				(0.1)
 #define NUMBER_OF_TYPES		30

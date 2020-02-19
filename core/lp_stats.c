@@ -1,12 +1,5 @@
+#if IPI_SUPPORT==1
 #include <lp_stats.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <pthread.h>
-#include <core.h>
-#include <simtypes.h>
-#include <hpdcs_utils.h>
-#include <handle_interrupt.h>
 
 //static inline __attribute__((always_inline))
 void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
@@ -56,3 +49,5 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 		}
 	}
 }
+
+#endif
