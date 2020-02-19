@@ -47,7 +47,7 @@ void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_t
 
 	s = (s != LP_STATE_READY) ? 1 : 0;
 
-	if (lps->lp_state[s].evt_type[t].avg_exec_time == NO_TIMER)
+	if (lps->lp_state[s].evt_type[t].avg_exec_time == 0)
 	{
 		lps->lp_state[s].evt_type[t].avg_exec_time = time;
 		#if DEBUG==1

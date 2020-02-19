@@ -31,7 +31,7 @@ void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 				gdb_abort;
 			}
 		}
-		memset((void *) LPS[index]->lp_statistics, NO_TIMER, sizeof(lp_evt_stats));
+		memset((void *) LPS[index]->lp_statistics, 0, sizeof(lp_evt_stats));
 		//static allocation end
 	}
 }
