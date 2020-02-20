@@ -1,5 +1,3 @@
-results*
-
 # Object files
 *.o
 *.ko
@@ -29,11 +27,13 @@ results*
 *.i*86
 *.x86_64
 *.hex
-*.idea
 
+#metadata per ide
+.idea
 .project
 .cproject
 
+#others executables
 test
 pcs-prealloc 
 traffic  	 
