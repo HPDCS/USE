@@ -301,6 +301,10 @@ ifdef THR_PROB_NORMAL
 CFLAGS:= $(CFLAGS) -DTHR_PROB_NORMAL=$(THR_PROB_NORMAL)
 endif
 
+#PHOLD_ROLL_NEARS
+ifdef NUM_NEARS
+CFLAGS:= $(CFLAGS) -DNUM_NEARS=$(NUM_NEARS)
+endif
 
 #TCAR
 ifdef NUM_CELLE_OCCUPATE
@@ -337,6 +341,8 @@ PHOLD_SOURCES=model/phold/application.c
 PHOLD_ROLL_MULTICAST_SOURCES=model/phold_roll_multicast/application.c
 
 PHOLD_ROLL_BROADCAST_SOURCES=model/phold_roll_broadcast/application.c
+
+PHOLD_ROLL_NEARS_SOURCES=model/phold_roll_nears/application.c
 
 PHOLD_O_SOURCES=model/phold_o/application.c
 
@@ -427,6 +433,7 @@ PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLD_O_OBJ=$(PHOLD_O_SOURCES:.c=.o)
 PHOLD_ROLL_MULTICAST_OBJ=$(PHOLD_ROLL_MULTICAST_SOURCES:.c=.o)
 PHOLD_ROLL_BROADCAST_OBJ=$(PHOLD_ROLL_BROADCAST_SOURCES:.c=.o)
+PHOLD_ROLL_NEARS_OBJ=$(PHOLD_ROLL_NEARS_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
@@ -458,6 +465,9 @@ phold_roll_multicast: clean _phold_roll_multicast executable
 
 phold_roll_broadcast: TARGET=phold_roll_broadcast
 phold_roll_broadcast: clean _phold_roll_broadcast executable
+
+phold_roll_nears: TARGET=phold_roll_nears
+phold_roll_nears: clean _phold_roll_nears executable
 
 pholdcount: TARGET=pholdcount 
 pholdcount: clean  _pholdcount executable
@@ -542,6 +552,9 @@ _phold_roll_multicast: $(PHOLD_ROLL_MULTICAST_OBJ)
 _phold_roll_broadcast: $(PHOLD_ROLL_BROADCAST_OBJ)
 	@ld -r -g $(PHOLD_ROLL_BROADCAST_OBJ) -o model/__application.o
 
+_phold_roll_nears: $(PHOLD_ROLL_NEARS_OBJ)
+	@ld -r -g $(PHOLD_ROLL_NEARS_OBJ) -o model/__application.o
+
 _pholdcount: $(PHOLDCOUNT_OBJ)
 	@ld -r -g $(PHOLDCOUNT_OBJ) -o model/__application.o
 
@@ -564,6 +577,7 @@ clean:
 	@find . -type f -name "phold" 		         -exec rm {} \;
 	@find . -type f -name "phold_roll_multicast" -exec rm {} \;
 	@find . -type f -name "phold_roll_broadcast" -exec rm {} \;
+	@find . -type f -name "phold_roll_nears"     -exec rm {} \;
 	@find . -type f -name "pcs" 		         -exec rm {} \;
 	@find . -type f -name "pcs-prealloc"         -exec rm {} \;
 	@find . -type f -name "traffic "  	         -exec rm {} \;

@@ -44,6 +44,7 @@ phold
 pholdcount
 phold_roll_multicast
 phold_roll_braodcast
+phold_roll_nears
 pcs
 /tcar
 log_test/*
