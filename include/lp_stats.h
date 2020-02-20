@@ -95,6 +95,6 @@ void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_t
 	}
 }
 
-#endif//IPI_SUPPORT
+#endif//DECISION_MODEL
 
 #endif

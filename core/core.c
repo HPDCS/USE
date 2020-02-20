@@ -310,7 +310,7 @@ void LPs_metada_init() {
 #if POSTING==1
 		LPS[i]->priority_message=NULL;
 #endif
-#if IPI_SUPPORT==1
+#if DECISION_MODEL==1
 		LPS[i]->lp_statistics = NULL;//LP event's statistic initialization, struct will be allocated by LP-0 at init time
 #endif
 	}
