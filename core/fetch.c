@@ -152,6 +152,9 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		if(LPS[lp_idx]->commit_horizon_ts<node->timestamp  //non sono sotto lock, non è sicuro così
 			|| (LPS[lp_idx]->commit_horizon_ts==node->timestamp && LPS[lp_idx]->commit_horizon_tb<node->counter) 
 		){
+				//these writes are not atomic. so 2 commits for same Lp on different events can enter here and update same Lp's variables
+				//so can happen that commit_ts belongs to first event and commit_tb belongs to second event
+				//this is a problem with ongvt period
 				LPS[lp_idx]->commit_horizon_ts = node->timestamp; //time min ← evt.ts
 				LPS[lp_idx]->commit_horizon_tb = node->counter;	
 		}

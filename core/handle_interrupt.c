@@ -57,7 +57,7 @@ void end_exposition_of_current_event(msg_t*event){
 }
 
 void start_exposition_of_current_event(msg_t*event){
-	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	#if HANDLE_INTERRUPT_WITH_CHECK==1 && DEBUG==1
 	check_unpreemptability();
 	#endif
 	if(event!=NULL){

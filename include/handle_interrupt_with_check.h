@@ -14,12 +14,11 @@ extern __thread unsigned int nesting_zone_unpreemptable;
 void reset_nesting_counters();
 #endif
 
-unsigned long enter_in_unpreemptable_zone();
-unsigned long exit_from_unpreemptable_zone();
+void enter_in_unpreemptable_zone();
+void exit_from_unpreemptable_zone();
 
-
-unsigned long enter_in_preemptable_zone();
-unsigned long exit_from_preemptable_zone();
+void enter_in_preemptable_zone();
+void exit_from_preemptable_zone();
 
 #if DEBUG==1
 void check_preemptability();

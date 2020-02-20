@@ -43,8 +43,7 @@ unsigned long get_preemption_counter(){
 void reset_preemption_counter(){
 	set_preemption_counter(PREEMPT_COUNT_INIT);
 }
-unsigned long decrement_preempt_counter(){
-	unsigned long value;
+void decrement_preempt_counter(){
 	#if DEBUG==1
 	if((*preempt_count_ptr)==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
 		printf("impossible decrement preempt_counter,it is already zero\n");
@@ -57,12 +56,10 @@ unsigned long decrement_preempt_counter(){
 	#endif
 	//this barrier before decrement follows implementation of preempt_enable() function in the linux kernel v 5.0
 	__asm__ __volatile__("": : :"memory");
-	value = __sync_sub_and_fetch(preempt_count_ptr, 1);
-	return value;
+	__sync_sub_and_fetch(preempt_count_ptr, 1);
 }
 
-unsigned long increment_preempt_counter(){
-	unsigned long value;
+void increment_preempt_counter(){
 	#if DEBUG==1
 	if((*preempt_count_ptr)>=MAX_PREEMPT_COUNTER){
 		printf("preempt_count is equals to MAX_PREEMPT_COUNTER %d in increment_preempt_counter\n",MAX_PREEMPT_COUNTER);
@@ -73,10 +70,9 @@ unsigned long increment_preempt_counter(){
 			gdb_abort;
 	}
 	#endif
-	value = __sync_add_and_fetch(preempt_count_ptr, 1);
+	__sync_add_and_fetch(preempt_count_ptr, 1);
 	//this barrier after increment follows implementation of preempt_disable() function in the linux kernel v 5.0
 	__asm__ __volatile__("": : :"memory");
-	return value;
 }
 
 #endif //PREEMPT_COUNTER

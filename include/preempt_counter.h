@@ -27,8 +27,8 @@
 
 void initialize_preempt_counter();
 void initialize_standing_ipi();
-unsigned long increment_preempt_counter();
-unsigned long decrement_preempt_counter();
+void increment_preempt_counter();
+void decrement_preempt_counter();
 unsigned long get_preemption_counter();
 void reset_preemption_counter();
 

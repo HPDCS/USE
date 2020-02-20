@@ -21,7 +21,9 @@ void*default_handler(void*arg){
     //this function works only with LP->state LP_STATE_READY or LP_STATE_SILENT_EXEC
     //set these variable from caller before call this function
     (void)arg;
+    #if DEBUG==1
     check_unpreemptability();
+    #endif
     if (LPS[current_lp]->state==LP_STATE_SILENT_EXEC){
         #if REPORT==1
         statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_SILENT_LP,1);
@@ -63,8 +65,7 @@ void*default_handler(void*arg){
     return NULL;//never reached
 }
 
-unsigned long enter_in_unpreemptable_zone(){
-	unsigned int preemption_counter;
+void enter_in_unpreemptable_zone(){
 	#if DEBUG==1
 	if(nesting_zone_unpreemptable>=MAX_NESTING_ZONE_UNPREEMPTABLE){
 		printf("error in enter_in_unpreemptable_zone\n");
@@ -72,10 +73,9 @@ unsigned long enter_in_unpreemptable_zone(){
 	}
 	nesting_zone_unpreemptable++;
 	#endif
-	preemption_counter=increment_preempt_counter();
-	return preemption_counter;
+	increment_preempt_counter();
 }
-unsigned long exit_from_unpreemptable_zone(){
+void  exit_from_unpreemptable_zone(){
 	#if DEBUG==1
 	if(nesting_zone_unpreemptable==NO_NESTING){
 		printf("error in exit_from_unpreemptable_zone\n");
@@ -88,10 +88,10 @@ unsigned long exit_from_unpreemptable_zone(){
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
 		default_handler(NULL);
 	#endif
-	return decrement_preempt_counter();
+	decrement_preempt_counter();
 }
 
-unsigned long enter_in_preemptable_zone(){
+void  enter_in_preemptable_zone(){
 	#if DEBUG==1
 	if(nesting_zone_preemptable>=MAX_NESTING_ZONE_PREEMPTABLE){
 		printf("error in enter_in_preemptable_zone\n");
@@ -104,11 +104,10 @@ unsigned long enter_in_preemptable_zone(){
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)
 		default_handler(NULL);
 	#endif
-	return decrement_preempt_counter();
+	decrement_preempt_counter();
 }
 
-unsigned long exit_from_preemptable_zone(){
-	unsigned int preemption_counter;
+void exit_from_preemptable_zone(){
 	#if DEBUG==1
 	if(nesting_zone_preemptable==NO_NESTING){
 		printf("error in exit_from_preemptable_zone\n");
@@ -116,8 +115,7 @@ unsigned long exit_from_preemptable_zone(){
 	}
 	nesting_zone_preemptable--;
 	#endif
-	preemption_counter=increment_preempt_counter();
-	return preemption_counter;
+	increment_preempt_counter();
 }
 
 #if DEBUG==1
@@ -128,33 +126,12 @@ void check_preemptability(){
 		gdb_abort;
 	}
 }
-#endif
 
 void check_unpreemptability(){
 	if(get_preemption_counter()==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
 		printf("code is preemptable in check_unpreemptability function\n");
 		gdb_abort;
 	}
-}
-
-#if POSTING==1 //todo remove this macro,handle_interrupt_with_check include posting per defautl
-void reset_info_and_change_bound(unsigned int lid,msg_t*event){
-	#if DEBUG==1
-	check_tie_breaker_not_zero(event->tie_breaker);
-	#endif
-
-	reset_priority_message(lid,LPS[lid]->priority_message);
-
-	LPS[lid]->dummy_bound->state=ROLLBACK_ONLY;
-	LPS[lid]->dummy_bound->timestamp=event->timestamp;
-	LPS[lid]->dummy_bound->tie_breaker=event->tie_breaker;
-	LPS[lid]->bound=LPS[lid]->dummy_bound;//modify bound,now priority message must be smaller than this bound
-}
-
-void reset_info_change_bound_and_change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker,msg_t*event){
-	//modify until_ts and tie_breaker
-	reset_info_and_change_bound(lid,event);
-	change_dest_ts(lid,until_ts,tie_breaker);
 }
 #endif
 

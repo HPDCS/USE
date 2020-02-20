@@ -67,7 +67,7 @@ void check_CFV_ALREADY_HANDLED(){
 				gdb_abort;
 	}
 	#endif
-	#if HANDLE_INTERRUPT_WITH_CHECK==1
+	#if HANDLE_INTERRUPT_WITH_CHECK==1 && DEBUG==1
 	check_unpreemptability();
 	#endif
 	#if HANDLE_INTERRUPT==1
