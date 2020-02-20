@@ -286,7 +286,7 @@ ifdef FAN_OUT
 CFLAGS:= $(CFLAGS) -DFAN_OUT=$(FAN_OUT)
 endif
 
-#PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT / TCAR /PHOLD_ROLL
+#PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT / TCAR /PHOLD_ROLL_MULTICAST / PHOLD_ROLL_BROADCAST
 ifdef LOOP_COUNT
 CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
 endif
@@ -296,15 +296,11 @@ ifdef VARIANCE
 CFLAGS:= $(CFLAGS) -DVARIANCE=$(VARIANCE)
 endif
 
-#PHOLD_ROLL
+#PHOLD_ROLL_MUTICAST / PHOLD_ROLL_BROADCAST
 ifdef THR_PROB_NORMAL
 CFLAGS:= $(CFLAGS) -DTHR_PROB_NORMAL=$(THR_PROB_NORMAL)
 endif
 
-#PHOLD_ROLL
-ifdef THR_PROB_ABNORMAL
-CFLAGS:= $(CFLAGS) -DTHR_PROB_ABNORMAL=$(THR_PROB_ABNORMAL)
-endif
 
 #TCAR
 ifdef NUM_CELLE_OCCUPATE
@@ -338,7 +334,9 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
-PHOLD_ROLL_SOURCES=model/phold_roll/application.c
+PHOLD_ROLL_MULTICAST_SOURCES=model/phold_roll_multicast/application.c
+
+PHOLD_ROLL_BROADCAST_SOURCES=model/phold_roll_broadcast/application.c
 
 PHOLD_O_SOURCES=model/phold_o/application.c
 
@@ -427,7 +425,8 @@ TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLD_O_OBJ=$(PHOLD_O_SOURCES:.c=.o)
-PHOLD_ROLL_OBJ=$(PHOLD_ROLL_SOURCES:.c=.o)
+PHOLD_ROLL_MULTICAST_OBJ=$(PHOLD_ROLL_MULTICAST_SOURCES:.c=.o)
+PHOLD_ROLL_BROADCAST_OBJ=$(PHOLD_ROLL_BROADCAST_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
@@ -454,8 +453,11 @@ phold: clean  _phold executable
 phold_o: TARGET=phold_o
 phold_o: clean  _phold_o executable
 
-phold_roll: TARGET=phold_roll
-phold_roll: clean _phold_roll executable
+phold_roll_multicast: TARGET=phold_roll_multicast
+phold_roll_multicast: clean _phold_roll_multicast executable
+
+phold_roll_broadcast: TARGET=phold_roll_broadcast
+phold_roll_broadcast: clean _phold_roll_broadcast executable
 
 pholdcount: TARGET=pholdcount 
 pholdcount: clean  _pholdcount executable
@@ -534,8 +536,11 @@ _phold: $(PHOLD_OBJ)
 _phold_o: $(PHOLD_O_OBJ)
 	@ld -r -g $(PHOLD_O_OBJ) -o model/__application.o
 
-_phold_roll: $(PHOLD_ROLL_OBJ)
-	@ld -r -g $(PHOLD_ROLL_OBJ) -o model/__application.o
+_phold_roll_multicast: $(PHOLD_ROLL_MULTICAST_OBJ)
+	@ld -r -g $(PHOLD_ROLL_MULTICAST_OBJ) -o model/__application.o
+
+_phold_roll_broadcast: $(PHOLD_ROLL_BROADCAST_OBJ)
+	@ld -r -g $(PHOLD_ROLL_BROADCAST_OBJ) -o model/__application.o
 
 _pholdcount: $(PHOLDCOUNT_OBJ)
 	@ld -r -g $(PHOLDCOUNT_OBJ) -o model/__application.o
@@ -556,14 +561,16 @@ _robot_explore: $(ROBOT_EXPLORE_OBJ)
 
 clean:
 	@find . -name "*.o" -exec rm {} \;
-	@find . -type f -name "phold" 		  -exec rm {} \;
-	@find . -type f -name "pcs" 		  -exec rm {} \;
-	@find . -type f -name "pcs-prealloc"  -exec rm {} \;
-	@find . -type f -name "traffic "  	  -exec rm {} \;
-	@find . -type f -name "tcar" 		  -exec rm {} \;
-	@find . -type f -name "phold" 		  -exec rm {} \;
-	@find . -type f -name "phold_o"       -exec rm {} \;
-	@find . -type f -name "pholdcount" 	  -exec rm {} \;
-	@find . -type f -name "pholdhotspot"  -exec rm {} \;
-	@find . -type f -name "robot_explore" -exec rm {} \;
-	@find . -type f -name "hash" 		  -exec rm {} \;
+	@find . -type f -name "phold" 		         -exec rm {} \;
+	@find . -type f -name "phold_roll_multicast" -exec rm {} \;
+	@find . -type f -name "phold_roll_broadcast" -exec rm {} \;
+	@find . -type f -name "pcs" 		         -exec rm {} \;
+	@find . -type f -name "pcs-prealloc"         -exec rm {} \;
+	@find . -type f -name "traffic "  	         -exec rm {} \;
+	@find . -type f -name "tcar" 		         -exec rm {} \;
+	@find . -type f -name "phold" 		         -exec rm {} \;
+	@find . -type f -name "phold_o"              -exec rm {} \;
+	@find . -type f -name "pholdcount" 	         -exec rm {} \;
+	@find . -type f -name "pholdhotspot"         -exec rm {} \;
+	@find . -type f -name "robot_explore"        -exec rm {} \;
+	@find . -type f -name "hash" 		         -exec rm {} \;
