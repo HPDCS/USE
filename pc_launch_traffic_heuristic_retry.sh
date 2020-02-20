@@ -29,7 +29,7 @@ do
             do
               for threads in $CORES
               do
-                ./create_config.sh ${threads} ${pstate} ${hmode} ${pl}
+                ./create_config.sh ${STARTING_THREADS} ${pstate} ${hmode} ${pl}
                 EX="sudo ./traffic $threads $lp $DURATION"
                 FILE="${FOLDER}/traffic_psf${filtering}-w${pl}-h${hmode}_maxth${threads}-p${pstate}-lp${lp}_conf${fn}_r${run}.dat"
                 touch ${FILE}

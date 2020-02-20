@@ -5,6 +5,10 @@ source ./pc_phold_heuristic.config
 
 mkdir -p ${FOLDER}
 
+for pc_wd_sz in $POWERCAP_WINDOW_SIZE_list
+do
+for pc_obs_per in $POWERCAP_OBSERVATION_PERIOD_list
+do
 for max_lp in $MAX_SKIPPED_LP_list
 do
 for ck in $CKP_PER_list
@@ -23,8 +27,8 @@ do
 	do
 		for test in $TEST_list 
 		do
-			echo make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
-			make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=$filtering MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
+			echo make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=${filtering} POWERCAP_OBSERVATION_PERIOD=${pc_obs_per} POWERCAP_WINDOW_SIZE=${pc_wd_sz} MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
+			make $test POWERCAP=1 NBC=1 POWERCAP_SAMPLE_FILTERING=${filtering} POWERCAP_OBSERVATION_PERIOD=${pc_obs_per} POWERCAP_WINDOW_SIZE=${pc_wd_sz} MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
 			mv $test ${test}_lf_hi
 			
 			for pl in $POWER_LIMIT_list
@@ -43,9 +47,9 @@ echo $run
 								for threads in $CORES
 								do
 								echo $threads
-									./create_config.sh $threads $pstate $hmode $pl
-									EX="sudo ./${test}_lf_hi $CORES $lp $TEST_DURATION"
-									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf$filtering-w$pl-h$hmode-$threads-p$pstate-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
+									./create_config.sh $STARTING_THREADS $pstate $hmode $pl
+									EX="sudo ./${test}_lf_hi $threads $lp $TEST_DURATION"
+									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf${filtering}-w${pl}-h${hmode}-pop${pc_obs_per}-pws${pc_wd_sz}-${threads}-p${pstate}-${lp}-maxlp-${max_lp}-look-${lookahead}-ck_per-${ck}-fan-${fan_out}-loop-${loop_count}-${run}"; touch $FILE
 															
 									N=0 
 									while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
@@ -69,6 +73,8 @@ echo $run
 			rm ${test}_lf_hi
 		done
 	done
+done
+done
 done
 done
 done
