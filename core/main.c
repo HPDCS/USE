@@ -85,15 +85,19 @@ void start_simulation() {
 #if POSTING==1
     printf("\t- POSTING enabled.\n");
 #endif
-#if POSTING_SYNC_CHECK_SILENT==1
-    printf("\t- POSTING_SYNC_CHECK_SILENT enabled.\n");
-#endif
-#if POSTING_SYNC_CHECK_FORWARD==1
-    printf("\t- POSTING_SYNC_CHECK_FORWARD enabled.\n");
-#endif
+
 #if IPI_SUPPORT==1
     printf("\t- IPI_SUPPORT enabled.\n");
 #endif
+
+#if SYNCH_CHECK==1
+    printf("\t- SYNCH_CHECK enabled.\n");
+#endif
+
+#if DECISION_MODEL==1
+    printf("\t- DECISION_MODEL enabled.\n");
+#endif
+
 //#if REVERSIBLE == 1
 //    printf("\t- SPECULATIVE SIMULATION\n");
 //#else
@@ -147,7 +151,7 @@ int main(int argn, char *argv[]) {
 
     print_statistics();
     
-    #if IPI_SUPPORT==1
+    #if DECISION_MODEL==1
     fini_lp_stats(LPS, n_prc_tot);
     #endif
 

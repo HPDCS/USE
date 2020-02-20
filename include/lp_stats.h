@@ -7,7 +7,7 @@
  * MACRO "IPI_SUPPORT" MUST BE *
  * DEFINED AND SET TO 1.       *
  *******************************/
-#if IPI_SUPPORT==1
+#if DECISION_MODEL==1
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,16 +37,16 @@ typedef struct _lp_stats {
 	#endif
 } lp_evt_stats;
 
-void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot);
-void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot);
+void init_lp_stats();
+void fini_lp_stats();
 
 static inline __attribute__((always_inline))
 void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_timer time)
 {
 	lp_evt_stats *lps=LPS[lp_idx]->lp_statistics;
 	#if DEBUG==1
-	if( (s!=LP_STATE_READY) && (s!=LP_STATE_ROLLBACK) ){
-		printf("invalid LP_state\n");
+	if( (s!=LP_STATE_READY) && (s!=LP_STATE_SILENT_EXEC) ){
+		printf("invalid LP_mode_state\n");
 		gdb_abort;
 	}
 

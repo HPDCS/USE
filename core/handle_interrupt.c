@@ -16,7 +16,7 @@
 #if IPI_SUPPORT==1
 #include <ipi.h>
 #include <lp_stats.h>
-
+#include <nb_calqueue.h>
 #endif
 
 extern __thread cntx_buf cntx_loop;
@@ -34,8 +34,12 @@ void end_exposition_of_current_event(msg_t*event){
 		}
 		#endif
 		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
-		#if IPI_SUPPORT==1
-		store_lp_stats(current_lp, event->execution_mode, event->type, exposition_timer);
+		#if DECISION_MODEL==1
+		if(1 || !resize_occured)
+			store_lp_stats(current_lp, event->execution_mode, event->type, exposition_timer);
+		else{
+			printf("timer resize=%llu\n",clock_timer_value(event->evt_start_time));
+		}
 		#endif
 		#if REPORT==1
 		if(event->execution_mode==LP_STATE_READY){

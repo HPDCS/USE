@@ -164,11 +164,14 @@ void check_ipi_capability(){
     printf("program has ipi_capability\n");
 }
 
+#if DECISION_MODEL==1
 static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution){
+    bool ipi_useful;
     clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[( (event_dest_in_execution->execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
-    if(avg_timer==NO_TIMER) //if avg_timer è 0 ossia non popolato manda ipi ossia no valore==no decision_model ==si manda ipi
-        return false;
-    
+    if(avg_timer==0){
+        ipi_useful = false;
+        goto exit;
+    }
     if (avg_timer >= TR)
     {
         clock_timer executed_time = CLOCK_READ();
@@ -179,12 +182,21 @@ static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_pt
             executed_time -= event_dest_in_execution->evt_start_time;
 
         if (executed_time < avg_timer)
-            if ((avg_timer - executed_time) >= TR_PRIME)
-                return true;
+            if ((avg_timer - executed_time) >= TR_PRIME){
+                ipi_useful=true;
+                goto exit;
+            }
     }
-
-    return false;
+    ipi_useful=false;
+exit:
+    #if REPORT==1
+    if(!ipi_useful){
+        statistics_post_th_data(tid,STAT_IPI_FILTERED_IN_DECISION_MODEL_TID,1);
+    }
+    #endif
+    return ipi_useful;
 }
+#endif
 
 void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
@@ -198,7 +210,11 @@ void send_ipi_to_lp(msg_t*event){
         return;
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
+        #if DECISION_MODEL==1
         ipi_useful = decision_model(LPS[lp_idx], event_dest_in_execution);
+        #else
+        ipi_useful=true;
+        #endif
         if(ipi_useful){
             //this unpreemptable barrier can be relaxed to contains only correlated statistics,no need to protect instructions before "syscall",
             //but in this way the number of syscalls must be coherent with kernel module counters!!

@@ -6,8 +6,6 @@
 
 #define ROLLBACK_ONLY 0x4//state reserved for dummy_bound
 
-#define NO_TIMER 0ULL
-
 void end_exposition_of_current_event(msg_t*event);
 void start_exposition_of_current_event(msg_t*event);
 msg_t* allocate_dummy_bound(unsigned int lp_idx);

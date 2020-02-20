@@ -311,7 +311,11 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].clock_exec_ipi_syscall_tid += value;
 			break;
 		#endif
-
+		#if DECISION_MODEL==1 && REPORT==1
+		case STAT_IPI_FILTERED_IN_DECISION_MODEL_TID:
+			stats[idx].ipi_filtered_in_decision_model_tid += value;
+			break;
+		#endif
 		default:
 			printf("Unrecognized stat type (%d)\n", type);
 	}
@@ -363,6 +367,9 @@ void gather_statistics() {
 		system_stats->clock_exec_ipi_syscall_tid += thread_stats[i].clock_exec_ipi_syscall_tid;
 		#endif
 
+		#if DECISION_MODEL==1 && REPORT==1
+		system_stats->ipi_filtered_in_decision_model_tid += thread_stats[i].ipi_filtered_in_decision_model_tid;
+		#endif
 	}
 
 	system_stats->clock_prune /= system_stats->counter_prune;
@@ -394,7 +401,10 @@ void gather_statistics() {
 	system_stats->clock_exec_ipi_syscall_per_syscall=system_stats->clock_exec_ipi_syscall_tot/system_stats->ipi_sended_tot;
 	#endif
 
-	
+	#if DECISION_MODEL==1 && REPORT==1
+	system_stats->ipi_filtered_in_decision_model_tot = system_stats->ipi_filtered_in_decision_model_tid;
+	system_stats->ipi_filtered_in_decision_model_tid /= n_cores;
+	#endif
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
 		system_stats->events_total         += lp_stats[i].events_total;
@@ -583,17 +593,8 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long long)stats->events_silent, percentage(stats->events_silent, stats->events_total));
 	printf("Silent events for GVT...........................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_silent_for_gvt, percentage(stats->events_silent_for_gvt, stats->events_silent));
-	
-	#if STATISTICS_ADDED==1
-	printf("Forward execution Time tot......................: %12lu clocks\n",
-		(unsigned long)stats->clock_forward_exec_tot);
-	printf("Forward execution Time per LP...................: %12.2f clocks\n",
-		stats->clock_forward_exec_lp);
-	printf("Forward execution Time per event................: %12.2f clocks\n",
-		stats->clock_forward_exec_per_event);
 
 	printf("\n");
-	#endif
 	
 	printf("Flushed events..................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_enqueued, percentage(stats->events_enqueued, stats->events_total));
@@ -607,7 +608,6 @@ static void _print_statistics(struct stats_t *stats) {
 	
 	printf("\n");
 	
-
 	printf("Average time to process any event...............: %12.2f clocks\n", stats->clock_event);
 	printf("   Average time spent in standard execution.....: %12.2f clocks\n", stats->clock_safe);
 	printf("   Average time spent in silent execution.......: %12.2f clocks (%4.2f%%)\n", stats->clock_silent, 0.0);
@@ -615,8 +615,6 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("   Average time in successfull fetch............: %12.2f clocks (%4.2f%%)\n", stats->clock_fetch_succ, 0.0);
 	printf("   Average time in unsuccessfull fetch..........: %12.2f clocks (%4.2f%%)\n", stats->clock_fetch_unsucc, 0.0);
 	printf("Average time spent to Enqueue...................: %12.2f clocks (%4.2f%%)\n", stats->clock_enqueue, 0.0);
-	
-	
 	
 	printf("\n");
 
@@ -637,7 +635,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Checkpoint recalculations.......................: %12llu\n", (unsigned long long)stats->counter_checkpoint_recalc);
 	printf("Checkpoint period...............................: %12llu\n", (unsigned long long)stats->checkpoint_period);
 	
-	printf("\n\n");
+	printf("\n");
 
 	#if POSTING==1 && REPORT==1
 
@@ -659,28 +657,6 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n");
 	#endif
 
-	#if IPI_SUPPORT==1 && REPORT==1
-	printf("IPI sent tot....................................: %12lu\n",
-		(unsigned long)stats->ipi_sended_tot);
-	printf("IPI sent per thread.............................: %12.2f\n",
-		stats->ipi_sended_tid);
-	printf("IPI handled in trampoline tot...................: %12lu\n",
-		(unsigned long)stats->ipi_trampoline_received_tot);
-	printf("IPI handled in trampoline per thread............: %12.2f\n",
-		stats->ipi_trampoline_received_tid);
-	printf("IPI received tot................................: %12lu\n",
-		(unsigned long)stats->ipi_received_tot);
-	printf("IPI received per thread.........................: %12.2f\n",
-		stats->ipi_received_tid);
-	printf("IPI sent syscall time...........................: %12lu clocks\n",
-		(unsigned long)stats->clock_exec_ipi_syscall_tot);
-	printf("IPI sent syscall time per thread................: %12.2f clocks\n",
-		stats->clock_exec_ipi_syscall_tid);
-	printf("IPI sent syscall time per 1 syscall.............: %12.2f clocks\n",
-		stats->clock_exec_ipi_syscall_per_syscall);
-	printf("\n\n");
-	#endif
-
 	#if HANDLE_INTERRUPT==1 && REPORT==1
 	
 	printf("Event not flushed tot...........................: %12lu\n",
@@ -698,6 +674,8 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Exposition silent Time per event................: %12.2f clocks\n",
 		stats->clock_exposition_silent_per_event);
 
+	printf("\n");
+
 	printf("Events forward interrupted tot..................: %12lu\n",
 		(unsigned long)stats->event_exposition_forward_interrupted_tot);
 	printf("Events forward interrupted per LP...............: %12.2f\n",
@@ -708,20 +686,19 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Events silent interrupted per LP................: %12.2f\n",
 		stats->event_exposition_silent_interrupted_lp);
 
-	printf("\n\n");
+	printf("\n");
 
     #endif
 
-	#if HANDLE_INTERRUPT_WITH_CHECK==1
-	printf("Sync check Silent Execution tot.................: %12lu\n",
-		(unsigned long)stats->sync_check_silent_tot);
-	printf("Sync check Silent Execution per LP..............: %12.2f\n",
-		stats->sync_check_silent_lp);
-
+	#if SYNCH_CHECK==1
 	printf("Sync check Forward Execution tot................: %12lu\n",
 		(unsigned long)stats->sync_check_forward_tot);
 	printf("Sync check Forward Execution per LP.............: %12.2f\n",
 		stats->sync_check_forward_lp);
+	printf("Sync check Silent Execution tot.................: %12lu\n",
+		(unsigned long)stats->sync_check_silent_tot);
+	printf("Sync check Silent Execution per LP..............: %12.2f\n",
+		stats->sync_check_silent_lp);
 	printf("Sync check useful tot...........................: %12lu\n",
 		(unsigned long)stats->sync_check_useful_tot);
 	printf("Sync check useful per LP........................: %12.2f\n",
@@ -729,6 +706,40 @@ static void _print_statistics(struct stats_t *stats) {
 
 	printf("\n");
 	#endif
+
+	#if IPI_SUPPORT==1 && REPORT==1
+	printf("IPI sent tot....................................: %12lu\n",
+		(unsigned long)stats->ipi_sended_tot);
+	printf("IPI sent per thread.............................: %12.2f\n",
+		stats->ipi_sended_tid);
+	printf("IPI handled in trampoline tot...................: %12lu\n",
+		(unsigned long)stats->ipi_trampoline_received_tot);
+	printf("IPI handled in trampoline per thread............: %12.2f\n",
+		stats->ipi_trampoline_received_tid);
+	printf("IPI received tot................................: %12lu\n",
+		(unsigned long)stats->ipi_received_tot);
+	printf("IPI received per thread.........................: %12.2f\n",
+		stats->ipi_received_tid);
+
+	printf("\n");
+
+	printf("IPI sent syscall time...........................: %12lu clocks\n",
+		(unsigned long)stats->clock_exec_ipi_syscall_tot);
+	printf("IPI sent syscall time per thread................: %12.2f clocks\n",
+		stats->clock_exec_ipi_syscall_tid);
+	printf("IPI sent syscall time per 1 syscall.............: %12.2f clocks\n",
+		stats->clock_exec_ipi_syscall_per_syscall);
+	printf("\n");
+	#endif
+
+	#if DECISION_MODEL==1
+	printf("IPI filtered in decision_model tot..............: %12lu\n",
+		(unsigned long)stats->ipi_filtered_in_decision_model_tot);
+	printf("IPI filtered in decision model per thread.......: %12.2f\n",
+		stats->ipi_filtered_in_decision_model_tid);
+	printf("\n\n");
+	#endif
+
 
 	printf("Total Clock.....................................: %12llu clocks\n", 
 		(unsigned long long)stats->clock_loop_tot);

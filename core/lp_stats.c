@@ -1,8 +1,11 @@
-#if IPI_SUPPORT==1
+#if DECISION_MODEL==1
 #include <lp_stats.h>
 
-//static inline __attribute__((always_inline))
-void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
+#ifndef PRINT_MEAN
+#define PRINT_MEAN 0
+#endif
+
+void init_lp_stats()
 {
 	unsigned int index;
 	if (LPS == NULL){
@@ -29,8 +32,7 @@ void init_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 	}
 }
 
-//static inline __attribute__((always_inline))
-void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
+void fini_lp_stats()
 {
 	unsigned int index;
 	for (index=0; index<n_prc_tot; index++)
@@ -40,10 +42,13 @@ void fini_lp_stats(LP_state ** LPS, unsigned int n_prc_tot)
 		{
 			unsigned int s, t;
 			for (s=0; s<NUMBER_OF_LP_STATES; s++)
-				for (t=0; t<NUMBER_OF_TYPES; t++)
-					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != NO_TIMER)
+				for (t=0; t<NUMBER_OF_TYPES; t++){
+					#if PRINT_MEAN==1
+					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != 0)
 						printf("LP-ID: %u - LP-Exe-State: %s - EVENT-Type: %u - Avg-Exe-Time: %llu\n",
 						index, (s == 0) ? "Forward" : "Silent", t, (unsigned long long int) ((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time);
+					#endif
+				}
 			#if DEBUG==1
 			printf("LP-ID: %u max_timer=%llu\n",index,(unsigned long long)((lp_evt_stats*)LPS[index]->lp_statistics)->max_timer);
 			#endif
