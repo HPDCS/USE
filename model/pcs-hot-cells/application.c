@@ -102,9 +102,9 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				state->channel_state[w] = 0;
 
 			// Set this cell as an hot one
-			state->hot_cell = ((me % HOT_CELL_FACTOR) == 0);
+			state->hot_cell = ((me % HOT_CELL_FACTOR) == 0) ? 1 : 0;
 			
-			if (state->hot_cell)
+			if (state->hot_cell > 0)
 			{
 				state->ta /= START_CALL_HOT_FACTOR;
 				state->ta_duration /= CALL_DURATION_HOT_FACTOR;
@@ -235,11 +235,14 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 		case HOTNESS_LEAVE:
 
-			state->ta *= START_CALL_HOT_FACTOR;
-			state->ta_duration *= CALL_DURATION_HOT_FACTOR;
-			state->ta_change *= HANDOFF_LEAVE_HOT_FACTOR;
+			state->hot_cell -= 1;
 
-			state->hot_cell = false;
+			if (state->hot_cell == 0)
+			{
+				state->ta *= START_CALL_HOT_FACTOR;
+				state->ta_duration *= CALL_DURATION_HOT_FACTOR;
+				state->ta_change *= HANDOFF_LEAVE_HOT_FACTOR;
+			}
 
 			new_event_content.from = me;
 			ScheduleNewEvent(event_content->cell, now+0.000001, HOTNESS_RECV, &new_event_content, sizeof(new_event_content));
@@ -247,33 +250,33 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 		case HOTNESS_RECV:
 
-			if (!state->hot_cell)
+			if (state->hot_cell == 0)
 			{
 				state->ta /= START_CALL_HOT_FACTOR;
 				state->ta_duration /= CALL_DURATION_HOT_FACTOR;
 				state->ta_change /= HANDOFF_LEAVE_HOT_FACTOR;
-
-				state->hot_cell = true;
-
-				switch (HOTNESS_CHANGE_DISTRIBUTION) {
-
-					case UNIFORM:
-
-						hotness_time  = now + (simtime_t)((state->ta_hotness) * Random());
-						break;
-
-					case EXPONENTIAL:
-						hotness_time = now + (simtime_t)(Expent(state->ta_hotness));
-						break;
-
-					default:
-						hotness_time = now + (simtime_t)(5 * Random());
-
-				}
-
-				new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
-				ScheduleNewEvent(me, hotness_time, HOTNESS_LEAVE, &new_event_content, sizeof(new_event_content));
 			}
+
+			state->hot_cell += 1;
+
+			switch (HOTNESS_CHANGE_DISTRIBUTION) {
+
+				case UNIFORM:
+
+					hotness_time  = now + (simtime_t)((state->ta_hotness) * Random());
+					break;
+
+				case EXPONENTIAL:
+					hotness_time = now + (simtime_t)(Expent(state->ta_hotness));
+					break;
+
+				default:
+					hotness_time = now + (simtime_t)(5 * Random());
+
+			}
+
+			new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
+			ScheduleNewEvent(me, hotness_time, HOTNESS_LEAVE, &new_event_content, sizeof(new_event_content));
 
 			break;
 

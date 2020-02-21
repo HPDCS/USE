@@ -105,6 +105,7 @@ typedef struct _lp_state_type{
 	unsigned int arriving_handoffs; // How many calls were received from other cells
 	unsigned int cont_no_sir_aim; // Used for fading recheck
 	unsigned int executed_events; // Total number of events
+	unsigned int hot_cell; // Number of hot tokens maintained
 
 	simtime_t lvt; // Last executed event was at this simulation time
 
@@ -125,8 +126,6 @@ typedef struct _lp_state_type{
 	struct _channel *channels;
 	int dummy;
 	bool dummy_flag;
-
-	bool hot_cell;
 } lp_state_type;
 
 
