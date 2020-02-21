@@ -19,6 +19,7 @@ start_call_hot_factor=( 0.25 0.5 0.75 1.0 )
 call_duration_hot_factor=( 0.5 0.75 1.0 1.5 )
 handoff_leave_hot_factor=( 0.5 1.0 2.0 4.0 )
 
+echo "PCS_HOT_CELLS (${CPUs};${LPs};${SECs})"
 echo "PCS_HOT_CELLS (${CPUs};${LPs};${SECs})" > pcs_hc_res.txt
 
 for taa in ${ta_arrival[@]}; do
@@ -35,8 +36,9 @@ datetime=`date '+%d/%m/%Y %H:%M:%S'`
 make -B pcs_hot_cells -DTA=${taa} -DTA_DURATION=${tad} -DTA_CHANGE=${tac} -DTA_HOTNESS=${tah} -DHOT_CELL_FACTOR=${hcf} \
 	-DSTART_CALL_HOT_FACTOR=${schf} -DCALL_DURATION_HOT_FACTOR=${cdhf} -DHANDOFF_LEAVE_HOT_FACTOR=${hlhf} \
 		IPI_SUPPORT=1 POSTING=1 CHECKPOINT_PERIOD=10 > /dev/null && echo "--------------------" >> pcs_hc_res.txt && \
-			echo "[${datetime}] (${taa};${tad};${tac};${tah};${hcf};${schf};${cdhf};${hlhf})" >> pcs_hc_res.txt && \
-				./pcs_hot_cells ${CPUs} ${LPs} ${SECs} | grep -e "Straggler\|Anti" >> pcs_hc_res.txt && echo "--------------------" >> pcs_hc_res.txt
+			echo "[${datetime}] (${taa};${tad};${tac};${tah};${hcf};${schf};${cdhf};${hlhf})" && \
+				echo "[${datetime}] (${taa};${tad};${tac};${tah};${hcf};${schf};${cdhf};${hlhf})" >> pcs_hc_res.txt && \
+					./pcs_hot_cells ${CPUs} ${LPs} ${SECs} | grep -e "Straggler\|Anti" >> pcs_hc_res.txt && echo "--------------------" >> pcs_hc_res.txt
 
 sleep 1
 
