@@ -18,7 +18,9 @@
 #define CHANNELS_PER_CELL	1000
 //#define TA_CHANGE		300.0
 #define TA_CHANGE		50.0
+#define TA_HOTNESS		500.0
 
+#define	HOTNESS_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define DURATION_DISTRIBUTION		EXPONENTIAL
 
@@ -38,6 +40,8 @@
 #define HANDOFF_LEAVE	 3
 #define HANDOFF_RECV	 4
 #define FADING_RECHECK	 5
+#define HOTNESS_LEAVE	 6
+#define HOTNESS_RECV	 7
 
 #define FADING_RECHECK_FREQUENCY	300	// Every 5 Minutes
 
@@ -108,6 +112,7 @@ typedef struct _lp_state_type{
 	double ref_ta; // Initial call interarrival frequency (same for all cells)
 	double ta_duration; // Average duration of a call
 	double ta_change; // Average time after which a call is diverted to another cell
+	double ta_hotness; // Average time after which hotness is given to another cell
 
 	int channels_per_cell; // Total channels in this cell
 	int total_calls;
