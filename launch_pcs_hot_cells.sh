@@ -3,7 +3,7 @@
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]
 then
 	echo "Missing arguments. Try with: ./launch_pcs_hot_cells.sh <CPUs> <LPs> <SECs>"
-fi
+else
 
 CPUs=$1
 LPs=$2
@@ -50,3 +50,5 @@ done
 done
 done
 done
+
+fi
