@@ -23,8 +23,10 @@
 #define DURATION_DISTRIBUTION		EXPONENTIAL
 
 /* Cell's hotness parameters */
-#define HOT_CELL_RATIO			10
-#define START_CALL_HOT_FACTOR	1.5
+#define HOT_CELL_FACTOR				10
+#define START_CALL_HOT_FACTOR		1.5
+#define CALL_DURATION_HOT_FACTOR	1.0
+#define HANDOFF_LEAVE_HOT_FACTOR	1.0
 
 /* Channel states */
 #define CHAN_BUSY	1

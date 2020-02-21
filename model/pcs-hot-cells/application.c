@@ -98,11 +98,13 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				state->channel_state[w] = 0;
 
 			// Set this cell as an hot one
-			state->hot_cell = ((me % HOT_CELL_RATIO) == 0);
+			state->hot_cell = ((me % HOT_CELL_FACTOR) == 0);
 			
 			if (state->hot_cell)
 			{
 				state->ta /= START_CALL_HOT_FACTOR;
+				state->ta_duration /= CALL_DURATION_HOT_FACTOR;
+				state->ta_change /= HANDOFF_LEAVE_HOT_FACTOR;
 			}
 
 			// Start the simulation
