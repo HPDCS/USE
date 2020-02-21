@@ -332,6 +332,8 @@ PCS_PREALLOC_SOURCES=model/pcs-prealloc/application.c\
 		    model/pcs-prealloc/functions_app.c\
 		    model/pcs-prealloc/topology.c
 
+PCS_HOT_CELLS_SOURCES=model/pcs-hot-cells/application.c\
+		    		  model/pcs-hot-cells/functions_app.c
 
 PCS_SOURCES=model/pcs/application.c\
 		    model/pcs/functions_app.c
@@ -426,6 +428,7 @@ CORE_OBJ=$(CORE_SOURCES:.c=.o)
 REVERSE_OBJ=$(REVERSE_SOURCES:.c=.o)
 
 PCS_OBJ=$(PCS_SOURCES:.c=.o)
+PCS_HOT_CELLS_OBJ=$(PCS_HOT_CELLS_SOURCES:.c=.o)
 PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
 TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
@@ -444,6 +447,9 @@ all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
 pcs: clean _pcs executable
+
+pcs_hot_cells: TARGET=pcs_hot_cells 
+pcs_hot_cells: clean _pcs_hot_cells executable
 
 pcs-prealloc: TARGET=pcs-prealloc 
 pcs-prealloc: clean _pcs_prealloc executable
@@ -533,6 +539,9 @@ reverse: $(REVERSE_OBJ)
 
 _pcs_prealloc: $(PCS_PREALLOC_OBJ)
 	@ld -r -g $(PCS_PREALLOC_OBJ) -o model/__application.o
+
+_pcs_hot_cells: $(PCS_HOT_CELLS_OBJ)
+	@ld -r -g $(PCS_HOT_CELLS_OBJ) -o model/__application.o
 
 _pcs: $(PCS_OBJ)
 	@ld -r -g $(PCS_OBJ) -o model/__application.o
