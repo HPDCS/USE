@@ -3,32 +3,52 @@
 
 
 /* DISTRIBUZIONI TIMESTAMP */
-#define UNIFORM		0
-#define EXPONENTIAL	1
+#define UNIFORM			0
+#define EXPONENTIAL		1
 #define DISTRIBUTION	1
 
-
-//define CHECK_FADING_TIME	10
 #define COMPLETE_CALLS		5000
+
 #ifndef TA
-#define TA			0.9
+#define TA		0.9
 #endif
-//#define TA_DURATION		120
+
+#ifndef TA_DURATION
 #define TA_DURATION		120
+#endif
+
+#ifndef CHANNELS_PER_CELL
 #define CHANNELS_PER_CELL	1000
-//#define TA_CHANGE		300.0
+#endif
+
+#ifndef TA_CHANGE
 #define TA_CHANGE		50.0
+#endif
+
+#ifndef TA_HOTNESS
 #define TA_HOTNESS		500.0
+#endif
 
 #define	HOTNESS_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define DURATION_DISTRIBUTION		EXPONENTIAL
 
 /* Cell's hotness parameters */
-#define HOT_CELL_FACTOR				6
-#define START_CALL_HOT_FACTOR		3.0
+#ifndef HOT_CELL_FACTOR
+#define HOT_CELL_FACTOR				1024
+#endif
+
+#ifndef START_CALL_HOT_FACTOR
+#define START_CALL_HOT_FACTOR		1.0
+#endif
+
+#ifndef CALL_DURATION_HOT_FACTOR
 #define CALL_DURATION_HOT_FACTOR	1.0
+#endif
+
+#ifndef HANDOFF_LEAVE_HOT_FACTOR
 #define HANDOFF_LEAVE_HOT_FACTOR	1.0
+#endif
 
 /* Channel states */
 #define CHAN_BUSY	1
