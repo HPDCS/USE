@@ -14,10 +14,10 @@ ta_duration=( 50     75    100   125   150  )
 ta_change=(   50     75    100   125   150  )
 ta_hotness=(  100    500   1000  2000  5000 )
 
-hot_cell_factor=( 5 10 25 50 )
-start_call_hot_factor=( 0.25 0.5 0.75 1.0 )
-call_duration_hot_factor=( 0.5 0.75 1.0 1.5 )
-handoff_leave_hot_factor=( 0.5 1.0 2.0 4.0 )
+hot_cell_factor=(          5     10     25  )
+start_call_hot_factor=(    0.5   0.75   1.0 )
+call_duration_hot_factor=( 0.5   0.75   1.0 )
+handoff_leave_hot_factor=( 0.5   1.0    2.0 )
 
 echo "PCS_HOT_CELLS (${CPUs};${LPs};${SECs})"
 echo "PCS_HOT_CELLS (${CPUs};${LPs};${SECs})" > pcs_hc_res.txt
@@ -38,7 +38,7 @@ make -B pcs_hot_cells TA=${taa} TA_DURATION=${tad} TA_CHANGE=${tac} TA_HOTNESS=$
 		IPI_SUPPORT=1 POSTING=1 CHECKPOINT_PERIOD=10 > /dev/null && echo "--------------------" >> pcs_hc_res.txt && \
 			echo "[${datetime}] (${taa};${tad};${tac};${tah};${hcf};${schf};${cdhf};${hlhf})" && \
 				echo "[${datetime}] (${taa};${tad};${tac};${tah};${hcf};${schf};${cdhf};${hlhf})" >> pcs_hc_res.txt && \
-					./pcs_hot_cells ${CPUs} ${LPs} ${SECs} | grep -e "Straggler\|Anti" >> pcs_hc_res.txt && echo "--------------------" >> pcs_hc_res.txt
+					./pcs_hot_cells ${CPUs} ${LPs} ${SECs} | grep -e "Straggler\|Anti" >> pcs_hc_res.txt
 
 sleep 1
 
