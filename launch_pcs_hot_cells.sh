@@ -33,8 +33,8 @@ for hlhf in ${handoff_leave_hot_factor[@]}; do
 
 datetime=`date '+%d/%m/%Y %H:%M:%S'`
 
-make -B pcs_hot_cells -DTA=${taa} -DTA_DURATION=${tad} -DTA_CHANGE=${tac} -DTA_HOTNESS=${tah} -DHOT_CELL_FACTOR=${hcf} \
-	-DSTART_CALL_HOT_FACTOR=${schf} -DCALL_DURATION_HOT_FACTOR=${cdhf} -DHANDOFF_LEAVE_HOT_FACTOR=${hlhf} \
+make -B pcs_hot_cells TA=${taa} TA_DURATION=${tad} TA_CHANGE=${tac} TA_HOTNESS=${tah} HOT_CELL_FACTOR=${hcf} \
+	START_CALL_HOT_FACTOR=${schf} CALL_DURATION_HOT_FACTOR=${cdhf} HANDOFF_LEAVE_HOT_FACTOR=${hlhf} \
 		IPI_SUPPORT=1 POSTING=1 CHECKPOINT_PERIOD=10 > /dev/null && echo "--------------------" >> pcs_hc_res.txt && \
 			echo "[${datetime}] (${taa};${tad};${tac};${tah};${hcf};${schf};${cdhf};${hlhf})" && \
 				echo "[${datetime}] (${taa};${tad};${tac};${tah};${hcf};${schf};${cdhf};${hlhf})" >> pcs_hc_res.txt && \
