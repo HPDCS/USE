@@ -42,7 +42,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			}
 			//TODO print all parameters
 
-			timestamp =  (simtime_t)(me + n_prc_tot) ;// ts normal_evt==i+NUM_LP,ts is integer
+			timestamp =  (simtime_t)(me) ;// ts normal_evt==i+NUM_LP,ts is integer
 			ScheduleNewEvent(me, timestamp, NORMAL_EVT, NULL, 0);
 			break;
 
@@ -58,16 +58,19 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			state_ptr->events++;//num NORMAL_EVT executed
 
-			ScheduleNewEvent(me, now+n_prc_tot, NORMAL_EVT, NULL, 0);//it generates my next evt
+			ScheduleNewEvent(me, now+n_prc_tot+LOOKAHEAD, NORMAL_EVT, NULL, 0);//it generates my next evt
 			
-			for(i = 0; i < n_prc_tot; i++){
-				random_num=Random();
-				if(i!=(unsigned int)me && THR_PROB_NORMAL >= random_num ){
-					timestamp=(simtime_t)(now+SHIFT);
-					ScheduleNewEvent(i, timestamp, ABNORMAL_EVT, NULL, 0);
+			random_num=Random();
+
+			if(THR_PROB_NORMAL >= random_num){
+				for(i = 0; i < n_prc_tot; i++){
+					if(i!=(unsigned int)me){
+						timestamp=(simtime_t)(now+SHIFT+LOOKAHEAD);
+						ScheduleNewEvent(i, timestamp, ABNORMAL_EVT, NULL, 0);
+					}
 				}
 			}
-
+			
 			break;
 
 		case ABNORMAL_EVT:

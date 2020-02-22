@@ -238,6 +238,7 @@ void send_ipi_to_lp(msg_t*event){
             exit_from_unpreemptable_zone();
         }
     }
+    return;
 }
 
 long get_sizeof_function(const char*function_name,char*path_program_name){
@@ -541,6 +542,6 @@ void check_trampoline_function(){
     //in case this check will be modified remember to delete all side-effects created with calls to sync_trampoline(), or with the setting of bound,priority_msg ecc
 }
 
-#endif
+#endif//DEBUG
 
 #endif

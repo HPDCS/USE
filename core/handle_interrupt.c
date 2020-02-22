@@ -13,12 +13,6 @@
 #include <handle_interrupt_with_check.h>
 #endif
 
-#if IPI_SUPPORT==1
-#include <ipi.h>
-#include <lp_stats.h>
-#include <nb_calqueue.h>
-#endif
-
 extern __thread cntx_buf cntx_loop;
 
 void end_exposition_of_current_event(msg_t*event){

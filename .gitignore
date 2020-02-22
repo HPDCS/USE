@@ -42,9 +42,10 @@ robot_explore
 hash 		 
 phold
 pholdcount
-phold_roll_multicast
-phold_roll_braodcast
-phold_roll_nears
+phold_multicast
+phold_braodcast
+phold_nears
+phold_nears_random
 pcs
 /tcar
 log_test/*

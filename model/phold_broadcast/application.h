@@ -6,10 +6,11 @@
 #define NORMAL_EVT	1
 #define ABNORMAL_EVT 2
 
+#define MODEL_NAME "PHOLD_BROADCAST"
 #define USELESS_INIT_NUMBER 123 //this is initial value of variables i,j but it's useless,because i,j will be overwrited
 
-#ifndef NUM_NEARS //number of neighborhors from me to me+NUM_NEARS mod NUM_LP
-#define NUM_NEARS 24
+#ifndef THR_PROB_NORMAL //threshold prob to gossip to another LP
+#define THR_PROB_NORMAL 1.0//greater is heaviest
 #endif
 
 #define SHIFT 0.5 //must be in (0,1),is useful to generate evts with ts==now+SHIFT,now ts is integer and different from all other now's ts of other LPs when a NORMAL_EVT evt is executed,so now+SHIFT generate ever evts with different ts 
@@ -37,8 +38,6 @@ typedef struct _event_content_type {
 typedef struct _lp_state_type {
 	simtime_t lvt;
 	unsigned int events;
-	unsigned int next_neighbohor;//policy round robin
-	unsigned int num_neighbohors_notified;
 } lp_state_type;
 
 

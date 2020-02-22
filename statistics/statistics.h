@@ -245,12 +245,12 @@ struct stats_t {
     #endif
 
     #if IPI_SUPPORT==1 && REPORT==1
-    stat64_t ipi_sended_tid;//per thread, num of ipis sended by target thread
+    stat64_t ipi_sent_tid;//per thread, num of ipis sent by target thread
     stat64_t ipi_trampoline_received_tid;//per thread, num of ipis handled in trampoline
     stat64_t ipi_received_tid;//per thread, num of ipis received by target thread
 
     //calculated in gather statistics
-    stat64_t ipi_sended_tot;
+    stat64_t ipi_sent_tot;
     stat64_t ipi_trampoline_received_tot;
     stat64_t ipi_received_tot;
 
@@ -325,5 +325,9 @@ void print_statistics();
 void statistics_post_lp_data(unsigned int lid, int type, stat64_t value);
 
 void statistics_post_th_data(unsigned int lid, int type, stat64_t value);
+
+void write_results_on_csv(char*path);
+
+extern volatile double simduration;
 
 #endif // _STATISTICS_H_

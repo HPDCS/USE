@@ -4,7 +4,7 @@
 #include <core.h>
 #include <hpdcs_utils.h>
 #include <simtypes.h>
-
+#include <unistd.h>
 
 //Variabili da tunare durante l'esecuzione per throttling e threshold
 extern double delta_count;
@@ -14,6 +14,7 @@ struct stats_t *thread_stats;
 struct stats_t *lp_stats;
 struct stats_t *system_stats;
 
+volatile double simduration;
 void statistics_init() {
 	if(posix_memalign((void**)&thread_stats, 64, n_cores * sizeof(struct stats_t)) < 0) {
 		printf("memalign failed\n");
@@ -302,7 +303,7 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		#if IPI_SUPPORT==1 && REPORT==1
 
 		case STAT_IPI_SENDED_TID:
-			stats[idx].ipi_sended_tid += value;
+			stats[idx].ipi_sent_tid += value;
 			break;
 		case STAT_IPI_RECEIVED_TID:
 			stats[idx].ipi_received_tid += value;
@@ -361,7 +362,7 @@ void gather_statistics() {
 		#endif
 
 		#if IPI_SUPPORT && REPORT==1
-		system_stats->ipi_sended_tid += thread_stats[i].ipi_sended_tid;
+		system_stats->ipi_sent_tid += thread_stats[i].ipi_sent_tid;
 		system_stats->ipi_trampoline_received_tid += thread_stats[i].ipi_trampoline_received_tid;
 		system_stats->ipi_received_tid += thread_stats[i].ipi_received_tid;
 		system_stats->clock_exec_ipi_syscall_tid += thread_stats[i].clock_exec_ipi_syscall_tid;
@@ -388,17 +389,17 @@ void gather_statistics() {
 	#endif
 
 	#if IPI_SUPPORT==1 && REPORT==1
-	system_stats->ipi_sended_tot = system_stats->ipi_sended_tid;
+	system_stats->ipi_sent_tot = system_stats->ipi_sent_tid;
 	system_stats->ipi_trampoline_received_tot = system_stats->ipi_trampoline_received_tid;
 	system_stats->ipi_received_tot = system_stats->ipi_received_tid;
 
-	system_stats->ipi_sended_tid /= n_cores;
+	system_stats->ipi_sent_tid /= n_cores;
 	system_stats->ipi_trampoline_received_tid /= n_cores;
 	system_stats->ipi_received_tid /= n_cores;
 
 	system_stats->clock_exec_ipi_syscall_tot=system_stats->clock_exec_ipi_syscall_tid;
 	system_stats->clock_exec_ipi_syscall_tid/=n_cores;
-	system_stats->clock_exec_ipi_syscall_per_syscall=system_stats->clock_exec_ipi_syscall_tot/system_stats->ipi_sended_tot;
+	system_stats->clock_exec_ipi_syscall_per_syscall=system_stats->clock_exec_ipi_syscall_tot/system_stats->ipi_sent_tot;
 	#endif
 
 	#if DECISION_MODEL==1 && REPORT==1
@@ -709,9 +710,9 @@ static void _print_statistics(struct stats_t *stats) {
 
 	#if IPI_SUPPORT==1 && REPORT==1
 	printf("IPI sent tot....................................: %12lu\n",
-		(unsigned long)stats->ipi_sended_tot);
+		(unsigned long)stats->ipi_sent_tot);
 	printf("IPI sent per thread.............................: %12.2f\n",
-		stats->ipi_sended_tid);
+		stats->ipi_sent_tid);
 	printf("IPI handled in trampoline tot...................: %12lu\n",
 		(unsigned long)stats->ipi_trampoline_received_tot);
 	printf("IPI handled in trampoline per thread............: %12.2f\n",
@@ -776,4 +777,106 @@ void print_statistics() {
 
 	printf("===== SYSTEM-WIDE STATISTICS =====\n");
 	_print_statistics(system_stats);
+}
+
+void write_empty_cell_and_separator(FILE*results_file,char*separator){
+	fprintf(results_file,"Empty%s",separator);
+}
+
+void write_unsigned_and_separator(FILE*file,unsigned int value,char*separator){
+	fprintf(file,"%u%s",value,separator);
+}
+
+void write_double_and_separator(FILE*file,double value,char*separator){
+	fprintf(file,"%12.2f%s",value,separator);
+}
+
+void write_string_unsigned_and_separator(FILE*file,unsigned int value,char*string,char*separator){
+	fprintf(file,"%s %u%s",string,value,separator);
+}
+
+void write_string_double_and_separator(FILE*file,double value,char*string,char*separator){
+	fprintf(file,"%s %12.2f%s",string,value,separator);
+}
+
+void write_standard_statistics(FILE*results_file){
+	write_unsigned_and_separator(results_file,n_cores,",");//num_thread
+	write_unsigned_and_separator(results_file,n_prc_tot,",");//num_lps
+	write_double_and_separator(results_file,simduration,",");//sim_duration
+    write_unsigned_and_separator(results_file,CHECKPOINT_PERIOD,",");//checkpoint_period
+    write_double_and_separator(results_file,(double)(system_stats->events_committed)/simduration/n_cores,",");//committed/sec
+    write_double_and_separator(results_file,percentage(system_stats->events_straggler, system_stats->events_total),",");//%straggler
+    write_double_and_separator(results_file,percentage(system_stats->events_anti, system_stats->events_total),",");//% anti
+    write_double_and_separator(results_file,percentage((system_stats->events_total - system_stats->events_silent - system_stats->total_frames+n_prc_tot), system_stats->events_total),",");//%useless
+    write_double_and_separator(results_file,percentage(system_stats->events_silent, system_stats->events_total),",");//% silent
+    write_double_and_separator(results_file,system_stats->clock_event,",");//event grain
+    write_double_and_separator(results_file,system_stats->clock_safe,",");//event forward grain
+    write_double_and_separator(results_file,system_stats->clock_silent,",");//event silent grain
+}
+
+#if IPI_SUPPORT==1
+void write_ipi_statistics(FILE*results_file){
+	write_string_unsigned_and_separator(results_file,system_stats->ipi_sent_tot,"Num_sent",";");//num_ipi
+	write_string_unsigned_and_separator(results_file,system_stats->ipi_trampoline_received_tot,"Num_rcv in tramp",";");//num ipi trampoline
+	write_string_unsigned_and_separator(results_file,system_stats->ipi_received_tot,"Num_rcv",";");//num ipi_received tot
+	write_string_double_and_separator(results_file,system_stats->clock_exec_ipi_syscall_per_syscall,"Time 1 sys",",");
+}
+#endif
+
+#if POSTING==1
+void write_posting_statistics(FILE*results_file){
+	write_string_unsigned_and_separator(results_file,system_stats->infos_posted_attempt_tot,"Attempt",";");
+	write_string_unsigned_and_separator(results_file,system_stats->infos_posted_tot,"Success",",");
+}
+#endif
+
+//TODO
+void write_model_parameters(FILE*results_file){
+	write_empty_cell_and_separator(results_file,",");
+}
+
+void write_first_line_on_csv(FILE*results_file){
+	fprintf(results_file,"THREADS,LPS,SEC,CKPT,COMMIT/sec,%%STRAG,%%ANTI,%%USELESS,%%SILENT,TIME EVT,TIME FORWARD,TIME SILENT,MODEL,POSTING,IPI,END\n");
+}
+
+//remember to adjust first line of csv table
+void write_results_on_csv(char*path){
+	FILE* results_file;
+	if( access( path, F_OK ) != -1 ) 
+	{//file exist
+    	results_file=fopen(path,"a+");
+    	if(results_file==NULL){
+			printf("error in fopen file %s\n",path);
+			gdb_abort;
+		}
+	} 
+	else 
+	{//file not exist
+    	results_file=fopen(path,"a+");
+    	if(results_file==NULL){
+			printf("error in fopen file %s\n",path);
+			gdb_abort;
+		}
+		write_first_line_on_csv(results_file);
+	}
+
+	write_standard_statistics(results_file);//common at all simulation model
+	write_model_parameters(results_file);
+
+	#if POSTING==1
+	write_posting_statistics(results_file);
+	#else
+	write_empty_cell_and_separator(results_file,",");
+	#endif
+	#if IPI_SUPPORT==1
+	write_ipi_statistics(results_file);
+	#else
+	write_empty_cell_and_separator(results_file,",");
+	#endif
+
+	write_empty_cell_and_separator(results_file,"\n");
+    fclose(results_file);
+    
+    return;
+
 }

@@ -14,10 +14,6 @@
 #include <events.h>
 #include <posting.h>
 
-#if IPI_SUPPORT==1
-#include <ipi.h>
-#endif
-
 
 /*void insert_msg_in_hash_table(msg_t*msg_ptr){//open addressing
     unsigned int hash_table_size=MAX_THR_HASH_TABLE_SIZE;

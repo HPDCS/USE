@@ -147,7 +147,7 @@ int main(int argn, char *argv[]) {
 	clock_timer_start(simulation_clocks);
 
 	start_simulation();
-    double simduration = (double)timer_value_seconds(exec_time);
+    simduration = (double)timer_value_seconds(exec_time);
 
     print_statistics();
     
@@ -160,6 +160,7 @@ int main(int argn, char *argv[]) {
     printf("Last gvt: %f\n", current_lvt);
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
+    write_results_on_csv("results/results.csv");//not present in original version
     //statistics_fini();
     if(sim_error){
         printf(RED("Execution ended for an error\n"));

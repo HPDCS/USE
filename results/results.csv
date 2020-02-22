@@ -1,0 +1,2 @@
+THREADS,LPS,SEC,CKPT,COMMIT/sec,%STRAG,%ANTI,%USELESS,%SILENT,TIME EVT,TIME FORWARD,TIME SILENT,MODEL,POSTING,IPI,END
+8,8,       10.02,5,    25101.62,        2.94,        6.10,       31.38,       25.21,    24499.14,    24957.35,    23139.99,Empty,Attempt 656469;Success 450056,Num_sent 311009;Num_rcv in tramp 198365;Num_rcv 192870;Time 1 sys     12911.98,Empty

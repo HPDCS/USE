@@ -286,22 +286,21 @@ ifdef FAN_OUT
 CFLAGS:= $(CFLAGS) -DFAN_OUT=$(FAN_OUT)
 endif
 
-#PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT / TCAR /PHOLD_ROLL_MULTICAST / PHOLD_ROLL_BROADCAST
+#PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT / TCAR /PHOLD_MULTICAST / PHOLD_BROADCAST
 ifdef LOOP_COUNT
 CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
 endif
 
-#PHOLD_ROLL
 ifdef VARIANCE
 CFLAGS:= $(CFLAGS) -DVARIANCE=$(VARIANCE)
 endif
 
-#PHOLD_ROLL_MUTICAST / PHOLD_ROLL_BROADCAST
+#PHOLD_MUTICAST / PHOLD_BROADCAST
 ifdef THR_PROB_NORMAL
 CFLAGS:= $(CFLAGS) -DTHR_PROB_NORMAL=$(THR_PROB_NORMAL)
 endif
 
-#PHOLD_ROLL_NEARS
+#PHOLD_NEARS
 ifdef NUM_NEARS
 CFLAGS:= $(CFLAGS) -DNUM_NEARS=$(NUM_NEARS)
 endif
@@ -347,11 +346,12 @@ PCS_SOURCES=model/pcs/application.c\
 
 PHOLD_SOURCES=model/phold/application.c
 
-PHOLD_ROLL_MULTICAST_SOURCES=model/phold_roll_multicast/application.c
+PHOLD_MULTICAST_SOURCES=model/phold_multicast/application.c
 
-PHOLD_ROLL_BROADCAST_SOURCES=model/phold_roll_broadcast/application.c
+PHOLD_BROADCAST_SOURCES=model/phold_broadcast/application.c
 
-PHOLD_ROLL_NEARS_SOURCES=model/phold_roll_nears/application.c
+PHOLD_NEARS_SOURCES=model/phold_nears/application.c
+PHOLD_NEARS_RANDOM_SOURCES=model/phold_nears_random/application.c
 
 PHOLD_O_SOURCES=model/phold_o/application.c
 
@@ -441,9 +441,10 @@ TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
 TCAR_OBJ=$(TCAR_SOURCES:.c=.o)
 PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLD_O_OBJ=$(PHOLD_O_SOURCES:.c=.o)
-PHOLD_ROLL_MULTICAST_OBJ=$(PHOLD_ROLL_MULTICAST_SOURCES:.c=.o)
-PHOLD_ROLL_BROADCAST_OBJ=$(PHOLD_ROLL_BROADCAST_SOURCES:.c=.o)
-PHOLD_ROLL_NEARS_OBJ=$(PHOLD_ROLL_NEARS_SOURCES:.c=.o)
+PHOLD_MULTICAST_OBJ=$(PHOLD_MULTICAST_SOURCES:.c=.o)
+PHOLD_BROADCAST_OBJ=$(PHOLD_BROADCAST_SOURCES:.c=.o)
+PHOLD_NEARS_OBJ=$(PHOLD_NEARS_SOURCES:.c=.o)
+PHOLD_NEARS_RANDOM_OBJ=$(PHOLD_NEARS_RANDOM_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
@@ -473,14 +474,17 @@ phold: clean  _phold executable
 phold_o: TARGET=phold_o
 phold_o: clean  _phold_o executable
 
-phold_roll_multicast: TARGET=phold_roll_multicast
-phold_roll_multicast: clean _phold_roll_multicast executable
+phold_multicast: TARGET=phold_multicast
+phold_multicast: clean _phold_multicast executable
 
-phold_roll_broadcast: TARGET=phold_roll_broadcast
-phold_roll_broadcast: clean _phold_roll_broadcast executable
+phold_broadcast: TARGET=phold_broadcast
+phold_broadcast: clean _phold_broadcast executable
 
-phold_roll_nears: TARGET=phold_roll_nears
-phold_roll_nears: clean _phold_roll_nears executable
+phold_nears: TARGET=phold_nears
+phold_nears: clean _phold_nears executable
+
+phold_nears_random: TARGET=phold_nears_random
+phold_nears_random: clean _phold_nears_random executable
 
 pholdcount: TARGET=pholdcount 
 pholdcount: clean  _pholdcount executable
@@ -562,14 +566,17 @@ _phold: $(PHOLD_OBJ)
 _phold_o: $(PHOLD_O_OBJ)
 	@ld -r -g $(PHOLD_O_OBJ) -o model/__application.o
 
-_phold_roll_multicast: $(PHOLD_ROLL_MULTICAST_OBJ)
-	@ld -r -g $(PHOLD_ROLL_MULTICAST_OBJ) -o model/__application.o
+_phold_multicast: $(PHOLD_MULTICAST_OBJ)
+	@ld -r -g $(PHOLD_MULTICAST_OBJ) -o model/__application.o
 
-_phold_roll_broadcast: $(PHOLD_ROLL_BROADCAST_OBJ)
-	@ld -r -g $(PHOLD_ROLL_BROADCAST_OBJ) -o model/__application.o
+_phold_broadcast: $(PHOLD_BROADCAST_OBJ)
+	@ld -r -g $(PHOLD_BROADCAST_OBJ) -o model/__application.o
 
-_phold_roll_nears: $(PHOLD_ROLL_NEARS_OBJ)
-	@ld -r -g $(PHOLD_ROLL_NEARS_OBJ) -o model/__application.o
+_phold_nears: $(PHOLD_NEARS_OBJ)
+	@ld -r -g $(PHOLD_NEARS_OBJ) -o model/__application.o
+
+_phold_nears_random: $(PHOLD_NEARS_RANDOM_OBJ)
+	@ld -r -g $(PHOLD_NEARS_RANDOM_OBJ) -o model/__application.o
 
 _pholdcount: $(PHOLDCOUNT_OBJ)
 	@ld -r -g $(PHOLDCOUNT_OBJ) -o model/__application.o
@@ -591,9 +598,10 @@ _robot_explore: $(ROBOT_EXPLORE_OBJ)
 clean:
 	@find . -name "*.o" -exec rm {} \;
 	@find . -type f -name "phold" 		         -exec rm {} \;
-	@find . -type f -name "phold_roll_multicast" -exec rm {} \;
-	@find . -type f -name "phold_roll_broadcast" -exec rm {} \;
-	@find . -type f -name "phold_roll_nears"     -exec rm {} \;
+	@find . -type f -name "phold_multicast"      -exec rm {} \;
+	@find . -type f -name "phold_broadcast"      -exec rm {} \;
+	@find . -type f -name "phold_nears"          -exec rm {} \;
+	@find . -type f -name "phold_nears_random"   -exec rm {} \;
 	@find . -type f -name "pcs" 		         -exec rm {} \;
 	@find . -type f -name "pcs-prealloc"         -exec rm {} \;
 	@find . -type f -name "traffic "  	         -exec rm {} \;

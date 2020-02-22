@@ -40,6 +40,7 @@ extern __thread cntx_buf cntx_loop;
 
 #if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
+
 //wrap memcpy to interrupt "library" function "memcpy"
 #define memcpy(d, s, n) ({ \
     void *res; \
@@ -259,6 +260,7 @@ void queue_deliver_msgs(void) {
         check_tie_breaker_not_zero(new_hole->tie_breaker);
         #endif
 
+        
         if (flagged){
             posted=post_info_with_oldval(new_hole,old_priority_message);
         }

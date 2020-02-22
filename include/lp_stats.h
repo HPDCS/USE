@@ -4,7 +4,7 @@
 
 /*******************************
  * IN ORDER TO BE ENABLED, THE  *
- * MACRO "IPI_SUPPORT" MUST BE *
+ * MACRO "DECISION_MODEL" MUST BE *
  * DEFINED AND SET TO 1.       *
  *******************************/
 #if DECISION_MODEL==1
