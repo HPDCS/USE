@@ -788,7 +788,7 @@ void write_unsigned_and_separator(FILE*file,unsigned int value,char*separator){
 }
 
 void write_double_and_separator(FILE*file,double value,char*separator){
-	fprintf(file,"%12.2f%s",value,separator);
+	fprintf(file,"%.2f%s",value,separator);
 }
 
 void write_string_unsigned_and_separator(FILE*file,unsigned int value,char*string,char*separator){
@@ -796,7 +796,7 @@ void write_string_unsigned_and_separator(FILE*file,unsigned int value,char*strin
 }
 
 void write_string_double_and_separator(FILE*file,double value,char*string,char*separator){
-	fprintf(file,"%s %12.2f%s",string,value,separator);
+	fprintf(file,"%s %.2f%s",string,value,separator);
 }
 
 void write_standard_statistics(FILE*results_file){
