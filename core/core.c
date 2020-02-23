@@ -32,6 +32,8 @@
 #include <hpdcs_utils.h>
 #include <prints.h>
 
+#define PINNING 1
+
 #if PREEMPT_COUNTER==1
 #include <preempt_counter.h>
 #endif
@@ -217,13 +219,18 @@ void _mkdir(const char *path) {
 
 
 void set_affinity(unsigned int tid){
+#if PINNING == 0
+return 0;
+#endif
 	unsigned int id_cpu;
 	cpu_set_t mask;	
 	id_cpu = (tid % 8) * 4 + (tid/((unsigned int)8));
 	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
 	CPU_ZERO(&mask);
 	CPU_SET(id_cpu, &mask);
-	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+    	pthread_t current_thread = pthread_self();
+    	int err = pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &mask);
+	//int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
@@ -552,7 +559,7 @@ void init_simulation(unsigned int thread_id){
 #endif
 
 	// Set the CPU affinity
-	//set_affinity(tid);//TODO: decommentare per test veri
+	set_affinity(tid);//TODO: decommentare per test veri
 	
 	// Initialize the set ??
 	unsafe_set_init();
