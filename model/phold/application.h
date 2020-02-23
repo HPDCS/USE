@@ -7,6 +7,7 @@
 #define LOOP			8
 #define EXTERNAL_LOOP	7
 
+#define MODEL_NAME "PHOLD"
 #define VARIANCE 0.2
 #define COMPLETE_EVENTS 5000
 #define COMPLETE_TIME 200000

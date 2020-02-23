@@ -830,13 +830,8 @@ void write_posting_statistics(FILE*results_file){
 }
 #endif
 
-//TODO
-void write_model_parameters(FILE*results_file){
-	write_empty_cell_and_separator(results_file,",");
-}
-
 void write_first_line_on_csv(FILE*results_file){
-	fprintf(results_file,"THREADS,LPS,SEC,CKPT,COMMIT/sec,%%STRAG,%%ANTI,%%USELESS,%%SILENT,TIME EVT,TIME FORWARD,TIME SILENT,MODEL,POSTING,IPI,END\n");
+	fprintf(results_file,"MODEL,THREADS,LPS,SEC,CKPT,COMMIT/sec,%%STRAG,%%ANTI,%%USELESS,%%SILENT,TIME EVT,TIME FORWARD,TIME SILENT,POSTING,IPI,END\n");
 }
 
 //remember to adjust first line of csv table
@@ -859,9 +854,9 @@ void write_results_on_csv(char*path){
 		}
 		write_first_line_on_csv(results_file);
 	}
-
+	write_model_parameters_and_separator(results_file,",");
 	write_standard_statistics(results_file);//common at all simulation model
-	write_model_parameters(results_file);
+	
 
 	#if POSTING==1
 	write_posting_statistics(results_file);

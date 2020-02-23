@@ -289,3 +289,9 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 		return false;
 	return true;
 }
+
+void write_model_parameters_and_separator(FILE*results_file,char*separator){
+	fprintf(results_file,"MODEL_NAME:%s;TA:%.2lf;TA_DURATION:%.2lf;CHANNELS_PER_CELL%u;TA_CHANGE:%.2lf%s",MODEL_NAME,TA,(double)TA_DURATION,CHANNELS_PER_CELL,(double)TA_CHANGE,separator);
+	//this function is only for statistics purpose
+	return;
+}

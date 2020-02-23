@@ -102,3 +102,8 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	return true;
 }
 
+void write_model_parameters_and_separator(FILE*results_file,char*separator){
+	fprintf(results_file,"MODEL_NAME:%s;LOOP:%u;THR_PROB_NORMAL:%.2lf%s",MODEL_NAME,LOOP_COUNT,THR_PROB_NORMAL,separator);
+	//this function is only for statistics purpose
+	return;
+}

@@ -330,4 +330,5 @@ void write_results_on_csv(char*path);
 
 extern volatile double simduration;
 
+extern void write_model_parameters_and_separator(FILE*results_file,char*separator);
 #endif // _STATISTICS_H_

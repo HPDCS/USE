@@ -1,6 +1,6 @@
 #include <ROOT-Sim.h>
 
-
+#define MODEL_NAME "PCS"
 
 /* DISTRIBUZIONI TIMESTAMP */
 #define UNIFORM		0
