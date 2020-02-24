@@ -5,6 +5,10 @@
 #include <hpdcs_utils.h>
 #include <timer.h>
 
+#if DECISION_MODEL==1
+#include <lp_stats.h>
+#endif
+
 #if DEBUG==1
 #include <checks.h>
 #endif
