@@ -2,9 +2,9 @@
 
 MAX_SKIPPED_LP_list="1000000"
 LP_list="36 64 121"							#numero di lp
-THREAD_list="4 8 12 16 20 24 28 32"		#numero di thread
+THREAD_list="4 8 16 24 32" #"4 8 12 16 20 24 28 32"		#numero di thread
 TEST_list="phold"						#test
-RUN_list="1 2"							#lista del numero di run
+RUN_list="1"							#lista del numero di run
 
 FAN_OUT_list="1"						#lista fan out
 LOOKAHEAD_list="0" 						#lookahead
@@ -46,8 +46,8 @@ do
 		
 		mv $test ${test}_ori
 		
-		echo make IPI_SUPPORT=1 POSTING=1 $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0
-			 make IPI_SUPPORT=1 POSTING=1 $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0
+		echo make IPI_SUPPORT=1 POSTING=1 SYNCH_CHECK=1 DECISION_MODEL=1 $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0
+			 make IPI_SUPPORT=1 POSTING=1 SYNCH_CHECK=1 DECISION_MODEL=1 $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0
 		
 		mv $test ${test}_ipi
 		
