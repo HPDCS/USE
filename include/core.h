@@ -140,4 +140,6 @@ extern bool ctrl_mark_elim;
 extern bool ctrl_del_elim;
 extern bool ctrl_del_banana;
 
+extern __thread unsigned int my_core;
+
 #endif

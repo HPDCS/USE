@@ -81,6 +81,7 @@ __thread unsigned long long evt_count = 0;
 __thread unsigned long long current_evt_state = 0;
 __thread void* current_evt_monitor = 0x0;
 
+__thread unsigned int my_core = -1;
 
 __thread struct __bucket_node *current_node = 0x0;
 
@@ -225,6 +226,7 @@ return 0;
 	unsigned int id_cpu;
 	cpu_set_t mask;	
 	id_cpu = (tid % 8) * 4 + (tid/((unsigned int)8));
+	my_core = id_cpu;
 	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
 	CPU_ZERO(&mask);
 	CPU_SET(id_cpu, &mask);

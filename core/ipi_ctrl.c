@@ -10,6 +10,8 @@
 #include <pthread.h>
 #include <string.h>
 
+#include <core.h>
+
 
 #define IPI_REGISTER_THREAD         (1U << 2)
 #define IPI_UNREGISTER_THREAD       (1U << 3)
@@ -122,7 +124,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
     }
     
 
-    cpu = tid;
+    cpu = my_core;//tid;
 
     if (pin_thread_to_core(cpu))
     {
