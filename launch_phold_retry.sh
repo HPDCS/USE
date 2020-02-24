@@ -66,7 +66,7 @@ do
 							echo $BEGIN
 							echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 							echo $FILE
-							(time $EX) &> $FILE
+							$EX &> $FILE
 							if test $N -ge $MAX_RETRY ; then echo break; break; fi
 							N=$(( N+1 ))
 						done  
@@ -80,7 +80,7 @@ do
 							echo $BEGIN
 							echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 							echo $FILE
-							(time $EX) &> $FILE
+							$EX &> $FILE
 							if test $N -ge $MAX_RETRY ; then echo break; break; fi
 							N=$(( N+1 ))
 						done  
@@ -88,7 +88,7 @@ do
 					done
 				done
 		done
-		rm ${test}_lf_hi
+		rm ${test}_ori ${test}_ipi
 	done
 done
 done
