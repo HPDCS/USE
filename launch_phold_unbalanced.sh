@@ -9,10 +9,10 @@ FAN_OUT_list="25 50 75 100"				#lista fan out
 LOOP_COUNT_list="10 50 100"				#loop_count
 TOKEN_FACTOR_list="100 10000 1000000"	#moltiplicatore token loop_count
 
-FOLDER="results/results_phold_unbalanced/results_phold_unbalanced_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/results_phold_unbalanced"
 
-mkdir results
-mkdir results/results_phold
+mkdir -p results
+mkdir -p results/results_phold_unbalanced
 
 mkdir ${FOLDER}
 
