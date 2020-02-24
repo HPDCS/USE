@@ -10,14 +10,22 @@
 
 //define CHECK_FADING_TIME	10
 #define COMPLETE_CALLS		5000
+
 #ifndef TA
 #define TA			0.9
 #endif
 //#define TA_DURATION		120
+#ifndef	TA_DURATION
 #define TA_DURATION		120
-#define CHANNELS_PER_CELL	1000
+#endif
+
+#ifndef CHANNELS_PER_CELL
+#define CHANNELS_PER_CELL 2000
+#endif
 //#define TA_CHANGE		300.0
+#ifndef TA_CHANGE
 #define TA_CHANGE		50.0
+#endif
 
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define DURATION_DISTRIBUTION		EXPONENTIAL
