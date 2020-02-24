@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#define MODEL_NAME "PHOLD_UNBALANCED"
 
 // Event types
 #define PASS_TOKEN_LOOP		5

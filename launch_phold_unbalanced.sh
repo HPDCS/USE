@@ -24,10 +24,10 @@ for fan_out in $FAN_OUT_list
 do
 	for test in $TEST_list 
 	do
-		make -B $test FAN_OUT=${fan_out} TOKEN_LOOP_COUNT_FACTOR=${token_factor} LOOP_COUNT=${loop_count}
+		make -B $test FAN_OUT=${fan_out} TOKEN_LOOP_COUNT_FACTOR=${token_factor} LOOP_COUNT=${loop_count} CHECKPOINT_PERIOD=10
 		mv $test ${test}_orig
 		
-		make -B $test ENABLE_IPI_MODULE=1 FAN_OUT=${fan_out} TOKEN_LOOP_COUNT_FACTOR=${token_factor} LOOP_COUNT=${loop_count}
+		make -B $test ENABLE_IPI_MODULE=1 FAN_OUT=${fan_out} TOKEN_LOOP_COUNT_FACTOR=${token_factor} LOOP_COUNT=${loop_count} CHECKPOINT_PERIOD=10
 		mv $test ${test}_ipi
 
 		for run in $RUN_list
