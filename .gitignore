@@ -1,4 +1,8 @@
 # Object files
+*.pdf
+*.tar.gz
+*.log
+*.aux
 *.o
 *.ko
 *.obj
