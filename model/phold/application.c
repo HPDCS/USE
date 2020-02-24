@@ -64,7 +64,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			state_ptr->events = 0;
 
 			if(me == 0) {
-				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
+				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, fan out %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, FAN_OUT, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
 			for(i = 0; i < EVENTS_PER_LP; i++) {
