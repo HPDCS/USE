@@ -124,7 +124,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
     }
     
 
-    cpu = my_core;//tid;
+    cpu = my_core;
 
     if (pin_thread_to_core(cpu))
     {
