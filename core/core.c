@@ -225,7 +225,16 @@ return 0;
 #endif
 	unsigned int id_cpu;
 	cpu_set_t mask;	
-	id_cpu = (tid % 8) * 4 + (tid/((unsigned int)8));
+	#if LINEAR_PINNING==1
+	id_cpu = tid;
+	if(tid >= N_CPU){
+		printf("Unable to linear pinning thread %u\n",tid);
+		exit(-1);
+	}
+	#else
+	id_cpu = ( (tid % 8) * 4 + (tid/((unsigned int)8))) % N_CPU;//the statement "% N_CPU" is a safe way to generate id_cpu beetween 0 and N_CPU-1
+	#endif
+
 	my_core = id_cpu;
 	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
 	CPU_ZERO(&mask);
@@ -233,7 +242,7 @@ return 0;
     	pthread_t current_thread = pthread_self();
     	int err = pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &mask);
 	//int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
-	if(err < 0) {
+	if(err != 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
 	}
