@@ -1,12 +1,12 @@
 #!/bin/bash
 
-LP_list="36 64 121"						#numero di lp
-THREAD_list="4 8 16 24 32"				#numero di thread
+LP_list="64 121"						#numero di lp
+THREAD_list="8 16 32"					#numero di thread
 TEST_list="phold_unbalanced"			#test
 RUN_list="1"							#lista del numero di run
 
-FAN_OUT_list="25 50 75 100"				#lista fan out
-LOOP_COUNT_list="10 50 100"				#loop_count
+FAN_OUT_list="75 100"					#lista fan out
+LOOP_COUNT_list="10"					#loop_count
 TOKEN_FACTOR_list="100 10000 1000000"	#moltiplicatore token loop_count
 
 FOLDER="results/results_phold_unbalanced"
