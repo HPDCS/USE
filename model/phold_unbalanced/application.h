@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#define MODEL_NAME "PHOLD_UNBALANCED"
 
 // Event types
 #define PASS_TOKEN_LOOP		5
@@ -19,9 +20,11 @@
 #define LOOP_COUNT 10
 #endif
 
-#ifndef TOKEN_LOOP_COUNT
-#define TOKEN_LOOP_COUNT (1000000 * LOOP_COUNT)
+#ifndef TOKEN_LOOP_COUNT_FACTOR
+#define TOKEN_LOOP_COUNT_FACTOR 1000000
 #endif
+
+#define TOKEN_LOOP_COUNT (TOKEN_LOOP_COUNT_FACTOR * LOOP_COUNT)
 
 #define TAU 1
 
