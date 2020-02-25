@@ -8,12 +8,12 @@ RUN_list="1"							#lista del numero di run
 
 LOOKAHEAD_list="0" 						#lookahead
 
-TA_list="0.9"
+TA_list="0.9 0.3 0.09 0.03"
 TA_DURATION_list="120"
-CHANNELS_PER_CELL_list="1000"
-TA_CHANGE_list="50.0"
+CHANNELS_PER_CELL_list="500"
+TA_CHANGE_list="50.0 20.0 10.0"
 
-CKP_PER_list="10"
+CKP_PER_list="5 10"
 
 PUB_list="0.33"
 EPB_list="3"
