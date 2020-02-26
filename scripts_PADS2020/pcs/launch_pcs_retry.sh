@@ -8,7 +8,7 @@ source $2
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-cd ..
+cd ../..
 
 mkdir -p ${FOLDER}
 
@@ -90,4 +90,4 @@ done
 done
 
 
-cd scripts_PADS2020
+cd scripts_PADS2020/pcs

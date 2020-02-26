@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ..
+cd ../..
 mkdir -p ${PLT_FOLDER}
 
 for max_lp in $MAX_SKIPPED_LP_list
@@ -42,4 +42,4 @@ done
 done
 done
 
-cd scripts_PADS2020
+cd scripts_PADS2020/pcs
