@@ -1,9 +1,5 @@
-#if DECISION_MODEL==1
+#if DECISION_MODEL==1 && REPORT==1
 #include <lp_stats.h>
-
-#ifndef PRINT_MEAN
-#define PRINT_MEAN 0
-#endif
 
 void init_lp_stats()
 {

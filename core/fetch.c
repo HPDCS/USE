@@ -348,10 +348,8 @@ unsigned int fetch_internal(){
 		
 #if DEBUG == 1 || REPORT ==1
 		c++;
-#endif
-
 		if(c==MAX_SKIPPED_LP*n_cores){	return 0; } //DEBUG
-
+#endif
 
 		from_get_next_and_valid = false;
 		current_node_is_valid = true;//if true then current_node can be eliminated 

@@ -11,6 +11,9 @@
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/mman.h>
 
 extern bool sim_error;
 extern volatile bool stop_timer;
@@ -18,7 +21,15 @@ extern volatile bool stop;
 
 #if IPI_SUPPORT==1
 #include <ipi.h>
+#endif
+
+#if DECISION_MODEL==1 && REPORT==1
 #include <lp_stats.h>
+#endif
+
+#ifndef MAX_MEMORY_ALLOCABLE
+#define GIGA (1024ULL*1024ULL*1024ULL)
+#define MAX_MEMORY_ALLOCABLE (56ULL*GIGA)
 #endif
 
 __thread struct drand48_data seedT;
@@ -119,6 +130,40 @@ void start_simulation() {
         pthread_join(p_tid[i], NULL);
     }
 }
+void set_max_memory_allocable(){
+    struct rlimit set_memory_limit;
+    set_memory_limit.rlim_cur=MAX_MEMORY_ALLOCABLE;
+    set_memory_limit.rlim_max=MAX_MEMORY_ALLOCABLE;
+    
+    if(setrlimit(RLIMIT_AS,&set_memory_limit)!=0){
+        printf("errore set limit address space\n");
+        perror("error:");
+        gdb_abort;
+    }
+}
+
+#if DEBUG==1
+void test_memory_limit_mmap(unsigned long byte_to_alloc){
+    char*memory_test;
+    if ((memory_test = mmap(NULL, (size_t) byte_to_alloc, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, 0, 0)) == MAP_FAILED){
+        printf("unable to alloc memory with mmap,test succeed\n");
+        perror("error");
+    }
+    else
+        free(memory_test);//free memory if limit not exceed
+}
+
+
+void test_memory_limit_malloc(unsigned long byte_to_alloc){
+    char*memory_test=malloc(byte_to_alloc);
+    if(memory_test==NULL){
+        printf("unable to alloc memory with malloc,test succeed\n");
+        perror("error");
+    }
+    else
+        free(memory_test);//free memory if limit not exceed
+}
+#endif
 
 int main(int argn, char *argv[]) {
     timer exec_time;
@@ -139,6 +184,11 @@ int main(int argn, char *argv[]) {
     check_ipi_capability();
 #endif
 
+    set_max_memory_allocable();
+    #if DEBUG==1
+    test_memory_limit_malloc(MAX_MEMORY_ALLOCABLE);
+    test_memory_limit_mmap(MAX_MEMORY_ALLOCABLE);
+    #endif
     printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);
@@ -151,7 +201,7 @@ int main(int argn, char *argv[]) {
 
     print_statistics();
     
-    #if DECISION_MODEL==1
+    #if DECISION_MODEL==1 && REPORT==1
     fini_lp_stats(LPS, n_prc_tot);
     #endif
 
@@ -160,7 +210,11 @@ int main(int argn, char *argv[]) {
     printf("Last gvt: %f\n", current_lvt);
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
+    
+    #if REPORT==1
     write_results_on_csv("results/results.csv");//not present in original version
+    #endif
+    
     //statistics_fini();
     if(sim_error){
         printf(RED("Execution ended for an error\n"));
