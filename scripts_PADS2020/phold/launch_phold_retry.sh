@@ -1,29 +1,12 @@
 #!/bin/bash
 
-MAX_SKIPPED_LP_list="1000000"
-LP_list="36 64 121"							#numero di lp
-THREAD_list="4 8 16 24 32" #"4 8 12 16 20 24 28 32"		#numero di thread
-TEST_list="phold"						#test
-RUN_list="1"							#lista del numero di run
+source $1
+source $2
 
-FAN_OUT_list="1"						#lista fan out
-LOOKAHEAD_list="0" 						#lookahead
-LOOP_COUNT_list="33 100 300 900 2700" 	#loop_count #50 100 150 250 400 600" 400=60micsec
-
-CKP_PER_list="10"
-
-PUB_list="0.33"
-EPB_list="3"
-
-MAX_RETRY="10"
-TEST_DURATION="60"
-
-BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
-CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
-
-FOLDER="results/results_phold" 
+cd ../..
 
 mkdir -p ${FOLDER}
+
 
 for max_lp in $MAX_SKIPPED_LP_list
 do
@@ -97,3 +80,5 @@ done
 done
 done
 done
+
+cd scripts_PADS2020/phold
