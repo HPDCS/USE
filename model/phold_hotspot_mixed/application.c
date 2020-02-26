@@ -71,6 +71,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			break;
 
         case LOOP:
+            state_ptr->events++;
 		case EXTERNAL_LOOP:
 			//timer_start(tm_ex);
 
@@ -81,7 +82,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			}
 			//printf("timer: %d\n", timer_value_micro(tm_ex));
 
-			state_ptr->events++;
 
 			delta = LOOKAHEAD + Expent(TAU);
 			timestamp = now + delta;
@@ -96,6 +96,8 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 
                 phase = (unsigned int)(state_ptr->events / ((int)((double)COMPLETE_EVENTS/(double)NUM_HOTSPOT_PHASES))) % 2;
+                //if((me == 100 || me == 0) && state_ptr->events % 500 == 0)
+                //    printf("[%d] phase %d : evt %d\n", me, phase, state_ptr->events);
                 p_hotspot = (double)(phase == 0 ? P_HOTSPOT_PHASE1 : P_HOTSPOT_PHASE2);
                 hotspots = (phase == 0 ? HOTSPOTS_PHASE1 : HOTSPOTS_PHASE2);
 
@@ -134,7 +136,6 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	//printf("TOTALE: %u\n", snapshot->events);//da_cancellare
 
 	if(snapshot->events < COMPLETE_EVENTS) {
-//	if(snapshot->lvt < COMPLETE_TIME) {
         return false;
     }
 	return true;

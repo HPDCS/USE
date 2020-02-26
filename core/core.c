@@ -83,7 +83,7 @@ __thread clock_timer main_loop_time,		//OK: cattura il tempo totale di esecuzion
 #include <time.h>
 #define MILLION 1000000
 #define BILLION 1000000000
-#define EVENTS_BEFORE_STATS_PERIOD_NS (100)
+#define EVENTS_BEFORE_STATS_PERIOD_NS (5)
 #define STATS_PERIOD_NS ((POWERCAP_OBSERVATION_PERIOD/POWERCAP_WINDOW_SIZE)*MILLION)
 #define PCAP_TOLLERANCE (0.10)
 
@@ -138,8 +138,8 @@ static void powercap_gathering_stats(){
 		}
 
         window_tot[window_phase % POWERCAP_WINDOW_SIZE] = total_events - last_total_events;
-        window_com[window_phase % POWERCAP_WINDOW_SIZE] = committed_events - last_committed_events;
-        window_adv[window_phase % POWERCAP_WINDOW_SIZE] = advanced_events - last_advanced_events;
+        window_adv[window_phase % POWERCAP_WINDOW_SIZE] = committed_events - last_committed_events;
+        window_com[window_phase % POWERCAP_WINDOW_SIZE] = advanced_events - last_advanced_events;
         window_rol[window_phase % POWERCAP_WINDOW_SIZE] = rollback_events - last_rollback_events;
         window_dur[window_phase % POWERCAP_WINDOW_SIZE] = duration;
         window_phase++;
