@@ -1,17 +1,13 @@
 #!/bin/bash
 
-LP_list="64 121"						#numero di lp
+LP_list="121 256"						#numero di lp
 THREAD_list="8 16 32"					#numero di thread
 TEST_list="phold_unbalanced"			#test
 RUN_list="1"							#lista del numero di run
 
 FAN_OUT_list="75 100"					#lista fan out
-LOOP_COUNT_list="10"					#loop_count
-TOKEN_FACTOR_list="100 10000 1000000"	#moltiplicatore token loop_count
-
-MAX_RETRY="10"
-TEST_DURATION="60"
-SIM_list="original ipi"
+LOOP_COUNT_list="1000"					#loop_count
+TOKEN_FACTOR_list="100 10000"			#moltiplicatore token loop_count
 
 SRC_FOLDER="results/results_phold_unbalanced/dat" 
 FOLDER="results/results_phold_unbalanced/plots"
