@@ -53,8 +53,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		case PASS_TOKEN_LOOP:
 
-			state_ptr->token -= 1;
-
 			loops = TOKEN_LOOP_COUNT;
 			for(i = 0; i < loops ; i++)
 				j = j + i;
@@ -89,14 +87,16 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			state_ptr->events++;
 
-			delta = LOOKAHEAD + Expent(TAU);
-			timestamp = now + TAU + delta;
-			ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
-
 			if (event_type == LOOP)
 			{
+				delta = LOOKAHEAD + Expent(TAU);
+				timestamp = now + TAU + delta;
+				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
+
 				if (state_ptr->token)
 				{
+					state_ptr->token -= 1;
+					
 					delta = LOOKAHEAD + Expent(TAU);
 					timestamp = now + TAU + delta;
 					ScheduleNewEvent(me, timestamp, PASS_TOKEN_LOOP, NULL, 0);

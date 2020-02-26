@@ -78,10 +78,9 @@
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
 
-#if STATISTICS_ADDED==1
+#if STATISTICS_ADDED==1 && REPORT==1
 //statistics without any particular macro enabled
 #define STAT_EVENTS_EXEC_AND_COMMITED_LP 900
-#define STAT_CLOCK_FORWARD_LP 901
 
 #endif
 
@@ -101,14 +100,9 @@
 #define STAT_EVENT_EXPOSITION_FORWARD_LP       604
 #define STAT_EVENT_EXPOSITION_SILENT_LP       605
 
-#define STAT_CLOCK_EXPOSITION_FORWARD_INTERRUPTED_LP  606
-#define STAT_CLOCK_EXPOSITION_SILENT_INTERRUPTED_LP  607
-
-#define STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP  608
-#define STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP  609
 #endif
 
-#if HANDLE_INTERRUPT_WITH_CHECK==1
+#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
 #define STAT_SYNC_CHECK_SILENT_LP           	800
 #define STAT_SYNC_CHECK_FORWARD_LP          	801
 #define STAT_SYNC_CHECK_USEFUL_LP             802
@@ -121,8 +115,28 @@
 #define STAT_IPI_TRAMPOLINE_RECEIVED_TID 503 //this statistic is not used explicitly, it is used in trampoline.S
 #endif
 
-#if DECISION_MODEL==1
+#if DECISION_MODEL==1 && REPORT==1
 #define STAT_IPI_FILTERED_IN_DECISION_MODEL_TID 1000
+
+#define STAT_CLOCK_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP  1001
+#define STAT_CLOCK_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP  1002
+
+#define STAT_CLOCK_EXPOSITION_FORWARD_SYNCH_INTERRUPTED_LP  1003
+#define STAT_CLOCK_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP  1004
+
+#define STAT_EVENT_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP  1005
+#define STAT_EVENT_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP  1006
+
+#define STAT_EVENT_EXPOSITION_FORWARD_SYNCH_INTERRUPTED_LP  1007
+#define STAT_EVENT_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP  1008
+
+#define STAT_CLOCK_RESIDUAL_TIME_FORWARD_ASYNCH_GAINED_LP  1009
+#define STAT_CLOCK_RESIDUAL_TIME_SILENT_ASYNCH_GAINED_LP   1010
+
+#define STAT_CLOCK_RESIDUAL_TIME_FORWARD_SYNCH_GAINED_LP  1011
+#define STAT_CLOCK_RESIDUAL_TIME_SILENT_SYNCH_GAINED_LP   1012
+
+#define STAT_LATENCY_START_EXPOSITION_AND_SEND_IPI_TID 1013
 #endif
 
 typedef double stat64_t;
@@ -182,11 +196,8 @@ struct stats_t {
     stat64_t clock_safe_tot;
     stat64_t clock_frame_tot;
 
-    #if STATISTICS_ADDED==1
+    #if STATISTICS_ADDED==1 && REPORT==1
     //new statistics added
-    stat64_t clock_forward_exec_lp;//per LP
-    stat64_t clock_forward_exec_per_event;//per event
-    stat64_t clock_forward_exec_tot;
 
     stat64_t events_exec_and_committed_lp;//per LP
     stat64_t events_exec_and_committed_tot;
@@ -203,6 +214,7 @@ struct stats_t {
     stat64_t infos_posted_useful_tot;
     
     #endif
+
     #if HANDLE_INTERRUPT==1 && REPORT==1
     stat64_t event_not_flushed_lp;//per lp, event that lp father doesn't flush
     stat64_t event_not_flushed_tot;
@@ -220,20 +232,9 @@ struct stats_t {
     stat64_t clock_exposition_silent_tot_lp;
 
     //statistics related to interruptions
-    stat64_t event_exposition_forward_interrupted_lp;//per LP
-    stat64_t event_exposition_silent_interrupted_lp;//per LP
-
-    stat64_t event_exposition_forward_interrupted_tot;
-    stat64_t event_exposition_silent_interrupted_tot;
-
-    stat64_t clock_exposition_forward_interrupted_per_event;//per event
-    stat64_t clock_exposition_silent_interrupted_per_event;//per event
-
-    stat64_t clock_exposition_forward_interrupted_tot_lp;
-    stat64_t clock_exposition_silent_interrupted_tot_lp;
     #endif
 
-    #if HANDLE_INTERRUPT_WITH_CHECK==1
+    #if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
     stat64_t sync_check_silent_lp;//per lp, num sync_check in past maded by lp
     stat64_t sync_check_forward_lp;//per lp, num sync_check in future maded by lp
 
@@ -262,6 +263,54 @@ struct stats_t {
     #if DECISION_MODEL==1 && REPORT==1
     stat64_t ipi_filtered_in_decision_model_tid;//per thread
     stat64_t ipi_filtered_in_decision_model_tot;
+
+    stat64_t event_exposition_forward_asynch_interrupted_lp;//per LP
+    stat64_t event_exposition_silent_asynch_interrupted_lp;//per LP
+    stat64_t event_exposition_forward_synch_interrupted_lp;//per LP
+    stat64_t event_exposition_silent_synch_interrupted_lp;//per LP
+
+    //event exposition
+    stat64_t event_exposition_forward_asynch_interrupted_tot;
+    stat64_t event_exposition_silent_asynch_interrupted_tot;
+
+    stat64_t event_exposition_forward_synch_interrupted_tot;
+    stat64_t event_exposition_silent_synch_interrupted_tot;
+
+
+    //tot
+    stat64_t clock_exposition_forward_asynch_interrupted_tot_lp;
+    stat64_t clock_exposition_silent_asynch_interrupted_tot_lp;
+
+    stat64_t clock_exposition_forward_synch_interrupted_tot_lp;
+    stat64_t clock_exposition_silent_synch_interrupted_tot_lp;
+
+    //per event
+    stat64_t clock_exposition_forward_asynch_interrupted_per_event;//per event
+    stat64_t clock_exposition_silent_asynch_interrupted_per_event;//per event
+
+    stat64_t clock_exposition_forward_synch_interrupted_per_event;//per event
+    stat64_t clock_exposition_silent_synch_interrupted_per_event;//per event
+
+    //residual time tot
+    stat64_t clock_residual_time_forward_asynch_gained_tot_lp;
+    stat64_t clock_residual_time_silent_asynch_gained_tot_lp;
+
+    stat64_t clock_residual_time_forward_synch_gained_tot_lp;
+    stat64_t clock_residual_time_silent_synch_gained_tot_lp;
+    
+    //residual time per lp
+    stat64_t clock_residual_time_forward_asynch_gained_per_event;
+    stat64_t clock_residual_time_silent_asynch_gained_per_event;
+
+    stat64_t clock_residual_time_forward_synch_gained_per_event;
+    stat64_t clock_residual_time_silent_synch_gained_per_event;
+
+
+    stat64_t equivalent_events_forward_interrupted_tot;
+    stat64_t equivalent_events_silent_interrupted_tot;
+
+    stat64_t latency_start_exposition_and_send_ipi_tot_tid;
+    stat64_t latency_start_exposition_and_send_ipi_per_ipi_sent;
     #endif
     
 } __attribute__((aligned (64)));
@@ -326,9 +375,11 @@ void statistics_post_lp_data(unsigned int lid, int type, stat64_t value);
 
 void statistics_post_th_data(unsigned int lid, int type, stat64_t value);
 
-void write_results_on_csv(char*path);
-
 extern volatile double simduration;
 
+#if REPORT==1
+void write_results_on_csv(char*path);
 extern void write_model_parameters_and_separator(FILE*results_file,char*separator);
+#endif
+
 #endif // _STATISTICS_H_

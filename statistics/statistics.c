@@ -238,12 +238,9 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 
 		//new_statistics added
-		#if STATISTICS_ADDED==1
+		#if STATISTICS_ADDED==1 && REPORT==1
 		case STAT_EVENTS_EXEC_AND_COMMITED_LP:
 			stats[idx].events_exec_and_committed_lp += value;//per LP
-			break;
-		case STAT_CLOCK_FORWARD_LP:
-			stats[idx].clock_forward_exec_per_event += value;
 			break;
 		#endif
 
@@ -279,16 +276,9 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_EVENT_EXPOSITION_SILENT_LP:
 			stats[idx].event_exposition_silent_lp += value;
 			break;
-
-		case STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP:
-			stats[idx].event_exposition_forward_interrupted_lp += value;
-			break;
-		case STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP:
-			stats[idx].event_exposition_silent_interrupted_lp += value;
-			break;
 		#endif
 
-		#if HANDLE_INTERRUPT_WITH_CHECK==1
+		#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
 		case STAT_SYNC_CHECK_SILENT_LP:
 			stats[idx].sync_check_silent_lp += value;
 			break;
@@ -312,11 +302,59 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].clock_exec_ipi_syscall_tid += value;
 			break;
 		#endif
+
 		#if DECISION_MODEL==1 && REPORT==1
 		case STAT_IPI_FILTERED_IN_DECISION_MODEL_TID:
 			stats[idx].ipi_filtered_in_decision_model_tid += value;
 			break;
+
+		case STAT_EVENT_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP:
+			stats[idx].event_exposition_forward_asynch_interrupted_lp += value;
+			break;
+		case STAT_EVENT_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP:
+			stats[idx].event_exposition_silent_asynch_interrupted_lp += value;
+			break;
+
+		case STAT_EVENT_EXPOSITION_FORWARD_SYNCH_INTERRUPTED_LP:
+			stats[idx].event_exposition_forward_synch_interrupted_lp += value;
+			break;
+		case STAT_EVENT_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP:
+			stats[idx].event_exposition_silent_synch_interrupted_lp += value;
+			break;
+
+
+		case STAT_CLOCK_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP:
+			stats[idx].clock_exposition_forward_asynch_interrupted_tot_lp += value;
+			break;
+		case STAT_CLOCK_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP:
+			stats[idx].clock_exposition_silent_asynch_interrupted_tot_lp += value;
+			break;
+		case STAT_CLOCK_EXPOSITION_FORWARD_SYNCH_INTERRUPTED_LP:
+			stats[idx].clock_exposition_forward_synch_interrupted_tot_lp += value;
+			break;
+		case STAT_CLOCK_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP:
+			stats[idx].clock_exposition_silent_synch_interrupted_tot_lp += value;
+			break;
+
+
+		case STAT_CLOCK_RESIDUAL_TIME_FORWARD_ASYNCH_GAINED_LP:
+			stats[idx].clock_residual_time_forward_asynch_gained_tot_lp += value;
+			break;
+		case STAT_CLOCK_RESIDUAL_TIME_SILENT_ASYNCH_GAINED_LP:
+			stats[idx].clock_residual_time_silent_asynch_gained_tot_lp += value;
+			break;
+		case STAT_CLOCK_RESIDUAL_TIME_FORWARD_SYNCH_GAINED_LP:
+			stats[idx].clock_residual_time_forward_synch_gained_tot_lp += value;
+			break;
+		case STAT_CLOCK_RESIDUAL_TIME_SILENT_SYNCH_GAINED_LP:
+			stats[idx].clock_residual_time_silent_synch_gained_tot_lp += value;
+			break;
+
+		case STAT_LATENCY_START_EXPOSITION_AND_SEND_IPI_TID:
+			stats[idx].latency_start_exposition_and_send_ipi_tot_tid += value;
+			break;
 		#endif
+
 		default:
 			printf("Unrecognized stat type (%d)\n", type);
 	}
@@ -370,6 +408,7 @@ void gather_statistics() {
 
 		#if DECISION_MODEL==1 && REPORT==1
 		system_stats->ipi_filtered_in_decision_model_tid += thread_stats[i].ipi_filtered_in_decision_model_tid;
+		system_stats->latency_start_exposition_and_send_ipi_tot_tid += thread_stats[i].latency_start_exposition_and_send_ipi_tot_tid;
 		#endif
 	}
 
@@ -405,6 +444,7 @@ void gather_statistics() {
 	#if DECISION_MODEL==1 && REPORT==1
 	system_stats->ipi_filtered_in_decision_model_tot = system_stats->ipi_filtered_in_decision_model_tid;
 	system_stats->ipi_filtered_in_decision_model_tid /= n_cores;
+	system_stats->latency_start_exposition_and_send_ipi_per_ipi_sent=system_stats->latency_start_exposition_and_send_ipi_tot_tid/system_stats->ipi_sent_tid;
 	#endif
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
@@ -415,7 +455,7 @@ void gather_statistics() {
 		system_stats->events_undo          += lp_stats[i].events_undo;
 		system_stats->events_stash         += lp_stats[i].events_stash;
 		system_stats->events_silent        += lp_stats[i].events_silent;
-		system_stats->events_silent_for_gvt        += lp_stats[i].events_silent_for_gvt;
+		system_stats->events_silent_for_gvt += lp_stats[i].events_silent_for_gvt;
 		//system_stats->events_fetched       += lp_stats[i].events_fetched;
 		system_stats->events_fetched_succ  += lp_stats[i].events_fetched_succ;
 		//system_stats->events_fetched_unsucc+= lp_stats[i].events_fetched_unsucc;
@@ -453,9 +493,8 @@ void gather_statistics() {
 		
 		system_stats->total_frames         += LPS[i]->num_executed_frames;
 
-	#if STATISTICS_ADDED==1
+	#if STATISTICS_ADDED==1 && REPORT==1
     	system_stats->events_exec_and_committed_lp += lp_stats[i].events_exec_and_committed_lp;
-    	system_stats->clock_forward_exec_lp += lp_stats[i].clock_forward_exec_lp;
     #endif
 
 	#if HANDLE_INTERRUPT==1 && REPORT==1
@@ -466,9 +505,27 @@ void gather_statistics() {
 		
 		system_stats->event_exposition_silent_lp += lp_stats[i].event_exposition_silent_lp;
 		system_stats->event_exposition_forward_lp += lp_stats[i].event_exposition_forward_lp;
+		
+	#endif
+	#if DECISION_MODEL==1 && REPORT==1
+		system_stats->event_exposition_forward_asynch_interrupted_lp += lp_stats[i].event_exposition_forward_asynch_interrupted_lp;
+    	system_stats->event_exposition_silent_asynch_interrupted_lp += lp_stats[i].event_exposition_silent_asynch_interrupted_lp;
+
+    	system_stats->event_exposition_forward_synch_interrupted_lp += lp_stats[i].event_exposition_forward_synch_interrupted_lp;
+    	system_stats->event_exposition_silent_synch_interrupted_lp += lp_stats[i].event_exposition_silent_synch_interrupted_lp;
 	
-		system_stats->event_exposition_forward_interrupted_lp += lp_stats[i].event_exposition_forward_interrupted_lp;
-    	system_stats->event_exposition_silent_interrupted_lp += lp_stats[i].event_exposition_silent_interrupted_lp;
+
+
+		system_stats->clock_exposition_forward_asynch_interrupted_tot_lp += lp_stats[i].clock_exposition_forward_asynch_interrupted_tot_lp;
+		system_stats->clock_exposition_silent_asynch_interrupted_tot_lp += lp_stats[i].clock_exposition_silent_asynch_interrupted_tot_lp;
+
+		system_stats->clock_exposition_forward_synch_interrupted_tot_lp += lp_stats[i].clock_exposition_forward_synch_interrupted_tot_lp;
+		system_stats->clock_exposition_silent_synch_interrupted_tot_lp += lp_stats[i].clock_exposition_silent_synch_interrupted_tot_lp;
+	
+		system_stats->clock_residual_time_forward_asynch_gained_tot_lp += lp_stats[i].clock_residual_time_forward_asynch_gained_tot_lp;
+		system_stats->clock_residual_time_silent_asynch_gained_tot_lp += lp_stats[i].clock_residual_time_silent_asynch_gained_tot_lp;
+		system_stats->clock_residual_time_forward_synch_gained_tot_lp += lp_stats[i].clock_residual_time_forward_synch_gained_tot_lp;
+		system_stats->clock_residual_time_silent_synch_gained_tot_lp += lp_stats[i].clock_residual_time_silent_synch_gained_tot_lp;
 	#endif
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
@@ -498,7 +555,7 @@ void gather_statistics() {
 	system_stats->clock_safety_check /= system_stats->counter_safety_check;
 	system_stats->clock_rollback     /= system_stats->counter_rollbacks;
 	// TODO rivedere questa statistica, perché incrementa su lp_stats[i] è già stata calcolata dentro il for degli lp
-	system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
+	//system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
 	system_stats->clock_checkpoint   /= system_stats->counter_checkpoints;
 	system_stats->clock_recovery     /= system_stats->counter_recoveries;
 
@@ -515,13 +572,10 @@ void gather_statistics() {
 	system_stats->checkpoint_period /= n_prc_tot;
 
 	//new statistics added
-    #if STATISTICS_ADDED==1
+    #if STATISTICS_ADDED==1 && REPORT==1
     system_stats->events_exec_and_committed_tot= system_stats->events_exec_and_committed_lp;
     system_stats->events_exec_and_committed_lp /= n_prc_tot;
 
-    system_stats->clock_forward_exec_tot= system_stats->clock_forward_exec_lp;
-    system_stats->clock_forward_exec_lp /= n_prc_tot;
-    system_stats->clock_forward_exec_per_event = system_stats->clock_forward_exec_tot /(system_stats->events_total - system_stats->events_silent);
     #endif
 
 	#if HANDLE_INTERRUPT==1 && REPORT==1
@@ -537,16 +591,41 @@ void gather_statistics() {
     system_stats->clock_exposition_forward_per_event = system_stats->clock_exposition_forward_tot_lp/ system_stats->event_exposition_forward_tot;
 
     system_stats->clock_exposition_silent_per_event=system_stats->clock_exposition_silent_tot_lp/system_stats->event_exposition_silent_tot;
-    
-    
-    //interruption
-    system_stats->event_exposition_forward_interrupted_tot= system_stats->event_exposition_forward_interrupted_lp;
-    system_stats->event_exposition_forward_interrupted_lp /= n_prc_tot;
-    
-    system_stats->event_exposition_silent_interrupted_tot= system_stats->event_exposition_silent_interrupted_lp;
-    system_stats->event_exposition_silent_interrupted_lp /= n_prc_tot;
 
-    //insert here clock on interruption
+    #endif
+
+    #if DECISION_MODEL==1 && REPORT==1
+    system_stats->event_exposition_forward_asynch_interrupted_tot= system_stats->event_exposition_forward_asynch_interrupted_lp;
+    system_stats->event_exposition_forward_asynch_interrupted_lp /= n_prc_tot;
+
+    system_stats->event_exposition_forward_synch_interrupted_tot= system_stats->event_exposition_forward_synch_interrupted_lp;
+    system_stats->event_exposition_forward_synch_interrupted_lp /= n_prc_tot;
+
+    system_stats->event_exposition_silent_asynch_interrupted_tot= system_stats->event_exposition_silent_asynch_interrupted_lp;
+    system_stats->event_exposition_silent_asynch_interrupted_lp /= n_prc_tot;
+
+    system_stats->event_exposition_silent_synch_interrupted_tot= system_stats->event_exposition_silent_synch_interrupted_lp;
+    system_stats->event_exposition_silent_synch_interrupted_lp /= n_prc_tot;
+
+
+
+    system_stats->clock_exposition_forward_asynch_interrupted_per_event = system_stats->clock_exposition_forward_asynch_interrupted_tot_lp/system_stats->event_exposition_forward_asynch_interrupted_tot;
+    system_stats->clock_exposition_silent_asynch_interrupted_per_event = system_stats->clock_exposition_silent_asynch_interrupted_tot_lp/system_stats->event_exposition_silent_asynch_interrupted_tot;
+
+    system_stats->clock_exposition_forward_synch_interrupted_per_event = system_stats->clock_exposition_forward_synch_interrupted_tot_lp/system_stats->event_exposition_forward_synch_interrupted_tot;
+    system_stats->clock_exposition_silent_synch_interrupted_per_event = system_stats->clock_exposition_silent_synch_interrupted_tot_lp/system_stats->event_exposition_silent_synch_interrupted_tot;
+
+
+
+    system_stats->clock_residual_time_forward_asynch_gained_per_event = system_stats->clock_residual_time_forward_asynch_gained_tot_lp/system_stats->event_exposition_forward_asynch_interrupted_tot;
+    system_stats->clock_residual_time_silent_asynch_gained_per_event = system_stats->clock_residual_time_silent_asynch_gained_tot_lp/system_stats->event_exposition_silent_asynch_interrupted_tot;
+
+    system_stats->clock_residual_time_forward_synch_gained_per_event = system_stats->clock_residual_time_forward_synch_gained_tot_lp/system_stats->event_exposition_forward_synch_interrupted_tot;
+    system_stats->clock_residual_time_silent_synch_gained_per_event = system_stats->clock_residual_time_silent_synch_gained_tot_lp/system_stats->event_exposition_silent_synch_interrupted_tot;    
+    
+
+    system_stats->equivalent_events_forward_interrupted_tot = (system_stats->clock_residual_time_forward_asynch_gained_tot_lp+system_stats->clock_residual_time_forward_synch_gained_tot_lp)/system_stats->clock_exposition_forward_per_event;
+    system_stats->equivalent_events_silent_interrupted_tot = (system_stats->clock_residual_time_silent_asynch_gained_tot_lp+system_stats->clock_residual_time_silent_synch_gained_tot_lp)/ system_stats->clock_exposition_silent_per_event;
     #endif
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
@@ -571,7 +650,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Committed events................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_committed, percentage(stats->events_committed, stats->events_total));
 	
-	#if STATISTICS_ADDED==1
+	#if STATISTICS_ADDED==1 && REPORT==1
 	printf("Events executed and committed tot...............: %12lu\n",
 		(unsigned long)stats->events_exec_and_committed_tot);
 	printf("Events executed and committed per LP............: %12.2f\n",
@@ -622,7 +701,8 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
 	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
 	printf("Rollback operations.............................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
-	printf("AVG Rollbacked Events...........................: %12.2f\n", stats->counter_rollbacks_length/stats->counter_rollbacks);
+	printf("AVG Rollbacked Events per Rollback..............: %12.2f\n", stats->counter_rollbacks_length/stats->counter_rollbacks);
+	printf("AVG Reprocessed Events per Rollback.............: %12.2f\n", ((double)stats->events_silent)/stats->counter_rollbacks);
 	printf("CheckOnGVT invocations..........................: %12llu\n", (unsigned long long)stats->counter_ongvt);
 	
 	printf("\n");
@@ -677,21 +757,64 @@ static void _print_statistics(struct stats_t *stats) {
 
 	printf("\n");
 
-	printf("Events forward interrupted tot..................: %12lu\n",
-		(unsigned long)stats->event_exposition_forward_interrupted_tot);
-	printf("Events forward interrupted per LP...............: %12.2f\n",
-		stats->event_exposition_forward_interrupted_lp);
+	#endif
 
-	printf("Events silent interrupted tot...................: %12lu\n",
-		(unsigned long)stats->event_exposition_silent_interrupted_tot);
-	printf("Events silent interrupted per LP................: %12.2f\n",
-		stats->event_exposition_silent_interrupted_lp);
+	#if DECISION_MODEL==1
+	printf("Events forward asynch interrupted tot... .......: %12lu\n",
+		(unsigned long)stats->event_exposition_forward_asynch_interrupted_tot);
+	printf("Events forward asynch interrupted per LP........: %12.2f\n",
+		stats->event_exposition_forward_asynch_interrupted_lp);
 
+	printf("Events forward synch interrupted tot............: %12lu\n",
+		(unsigned long)stats->event_exposition_forward_synch_interrupted_tot);
+	printf("Events forward synch interrupted per LP.........: %12.2f\n",
+		stats->event_exposition_forward_synch_interrupted_lp);
+
+	printf("Events silent asynch interrupted tot............: %12lu\n",
+		(unsigned long)stats->event_exposition_silent_asynch_interrupted_tot);
+	printf("Events silent asynch interrupted per LP.........: %12.2f\n",
+		stats->event_exposition_silent_asynch_interrupted_lp);
+
+	printf("Events silent synch interrupted tot.............: %12lu\n",
+		(unsigned long)stats->event_exposition_silent_synch_interrupted_tot);
+	printf("Events silent synch interrupted per LP..........: %12.2f\n",
+		stats->event_exposition_silent_synch_interrupted_lp);
+
+	printf("\n");
+
+	printf("Exposition forward asynch interrupted Time per event...: %12lf clocks\n",
+		stats->clock_exposition_forward_asynch_interrupted_per_event);
+	printf("Exposition silent asynch interrupted Time per event....: %12.2f clocks\n",
+		stats->clock_exposition_silent_asynch_interrupted_per_event);
+
+	printf("Exposition forward synch interrupted Time per event....: %12lf clocks\n",
+		stats->clock_exposition_forward_synch_interrupted_per_event);
+	printf("Exposition silent synch interrupted Time per event.....: %12.2f clocks\n",
+		stats->clock_exposition_silent_synch_interrupted_per_event);
+
+	printf("Residual Time forward asynch gained per event..........: %12lf clocks\n",
+		stats->clock_residual_time_forward_asynch_gained_per_event);
+	printf("Residual Time forward synch gained per event...........: %12lf clocks\n",
+		stats->clock_residual_time_forward_synch_gained_per_event);
+
+	printf("Residual Time silent asynch gained per event...........: %12.2f clocks\n",
+		stats->clock_residual_time_silent_asynch_gained_per_event);
+	printf("Residual Time silent synch gained per event............: %12.2f clocks\n",
+		stats->clock_residual_time_silent_synch_gained_per_event);
+
+
+    printf("Equivalent events forward entirely interrupted.........: %12lf\n",
+		stats->equivalent_events_forward_interrupted_tot);
+	printf("Equivalent events silent entirely interrupted..........: %12.2f\n",
+		stats->equivalent_events_silent_interrupted_tot);
+	printf("Avg Latency to send ipi................................: %12.2f clocks\n",
+		stats->latency_start_exposition_and_send_ipi_per_ipi_sent);
+    
 	printf("\n");
 
     #endif
 
-	#if SYNCH_CHECK==1
+	#if SYNCH_CHECK==1 && REPORT==1
 	printf("Sync check Forward Execution tot................: %12lu\n",
 		(unsigned long)stats->sync_check_forward_tot);
 	printf("Sync check Forward Execution per LP.............: %12.2f\n",
@@ -733,7 +856,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n");
 	#endif
 
-	#if DECISION_MODEL==1
+	#if DECISION_MODEL==1 && REPORT==1
 	printf("IPI filtered in decision_model tot..............: %12lu\n",
 		(unsigned long)stats->ipi_filtered_in_decision_model_tot);
 	printf("IPI filtered in decision model per thread.......: %12.2f\n",
@@ -779,6 +902,7 @@ void print_statistics() {
 	_print_statistics(system_stats);
 }
 
+#if REPORT==1
 void write_empty_cell_and_separator(FILE*results_file,char*separator){
 	fprintf(results_file,"Empty%s",separator);
 }
@@ -858,7 +982,7 @@ void write_results_on_csv(char*path){
 	write_standard_statistics(results_file);//common at all simulation model
 	
 
-	#if POSTING==1
+	#if POSTING==1 
 	write_posting_statistics(results_file);
 	#else
 	write_empty_cell_and_separator(results_file,",");
@@ -875,3 +999,4 @@ void write_results_on_csv(char*path){
     return;
 
 }
+#endif//REPORT

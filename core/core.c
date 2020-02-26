@@ -52,12 +52,15 @@
 
 #if IPI_SUPPORT==1
 #include <ipi.h>
-#include <lp_stats.h>
 #endif
 
 #if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
+
+#if DECISION_MODEL==1 && REPORT==1
 #include <lp_stats.h>
+#endif
+
 #endif
 
 #if HANDLE_INTERRUPT_WITH_CHECK==1
@@ -328,7 +331,7 @@ void LPs_metada_init() {
 #if POSTING==1
 		LPS[i]->priority_message=NULL;
 #endif
-#if DECISION_MODEL==1
+#if DECISION_MODEL==1 && REPORT==1
 		LPS[i]->lp_statistics = NULL;//LP event's statistic initialization, struct will be allocated by LP-0 at init time
 #endif
 	}
@@ -623,7 +626,7 @@ void init_simulation(unsigned int thread_id){
 		check_trampoline_function();
 		printf("all checks passed on trampoline function\n");
 		#endif
-		#if DECISION_MODEL==1
+		#if DECISION_MODEL==1 && REPORT==1
 		init_lp_stats();//allocation of lp_stats structs for all LPs
 		printf("LP_stats init finished\n");
 		#endif
@@ -692,7 +695,9 @@ void init_simulation(unsigned int thread_id){
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
 //LP e event_ts sono gli stessi di current_LP e current_lvt, quindi potrebbero essere tolti
 //inoltre, se passiamo solo il msg_t, possiamo evitare di passare gli altri parametri...era stato fatto così per mantenere il parallelismo con ProcessEvent
-stat64_t execute_time;
+#if REPORT==1
+	stat64_t execute_time;
+#endif
 
 #if REVERSIBLE == 1
 	unsigned int mode;
@@ -757,9 +762,6 @@ stat64_t execute_time;
 
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
-		}
-		else{
-			statistics_post_lp_data(LP, STAT_CLOCK_FORWARD_LP, execute_time);
 		}
 #endif
 
@@ -831,12 +833,6 @@ void thread_loop(unsigned int thread_id) {
 		#if REPORT==1
         	statistics_post_th_data(tid,STAT_IPI_RECEIVED_TID,1);
         #endif
-        	if(LPS[current_lp]->state==LP_STATE_READY){
-        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP,1);
-        	}
-        	else{
-        		statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP,1);
-        	}
             if(current_msg==NULL){//event interrupted in silent execution with IPI,but there is no current_msg
             	#if DEBUG==1
             	check_CFV_TO_HANDLE_current_msg_null();
@@ -844,6 +840,20 @@ void thread_loop(unsigned int thread_id) {
             	make_LP_state_invalid(LPS[current_lp]->old_valid_bound);
             }
 			else if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
+				#if DECISION_MODEL==1 && REPORT==1
+				statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP,1);
+				clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
+        		statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP,time_evt_interrupted);
+				clock_timer time_gained;
+				clock_timer actual_mean=get_actual_mean(current_lp,LP_STATE_SILENT_EXEC,LPS[current_lp]->msg_curr_executed->type);
+				//printf("silent asynch actual mean=%llu,time_evt_interrupted=%llu\n",actual_mean,time_evt_interrupted);
+				if(actual_mean > time_evt_interrupted)
+					time_gained=actual_mean-time_evt_interrupted;
+				else
+					time_gained=0;
+				statistics_post_lp_data(current_lp,STAT_CLOCK_RESIDUAL_TIME_SILENT_ASYNCH_GAINED_LP,time_gained);
+				#endif
+
 				#if DEBUG==1
 				check_CFV_TO_HANDLE_past();
 				#endif//DEBUG
@@ -851,6 +861,21 @@ void thread_loop(unsigned int thread_id) {
 				make_LP_state_invalid(list_prev(current_msg));
 			}
 			else{
+				#if DECISION_MODEL==1 && REPORT==1
+				statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP,1);
+				
+        		clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
+				statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP,time_evt_interrupted);
+				clock_timer time_gained;
+				clock_timer actual_mean=get_actual_mean(current_lp,LP_STATE_READY,LPS[current_lp]->msg_curr_executed->type);
+				//printf("forward asynch actual mean=%llu,time_evt_interrupted=%llu\n",actual_mean,time_evt_interrupted);
+				if(actual_mean >time_evt_interrupted)
+					time_gained=actual_mean-time_evt_interrupted;
+				else
+					time_gained=0;
+				statistics_post_lp_data(current_lp,STAT_CLOCK_RESIDUAL_TIME_FORWARD_ASYNCH_GAINED_LP,time_gained);
+				#endif
+
 				//event interrupt in future
 				#if DEBUG==1
 				check_CFV_TO_HANDLE_future();

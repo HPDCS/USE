@@ -4,10 +4,10 @@
 
 /*******************************
  * IN ORDER TO BE ENABLED, THE  *
- * MACRO "DECISION_MODEL" MUST BE *
+ * MACROS "HANDLE_INTERRUPT && REPORT" MUST BE *
  * DEFINED AND SET TO 1.       *
  *******************************/
-#if DECISION_MODEL==1
+#if DECISION_MODEL==1 && REPORT==1
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +39,13 @@ typedef struct _lp_stats {
 
 void init_lp_stats();
 void fini_lp_stats();
+
+static inline __attribute__((always_inline))
+clock_timer get_actual_mean(unsigned int lp_idx,unsigned int s, unsigned int t){
+	s = (s != LP_STATE_READY) ? 1 : 0;
+	lp_evt_stats *lps=LPS[lp_idx]->lp_statistics;
+	return lps->lp_state[s].evt_type[t].avg_exec_time;
+}
 
 static inline __attribute__((always_inline))
 void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_timer time)
@@ -95,6 +102,6 @@ void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_t
 	}
 }
 
-#endif//DECISION_MODEL
+#endif//DECISION_MODEL==1 && REPORT==1
 
 #endif

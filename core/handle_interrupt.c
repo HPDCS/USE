@@ -5,7 +5,7 @@
 #include <hpdcs_utils.h>
 #include <timer.h>
 
-#if DECISION_MODEL==1
+#if DECISION_MODEL==1 && REPORT==1
 #include <lp_stats.h>
 #endif
 
@@ -31,15 +31,11 @@ void end_exposition_of_current_event(msg_t*event){
 			gdb_abort;
 		}
 		#endif
+		#if REPORT==1
 		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
 		#if DECISION_MODEL==1
-		if(1 || !resize_occured)
-			store_lp_stats(current_lp, event->execution_mode, event->type, exposition_timer);
-		else{
-			printf("timer resize=%llu\n",clock_timer_value(event->evt_start_time));
-		}
+		store_lp_stats(current_lp, event->execution_mode, event->type, exposition_timer);
 		#endif
-		#if REPORT==1
 		if(event->execution_mode==LP_STATE_READY){
 			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_LP,1);
 			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD_TOT_LP,exposition_timer);

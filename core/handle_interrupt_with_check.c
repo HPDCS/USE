@@ -5,6 +5,10 @@
 #include <posting.h>
 #include <hpdcs_utils.h>
 
+#if DECISION_MODEL==1 && REPORT==1
+#include <lp_stats.h>
+#endif
+
 #if DEBUG==1
 __thread unsigned int nesting_zone_preemptable=0;
 __thread unsigned int nesting_zone_unpreemptable=0;
@@ -35,11 +39,25 @@ void*default_handler(void*arg){
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             if(current_msg==NULL){
-            make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
+            	make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
             }
             else{//current_msg not null
+            	#if DECISION_MODEL==1 && REPORT==1
+                clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
+                statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP,1);
+                statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP,time_evt_interrupted);
+                clock_timer time_gained;
+				clock_timer actual_mean=get_actual_mean(current_lp,LP_STATE_SILENT_EXEC,LPS[current_lp]->msg_curr_executed->type);
+				//printf("silent synch actual mean=%llu,time_evt_interrupted=%llu\n",actual_mean,time_evt_interrupted);
+				if(actual_mean > time_evt_interrupted)
+					time_gained=actual_mean - time_evt_interrupted;
+				else
+					time_gained=0;
+				statistics_post_lp_data(current_lp,STAT_CLOCK_RESIDUAL_TIME_SILENT_SYNCH_GAINED_LP,time_gained);
+				
+				#endif
+
                 insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
-                statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_INTERRUPTED_LP,1);
                 make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
             }
         }
@@ -53,8 +71,21 @@ void*default_handler(void*arg){
         #endif
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
-            //no need of insert current_msg
-            statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_INTERRUPTED_LP,1);
+        	#if DECISION_MODEL==1 && REPORT==1
+            //no need of insert current_msg in localqueue
+            clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
+            statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_SYNCH_INTERRUPTED_LP,1);
+            statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD_SYNCH_INTERRUPTED_LP,time_evt_interrupted);
+            
+            clock_timer time_gained;
+			clock_timer actual_mean=get_actual_mean(current_lp,LP_STATE_READY,LPS[current_lp]->msg_curr_executed->type);
+			//printf("forward synch actual mean=%llu,time_evt_interrupted=%llu\n",actual_mean,time_evt_interrupted);
+			if(actual_mean > time_evt_interrupted)
+				time_gained=actual_mean - time_evt_interrupted;
+			else
+				time_gained=0;
+			statistics_post_lp_data(current_lp,STAT_CLOCK_RESIDUAL_TIME_FORWARD_SYNCH_GAINED_LP,time_gained);
+            #endif
             make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
         }
     }

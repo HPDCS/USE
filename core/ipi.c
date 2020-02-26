@@ -19,7 +19,9 @@
 #include <sys/resource.h>
 #include <sys/capability.h>
 
+#if REPORT==1
 #include <lp_stats.h>
+#endif
 
 #define IPI_ARRIVAL_TIME 2000ULL//in clock cycles
 #define FACTOR_IPI 2
@@ -79,7 +81,9 @@ void run_time_data_init (void)
   rt_data.in_msg_state_offset = offsetof(struct __msg_t, state);
   rt_data.in_msg_monitor_offset = offsetof(struct __msg_t, tie_breaker);
   rt_data.in_msg_timestamp_offset = offsetof(struct __msg_t, timestamp);
+  #if REPORT==1
   rt_data.in_stats_ipi_trampoline_received_offset = offsetof(struct stats_t, ipi_trampoline_received_tid);
+  #endif
   rt_data.sizeof_stats = sizeof(struct stats_t);
 }
 
@@ -147,6 +151,7 @@ void set_program_name(char*program_name_to_set){
 }
 
 bool enough_memory_lockable(){
+
     bool cap_ipc_lock = pid_has_capability(getpid(),CAP_EFFECTIVE,"cap_ipc_lock");
     if(cap_ipc_lock)
         return true;
@@ -165,7 +170,7 @@ void check_ipi_capability(){
 }
 
 #if DECISION_MODEL==1
-static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution){
+static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution,clock_timer*latency){
     bool ipi_useful;
     clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[( (event_dest_in_execution->execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
     if(avg_timer==0){
@@ -180,6 +185,8 @@ static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_pt
             executed_time = 0ULL;
         else
             executed_time -= event_dest_in_execution->evt_start_time;
+
+        *latency=executed_time;//latency to notify receiver
 
         if (executed_time < avg_timer)
             if ((avg_timer - executed_time) >= TR_PRIME){
@@ -202,7 +209,9 @@ void send_ipi_to_lp(msg_t*event){
     //lp is locked by thread tid if lp_lock[lp_id]==tid+1,else lp_lock[lp_id]=0
     unsigned int lck_tid;
     unsigned int lp_idx;
+    #if REPORT==1
     unsigned long long syscall_time = 0;
+    #endif
     bool ipi_useful=false;
     lp_idx=event->receiver_id;
     lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
@@ -211,7 +220,8 @@ void send_ipi_to_lp(msg_t*event){
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
         #if DECISION_MODEL==1
-        ipi_useful = decision_model(LPS[lp_idx], event_dest_in_execution);
+        clock_timer latency;
+        ipi_useful = decision_model(LPS[lp_idx], event_dest_in_execution,&latency);
         #else
         ipi_useful=true;
         #endif
@@ -221,6 +231,9 @@ void send_ipi_to_lp(msg_t*event){
             enter_in_unpreemptable_zone();
 
             #if REPORT==1
+            #if DECISION_MODEL==1
+            statistics_post_th_data(tid,STAT_LATENCY_START_EXPOSITION_AND_SEND_IPI_TID,latency);
+            #endif
             clock_timer_start(syscall_time);
             #endif
 
