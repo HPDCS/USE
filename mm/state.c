@@ -605,19 +605,10 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	}
 	#endif
 
-	/*#if HANDLE_INTERRUPT==1
-	start_exposition_of_current_event(current_msg);
-	#endif*/
-
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
-
-	/*#if HANDLE_INTERRUPT==1
-	end_exposition_of_current_event(current_msg);
-	#endif*/
 
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events);
-
 	//TODO
 	//con questo check si vogliono tenere in conto sia gli eventi silent in mode ONGVT per riportarsi ad una simulazione commit,
 	// sia gli eventi after mode ONGVT ossia LP_STATE_ROLLBACK necessaria per riportarsi nel punto in cui si era della simulazione
@@ -651,7 +642,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		//con questo check si vogliono tenere in conto il numero di eventi in un rollback che non sia quello forzato tramite la modalità ONGVT
 		//ma destination time potrebbe essere sovrascritto col list_next(bound), quindi sfalsa la statistica tenendo in considerazione anche quelli nella modalità ONGVT
 		if(destination_time < INFTY)
-			statistics_post_lp_data(lid, STAT_ROLLBACK_LENGTH, (double)rollback_lenght);
+			statistics_post_lp_data(lid, STAT_ROLLBACK_LENGTH,(double)rollback_lenght);
 
 		statistics_post_lp_data(lid, STAT_CLOCK_ROLLBACK, (double)clock_timer_value(rollback_timer));
 	}
