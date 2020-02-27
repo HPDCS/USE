@@ -42,13 +42,13 @@ results/
 #others executables
 test
 pcs-prealloc 
-traffic  	 
+traffic
 tcar	 
 robot_explore
-hash 		 
+hash
 /phold
 pholdcount
-pcs
+/pcs
 /tcar
 log_test/*
 /pcs_lf
