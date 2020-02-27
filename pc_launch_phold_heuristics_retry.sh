@@ -49,7 +49,7 @@ echo $run
 								echo $threads
 									./create_config.sh $STARTING_THREADS $pstate $hmode $pl
 									EX="sudo ./${test}_lf_hi $threads $lp $TEST_DURATION"
-									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf${filtering}-w${pl}-h${hmode}-pop${pc_obs_per}-pws${pc_wd_sz}-${threads}-p${pstate}-${lp}-maxlp-${max_lp}-look-${lookahead}-ck_per-${ck}-fan-${fan_out}-loop-${loop_count}-${run}"; touch $FILE
+									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-psf${filtering}-w${pl}-h${hmode}-pop${pc_obs_per}-pws${pc_wd_sz}-th${threads}-p${pstate}-${lp}-maxlp-${max_lp}-look-${lookahead}-ck_per-${ck}-fan-${fan_out}-loop-${loop_count}-${run}"; touch $FILE
 															
 									N=0 
 									while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]

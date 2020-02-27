@@ -8,7 +8,7 @@
 #define EXTERNAL_LOOP	7
 
 #define VARIANCE 0.2
-#define COMPLETE_EVENTS 5000
+#define COMPLETE_EVENTS 1200
 #define EVENTS_PER_LP 5
 
 #ifndef FAN_OUT

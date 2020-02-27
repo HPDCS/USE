@@ -11,8 +11,8 @@ do
     echo cp topology_${fn}.txt topology.txt
     cp model/traffic/small_topology_${fn}.txt topology.txt
 
-    echo make traffic POWERCAP=1 REPORT=1 DEBUG=0 PRINT_SCREEN=0 SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50 POWERCAP_SAMPLE_FILTERING=$filtering
-    make traffic POWERCAP=1 REPORT=1 DEBUG=0 PRINT_SCREEN=0 SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50 POWERCAP_SAMPLE_FILTERING=$filtering
+    echo make traffic POWERCAP=1 REPORT=1 DEBUG=0 PRINT_SCREEN=0 SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50 POWERCAP_SAMPLE_FILTERING=$filtering POWERCAP_OBSERVATION_PERIOD=200 POWERCAP_WINDOW_SIZE=1
+    make traffic POWERCAP=1 REPORT=1 DEBUG=0 PRINT_SCREEN=0 SIMPLE_TRAFFIC=1 VERBOSE=1 ONGVT_PERIOD=1000 CKP_PERIOD=50 POWERCAP_SAMPLE_FILTERING=$filtering POWERCAP_OBSERVATION_PERIOD=200 POWERCAP_WINDOW_SIZE=1
 
 	  for pl in $POWER_LIMIT_list
 		do
@@ -29,6 +29,7 @@ do
             do
               for threads in $CORES
               do
+                echo ./create_config.sh ${STARTING_THREADS} ${pstate} ${hmode} ${pl}
                 ./create_config.sh ${STARTING_THREADS} ${pstate} ${hmode} ${pl}
                 EX="sudo ./traffic $threads $lp $DURATION"
                 FILE="${FOLDER}/traffic_psf${filtering}-w${pl}-h${hmode}_maxth${threads}-p${pstate}-lp${lp}_conf${fn}_r${run}.dat"

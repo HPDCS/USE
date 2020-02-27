@@ -1,10 +1,11 @@
 #!/bin/bash
 
+STARTING_THREADS="10"
 MAX_SKIPPED_LP_list="1000000"
 LP_list="137"					#number of lps:137 for small topology; 163 for medium tobology
 THREAD_list="1 5 10 15 20 25 30 35 40"	#numero di thread
 TEST_list="traffic"						#test
-RUN_list="0 1 2 3 4"							#lista del numero di run
+RUN_list="0 1 2 3 4 5 6"							#lista del numero di run
 
 LOOKAHEAD_list="0"		 				#lookahead
 
@@ -20,13 +21,13 @@ DURATION="120"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-POWERCAP_SAMPLE_FILTERING_list="0 1 2 3"
+POWERCAP_SAMPLE_FILTERING_list="0"
 
 PSTATE_list="0"
 HEURISTIC_MODE_list="10 11"
-POWER_LIMIT_list="55.0 65.0 45.0"
+POWER_LIMIT_list="55.0 65.0"
 STATIC_PSTATE="1"
-CORES="20 40"
+CORES="40"
 
-FOLDER="results/results_traffic_h"
-RES_FOLDER="results/plots_traffic_h"
+FOLDER="results/results_traffic_h_th_correct"
+RES_FOLDER="results/plots_traffic_h_th_correct"
