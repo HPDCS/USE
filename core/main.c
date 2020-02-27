@@ -29,7 +29,7 @@ extern volatile bool stop;
 
 #ifndef MAX_MEMORY_ALLOCABLE
 #define GIGA (1024ULL*1024ULL*1024ULL)
-#define MAX_MEMORY_ALLOCABLE (56ULL*GIGA)
+#define MAX_MEMORY_ALLOCABLE (200ULL*GIGA)
 #endif
 
 __thread struct drand48_data seedT;
