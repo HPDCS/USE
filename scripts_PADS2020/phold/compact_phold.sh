@@ -62,11 +62,11 @@ do
 						do
 							FILE="${SRC_FOLDER}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; 
 							th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
-							th=`python -c "print '$th'.strip()"`
-							sum=`python -c "print $th+$sum"`
+							th=`python2 -c "print '$th'.strip()"`
+							sum=`python2 -c "print $th+$sum"`
 							count=$(($count+1))
 						done
-						avg=`python -c "print $sum/$count"`
+						avg=`python2 -c "print $sum/$count"`
 						line="$line $avg"
 					done
 					echo $line >> $OUT
