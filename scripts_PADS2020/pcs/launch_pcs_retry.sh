@@ -32,13 +32,13 @@ for lookahead in $LOOKAHEAD_list
 do
 	for test in $TEST_list 
 	do
-		echo make $test TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} CHECKPOINT_PERIOD=${ck}
-			 make $test TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} CHECKPOINT_PERIOD=${ck}
+		echo make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck}
+			 make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck}
 		
 		mv $test ${test}_ori
 		
-		echo make $test TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} CHECKPOINT_PERIOD=${ck} IPI_SUPPORT=1 POSTING=1 SYNCH_CHECK=1 DECISION_MODEL=1
-			 make $test TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} CHECKPOINT_PERIOD=${ck} IPI_SUPPORT=1 POSTING=1 SYNCH_CHECK=1 DECISION_MODEL=1
+		echo make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck} IPI_SUPPORT=1 POSTING=1 SYNCH_CHECK=1 DECISION_MODEL=1
+			 make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CHECKPOINT_PERIOD=${ck} IPI_SUPPORT=1 POSTING=1 SYNCH_CHECK=1 DECISION_MODEL=1
 		 
 		mv $test ${test}_ipi
 		
