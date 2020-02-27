@@ -960,6 +960,7 @@ void write_first_line_on_csv(FILE*results_file){
 
 //remember to adjust first line of csv table
 void write_results_on_csv(char*path){
+	return;
 	FILE* results_file;
 	if( access( path, F_OK ) != -1 ) 
 	{//file exist
