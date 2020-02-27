@@ -444,7 +444,7 @@ void gather_statistics() {
 	#if DECISION_MODEL==1 && REPORT==1
 	system_stats->ipi_filtered_in_decision_model_tot = system_stats->ipi_filtered_in_decision_model_tid;
 	system_stats->ipi_filtered_in_decision_model_tid /= n_cores;
-	system_stats->latency_start_exposition_and_send_ipi_per_ipi_sent=system_stats->latency_start_exposition_and_send_ipi_tot_tid/system_stats->ipi_sent_tid;
+	system_stats->latency_start_exposition_and_send_ipi_per_ipi_sent = system_stats->latency_start_exposition_and_send_ipi_tot_tid/system_stats->ipi_sent_tid;
 	#endif
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
