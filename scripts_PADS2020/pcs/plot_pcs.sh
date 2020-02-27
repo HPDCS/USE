@@ -1,7 +1,11 @@
 #!/bin/bash
 
+source $1
+source $2
+
 cd ../..
 mkdir -p ${PLT_FOLDER}
+
 
 for max_lp in $MAX_SKIPPED_LP_list
 do
