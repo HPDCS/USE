@@ -30,7 +30,7 @@ do
 		for lp in $LP_list
 		do
 			OUT="${DAT_FOLDER}/${test}-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change"; 				
-			gnuplot -e "file=\"$OUT\"" -e "tit=\"${test}-$lp-ta-$ta-tad-$ta_duration-channels-$channels_per_cell-tac-$ta_change\"" th.gp
+			gnuplot -e "file=\"$OUT\"" -e "tit=\"LP:$lp-TA:$ta-TAD:$ta_duration-CH:$channels_per_cell-TAC:$ta_change-CKP:$ck\"" th.gp
 			cp $OUT.pdf ${PLT_FOLDER}
 			rm $OUT.eps
 			rm $OUT.pdf
