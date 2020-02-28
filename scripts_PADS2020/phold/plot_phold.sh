@@ -43,7 +43,7 @@ do
 		for lp in $LP_list
 			do
 				OUT="${SRC_FOLDER}/${test}-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count"
-				gnuplot -e "file=\"$OUT\"" -e "tit=\"${test}-$lp-maxlp-ck_per-$ck-fan-$fan_out-loop-$loop_count\"" th.gp
+				gnuplot -e "file=\"$OUT\"" -e "tit=\"LP:$lp-FAN:$fan_out-LOOP:$loop_count-CKP:$ck\"" th.gp
 				cp $OUT.pdf ${FOLDER}
 				rm $OUT.eps
 				rm $OUT.pdf
