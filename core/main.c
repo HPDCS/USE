@@ -27,10 +27,13 @@ extern volatile bool stop;
 #include <lp_stats.h>
 #endif
 
-#ifndef MAX_MEMORY_ALLOCABLE
 #define GIGA (1024ULL*1024ULL*1024ULL)
-#define MAX_MEMORY_ALLOCABLE (200ULL*GIGA)
+
+#ifndef MAX_ALLOCABLE_GIGAS
+#error MAX_ALLOCABLE_GIGAS is not defined in makefile
 #endif
+
+#define MAX_MEMORY_ALLOCABLE (MAX_ALLOCABLE_GIGAS*GIGA) //MAX_GIGA_ALLOCABLE is defined in makefile
 
 __thread struct drand48_data seedT;
 
@@ -130,10 +133,10 @@ void start_simulation() {
         pthread_join(p_tid[i], NULL);
     }
 }
-void set_max_memory_allocable(){
+void set_max_memory_allocable(unsigned long max_bytes_allocable){
     struct rlimit set_memory_limit;
-    set_memory_limit.rlim_cur=MAX_MEMORY_ALLOCABLE;
-    set_memory_limit.rlim_max=MAX_MEMORY_ALLOCABLE;
+    set_memory_limit.rlim_cur=max_bytes_allocable;
+    set_memory_limit.rlim_max=max_bytes_allocable;
     
     if(setrlimit(RLIMIT_AS,&set_memory_limit)!=0){
         printf("errore set limit address space\n");
@@ -184,11 +187,12 @@ int main(int argn, char *argv[]) {
     check_ipi_capability();
 #endif
 
-    set_max_memory_allocable();
+    set_max_memory_allocable(MAX_MEMORY_ALLOCABLE);
     #if DEBUG==1
     test_memory_limit_malloc(MAX_MEMORY_ALLOCABLE);
     test_memory_limit_mmap(MAX_MEMORY_ALLOCABLE);
     #endif
+
     printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);

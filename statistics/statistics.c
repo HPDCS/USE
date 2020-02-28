@@ -762,23 +762,15 @@ static void _print_statistics(struct stats_t *stats) {
 	#if DECISION_MODEL==1
 	printf("Events forward asynch interrupted tot... .......: %12lu\n",
 		(unsigned long)stats->event_exposition_forward_asynch_interrupted_tot);
-	printf("Events forward asynch interrupted per LP........: %12.2f\n",
-		stats->event_exposition_forward_asynch_interrupted_lp);
 
 	printf("Events forward synch interrupted tot............: %12lu\n",
 		(unsigned long)stats->event_exposition_forward_synch_interrupted_tot);
-	printf("Events forward synch interrupted per LP.........: %12.2f\n",
-		stats->event_exposition_forward_synch_interrupted_lp);
 
 	printf("Events silent asynch interrupted tot............: %12lu\n",
 		(unsigned long)stats->event_exposition_silent_asynch_interrupted_tot);
-	printf("Events silent asynch interrupted per LP.........: %12.2f\n",
-		stats->event_exposition_silent_asynch_interrupted_lp);
 
 	printf("Events silent synch interrupted tot.............: %12lu\n",
 		(unsigned long)stats->event_exposition_silent_synch_interrupted_tot);
-	printf("Events silent synch interrupted per LP..........: %12.2f\n",
-		stats->event_exposition_silent_synch_interrupted_lp);
 
 	printf("\n");
 
