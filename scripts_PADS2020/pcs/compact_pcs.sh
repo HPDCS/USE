@@ -9,8 +9,9 @@ BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H)
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
 cd ../..
-
 mkdir -p ${DAT_FOLDER}
+
+OUT_SPEEDUP=${DAT_FOLDER}/speedup.txt
 
 for max_lp in $MAX_SKIPPED_LP_list
 do
@@ -46,6 +47,7 @@ do
 			for threads in $THREAD_list
 			do
 				line="$threads "
+				list_avg=""
 				for sim in $SIM_list
 				do
 					th=0
@@ -60,8 +62,12 @@ do
 						count=$(($count+1))
 					done
 					avg=`python2 -c "print $sum/$count"`
+					list_avg="$list_avg $avg "
 					line="$line $avg"
 				done
+				arr=($list_avg)
+				speedup=`python2 -c "print ${arr[1]}/${arr[0]}"`
+				echo "${test}-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change speedup: ${speedup}" >> ${OUT_SPEEDUP}
 				echo $line >> $OUT
 			done
 		done
