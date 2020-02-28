@@ -46,4 +46,13 @@ done
 done
 done
 
+file_list=$(ls ${PLT_FOLDER})
+file_list2=""
+for file in ${file_list}
+do
+	file_list2+="${PLT_FOLDER}/${file} "
+done
+
+pdfunite ${file_list2} ${FOLDER}/${test}_unito.pdf
+
 cd scripts_PADS2020/pcs
