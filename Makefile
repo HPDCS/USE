@@ -7,7 +7,9 @@ FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -mno-red-zone -O0
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
-FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
+FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo) \
+	-DN_NUMA_NODES=$(shell numactl --hardware | grep -c cpus)
+
 
 INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
 LIBS=-pthread -lm -lcap
@@ -463,6 +465,7 @@ CORE_SOURCES =  core/ipi_ctrl.c\
 		core/handle_interrupt.c\
 		core/handle_interrupt_with_check.c\
 		core/lp_stats.c\
+		core/numa.c\
 		mm/garbagecollector.c
 		
 

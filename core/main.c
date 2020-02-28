@@ -14,6 +14,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/mman.h>
+#include <numa.h>
 
 extern bool sim_error;
 extern volatile bool stop_timer;
@@ -133,6 +134,7 @@ void start_simulation() {
         pthread_join(p_tid[i], NULL);
     }
 }
+
 void set_max_memory_allocable(unsigned long max_bytes_allocable){
     struct rlimit set_memory_limit;
     set_memory_limit.rlim_cur=max_bytes_allocable;
@@ -192,6 +194,8 @@ int main(int argn, char *argv[]) {
     test_memory_limit_malloc(MAX_MEMORY_ALLOCABLE);
     test_memory_limit_mmap(MAX_MEMORY_ALLOCABLE);
     #endif
+
+    set_numa_topology();
 
     printf("***START SIMULATION***\n\n");
 

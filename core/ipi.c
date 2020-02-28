@@ -281,6 +281,9 @@ long get_sizeof_function(const char*function_name,char*path_program_name){
     memcpy(command+index,function_name,strlen(function_name));
 
     fp = popen(command, "r");
+    if(fp==NULL){
+        return -1;
+    }
     if(fscanf(fp,"%lu %lu %s %s\n",&addr,&function_size,type,func_target)!=4){
         pclose(fp);
         printf("invalid parameter in function get_size_function\n");
@@ -291,6 +294,7 @@ long get_sizeof_function(const char*function_name,char*path_program_name){
         pclose(fp);
         return function_size;
     }
+    pclose(fp);
     return -1;
 }
 

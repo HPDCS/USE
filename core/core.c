@@ -31,6 +31,7 @@
 #include "lookahead.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
+#include <numa.h>
 
 #define PINNING 1
 
@@ -221,7 +222,6 @@ void _mkdir(const char *path) {
 	}
 }
 
-
 void set_affinity(unsigned int tid){
 #if PINNING == 0
 return 0;
@@ -235,15 +235,16 @@ return 0;
 		exit(-1);
 	}
 	#else
-	id_cpu = ( (tid % 8) * 4 + (tid/((unsigned int)8))) % N_CPU;//the statement "% N_CPU" is a safe way to generate id_cpu beetween 0 and N_CPU-1
+	id_cpu = NUMA_TOPOLOGY[tid];
+	//id_cpu = ( (tid % 8) * 4 + (tid/((unsigned int)8))) % N_CPU;//the statement "% N_CPU" is a safe way to generate id_cpu beetween 0 and N_CPU-1
 	#endif
 
 	my_core = id_cpu;
 	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
 	CPU_ZERO(&mask);
 	CPU_SET(id_cpu, &mask);
-    	pthread_t current_thread = pthread_self();
-    	int err = pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &mask);
+	pthread_t current_thread = pthread_self();
+	int err = pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &mask);
 	//int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 	if(err != 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
