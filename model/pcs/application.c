@@ -8,6 +8,7 @@
 bool pcs_statistics = false;
 unsigned int complete_calls = COMPLETE_CALLS;
 
+#define TOPOLOGY_PCS TOPOLOGY_HEXAGON
 
 #define DUMMY_TA 500
 
@@ -26,6 +27,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 	simtime_t handoff_time;
 	simtime_t timestamp = 0;
+	simtime_t tmp = 1.0;
 
 	lp_state_type *state;
 	state = (lp_state_type*)ptr;
@@ -143,15 +145,19 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				}
 
 				// Determine whether the call will be handed-off or not
-				switch (CELL_CHANGE_DISTRIBUTION) {
-
+//				switch (CELL_CHANGE_DISTRIBUTION) {
+					if(FACTOR_SCALING != 0 && (Random() < PROB_FASTER)){
+						tmp = FACTOR_SCALING;
+					}
+					else tmp=1;
+ switch (CELL_CHANGE_DISTRIBUTION) {
 					case UNIFORM:
 
-						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
+						handoff_time  = now + (simtime_t)((state->ta_change/tmp) * Random());
 						break;
 
 					case EXPONENTIAL:
-						handoff_time = now + (simtime_t)(Expent(state->ta_change));
+						handoff_time = now + (simtime_t)(Expent(state->ta_change/tmp));
 						break;
 
 					default:
@@ -162,7 +168,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				if(new_event_content.call_term_time < handoff_time) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
-					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
+					new_event_content.cell = FindReceiver(TOPOLOGY_PCS);
 					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
 				}
 			}
@@ -233,13 +239,18 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				new_event_content.call_term_time = event_content->call_term_time;
 
 
-				switch (CELL_CHANGE_DISTRIBUTION) {
+//				switch (CELL_CHANGE_DISTRIBUTION) {
+					if(FACTOR_SCALING != 0 && Random() < PROB_FASTER){
+						 tmp = FACTOR_SCALING;
+                                        }
+					else tmp = 1;  
+                                     switch (CELL_CHANGE_DISTRIBUTION) {                                                                                                                                                     
 					case UNIFORM:
-						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
+						handoff_time  = now + (simtime_t)((state->ta_change/tmp) * Random());
 
 						break;
 					case EXPONENTIAL:
-						handoff_time = now + (simtime_t)(Expent( state->ta_change ));
+						handoff_time = now + (simtime_t)(Expent( state->ta_change/tmp ));
 
 						break;
 					default:
@@ -250,7 +261,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				if(new_event_content.call_term_time < handoff_time ) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
-					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
+					new_event_content.cell = FindReceiver(TOPOLOGY_PCS);
 					ScheduleNewEvent(me, handoff_time, HANDOFF_LEAVE, &new_event_content, sizeof(new_event_content));
 				}
 			}

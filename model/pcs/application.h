@@ -8,6 +8,9 @@
 #define DISTRIBUTION	1
 
 
+#define FACTOR_SCALING 0
+#define PROB_FASTER    0.4
+
 //define CHECK_FADING_TIME	10
 #define COMPLETE_CALLS		5000
 
@@ -42,7 +45,9 @@
 #define HANDOFF_RECV	 4
 #define FADING_RECHECK	 5
 
+#ifndef FADING_RECHECK_FREQUENCY
 #define FADING_RECHECK_FREQUENCY	300	// Every 5 Minutes
+#endif
 
 #define MSK 0x1
 #define SET_CHANNEL_BIT(B,K) ( B |= (MSK << K) )
