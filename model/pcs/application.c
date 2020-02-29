@@ -87,8 +87,8 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			// Show current configuration, only once
 			if(me == 0) {
-				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
-					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
+				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d, FACTOR_SCALING=%d,PROB_FASTER=%lf\n",
+					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta,FACTOR_SCALING,PROB_FASTER);
 				fflush(stdout);
 			}
 
