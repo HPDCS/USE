@@ -144,13 +144,12 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
  						new_event_content.call_term_time = now + (simtime_t) (5 * Random() );
 				}
 
-				// Determine whether the call will be handed-off or not
-//				switch (CELL_CHANGE_DISTRIBUTION) {
-					if(FACTOR_SCALING != 0 && (Random() < PROB_FASTER)){
-						tmp = FACTOR_SCALING;
-					}
-					else tmp=1;
- switch (CELL_CHANGE_DISTRIBUTION) {
+				if(FACTOR_SCALING != 0 && (Random() < PROB_FASTER)){
+					tmp = FACTOR_SCALING;
+				}
+				else tmp=1;
+					// Determine whether the call will be handed-off or not
+ 				switch (CELL_CHANGE_DISTRIBUTION) {
 					case UNIFORM:
 
 						handoff_time  = now + (simtime_t)((state->ta_change/tmp) * Random());
@@ -216,7 +215,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			new_event_content.call_term_time =  event_content->call_term_time;
 			new_event_content.from = me;
 			new_event_content.dummy = &(state->dummy);
-			ScheduleNewEvent(event_content->cell, now+0.000001, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
+			ScheduleNewEvent(event_content->cell, now+HANDOFF_RECV_SHIFT, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 			break;
 
 		case HANDOFF_RECV:
@@ -238,13 +237,12 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				new_event_content.channel = allocation(state);
 				new_event_content.call_term_time = event_content->call_term_time;
 
+				if(FACTOR_SCALING != 0 && Random() < PROB_FASTER){
+					 tmp = FACTOR_SCALING;
+		                            }
+				else tmp = 1;
 
-//				switch (CELL_CHANGE_DISTRIBUTION) {
-					if(FACTOR_SCALING != 0 && Random() < PROB_FASTER){
-						 tmp = FACTOR_SCALING;
-                                        }
-					else tmp = 1;  
-                                     switch (CELL_CHANGE_DISTRIBUTION) {                                                                                                                                                     
+	            switch (CELL_CHANGE_DISTRIBUTION) {                                                                                                                                                     
 					case UNIFORM:
 						handoff_time  = now + (simtime_t)((state->ta_change/tmp) * Random());
 
@@ -259,6 +257,10 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				}
 
 				if(new_event_content.call_term_time < handoff_time ) {
+					if(now > new_event_content.call_term_time){
+						printf("invalid timestamp call_term_time %lf, is in past respect to now %lf\n",new_event_content.call_term_time,now);
+						abort();
+					}
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_PCS);
@@ -266,26 +268,21 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				}
 			}
 
-
 			break;
 
 
-				case FADING_RECHECK:
-
+		case FADING_RECHECK:
 /*
 			if(state->check_fading)
 				state->check_fading = false;
 			else
 				state->check_fading = true;
 */
-
 			fading_recheck(state);
 
 			timestamp = now + (simtime_t) (FADING_RECHECK_FREQUENCY );
 			ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
-
 			break;
-
 
 		default:
 			fprintf(stdout, "PCS: Unknown event type! (me = %d - event type = %d)\n", me, event_type);

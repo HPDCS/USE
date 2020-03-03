@@ -195,7 +195,7 @@ int main(int argn, char *argv[]) {
     test_memory_limit_mmap(MAX_MEMORY_ALLOCABLE);
     #endif
 
-    set_numa_topology();
+    //set_numa_topology();
 
     printf("***START SIMULATION***\n\n");
 

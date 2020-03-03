@@ -9,7 +9,7 @@
 #include "core.h"
 #include "lookahead.h"
 #include "hpdcs_utils.h"
-
+#include <prints.h>
 #if DEBUG==1
 #include <checks.h>
 #endif
@@ -226,8 +226,14 @@ void queue_deliver_msgs(void) {
         new_hole->max_outgoing_ts = new_hole->timestamp;
         new_hole->posted=NEVER_POSTED;
 #if DEBUG==1
-        if(new_hole->timestamp < current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
-        if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+        if(new_hole->timestamp < current_lvt){
+            printf("Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f",current_lvt,new_hole->timestamp);
+            print_event(new_hole);
+            print_event(current_msg);
+            printf("current_lp=%u,new_hole->receiver_id=%u\n",current_lp,new_hole->receiver_id);
+            printf("current_msg->type=%u,new_hole->type=%u\n",current_msg->type,new_hole->type);
+            gdb_abort;
+        }
 #endif
 
         if(current_msg->max_outgoing_ts < new_hole->timestamp)
@@ -332,9 +338,15 @@ void queue_deliver_msgs(void) {
         new_hole->max_outgoing_ts = new_hole->timestamp;
 
 #if DEBUG==1
-        if(new_hole->timestamp < current_lvt){ printf(RED("1Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
-        //if(new_hole->timestamp != _thr_pool.messages[i].timestamp){ printf(RED("2Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
-        if(new_hole->timestamp < current_lvt){ printf(RED("3Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f"),current_lvt,new_hole->timestamp); gdb_abort;}
+        if(new_hole->timestamp < current_lvt){
+            printf("Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f",current_lvt,new_hole->timestamp);
+            print_event(new_hole);
+            print_event(current_msg);
+            printf("current_msg->timestamp=%lf,new_hole->timestamp=%lf\n",current_msg->timestamp,new_hole->timestamp);
+            printf("current_lp=%u,new_hole->receiver_id=%u\n",current_lp,new_hole->receiver_id);
+            printf("current_msg->type=%u,new_hole->type=%u\n",current_msg->type,new_hole->type);
+            gdb_abort;
+        }
 #endif
 
         if(current_msg->max_outgoing_ts < new_hole->timestamp)

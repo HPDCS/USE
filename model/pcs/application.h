@@ -30,6 +30,14 @@
 #define TA_CHANGE		50.0
 #endif
 
+#ifndef FADING_RECHECK_FREQUENCY
+#define FADING_RECHECK_FREQUENCY	300	// Every 5 Minutes
+#endif
+
+#ifndef HANDOFF_RECV_SHIFT
+#define HANDOFF_RECV_SHIFT	0.000001
+#endif
+
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define DURATION_DISTRIBUTION		EXPONENTIAL
 
@@ -45,9 +53,7 @@
 #define HANDOFF_RECV	 4
 #define FADING_RECHECK	 5
 
-#ifndef FADING_RECHECK_FREQUENCY
-#define FADING_RECHECK_FREQUENCY	300	// Every 5 Minutes
-#endif
+
 
 #define MSK 0x1
 #define SET_CHANNEL_BIT(B,K) ( B |= (MSK << K) )
