@@ -257,7 +257,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				}
 
 				if(new_event_content.call_term_time < handoff_time ) {
-					if(now > new_event_content.call_term_time){
+					if(new_event_content.call_term_time < now){
 						printf("invalid timestamp call_term_time %lf, is in past respect to now %lf\n",new_event_content.call_term_time,now);
 						abort();
 					}
