@@ -124,7 +124,7 @@ bool post_info_event_invalid(msg_t*event){
 msg_t* flag_as_posted(msg_t*event,bool* flagged){
     //event to flush on calqueue.now it is in thread_pool so it is thread_local
     unsigned int lp_idx=event->receiver_id;
-    simtime_t bound_ts;
+    simtime_t bound_ts=0.0;
     if(LPS[lp_idx]->bound!=NULL){
         bound_ts=LPS[lp_idx]->bound->timestamp;
     }
@@ -155,7 +155,7 @@ bool post_info_with_oldval(msg_t*event,msg_t*old_priority_message){
 
 bool post_information(msg_t*event,bool retry_loop){
     unsigned int lp_idx=event->receiver_id;
-    simtime_t bound_ts;
+    simtime_t bound_ts=0.0;
     msg_t*event_dest_LP;
     if(retry_loop){
         while(1){

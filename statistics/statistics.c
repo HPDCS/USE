@@ -59,7 +59,7 @@ void statistics_fini() {
 	free(lp_stats);
 	free(system_stats);
 
-	#if DECISION_MODEL==1
+	#if IPI_DECISION_MODEL==1
     fini_ipi_decision_model_stats();
     #endif
 }
@@ -316,7 +316,7 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			break;
 		#endif
 
-		#if DECISION_MODEL==1 && REPORT==1
+		#if IPI_DECISION_MODEL==1 && REPORT==1
 		case STAT_IPI_FILTERED_IN_DECISION_MODEL_TID:
 			stats[idx].ipi_filtered_in_decision_model_tid += value;
 			break;
@@ -419,7 +419,7 @@ void gather_statistics() {
 		system_stats->clock_exec_ipi_syscall_tid += thread_stats[i].clock_exec_ipi_syscall_tid;
 		#endif
 
-		#if DECISION_MODEL==1 && REPORT==1
+		#if IPI_DECISION_MODEL==1 && REPORT==1
 		system_stats->ipi_filtered_in_decision_model_tid += thread_stats[i].ipi_filtered_in_decision_model_tid;
 		system_stats->latency_start_exposition_and_send_ipi_tot_tid += thread_stats[i].latency_start_exposition_and_send_ipi_tot_tid;
 		#endif
@@ -454,7 +454,7 @@ void gather_statistics() {
 	system_stats->clock_exec_ipi_syscall_per_syscall=system_stats->clock_exec_ipi_syscall_tot/system_stats->ipi_sent_tot;
 	#endif
 
-	#if DECISION_MODEL==1 && REPORT==1
+	#if IPI_DECISION_MODEL==1 && REPORT==1
 	system_stats->ipi_filtered_in_decision_model_tot = system_stats->ipi_filtered_in_decision_model_tid;
 	system_stats->ipi_filtered_in_decision_model_tid /= n_cores;
 	system_stats->latency_start_exposition_and_send_ipi_per_ipi_sent = system_stats->latency_start_exposition_and_send_ipi_tot_tid/system_stats->ipi_sent_tid;
@@ -520,7 +520,7 @@ void gather_statistics() {
 		system_stats->event_exposition_forward_lp += lp_stats[i].event_exposition_forward_lp;
 		
 	#endif
-	#if DECISION_MODEL==1 && REPORT==1
+	#if IPI_DECISION_MODEL==1 && REPORT==1
 		system_stats->event_exposition_forward_asynch_interrupted_lp += lp_stats[i].event_exposition_forward_asynch_interrupted_lp;
     	system_stats->event_exposition_silent_asynch_interrupted_lp += lp_stats[i].event_exposition_silent_asynch_interrupted_lp;
 
@@ -607,7 +607,7 @@ void gather_statistics() {
 
     #endif
 
-    #if DECISION_MODEL==1 && REPORT==1
+    #if IPI_DECISION_MODEL==1 && REPORT==1
     system_stats->event_exposition_forward_asynch_interrupted_tot= system_stats->event_exposition_forward_asynch_interrupted_lp;
     system_stats->event_exposition_forward_asynch_interrupted_lp /= n_prc_tot;
 
@@ -762,7 +762,7 @@ static void _print_statistics(struct stats_t *stats) {
 
 	#endif
 
-	#if DECISION_MODEL==1 && REPORT==1
+	#if IPI_DECISION_MODEL==1 && REPORT==1
 	printf("Events forward asynch interrupted tot... .......: %12lu\n",
 		(unsigned long)stats->event_exposition_forward_asynch_interrupted_tot);
 
@@ -837,7 +837,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n");
 	#endif
 
-	#if DECISION_MODEL==1 && REPORT==1
+	#if IPI_DECISION_MODEL==1 && REPORT==1
 	printf("IPI filtered in decision_model tot..............: %12lu\n",
 		(unsigned long)stats->ipi_filtered_in_decision_model_tot);
 	printf("\n\n");

@@ -90,7 +90,7 @@ __thread unsigned int my_core = -1;
 __thread struct __bucket_node *current_node = 0x0;
 
 __thread unsigned int last_checked_lp = 0;
-unsigned int start_periodic_check_ongvt = 0;
+volatile unsigned int start_periodic_check_ongvt = 0;
 __thread unsigned int check_ongvt_period = 0;
 
 //__thread simtime_t 		commit_horizon_ts = 0;
@@ -130,7 +130,7 @@ unsigned int n_prc_tot; //pls cambia nome
 /* Average time between consecutive events */
 simtime_t t_btw_evts = 0.1; //Non saprei che metterci
 
-bool sim_error = false;
+volatile bool sim_error = false;
 
 //void **states;
 LP_state **LPS = NULL;
@@ -139,8 +139,8 @@ LP_state **LPS = NULL;
 volatile bool stop = false;
 volatile bool stop_timer = false;
 pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
-unsigned int sec_stop = 0;
-unsigned long long *sim_ended;
+volatile unsigned int sec_stop = 0;
+volatile unsigned long long *sim_ended;
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
@@ -334,7 +334,7 @@ void LPs_metada_init() {
 		LPS[i]->priority_message=NULL;
 #endif
 #if IPI_DECISION_MODEL==1
-		LPS[i]->lp_statistics = NULL;//LP event's statistic initialization, struct will be allocated by LP-0 at init time
+		LPS[i]->ipi_statistics = NULL;//LP event's statistic initialization, struct will be allocated by LP-0 at init time
 #endif
 	}
 	
@@ -685,6 +685,7 @@ void init_simulation(unsigned int thread_id){
 	    }
 	}
 
+	fflush(stdout);
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -1155,7 +1156,7 @@ end_loop:
 			}
 		}
 #endif
-		#if DEBUG==1 //not present in original version
+		
 		if(current_lp==(unsigned int)INVALID_LP_IDX){
 			if(is_end_sim(last_checked_lp)){//current_lp can be uninitialized here !!!
 			//idea:use last_checked_lp and increment mod num_Lp instead.
@@ -1165,14 +1166,14 @@ end_loop:
 			}
 			last_checked_lp = (last_checked_lp+1)%n_prc_tot;
 		}
-		#else
-		if(is_end_sim(current_lp)){//current_lp can be uninitialized here !!!
+		else{
+			if(is_end_sim(current_lp)){//current_lp can be uninitialized here !!!
 			//idea:use last_checked_lp and increment mod num_Lp instead.
-			if(check_termination()){
-				__sync_bool_compare_and_swap(&stop, false, true);
+				if(check_termination()){
+					__sync_bool_compare_and_swap(&stop, false, true);
+				}
 			}
 		}
-		#endif
 
 		//LOCAL LISTS PRUNING,no need to have current_lp and current_msg set.
 		nbc_prune();
@@ -1186,6 +1187,9 @@ end_loop:
 			}
 		}
 	}
+
+	//here while loop is finished !!!
+
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif

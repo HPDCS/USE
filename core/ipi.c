@@ -171,7 +171,7 @@ void check_ipi_capability(){
 #if IPI_DECISION_MODEL==1
 static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution,clock_timer*latency){
     bool ipi_useful;
-    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->lp_statistics)->lp_state[( (event_dest_in_execution->execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
+    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->ipi_statistics)->lp_state[( (event_dest_in_execution->execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
     if(avg_timer==0){
         ipi_useful = false;
         goto exit;

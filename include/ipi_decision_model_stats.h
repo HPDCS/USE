@@ -45,14 +45,14 @@ void print_ipi_decision_model_stats();
 static inline __attribute__((always_inline))
 clock_timer get_actual_mean(unsigned int lp_idx,unsigned int s, unsigned int t){
 	s = (s != LP_STATE_READY) ? 1 : 0;
-	lp_evt_stats *lps=LPS[lp_idx]->lp_statistics;
+	lp_evt_stats *lps=LPS[lp_idx]->ipi_statistics;
 	return lps->lp_state[s].evt_type[t].avg_exec_time;
 }
 
 static inline __attribute__((always_inline))
 void store_ipi_decision_model_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_timer time)
 {
-	lp_evt_stats *lps=LPS[lp_idx]->lp_statistics;
+	lp_evt_stats *lps=LPS[lp_idx]->ipi_statistics;
 	#if DEBUG==1
 	if( (s!=LP_STATE_READY) && (s!=LP_STATE_SILENT_EXEC) ){
 		printf("invalid LP_mode_state\n");

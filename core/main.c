@@ -14,7 +14,7 @@
 #include <sys/mman.h>
 #include <memory_limit.h>
 
-extern bool sim_error;
+extern volatile bool sim_error;
 extern volatile bool stop_timer;
 extern volatile bool stop;
 

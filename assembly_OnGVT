@@ -1,0 +1,25 @@
+compilando con printf:
+
+0000000000002170 <OnGVT>:
+    2170:	8b 56 08             	mov    0x8(%rsi),%edx
+    2173:	31 c0                	xor    %eax,%eax
+    2175:	81 fa 87 13 00 00    	cmp    $0x1387,%edx
+    217b:	77 03                	ja     2180 <OnGVT+0x10>
+    217d:	c3                   	retq   
+    217e:	66 90                	xchg   %ax,%ax
+    2180:	48 83 ec 08          	sub    $0x8,%rsp
+    2184:	48 8d 35 96 26 01 00 	lea    0x12696(%rip),%rsi        # 14821 <__PRETTY_FUNCTION__.5886+0x21>
+    218b:	bf 01 00 00 00       	mov    $0x1,%edi
+    2190:	e8 db f7 ff ff       	callq  1970 <__printf_chk@plt>
+    2195:	b8 01 00 00 00       	mov    $0x1,%eax
+    219a:	48 83 c4 08          	add    $0x8,%rsp
+    219e:	c3                   	retq   
+    219f:	90                   	nop
+
+compilando senza printf:
+
+0000000000002170 <OnGVT>:
+    2170:   81 7e 08 87 13 00 00    cmpl   $0x1387,0x8(%rsi)
+    2177:   0f 97 c0                seta   %al
+    217a:   c3                      retq   
+    217b:   0f 1f 44 00 00          nopl   0x0(%rax,%rax,1)

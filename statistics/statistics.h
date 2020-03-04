@@ -115,7 +115,7 @@
 #define STAT_IPI_TRAMPOLINE_RECEIVED_TID 503 //this statistic is not used explicitly, it is used in trampoline.S
 #endif
 
-#if DECISION_MODEL==1 && REPORT==1
+#if IPI_DECISION_MODEL==1 && REPORT==1
 #define STAT_IPI_FILTERED_IN_DECISION_MODEL_TID 1000
 
 #define STAT_CLOCK_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP  1001
@@ -260,7 +260,7 @@ struct stats_t {
     stat64_t clock_exec_ipi_syscall_tot;
     #endif
 
-    #if DECISION_MODEL==1 && REPORT==1
+    #if IPI_DECISION_MODEL==1 && REPORT==1
     stat64_t ipi_filtered_in_decision_model_tid;//per thread
     stat64_t ipi_filtered_in_decision_model_tot;
 

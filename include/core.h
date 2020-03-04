@@ -113,7 +113,7 @@ extern  simtime_t gvt;
 extern simtime_t t_btw_evts;
 extern LP_state **LPS;
 extern volatile bool stop;
-extern unsigned int sec_stop;
+extern volatile unsigned int sec_stop;
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);

@@ -133,8 +133,8 @@ typedef struct _LP_state {
 	msg_t* priority_message;//used to write priority message
 #endif
 
-#if DECISION_MODEL==1
-	void*lp_statistics;//used to keep track of per-LP event's statistics
+#if IPI_DECISION_MODEL==1
+	void*ipi_statistics;//used to keep track of per-LP event's statistics
 #endif
 
 } LP_state;
