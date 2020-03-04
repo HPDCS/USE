@@ -3,7 +3,7 @@
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 
-FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -mno-red-zone -O3
+FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -mno-red-zone -O0
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
@@ -12,7 +12,8 @@ FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CP
 
 
 INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
-LIBS=-pthread -lm -lcap
+LIBS=-pthread -lm -lcap 
+#add this library to fix -lgcc_s "libgcc_s.so.1 must be installed for pthread_cancel to work"
 ARCH_X86=1
 ARCH_X86_64=1
 
@@ -41,7 +42,7 @@ HANDLE_INTERRUPT=1
 HANDLE_INTERRUPT_WITH_CHECK=1
 endif
 
-ifdef ENABLE_IPI_MODULE
+ifeq ($(ENABLE_IPI_MODULE),1)
 PREEMPT_COUNTER=1
 LONG_JMP=1
 HANDLE_INTERRUPT=1

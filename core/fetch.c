@@ -818,18 +818,18 @@ void prune_local_queue_with_ts(simtime_t ts){
 			//trovato il primo nodo valido, continuo localmente la ricerca
 			while(current!=NULL && current->max_outgoing_ts < ts){
 				#if POSTING==1
-            if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
-            	if(LPS[current->receiver_id]->priority_message==current){
-            		break;
+            	if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
+            		if(LPS[current->receiver_id]->priority_message==current){
+            			break;
+            		}
+            		else if (current->collectionable==false){
+            			current->collectionable=true;
+            			break;
+            		}
+            		//current is not posted on LP and it is collectionable,collect it!
             	}
-            	else if (current->collectionable==false){
-            		current->collectionable=true;
-            		break;
-            	}
-            	//current is not posted on LP and it is collectionable,collect it!
-            }
-            //current is never been posted on LP collect it
-            #endif
+            	//current is never been posted on LP collect it
+            	#endif
 				to = current;
 				count_nodes++;
 				current = list_next(current); 
