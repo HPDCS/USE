@@ -6,6 +6,10 @@
 #include <simtypes.h>
 #include <unistd.h>
 
+#if IPI_DECISION_MODEL==1
+#include <ipi_decision_model_stats.h>
+#endif
+
 //Variabili da tunare durante l'esecuzione per throttling e threshold
 extern double delta_count;
 extern unsigned int reverse_execution_threshold;
@@ -15,6 +19,7 @@ struct stats_t *lp_stats;
 struct stats_t *system_stats;
 
 volatile double simduration;
+
 void statistics_init() {
 	if(posix_memalign((void**)&thread_stats, 64, n_cores * sizeof(struct stats_t)) < 0) {
 		printf("memalign failed\n");
@@ -43,12 +48,20 @@ void statistics_init() {
 	memset(thread_stats, 0, n_cores * sizeof(struct stats_t));
 	memset(lp_stats, 0, n_prc_tot * sizeof(struct stats_t));
 	memset(system_stats, 0, sizeof(struct stats_t));
+
+	#if IPI_DECISION_MODEL==1
+	init_ipi_decision_model_stats();//allocation of lp_stats structs for all LPs
+	#endif
 }
 
 void statistics_fini() {
 	free(thread_stats);
 	free(lp_stats);
 	free(system_stats);
+
+	#if DECISION_MODEL==1
+    fini_ipi_decision_model_stats();
+    #endif
 }
 
 static void statistics_post_data(struct stats_t *stats, int idx, int type, stat64_t value) {
@@ -866,6 +879,11 @@ void print_statistics() {
 
 	printf("===== SYSTEM-WIDE STATISTICS =====\n");
 	_print_statistics(system_stats);
+	
+	#if PRINT_IPI_DECISION_MODEL_STATS==1
+	print_ipi_decision_model_stats();
+	#endif
+
 }
 
 #if REPORT==1

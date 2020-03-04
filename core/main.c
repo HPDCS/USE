@@ -22,8 +22,8 @@ extern volatile bool stop;
 #include <ipi.h>
 #endif
 
-#if DECISION_MODEL==1
-#include <lp_stats.h>
+#if IPI_DECISION_MODEL==1
+#include <ipi_decision_model_stats.h>
 #endif
 
 __thread struct drand48_data seedT;
@@ -99,8 +99,8 @@ void start_simulation() {
     printf("\t- SYNCH_CHECK enabled.\n");
 #endif
 
-#if DECISION_MODEL==1
-    printf("\t- DECISION_MODEL enabled.\n");
+#if IPI_DECISION_MODEL==1
+    printf("\t- IPI_DECISION_MODEL enabled.\n");
 #endif
 
 //#if REVERSIBLE == 1
@@ -184,10 +184,6 @@ int main(int argn, char *argv[]) {
     simduration = (double)timer_value_seconds(exec_time);
 
     print_statistics();
-    
-    #if DECISION_MODEL==1
-    fini_lp_stats();
-    #endif
 
     printf("Simulation ended (seconds): %12.2f\n", simduration);
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
@@ -199,12 +195,12 @@ int main(int argn, char *argv[]) {
     write_results_on_csv("results/results.csv");//not present in original version
     #endif
     
-    //statistics_fini();
+    statistics_fini();
+
     if(sim_error){
         printf(RED("Execution ended for an error\n"));
     } 
     else if (stop || stop_timer){
-        //sleep(5);
         printf(GREEN( "Execution ended correctly\n"));
     }
     return 0;

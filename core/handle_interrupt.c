@@ -5,8 +5,8 @@
 #include <hpdcs_utils.h>
 #include <timer.h>
 
-#if DECISION_MODEL==1
-#include <lp_stats.h>
+#if IPI_DECISION_MODEL==1
+#include <ipi_decision_model_stats.h>
 #endif
 
 #if DEBUG==1
@@ -33,8 +33,8 @@ void end_exposition_of_current_event(msg_t*event){
 		#endif
 		#if REPORT==1
 		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
-		#if DECISION_MODEL==1
-		store_lp_stats(current_lp, event->execution_mode, event->type, exposition_timer);
+		#if IPI_DECISION_MODEL==1
+		store_ipi_decision_model_stats(current_lp, event->execution_mode, event->type, exposition_timer);
 		#endif
 		if(event->execution_mode==LP_STATE_READY){
 			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_LP,1);

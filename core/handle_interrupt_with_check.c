@@ -5,8 +5,8 @@
 #include <posting.h>
 #include <hpdcs_utils.h>
 
-#if DECISION_MODEL==1
-#include <lp_stats.h>
+#if IPI_DECISION_MODEL==1
+#include <ipi_decision_model_stats.h>
 #endif
 
 #if DEBUG==1
@@ -42,7 +42,7 @@ void*default_handler(void*arg){
             	make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
             }
             else{//current_msg not null
-            	#if DECISION_MODEL==1 && REPORT==1
+            	#if IPI_DECISION_MODEL==1 && REPORT==1
                 clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
                 statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP,1);
                 statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT_SYNCH_INTERRUPTED_LP,time_evt_interrupted);
@@ -71,7 +71,7 @@ void*default_handler(void*arg){
         #endif
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
-        	#if DECISION_MODEL==1 && REPORT==1
+        	#if IPI_DECISION_MODEL==1 && REPORT==1
             //no need of insert current_msg in localqueue
             clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
             statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_SYNCH_INTERRUPTED_LP,1);

@@ -1,13 +1,13 @@
 #pragma once
-#ifndef __LP_STATS_H
-#define __LP_STATS_H
+#ifndef __IPI_DECISION_MODEL_STATS_H
+#define __IPI_DECISION_MODEL_STATS_H
 
 /*******************************
  * IN ORDER TO BE ENABLED, THE  *
- * MACROS "HANDLE_INTERRUPT && REPORT" MUST BE *
+ * MACROS "IPI_DECISION_MODEL" MUST BE *
  * DEFINED AND SET TO 1.       *
  *******************************/
-#if DECISION_MODEL==1
+#if IPI_DECISION_MODEL==1
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,8 +37,10 @@ typedef struct _lp_stats {
 	#endif
 } lp_evt_stats;
 
-void init_lp_stats();
-void fini_lp_stats();
+void init_ipi_decision_model_stats();
+void fini_ipi_decision_model_stats();
+
+void print_ipi_decision_model_stats();
 
 static inline __attribute__((always_inline))
 clock_timer get_actual_mean(unsigned int lp_idx,unsigned int s, unsigned int t){
@@ -48,7 +50,7 @@ clock_timer get_actual_mean(unsigned int lp_idx,unsigned int s, unsigned int t){
 }
 
 static inline __attribute__((always_inline))
-void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_timer time)
+void store_ipi_decision_model_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_timer time)
 {
 	lp_evt_stats *lps=LPS[lp_idx]->lp_statistics;
 	#if DEBUG==1
@@ -102,6 +104,6 @@ void store_lp_stats(unsigned int lp_idx, unsigned int s, unsigned int t, clock_t
 	}
 }
 
-#endif//DECISION_MODEL==1 && REPORT==1
+#endif//IPI_DECISION_MODEL==1
 
 #endif

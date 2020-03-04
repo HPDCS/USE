@@ -31,7 +31,7 @@ extern char _fini;
 
 static __thread int fd;
 static __thread int cpu;
-static __thread cpu_set_t oldset;
+//static __thread cpu_set_t oldset;
 
 static inline int alloc_alternate_stack_area(void ** stack, unsigned long stack_size)
 {
@@ -65,7 +65,7 @@ static inline int free_alternate_stack_area(void ** stack, unsigned long stack_s
     return res;
 }
 
-static inline int pin_thread_to_core(int core)
+/*static inline int pin_thread_to_core(int core)
 {
 	int sched_cpu;
 	cpu_set_t cpuset;
@@ -88,14 +88,14 @@ static inline int pin_thread_to_core(int core)
 
 	return 0;
 }
-
 static inline int remove_thread_pinning(void)
 {
     if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &oldset))
         return 1;
 
     return 0;
-}
+}*/
+
 
 int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack,
     unsigned long long ** preempt_count_ptr_addr, unsigned long long ** standing_ipi_ptr_addr,
@@ -126,20 +126,10 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
     cpu = my_core;
 
-    if (pin_thread_to_core(cpu))
-    {
-        printf("Unable to pin thread to core %d. "
-        		"Thread will work with no IPI support.\n", cpu);
-        return 1;
-    }
-
     if (alloc_alternate_stack_area(alternate_stack, alternate_stack_size))
     {
         printf("Unable to allocate an \"alternate_stack\" memory area. "
                 "Thread will work with no IPI support.\n");
-
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
 
         return 1;
     }
@@ -151,9 +141,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
-
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
 
         return 1;
     }
@@ -167,9 +154,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
-
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
 
         return 1;
     }
@@ -185,9 +169,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
-
         return 1;
     }
 
@@ -201,9 +182,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
-
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
 
         return 1;
     }
@@ -225,9 +203,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
-
         return 1;
     }
 
@@ -241,9 +216,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
-
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
 
         return 1;
     }
@@ -259,9 +231,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
 
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
-
         return 1;
     }
 
@@ -275,9 +244,6 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
 
         if (free_alternate_stack_area(alternate_stack, alternate_stack_size))
             printf("Unable to free the \"alternate_stack\" memory area.\n");
-
-        if (remove_thread_pinning())
-            printf("Unable to remove thread pinning from core %d.\n", cpu);
 
         return 1;
     }
@@ -299,12 +265,6 @@ int ipi_unregister_thread(void ** alternate_stack, unsigned long alternate_stack
 
     if (alternate_stack != NULL && free_alternate_stack_area(alternate_stack, alternate_stack_size))
         printf("Unable to free the \"alternate_stack\" memory area.\n");
-
-    if (remove_thread_pinning())
-    {
-        printf("Unable to remove thread pinning from core %d.\n", cpu);
-        res = 1;
-    }
 
     return res;
 }

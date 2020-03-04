@@ -58,8 +58,8 @@
 #if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
 
-#if DECISION_MODEL==1
-#include <lp_stats.h>
+#if IPI_DECISION_MODEL==1
+#include <ipi_decision_model_stats.h>
 #endif
 
 #endif
@@ -333,7 +333,7 @@ void LPs_metada_init() {
 #if POSTING==1
 		LPS[i]->priority_message=NULL;
 #endif
-#if DECISION_MODEL==1
+#if IPI_DECISION_MODEL==1
 		LPS[i]->lp_statistics = NULL;//LP event's statistic initialization, struct will be allocated by LP-0 at init time
 #endif
 	}
@@ -575,7 +575,7 @@ void init_simulation(unsigned int thread_id){
 #endif
 
 	// Set the CPU affinity
-	set_affinity(tid);//TODO: decommentare per test veri
+	set_affinity(tid);
 	
 	// Initialize the set ??
 	unsafe_set_init();
@@ -628,10 +628,7 @@ void init_simulation(unsigned int thread_id){
 		check_trampoline_function();
 		printf("all checks passed on trampoline function\n");
 		#endif
-		#if DECISION_MODEL==1
-		init_lp_stats();//allocation of lp_stats structs for all LPs
-		printf("LP_stats init finished\n");
-		#endif
+
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
        		current_msg->sender_id 		= -1;//
@@ -660,8 +657,7 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->state_log_forced = false;
 			LPS[current_lp]->until_ongvt = 0;
 			LPS[current_lp]->until_ckpt_recalc = 0;
-			//LPS[current_lp]->ckpt_period = 20;
-			//LPS[current_lp]->epoch = 1;
+
 #if HANDLE_INTERRUPT==1
 			//after execution of INIT_EVENTS alloc dummy_bound
 			LPS[current_lp]->dummy_bound=allocate_dummy_bound(current_lp);
@@ -842,7 +838,7 @@ void thread_loop(unsigned int thread_id) {
             	make_LP_state_invalid(LPS[current_lp]->old_valid_bound);
             }
 			else if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
-				#if DECISION_MODEL==1 && REPORT==1
+				#if IPI_DECISION_MODEL==1 && REPORT==1
 				statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP,1);
 				clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
         		statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP,time_evt_interrupted);
@@ -863,7 +859,7 @@ void thread_loop(unsigned int thread_id) {
 				make_LP_state_invalid(list_prev(current_msg));
 			}
 			else{
-				#if DECISION_MODEL==1 && REPORT==1
+				#if IPI_DECISION_MODEL==1 && REPORT==1
 				statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP,1);
 				
         		clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);

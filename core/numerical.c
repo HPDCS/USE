@@ -477,6 +477,7 @@ void numerical_init(void) {
 	// Initialize the master seed
 	load_seed();
 	master_seed = sanitize_seed(master_seed);
+	printf("master seed is %lu\n",master_seed);
 
 }
 #undef RS_WORD_LENGTH

@@ -1,7 +1,7 @@
-#if DECISION_MODEL==1
-#include <lp_stats.h>
+#if IPI_DECISION_MODEL==1
+#include <ipi_decision_model_stats.h>
 
-void init_lp_stats()
+void init_ipi_decision_model_stats()
 {
 	unsigned int index;
 	if (LPS == NULL){
@@ -28,29 +28,37 @@ void init_lp_stats()
 	}
 }
 
-void fini_lp_stats()
+#if PRINT_IPI_DECISION_MODEL_STATS==1
+void print_ipi_decision_model_stats()
 {
 	unsigned int index;
 	for (index=0; index<n_prc_tot; index++)
 	{
-
 		if (LPS[index]->lp_statistics != NULL)
 		{
 			unsigned int s, t;
-			for (s=0; s<NUMBER_OF_LP_STATES; s++)
+			for (s=0; s<NUMBER_OF_LP_STATES; s++){
 				for (t=0; t<NUMBER_OF_TYPES; t++){
-					#if PRINT_MEAN==1
 					if (((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time != 0)
 						printf("LP-ID: %u - LP-Exe-State: %s - EVENT-Type: %u - Avg-Exe-Time: %llu\n",
 						index, (s == 0) ? "Forward" : "Silent", t, (unsigned long long int) ((lp_evt_stats *) LPS[index]->lp_statistics)->lp_state[s].evt_type[t].avg_exec_time);
-					#endif
 				}
+			}	
 			#if DEBUG==1
 			printf("LP-ID: %u max_timer=%llu\n",index,(unsigned long long)((lp_evt_stats*)LPS[index]->lp_statistics)->max_timer);
 			#endif
-			free((void *) LPS[index]->lp_statistics);
-			LPS[index]->lp_statistics = NULL;
 		}
+	}
+}
+#endif
+
+void fini_ipi_decision_model_stats()
+{
+	unsigned int index;
+	for (index=0; index<n_prc_tot; index++)
+	{
+		free((void *) LPS[index]->lp_statistics);
+		LPS[index]->lp_statistics = NULL;
 	}
 }
 
