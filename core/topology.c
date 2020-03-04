@@ -98,6 +98,13 @@ unsigned int FindReceiver(int topology) {
 			#undef SE
 			#undef E
 
+			#if DEBUG==1 //not present in original version
+			if(current_lp==(unsigned int)receiver && (n_prc_tot!=1) ){
+				printf("invalid receiver id in TOPOLOGY HEXAGON\n");
+				abort();
+			}
+			#endif
+
 			break;
 
 

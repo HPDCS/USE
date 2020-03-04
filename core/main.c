@@ -11,10 +11,8 @@
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/mman.h>
-#include <numa.h>
+
+#include <memory_limit.h>
 
 extern bool sim_error;
 extern volatile bool stop_timer;
@@ -24,17 +22,9 @@ extern volatile bool stop;
 #include <ipi.h>
 #endif
 
-#if DECISION_MODEL==1 && REPORT==1
+#if DECISION_MODEL==1
 #include <lp_stats.h>
 #endif
-
-#define GIGA (1024ULL*1024ULL*1024ULL)
-
-#ifndef MAX_ALLOCABLE_GIGAS
-#error MAX_ALLOCABLE_GIGAS is not defined in makefile
-#endif
-
-#define MAX_MEMORY_ALLOCABLE (MAX_ALLOCABLE_GIGAS*GIGA) //MAX_GIGA_ALLOCABLE is defined in makefile
 
 __thread struct drand48_data seedT;
 
@@ -47,7 +37,7 @@ void *start_thread(){
 	
 	int tid = (int) __sync_fetch_and_add(&tid_ticket, 1);
 	
-    srand48_r(tid+254, &seedT);
+    srand48_r(tid+254, &seedT);//useful for nbcalqueue
 
 	//START THREAD (definita in core.c)
 	thread_loop(tid);
@@ -135,43 +125,16 @@ void start_simulation() {
     }
 }
 
-void set_max_memory_allocable(unsigned long max_bytes_allocable){
-    struct rlimit set_memory_limit;
-    set_memory_limit.rlim_cur=max_bytes_allocable;
-    set_memory_limit.rlim_max=max_bytes_allocable;
-    
-    if(setrlimit(RLIMIT_AS,&set_memory_limit)!=0){
-        printf("errore set limit address space\n");
-        perror("error:");
-        gdb_abort;
-    }
+void print_commit_hash_and_newline(){
+    printf("commit hash:\n");
+    system("git log --pretty=format:'%H' -n 1");
 }
-
-#if DEBUG==1
-void test_memory_limit_mmap(unsigned long byte_to_alloc){
-    char*memory_test;
-    if ((memory_test = mmap(NULL, (size_t) byte_to_alloc, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, 0, 0)) == MAP_FAILED){
-        printf("unable to alloc memory with mmap,test succeed\n");
-        perror("error");
-    }
-    else
-        free(memory_test);//free memory if limit not exceed
-}
-
-
-void test_memory_limit_malloc(unsigned long byte_to_alloc){
-    char*memory_test=malloc(byte_to_alloc);
-    if(memory_test==NULL){
-        printf("unable to alloc memory with malloc,test succeed\n");
-        perror("error");
-    }
-    else
-        free(memory_test);//free memory if limit not exceed
-}
-#endif
 
 int main(int argn, char *argv[]) {
     timer exec_time;
+
+    printf("taken %d parameters\n",argn);
+    print_commit_hash_and_newline();
 
     if(argn < 3) {
         fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
@@ -180,8 +143,22 @@ int main(int argn, char *argv[]) {
     } else {
         n_cores = atoi(argv[1]);
         n_prc_tot = atoi(argv[2]);
-        if(argn == 4)
+
+        if(argn >= 4){
             sec_stop = atoi(argv[3]);
+        }
+            
+        if(argn == 5){//pass compilation line as argument
+            const char* compilation_line="make";
+            if(strncmp(argv[4],compilation_line,strlen(compilation_line))==0){
+                printf("Compilation line: %s\n",argv[4]);
+            }
+            else{
+                printf("Last parameter must be compilation_line and start with \"%s\"\n",compilation_line);
+                exit(EXIT_FAILURE);
+            }
+            
+        }
     }
   
 #if IPI_SUPPORT==1
@@ -191,8 +168,7 @@ int main(int argn, char *argv[]) {
 
     set_max_memory_allocable(MAX_MEMORY_ALLOCABLE);
     #if DEBUG==1
-    test_memory_limit_malloc(MAX_MEMORY_ALLOCABLE);
-    test_memory_limit_mmap(MAX_MEMORY_ALLOCABLE);
+    test_memory_limit();
     #endif
 
     //set_numa_topology();
@@ -209,8 +185,8 @@ int main(int argn, char *argv[]) {
 
     print_statistics();
     
-    #if DECISION_MODEL==1 && REPORT==1
-    fini_lp_stats(LPS, n_prc_tot);
+    #if DECISION_MODEL==1
+    fini_lp_stats();
     #endif
 
     printf("Simulation ended (seconds): %12.2f\n", simduration);

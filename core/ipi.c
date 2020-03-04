@@ -19,7 +19,7 @@
 #include <sys/resource.h>
 #include <sys/capability.h>
 
-#if REPORT==1
+#if DECISION_MODEL==1
 #include <lp_stats.h>
 #endif
 
@@ -166,7 +166,6 @@ void check_ipi_capability(){
         printf("not enough memory lockable\n");
         gdb_abort;
     }
-    printf("program has ipi_capability\n");
 }
 
 #if DECISION_MODEL==1

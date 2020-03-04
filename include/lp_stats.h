@@ -7,7 +7,7 @@
  * MACROS "HANDLE_INTERRUPT && REPORT" MUST BE *
  * DEFINED AND SET TO 1.       *
  *******************************/
-#if DECISION_MODEL==1 && REPORT==1
+#if DECISION_MODEL==1
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

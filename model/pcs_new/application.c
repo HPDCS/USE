@@ -81,14 +81,17 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			if(IsParameterPresent(event_content, "complete_calls"))
 				complete_calls = GetParameterInt(event_content, "complete_calls");
 
-			state->fading_recheck = IsParameterPresent(event_content, "fading_recheck");
+			if(IsParameterPresent(event_content, "fading_recheck"))
+				state->fading_recheck = true;
+			else
+				state->fading_recheck=false;
 			state->variable_ta = IsParameterPresent(event_content, "variable_ta");
 
 
 			// Show current configuration, only once
 			if(me == 0) {
-				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d, FACTOR_SCALING=%d,PROB_FASTER=%lf\n",
-					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta,FACTOR_SCALING,PROB_FASTER);
+				printf("%s: CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nfading_recheck_frequency: %d\nvariable_ta: %d, FACTOR_SCALING=%d,PROB_FASTER=%lf\n",
+					MODEL_NAME,complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck,FADING_RECHECK_FREQUENCY, state->variable_ta,FACTOR_SCALING,PROB_FASTER);
 				fflush(stdout);
 			}
 
@@ -164,7 +167,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 				}
 
-				if(new_event_content.call_term_time < handoff_time) {
+				if(new_event_content.call_term_time <= handoff_time + HANDOFF_LEAVE_SHIFT) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_PCS);
@@ -215,7 +218,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			new_event_content.call_term_time =  event_content->call_term_time;
 			new_event_content.from = me;
 			new_event_content.dummy = &(state->dummy);
-			ScheduleNewEvent(event_content->cell, now+HANDOFF_RECV_SHIFT, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
+			ScheduleNewEvent(event_content->cell, now + HANDOFF_LEAVE_SHIFT, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 			break;
 
 		case HANDOFF_RECV:
@@ -256,7 +259,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 						(simtime_t) (5 * Random());
 				}
 
-				if(new_event_content.call_term_time < handoff_time ) {
+				if(new_event_content.call_term_time <= handoff_time + HANDOFF_LEAVE_SHIFT ) {
 					#if DEBUG==1
 					if(new_event_content.call_term_time < now){
 						printf("invalid timestamp call_term_time %lf, is in past respect to now %lf\n",new_event_content.call_term_time,now);

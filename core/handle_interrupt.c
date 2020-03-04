@@ -5,7 +5,7 @@
 #include <hpdcs_utils.h>
 #include <timer.h>
 
-#if DECISION_MODEL==1 && REPORT==1
+#if DECISION_MODEL==1
 #include <lp_stats.h>
 #endif
 

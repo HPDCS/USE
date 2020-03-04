@@ -5,7 +5,7 @@
 #include <posting.h>
 #include <hpdcs_utils.h>
 
-#if DECISION_MODEL==1 && REPORT==1
+#if DECISION_MODEL==1
 #include <lp_stats.h>
 #endif
 

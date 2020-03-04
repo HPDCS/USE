@@ -308,11 +308,6 @@ else
 CFLAGS:= $(CFLAGS) -DCKPT_RECALC=0
 endif
 
-ifdef REPORT
-CFLAGS:= $(CFLAGS) -DREPORT=$(REPORT)
-else
-CFLAGS:= $(CFLAGS) -DREPORT=1
-endif
 ################################# USED FOR SINGLE MODELS################
 
 #PHOLD / PHOLC_COUNT / PHOLD_HOTSPOT
@@ -399,6 +394,9 @@ PCS_HOT_CELLS_SOURCES=model/pcs-hot-cells/application.c\
 PCS_SOURCES=model/pcs/application.c\
 		    model/pcs/functions_app.c
 
+PCS_NEW_SOURCES=model/pcs_new/application.c\
+		    model/pcs_new/functions_app.c
+
 PHOLD_SOURCES=model/phold/application.c
 
 PHOLD_UNBALANCED_SOURCES=model/phold_unbalanced/application.c
@@ -469,6 +467,7 @@ CORE_SOURCES =  core/ipi_ctrl.c\
 		core/handle_interrupt_with_check.c\
 		core/lp_stats.c\
 		core/numa.c\
+		core/memory_limit.c\
 		mm/garbagecollector.c
 		
 
@@ -493,6 +492,7 @@ CORE_OBJ=$(CORE_SOURCES:.c=.o)
 REVERSE_OBJ=$(REVERSE_SOURCES:.c=.o)
 
 PCS_OBJ=$(PCS_SOURCES:.c=.o)
+PCS_NEW_OBJ=$(PCS_NEW_SOURCES:.c=.o)
 PCS_HOT_CELLS_OBJ=$(PCS_HOT_CELLS_SOURCES:.c=.o)
 PCS_PREALLOC_OBJ=$(PCS_PREALLOC_SOURCES:.c=.o)
 TRAFFIC_OBJ=$(TRAFFIC_SOURCES:.c=.o)
@@ -514,6 +514,9 @@ all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
 pcs: clean _pcs executable
+
+pcs_new: TARGET=pcs_new
+pcs_new: clean _pcs_new executable
 
 pcs_hot_cells: TARGET=pcs_hot_cells 
 pcs_hot_cells: clean _pcs_hot_cells executable
@@ -619,6 +622,9 @@ _pcs_hot_cells: $(PCS_HOT_CELLS_OBJ)
 _pcs: $(PCS_OBJ)
 	@ld -r -g $(PCS_OBJ) -o model/__application.o
 
+_pcs_new: $(PCS_NEW_OBJ)
+	@ld -r -g $(PCS_NEW_OBJ) -o model/__application.o
+
 _tcar: $(TCAR_OBJ)
 	@ld -r -g $(TCAR_OBJ) -o model/__application.o
 
@@ -668,6 +674,7 @@ clean:
 	@find . -type f -name "phold_nears"          -exec rm {} \;
 	@find . -type f -name "phold_nears_random"   -exec rm {} \;
 	@find . -type f -name "pcs" 		         -exec rm {} \;
+	@find . -type f -name "pcs_new" 		     -exec rm {} \;
 	@find . -type f -name "pcs-prealloc"         -exec rm {} \;
 	@find . -type f -name "traffic "  	         -exec rm {} \;
 	@find . -type f -name "tcar" 		         -exec rm {} \;
