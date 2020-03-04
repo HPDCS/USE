@@ -440,7 +440,10 @@ static void load_seed(void) {
 
 		}
 		printf("opened random number device from path /dev/random\n");
-		read(fd, &new_seed, sizeof(seed_type));
+		if(read(fd, &new_seed, sizeof(seed_type))!=sizeof(seed_type)){
+			printf("error in reading new_seed from dev/random\n");
+			gdb_abort;
+		}
 		printf("readed random number from path /dev/random\n");
 		close(fd);
 		fprintf(fp, "%llu\n", (unsigned long long)new_seed); // We cast, so that we get an integer representing just a bit sequence
@@ -454,7 +457,10 @@ static void load_seed(void) {
 	}
 
 	// Load the initial seed
-	fscanf(fp, "%llu", (unsigned long long *)&master_seed);
+	if(fscanf(fp, "%llu", (unsigned long long *)&master_seed)!=1){
+		printf("error in reading master seed\n");
+		gdb_abort;
+	}
 
 
 	rewind(fp);

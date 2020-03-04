@@ -2,7 +2,8 @@
 #include <sys/resource.h>
 #include <stdio.h>
 #include <hpdcs_utils.h>
-
+#include <sys/mman.h>
+#include <stdlib.h>
 void set_max_memory_allocable(unsigned long max_bytes_allocable){
     struct rlimit set_memory_limit;
     set_memory_limit.rlim_cur=max_bytes_allocable;

@@ -234,7 +234,7 @@ int ipi_register_thread(int tid, unsigned long callback, void ** alternate_stack
         return 1;
     }
 
-    if (ioctl(fd, IPI_SET_TEXT_END, (&_fini - 1)) < 0)
+    if (ioctl(fd, IPI_SET_TEXT_END, (((unsigned long long)&_fini - 1))) < 0)
     {
         printf("Unable to set second range's text_end with address 0x%lx. "
                 "Thread will work with no IPI support.\n",(unsigned long) &_fini);

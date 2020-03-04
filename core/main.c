@@ -11,7 +11,7 @@
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
-
+#include <sys/mman.h>
 #include <memory_limit.h>
 
 extern bool sim_error;
@@ -127,7 +127,8 @@ void start_simulation() {
 
 void print_commit_hash_and_newline(){
     printf("commit hash:\n");
-    system("git log --pretty=format:'%H' -n 1");
+    int res=system("git log --pretty=format:'%H' -n 1");
+    (void)res;
 }
 
 int main(int argn, char *argv[]) {
