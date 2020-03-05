@@ -224,7 +224,7 @@ void send_ipi_to_lp(msg_t*event){
         #else
         ipi_useful=true;
         #endif
-        if(ipi_useful){
+        if(ipi_useful && (event_dest_in_execution == LPS[lp_idx]->msg_curr_executed)){
             //this unpreemptable barrier can be relaxed to contains only correlated statistics,no need to protect instructions before "syscall",
             //but in this way the number of syscalls must be coherent with kernel module counters!!
             enter_in_unpreemptable_zone();

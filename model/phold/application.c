@@ -126,7 +126,10 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	}
 }
 	
-
+//these 3 pragma statements are useful to debug -O3 compilation,
+//OnGVT not works with -O3 if these 3 statement or statement printf("snapshot_events=%d\n",snapshot->events) are decommented
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	(void) me;
 
@@ -136,6 +139,7 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
     //printf("snapshot_events=%d\n",snapshot->events);
 	return true;
 }
+//#pragma GCC pop_options
 
 void write_model_parameters_and_separator(FILE*results_file,char*separator){
 	fprintf(results_file,"MODEL_NAME:%s;LOOP:%u;FAN_OUT%u%s",MODEL_NAME,LOOP_COUNT,FAN_OUT,separator);
