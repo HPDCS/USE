@@ -1,6 +1,9 @@
 #ifndef MEMORY_LIMIT_H
 #define MEMORY_LIMIT_H
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #define GIGA (1024ULL*1024ULL*1024ULL)
 
 #ifndef MAX_ALLOCABLE_GIGAS
@@ -12,6 +15,6 @@
 #if DEBUG==1
 void test_memory_limit();
 #endif
-
 void set_max_memory_allocable(unsigned long max_bytes_allocable);
+long get_memory_allocated();
 #endif

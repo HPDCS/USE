@@ -5,6 +5,18 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 
+long get_memory_allocated() {
+  struct rusage r_usage;
+  if(getrusage(RUSAGE_SELF,&r_usage)!=0){
+    printf("impossible retrieve memory allocated by current process\n");
+    perror("error:");
+    return -1;
+  }
+  //return the maximum resident set size used (in kilobytes).
+  return r_usage.ru_maxrss;
+}
+
+
 void set_max_memory_allocable(unsigned long max_bytes_allocable){
     struct rlimit set_memory_limit;
     set_memory_limit.rlim_cur=max_bytes_allocable;

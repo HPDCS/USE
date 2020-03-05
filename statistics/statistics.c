@@ -12,6 +12,9 @@
 
 #include <malloc.h> //useful to print allocation info related to malloc functions
 
+#include <sys/types.h>
+#include <unistd.h>
+#include <memory_limit.h>
 //Variabili da tunare durante l'esecuzione per throttling e threshold
 extern double delta_count;
 extern unsigned int reverse_execution_threshold;
@@ -845,13 +848,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n\n");
 	#endif
 
-	//memory allocation info related to malloc functions
-	struct mallinfo mi;
-	mi = mallinfo();//get malloc info
-    
-    printf("Total allocated space in MB(uordblks)...........: %d\n", mi.uordblks/(1024*1024));
-    printf("Total non-mmapped Megabytes (arena).............: %d\n", mi.arena/(1024*1024));
-    printf("\n");
+    printf("Total allocated space...........................: %lu MB\n", get_memory_allocated()/(1024));
 
 	printf("\n\n");
 
