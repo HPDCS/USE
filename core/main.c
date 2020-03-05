@@ -183,7 +183,7 @@ int main(int argn, char *argv[]) {
 
 	start_simulation();
     simduration = (double)timer_value_seconds(exec_time);
-
+    
     print_statistics();
 
     printf("Simulation ended (seconds): %12.2f\n", simduration);
