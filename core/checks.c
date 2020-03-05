@@ -353,15 +353,6 @@ void check_thread_loop_after_executeEvent(){
         gdb_abort;
     }
 
-    
-#if POSTING==1
-    for(unsigned int i=0;i<MAX_THR_HASH_TABLE_SIZE;i++){
-        if(_thr_pool.collision_list[i]!=NULL){
-            printf("not empty collision list,tid=%d\n",tid);
-            gdb_abort;
-        }
-    }
-#endif
 	if((unsigned long long)current_msg->node & 0x1){
 			printf(RED("B - Mi hanno cancellato il nodo mentre lo processavo!!!\n"));
 			print_event(current_msg);

@@ -782,6 +782,130 @@ void prune_local_queue_with_ts_old(simtime_t ts){
 }
 
 
+#if POSTING==1 //TODO remove double version of this function and insert POSTING's line in one function
+void prune_local_queue_with_ts(simtime_t ts){
+	msg_t *current = NULL;
+	msg_t *tmp_node = NULL;
+
+	msg_t *from = NULL;
+	msg_t *to = NULL;
+	
+	size_t count_nodes= 0;
+	
+	//given a linked list L=[head,tail] it founds a set of sublists ["from","to"] where "from" is head of sublist of L and "to" is tail of sublist of L.
+	//every couple ["from","to"] can be freed.
+	//So L can be seen as L=(...from_1...to_1...from_2...to_2........from_n....to_n...) 
+	//Note:
+	//"from" can be equals to "to", if from==to==NULL (count_nodes must be 0) means no evts must be freed,this condition terminates the search of sublists ["from","to"]
+	//if from==to with from !=NULL (count_nodes must be 1) means only one evts must be freed,in this case continue search!
+	
+	//get head of list L
+	if(((rootsim_list*)to_remove_local_evts_old)->head != NULL){
+		current = (msg_t*) ((rootsim_list*)to_remove_local_evts_old)->head->data;
+	}
+	//scan the list L
+	while(current!=NULL){
+		tmp_node = list_next(current);
+		//in this loop "current" is the current node to check if can be freed
+		#if DEBUG==1
+		if(from != NULL || to!=NULL || count_nodes!=0){
+			printf("variables haven't initial value in prune_local_queue_with_ts\n");
+			gdb_abort;
+		}
+		#endif
+
+		if(current->max_outgoing_ts < ts){//in this case we can free events,else goto next node
+            #if POSTING==1
+            if(current->posted!=NEVER_POSTED){
+            	if(LPS[current->receiver_id]->priority_message==current){
+            		//printf("priority_msg==evt==0x%lx,tid=%d\n",current,tid);
+            		current = tmp_node;//set current to next_node to compute and continue loop
+            		continue;
+            	}
+            	else if(current->collectionable==false){
+            		current->collectionable=true;
+            		current = tmp_node;//set current to next_node to compute and continue loop
+            		continue;
+            	}
+            	//current is not posted on LP and it is collectionable,collect it!
+            }
+            //current is never been posted on LP, collect it
+            #endif
+
+            //trovato il primo nodo valido, continuo localmente la ricerca a partire dal nodo successivo
+			from = current;
+			to = current;
+			count_nodes++;
+			current = list_next(current);
+
+			while(current!=NULL && current->max_outgoing_ts < ts){
+				#if POSTING==1
+            	if(current->posted!=NEVER_POSTED){
+            		if(LPS[current->receiver_id]->priority_message==current){
+            			//printf("priority_msg2==evt2==0x%lx,tid=%d\n",current,tid);
+            			break;
+            		}
+            		else if (current->collectionable==false){
+            			//printf("ptr=%lx,tid=%d\n",current,tid);
+            			current->collectionable=true;
+            			break;
+            		}
+            		//current is not posted on LP and it is collectionable,collect it!
+            	}
+            	//current is never been posted on LP collect it
+            	#endif
+				to = current;
+				count_nodes++;
+				current = list_next(current); 
+			}
+			//now current cannot be freed,goto next of current in next_loop
+
+			#if DEBUG==1 //not present in original version
+			if(count_nodes==0 || current==from || (list_next(to)!=current) ){
+				printf("error in prune_local_queue_with_ts\n");
+				gdb_abort;
+			}
+			#endif
+
+			//here we have sublist ["from","to"]
+
+			//Stacco dalla vecchia lista
+			if(list_prev(from) != NULL){
+				list_container_of(list_prev(from))->next = list_container_of(to)->next;
+			}else{
+				((rootsim_list*)to_remove_local_evts_old)->head = list_container_of(to)->next;
+			}
+
+			if(list_next(to) != NULL){
+				list_container_of(list_next(to))->prev = list_container_of(from)->prev;
+			}else{
+				((rootsim_list*)to_remove_local_evts_old)->tail = list_container_of(from)->prev;
+			}
+
+			((rootsim_list*)to_remove_local_evts_old)->size -= count_nodes;
+			//Attacco nella nuova lista
+			list_insert_tail_by_contents(freed_local_evts, count_nodes ,from, to);
+
+			//remember that list_next(to)==current,but current cannot be freed, so goto next of current
+			if(current!=NULL){
+				tmp_node = list_next(current);//goto node after "current"
+			}
+			else{
+				tmp_node = list_next(to);//goto node after "to"
+			}
+
+			//tmp_node = list_next(to);//goto node after "to",this line is present in original version instead of if-else statements above
+			
+			//resetto i campi
+			to = NULL;
+			from = NULL;
+			count_nodes= 0;
+		}
+		current = tmp_node;//set current to next_node to compute,this statement is idempotent if we enter in if(current->max_outgoing_ts < ts)
+	}
+}
+
+#else
 void prune_local_queue_with_ts(simtime_t ts){
 	msg_t *current = NULL;
 	msg_t *tmp_node = NULL;
@@ -799,41 +923,21 @@ void prune_local_queue_with_ts(simtime_t ts){
 		tmp_node = list_next(current);
 		
 		if(current->max_outgoing_ts < ts){
-            #if POSTING==1
-            if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
-            	if(LPS[current->receiver_id]->priority_message==current){
-            		current = tmp_node;
-            		continue;
-            	}
-            	else if (current->collectionable==false){
-            		current->collectionable=true;
-            		current = tmp_node;
-            		continue;
-            	}
-            	//current is not posted on LP and it is collectionable,collect it!
-            }
-            //current is never been posted on LP collect it
-            #endif
 			from = current;
 			//trovato il primo nodo valido, continuo localmente la ricerca
 			while(current!=NULL && current->max_outgoing_ts < ts){
-				#if POSTING==1
-            	if(current->posted==POSTED_VALID || current->posted==POSTED_INVALID){
-            		if(LPS[current->receiver_id]->priority_message==current){
-            			break;
-            		}
-            		else if (current->collectionable==false){
-            			current->collectionable=true;
-            			break;
-            		}
-            		//current is not posted on LP and it is collectionable,collect it!
-            	}
-            	//current is never been posted on LP collect it
-            	#endif
 				to = current;
 				count_nodes++;
 				current = list_next(current); 
 			}
+
+			#if DEBUG==1 //not present in original version
+			if(count_nodes==0 || current==from){
+				printf("error in prune_local_queue_with_ts\n");
+				gdb_abort;
+			}
+			#endif
+
 			//Stacco dalla vecchia lista
 			if(list_prev(from) != NULL){
 				list_container_of(list_prev(from))->next = list_container_of(to)->next;
@@ -846,7 +950,7 @@ void prune_local_queue_with_ts(simtime_t ts){
 				((rootsim_list*)to_remove_local_evts_old)->tail = list_container_of(from)->prev;
 			}
 			((rootsim_list*)to_remove_local_evts_old)->size -= count_nodes;
-			//Attavvo nella nuova lista
+			//Attacco nella nuova lista
 			list_insert_tail_by_contents(freed_local_evts, count_nodes ,from, to);
 			tmp_node = list_next(to);
 			//resetto i campi
@@ -857,4 +961,4 @@ void prune_local_queue_with_ts(simtime_t ts){
 		current = tmp_node;
 	}
 }
-
+#endif

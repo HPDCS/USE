@@ -599,13 +599,6 @@ void init_simulation(unsigned int thread_id){
 	initialize_preempt_counter(tid);//init counter
 #endif
 
-#if POSTING==1
-    //initialize collision_list
-    for (int i=0; i<MAX_THR_HASH_TABLE_SIZE; i++)
-    {
-        _thr_pool.collision_list[i]=NULL;
-    }
-#endif
 	if(tid == 0){
 		LPs_metada_init();
 		printf("LP_metada init finished\n");

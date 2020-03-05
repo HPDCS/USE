@@ -118,7 +118,6 @@ __thread nbc_bucket_node *to_free_tables_new = NULL;
 
 __thread unsigned long long mark;
 __thread unsigned int to_remove_nodes_count = 0;
-__thread bool resize_occured=false;
 
 static unsigned int * volatile prune_array;
 static unsigned int threads;
@@ -878,7 +877,7 @@ static table* read_table(nb_calqueue *queue)
 		new_h 			= h->new_table;
 		array 			= h->array;
 		new_bw 			= new_h->bucket_width;
-		resize_occured = true;
+
 		if(new_bw < 0)
 		{
 			block_table(h);

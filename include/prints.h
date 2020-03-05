@@ -11,7 +11,7 @@
 #define printth(format, ...) printf("T%u :: " format, tid, ##__VA_ARGS__);
 
 #if POSTING==1
-#define print_event(event)	printf("[LP:%u->%u]: TS:%f TB:%u EP:%u STATE:%#02x(%s) IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p,posted=%d,MONITOR=%lx\n",\
+#define print_event(event)	printf("[LP:%u->%u]: TS:%f TB:%u EP:%u STATE:%#02x(%s) IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p,posted=%llu,MONITOR=%lx\n",\
 							event->sender_id,\
 							event->receiver_id,\
 							event->timestamp,\

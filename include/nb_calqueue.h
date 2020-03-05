@@ -155,5 +155,4 @@ extern void prune_local_queue_with_ts(simtime_t ts);
 
 extern unsigned long long hash(double timestamp, double bucket_width);
 
-extern __thread bool resize_occured;
 #endif /* DATATYPES_NONBLOCKING_QUEUE_H_ */

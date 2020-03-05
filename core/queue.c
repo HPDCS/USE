@@ -193,7 +193,7 @@ void queue_deliver_msgs(void) {
 #if DEBUG==1//not present in original version
         check_queue_deliver_msgs();
 #endif
-    resize_occured = false;
+
     for(i = 0; i < _thr_pool._thr_pool_count; i++) {
 
         new_hole = _thr_pool.messages[i].father;
@@ -225,6 +225,7 @@ void queue_deliver_msgs(void) {
         new_hole->tie_breaker = 0;
         new_hole->max_outgoing_ts = new_hole->timestamp;
         new_hole->posted=NEVER_POSTED;
+        new_hole->collectionable=false;
 #if DEBUG==1
         if(new_hole->timestamp < current_lvt){
             printf("Sto generando eventi nel passato!!! LVT:%f NEW_TS:%f",current_lvt,new_hole->timestamp);

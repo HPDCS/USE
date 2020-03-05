@@ -14,37 +14,6 @@
 #include <events.h>
 #include <posting.h>
 
-
-/*void insert_msg_in_hash_table(msg_t*msg_ptr){//open addressing
-    unsigned int hash_table_size=MAX_THR_HASH_TABLE_SIZE;
-    #if DEBUG==1
-    if((MAX_THR_HASH_TABLE_SIZE & (MAX_THR_HASH_TABLE_SIZE-1))!=0){
-        printf("MAX_THR_HASH_TABLE_SIZE is not a power of 2\n");
-        gdb_abort;
-    }
-    #endif
-    int start_index=msg_ptr->receiver_id & (hash_table_size-1);//return index of hash table
-    for(unsigned int i=start_index;i<hash_table_size+start_index;i++){
-        int new_index=i & (hash_table_size-1);
-        msg_t*event_in_list=_thr_pool.collision_list[new_index];
-        if(event_in_list==NULL){//empty position,not exist any event with same LP id
-            _thr_pool.collision_list[new_index]=msg_ptr;
-            msg_ptr->id_in_thread_pool_hash_table=new_index;
-            break;
-        }
-        else if(event_in_list->receiver_id==msg_ptr->receiver_id){//events have same LP id
-            if( msg_ptr->timestamp < event_in_list->timestamp ) 
-            {//update min event
-                _thr_pool.collision_list[new_index]=msg_ptr;//update node information
-                msg_ptr->id_in_thread_pool_hash_table=new_index;
-                break;
-            }
-            //same LP but greater timestamp
-            break;
-        }
-    }
-}*/
-
 #if REPORT==1
 void update_statistics(int lp_idx){
     (void)lp_idx;
@@ -98,9 +67,9 @@ void reset_priority_message(unsigned int lp_idx,msg_t*old_priority_message_to_re
 }
 
 bool post_info_event_valid(msg_t*event){
-    int value_posted=event->posted;
+    unsigned long long value_posted=event->posted;
     if(value_posted==NEVER_POSTED && CAS_x86((unsigned long long*)&(event->posted),
-        (unsigned long)NEVER_POSTED,(unsigned long)POSTED_VALID)==true){
+        (unsigned long long)NEVER_POSTED,(unsigned long long)POSTED_VALID)==true){
         #if REPORT==1
         statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
         #endif
@@ -112,7 +81,7 @@ bool post_info_event_valid(msg_t*event){
 bool post_info_event_invalid(msg_t*event){
     int value_posted=event->posted;
     if(value_posted!=POSTED_INVALID && CAS_x86((unsigned long long*)&(event->posted),
-        (unsigned long)value_posted,(unsigned long)POSTED_INVALID)==true){
+        (unsigned long long)value_posted,(unsigned long long)POSTED_INVALID)==true){
         #if REPORT==1
         statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
         #endif
