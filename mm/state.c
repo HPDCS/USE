@@ -406,62 +406,6 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		check_events_state(old_state,evt,local_next_evt);
 		#endif
 
-		#if POSTING_SYNC_CHECK_SILENT==1 && INTERRUPT_SILENT==1
-		if(old_state!=LP_STATE_ONGVT){
-			#if DEBUG==1
-			check_current_msg_is_in_future(lid);
-	    	#endif//DEBUG
-	    	if(*preempt_count_ptr==PREEMPT_COUNT_CODE_INTERRUPTIBLE){
-	    		#if REPORT==1
-    			statistics_post_lp_data(current_lp,STAT_SYNC_CHECK_SILENT,1);
-				#endif
-				#if VERBOSE >0
-				printf("sync check past in silent_execution\n");
-				#endif
-		    	msg_t*best_evt=get_best_LP_info_good(lid);
-		    	if(best_evt!=NULL){
-		    		if(current_msg==NULL){
-		    			if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
-			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) && (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
-				            make_LP_state_invalid_and_long_jmp(LPS[lid]->old_valid_bound);
-			        	}
-			        	else if((best_evt->timestamp<evt->timestamp)
-			    		|| ( (best_evt->timestamp==evt->timestamp) 
-			    			&& (best_evt->tie_breaker<evt->tie_breaker) )){
-			        		//priority message is between last_silent_exec and next_event,stop rollback
-							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
-							break;
-			        	}
-			        	else{//priority message before dest_ts and after last_silent_exec
-							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
-			        	}
-		    		}
-		    		else{//current_msg not null
-			    		if( (best_evt->timestamp<LPS[lid]->last_silent_exec_evt->timestamp)
-			    		|| ( (best_evt->timestamp==LPS[lid]->last_silent_exec_evt->timestamp) 
-			    			&& (best_evt->tie_breaker<LPS[lid]->last_silent_exec_evt->tie_breaker) )){
-			    			insert_ordered_in_list(lid,(struct rootsim_list_node*)LPS[lid]->queue_in,LPS[lid]->last_silent_exec_evt,current_msg);
-							make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
-			        	}
-			        	else if((best_evt->timestamp<evt->timestamp)
-			    		|| ( (best_evt->timestamp==evt->timestamp) 
-			    			&& (best_evt->tie_breaker<evt->tie_breaker) )){
-			        		//priority message is between last_silent_exec and next_event,stop rollback
-							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
-							break;
-			        	}
-			        	else{//priority message before dest_ts and after last_silent_exec
-							reset_info_change_bound_and_change_dest_ts(lid,&until_ts,&tie_breaker,best_evt);
-							#if DEBUG==1
-							check_current_msg_is_in_future(lid);
-							#endif
-			        	}
-		    		}
-		        }
-		    }
-		}
-		#endif//POSTING_SYNC_CHECK_SILENT
-
 		executeEvent(lid, evt->timestamp, evt->type, evt->data, evt->data_size, state_buffer, true, evt);
 		#if HANDLE_INTERRUPT==1
 		change_dest_ts(lid,&until_ts,&tie_breaker);//if ScheduleNeWEvent viewed priority_message it changed the bound with priority_msg but doesn't chagne dest_ts 
@@ -612,7 +556,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	//TODO
 	//con questo check si vogliono tenere in conto sia gli eventi silent in mode ONGVT per riportarsi ad una simulazione commit,
 	// sia gli eventi after mode ONGVT ossia LP_STATE_ROLLBACK necessaria per riportarsi nel punto in cui si era della simulazione
-	//ma destination time potrebbe essere sovrascritto col list_next(bound), quindi sfalsa la statistica
+	//ma destination time==INFTY potrebbe essere sovrascritto col list_next(bound), quindi sfalsa la statistica
 	if(LPS[lid]->state == LP_STATE_ONGVT || destination_time == INFTY)
 		statistics_post_lp_data(lid, STAT_EVENT_SILENT_FOR_GVT, (double)reprocessed_events);
 

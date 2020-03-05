@@ -887,14 +887,13 @@ void print_statistics() {
 		printf("\n", i);
 	}
 */
-
-	printf("===== SYSTEM-WIDE STATISTICS =====\n");
-	_print_statistics(system_stats);
-	
 	#if PRINT_IPI_DECISION_MODEL_STATS==1
 	print_ipi_decision_model_stats();
 	#endif
-
+	
+	printf("===== SYSTEM-WIDE STATISTICS =====\n");
+	_print_statistics(system_stats);
+	
 }
 
 #if REPORT==1

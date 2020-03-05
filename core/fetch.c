@@ -238,7 +238,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 #define set_commit_state_as_banana(event)				(	(event)->monitor =  (void*) 0xBA4A4A  	) 
 
 
-bool check_if_event_already_handled_inside_lock(msg_t*event){
+bool event_is_already_handled_inside_lock(msg_t*event){
 	simtime_t ts;
 	unsigned int tb;
 	LP_state *lp_ptr=LPS[event->receiver_id];
@@ -459,7 +459,7 @@ unsigned int fetch_internal(){
             #endif
             if(first_has_greater_ts(event,priority_message)){
             	reset_priority_message(lp_idx,priority_message);
-        		if(!check_if_event_already_handled_inside_lock(priority_message))
+        		if(!event_is_already_handled_inside_lock(priority_message))
         		{
         			swap_event_with_priority_message(event,priority_message);
             	}

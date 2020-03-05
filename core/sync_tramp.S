@@ -1,6 +1,6 @@
 .file	"sync_tramp.S"
 .text
-
+//this function emulates the behavior of trampoline.S, but it can be called in synch way as normal function
  .macro countoccurrences varname
  	pushq		%rsi
  	pushq		%rdi

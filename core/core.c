@@ -330,12 +330,15 @@ void LPs_metada_init() {
 		LPS[i]->LP_state_is_valid=true;//start with LP state valid
 		LPS[i]->old_valid_bound=NULL;
 #endif
-#if POSTING==1
-		LPS[i]->priority_message=NULL;
-#endif
+
 #if IPI_DECISION_MODEL==1
 		LPS[i]->ipi_statistics = NULL;//LP event's statistic initialization, struct will be allocated by LP-0 at init time
 #endif
+
+#if POSTING==1
+		LPS[i]->priority_message=NULL;
+#endif
+
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
@@ -638,7 +641,7 @@ void init_simulation(unsigned int thread_id){
        		current_msg->monitor 		= 0x0;//
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound); //ma qui il problema non era che non c'è il bound?
 #if HANDLE_INTERRUPT==1
-			current_msg->evt_start_time = 0;//event INIT does not require to be monitored
+			current_msg->processing_info.evt_start_time = 0;//event INIT does not require to be monitored
 #endif
 			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
 			queue_deliver_msgs(); //Serve un clean della coda? Secondo me si! No, lo fa direttamente il metodo
@@ -678,7 +681,6 @@ void init_simulation(unsigned int thread_id){
 	    }
 	}
 
-	fflush(stdout);
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -834,7 +836,7 @@ void thread_loop(unsigned int thread_id) {
 			else if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 				#if IPI_DECISION_MODEL==1 && REPORT==1
 				statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP,1);
-				clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
+				clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->processing_info.evt_start_time);
         		statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT_ASYNCH_INTERRUPTED_LP,time_evt_interrupted);
 				clock_timer time_gained;
 				clock_timer actual_mean=get_actual_mean(current_lp,LP_STATE_SILENT_EXEC,LPS[current_lp]->msg_curr_executed->type);
@@ -856,7 +858,7 @@ void thread_loop(unsigned int thread_id) {
 				#if IPI_DECISION_MODEL==1 && REPORT==1
 				statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP,1);
 				
-        		clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->evt_start_time);
+        		clock_timer time_evt_interrupted=clock_timer_value(LPS[current_lp]->msg_curr_executed->processing_info.evt_start_time);
 				statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD_ASYNCH_INTERRUPTED_LP,time_evt_interrupted);
 				clock_timer time_gained;
 				clock_timer actual_mean=get_actual_mean(current_lp,LP_STATE_READY,LPS[current_lp]->msg_curr_executed->type);
@@ -1160,8 +1162,7 @@ end_loop:
 			last_checked_lp = (last_checked_lp+1)%n_prc_tot;
 		}
 		else{
-			if(is_end_sim(current_lp)){//current_lp can be uninitialized here !!!
-			//idea:use last_checked_lp and increment mod num_Lp instead.
+			if(is_end_sim(current_lp)){
 				if(check_termination()){
 					__sync_bool_compare_and_swap(&stop, false, true);
 				}

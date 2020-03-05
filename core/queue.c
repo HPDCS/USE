@@ -10,6 +10,7 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 #include <prints.h>
+
 #if DEBUG==1
 #include <checks.h>
 #endif
@@ -41,7 +42,7 @@ extern __thread cntx_buf cntx_loop;
 #if HANDLE_INTERRUPT==1
 #include <handle_interrupt.h>
 
-//wrap memcpy to interrupt "library" function "memcpy"
+//override memcpy to interrupt library function "memcpy"
 #define memcpy(d, s, n) ({ \
     void *res; \
     asm volatile ( \
@@ -55,6 +56,7 @@ extern __thread cntx_buf cntx_loop;
     res; \
 })
 #endif
+
 //used to take locks on LPs
 volatile unsigned int *lp_lock;
 
@@ -145,7 +147,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     msg_ptr->type = event_type;
 
 #if HANDLE_INTERRUPT==1
-    msg_ptr->evt_start_time = 0;//event starting time initialization
+    msg_ptr->processing_info.evt_start_time = 0;//event starting time initialization
 #endif
 
     memcpy(msg_ptr->data, event_content, event_size);

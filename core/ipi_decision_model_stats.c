@@ -24,7 +24,6 @@ void init_ipi_decision_model_stats()
 			}
 		}
 		memset((void *) LPS[index]->ipi_statistics, 0, sizeof(lp_evt_stats));
-		//static allocation end
 	}
 }
 

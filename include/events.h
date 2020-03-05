@@ -11,6 +11,12 @@
 #define ELIMINATED	0x2
 #define ANTI_MSG	0x3
 
+struct event_processing_info{
+	//execution_mode and evt_start_time are read/writed in 2 near statements,put them in same cache line
+	unsigned int execution_mode;//e.g. LP_STATE_READY,LP_STATE_SILENT_EXEC ecc,any threads need of access concurrently at this field
+	clock_timer evt_start_time;//set to the event starting time when executed, 0 otherwise,any threads need of access concurrently at this field
+}__attribute__((aligned (CACHE_LINE_SIZE)));
+
 typedef struct __msg_t
 {
 	/* event's attributes */
@@ -73,13 +79,13 @@ typedef struct __msg_t
 #endif
 
 #if HANDLE_INTERRUPT==1
-	unsigned int execution_mode;//e.g. LP_STATE_READY,LP_STATE_SILENT_EXEC ecc
-	clock_timer evt_start_time;//set to the event starting time when executed, 0 otherwise
+	struct event_processing_info processing_info;
 #endif
 	
 #if POSTING==1
 	bool collectionable;//used for garbage collection
-	unsigned long long posted;
+
+	unsigned long long posted __attribute__ ((aligned (CACHE_LINE_SIZE)));//any threads need of access concurrently at this field,this field is accessed frequently in read/write manner,put this in 1 cache line
 #endif
 
 } msg_t;

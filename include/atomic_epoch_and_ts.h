@@ -4,7 +4,7 @@
 #include <atomic_16byte.h>
 #define get_epoch_of_LP(lp_idx) get_epoch(LPS[lp_idx]->atomic_epoch_and_ts)
 #define set_epoch_of_LP(lp_idx,value) set_epoch(&(LPS[lp_idx]->atomic_epoch_and_ts),value)
-typedef uint128_atomic atomic_epoch_and_ts;
+typedef uint128_atomic atomic_epoch_and_ts __attribute__ ((aligned (128)));
 
 atomic_epoch_and_ts atomic_load_epoch_and_ts(atomic_epoch_and_ts*atomic_epoch_and_ts);
 void atomic_store_epoch_and_ts(atomic_epoch_and_ts*pepoch_and_ts,atomic_epoch_and_ts new_epoch_and_ts);

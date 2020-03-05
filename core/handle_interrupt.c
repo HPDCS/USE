@@ -32,11 +32,11 @@ void end_exposition_of_current_event(msg_t*event){
 		}
 		#endif
 		#if REPORT==1
-		clock_timer exposition_timer = clock_timer_value(event->evt_start_time);
+		clock_timer exposition_timer = clock_timer_value(event->processing_info.evt_start_time);
 		#if IPI_DECISION_MODEL==1
-		store_ipi_decision_model_stats(current_lp, event->execution_mode, event->type, exposition_timer);
+		store_ipi_decision_model_stats(current_lp, event->processing_info.execution_mode, event->type, exposition_timer);
 		#endif
-		if(event->execution_mode==LP_STATE_READY){
+		if(event->processing_info.execution_mode==LP_STATE_READY){
 			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_FORWARD_LP,1);
 			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_FORWARD_TOT_LP,exposition_timer);
 		}
@@ -44,7 +44,7 @@ void end_exposition_of_current_event(msg_t*event){
 			statistics_post_lp_data(current_lp,STAT_EVENT_EXPOSITION_SILENT_LP,1);
 			statistics_post_lp_data(current_lp,STAT_CLOCK_EXPOSITION_SILENT_TOT_LP,exposition_timer);
 		}
-		#endif
+		#endif//REPORT
 		//reset exposition of current_msg in execution
 		LPS[current_lp]->msg_curr_executed=NULL;
 	}
@@ -61,8 +61,8 @@ void start_exposition_of_current_event(msg_t*event){
 			gdb_abort;
 		}
 		#endif
-		clock_timer_start(event->evt_start_time);//event starting time sampled just before updating preemption_counter
-		event->execution_mode=LPS[current_lp]->state;
+		clock_timer_start(event->processing_info.evt_start_time);//event starting time sampled just before updating preemption_counter
+		event->processing_info.execution_mode=LPS[current_lp]->state;
 		//start exposition of current_msg
 		LPS[current_lp]->msg_curr_executed=event;
 	}
@@ -84,6 +84,7 @@ msg_t* allocate_dummy_bound(unsigned int lp_idx){
 	return dummy_bound;
 }
 
+#if DEBUG==1
 bool dummy_bound_is_corrupted(int lp_idx){
 	//return true if dummy_bound is invalid,false otherwise
 	//dummy bound is invalid if contains fileds'values different from its initialization
@@ -107,6 +108,7 @@ bool bound_is_corrupted(int lp_idx){
 		return true;
 	return false;
 }
+#endif
 
 void make_LP_state_invalid(msg_t*restore_bound){
 	LPS[current_lp]->msg_curr_executed=NULL;

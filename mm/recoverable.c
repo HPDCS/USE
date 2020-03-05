@@ -35,6 +35,9 @@
 #include <numerical.h>
 #include "dymelor.h"
 
+#if HANDLE_INTERRUPT_WITH_CHECK==1
+#include <handle_interrupt_with_check.h> //useful to define unpreemptable code blocks
+#endif
 
 /// Recoverable memory state for LPs
 malloc_state **recoverable_state;
@@ -129,9 +132,7 @@ size_t get_log_size(malloc_state *logged_state){
 * @return A pointer to the allocated memory
 *
 */
-#if HANDLE_INTERRUPT_WITH_CHECK==1
-#include <handle_interrupt_with_check.h>
-#endif
+
 void *__wrap_malloc(size_t size) {
 	void *ptr;
 

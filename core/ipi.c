@@ -55,6 +55,7 @@ __thread unsigned long alternate_stack_area = 4096UL;
 
 __thread unsigned long interruptible_section_start = 0UL;
 __thread unsigned long interruptible_section_end = 0UL;
+
 char program_name[MAX_LEN_PROGRAM_NAME];
 
 struct run_time_data rt_data;
@@ -171,7 +172,7 @@ void check_ipi_capability(){
 #if IPI_DECISION_MODEL==1
 static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution,clock_timer*latency){
     bool ipi_useful;
-    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->ipi_statistics)->lp_state[( (event_dest_in_execution->execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
+    clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->ipi_statistics)->lp_state[( (event_dest_in_execution->processing_info.execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
     if(avg_timer==0){
         ipi_useful = false;
         goto exit;
@@ -180,10 +181,10 @@ static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_pt
     {
         clock_timer executed_time = CLOCK_READ();
 
-        if (event_dest_in_execution->evt_start_time > executed_time)
+        if (event_dest_in_execution->processing_info.evt_start_time > executed_time)
             executed_time = 0ULL;
         else
-            executed_time -= event_dest_in_execution->evt_start_time;
+            executed_time -= event_dest_in_execution->processing_info.evt_start_time;
 
         *latency=executed_time;//latency to notify receiver
 

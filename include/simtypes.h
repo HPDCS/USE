@@ -122,20 +122,23 @@ typedef struct _LP_state {
 	unsigned int until_clean_ckp;
 
 #if HANDLE_INTERRUPT==1
-	msg_t* last_silent_exec_evt;
-	msg_t* old_valid_bound;
-	msg_t* dummy_bound;
-	msg_t* msg_curr_executed;//this is NULL if there is no event in execution 
-	bool LP_state_is_valid;
-#endif
+	msg_t* last_silent_exec_evt;//is private if we have lock on LP
+	msg_t* old_valid_bound;//is private if we have lock on LP
+	msg_t* dummy_bound;//is private if we have lock on LP
+	bool LP_state_is_valid;//is private if we have lock on LP
 
-#if POSTING==1
-	msg_t* priority_message;//used to write priority message
+	msg_t* msg_curr_executed;//this is NULL if there is no event in execution,any threads need of access concurrently at this field 
 #endif
 
 #if IPI_DECISION_MODEL==1
-	void*ipi_statistics;//used to keep track of per-LP event's statistics
+	void*ipi_statistics;//used to keep track of per-LP event's statistics,any threads need of access concurrently at this field
 #endif
+
+#if POSTING==1
+	msg_t* priority_message __attribute__ ((aligned (CACHE_LINE_SIZE)));//used to write priority message,any threads need of access concurrently at this field
+#endif
+
+
 
 } LP_state;
 

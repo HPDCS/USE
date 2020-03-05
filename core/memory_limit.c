@@ -4,6 +4,7 @@
 #include <hpdcs_utils.h>
 #include <sys/mman.h>
 #include <stdlib.h>
+
 void set_max_memory_allocable(unsigned long max_bytes_allocable){
     struct rlimit set_memory_limit;
     set_memory_limit.rlim_cur=max_bytes_allocable;
@@ -42,4 +43,4 @@ void test_memory_limit(){
     test_memory_limit_malloc(MAX_MEMORY_ALLOCABLE);
     test_memory_limit_mmap(MAX_MEMORY_ALLOCABLE);
 }
-#endif
+#endif//DEBUG

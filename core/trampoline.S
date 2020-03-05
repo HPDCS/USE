@@ -79,7 +79,7 @@ cfv_trampoline:
 	movq		LPS(%rip), %rdx
 	movq		(%rdx, %rbx, 8), %rdx
 
-	countoccurrences trampoline_count0
+	//countoccurrences trampoline_count0
 
 	/* %rcx <--- (&rt_data)->in_lpstate_priority_message_offset (type: size_t) */
 	/* %rbx <--- LPS[current_lp]->priority_message (type: msg_t *) */
@@ -89,7 +89,7 @@ cfv_trampoline:
 	testq		%rbx, %rbx
 	jz			.L1
 
-	countoccurrences trampoline_count1
+	//countoccurrences trampoline_count1
 
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->state (type: unsigned int) */
@@ -99,7 +99,7 @@ cfv_trampoline:
 	cmpl		$0x3, %ecx
 	jnz			.L3
 
-	countoccurrences trampoline_count2
+	//countoccurrences trampoline_count2
 
 	/* %rcx <--- (&rt_data)->in_msg_monitor_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->monitor (type: unsigned int) */
@@ -110,7 +110,7 @@ cfv_trampoline:
 	jz			.L1
 	jmp			.L2
 
-	countoccurrences trampoline_count3
+	//countoccurrences trampoline_count3
 
 .L3:
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
@@ -121,7 +121,7 @@ cfv_trampoline:
 	testl		%ecx, %ecx
 	jnz			.L1
 
-	countoccurrences trampoline_count4
+	//countoccurrences trampoline_count4
 
 .L2:
 	/* %rcx <--- (&rt_data)->in_lpstate_bound_offset (type: size_t) */
@@ -132,7 +132,7 @@ cfv_trampoline:
 	testq		%rcx, %rcx
 	jz			.L1
 
-	countoccurrences trampoline_count5
+	//countoccurrences trampoline_count5
 
 	/* %rdx <--- (&rt_data)->in_msg_timestamp_offset (type: size_t) */
 	/* %xmm1 <--- LPS[current_lp]->bound->timestamp (type: double) */
@@ -144,7 +144,7 @@ cfv_trampoline:
 	comisd		%xmm1, %xmm0
 	jae			.L1
 
-	countoccurrences trampoline_count6
+	//countoccurrences trampoline_count6
 
 /*      PREAMBLE END      */
 /**************************/

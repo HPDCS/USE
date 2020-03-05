@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <hpdcs_utils.h>
+
 unsigned int NUMA_TOPOLOGY[N_CPU];
 
 void set_cores_id_on_numa_topology(unsigned int id_numa_node,unsigned int num_cores_per_numa_node){
