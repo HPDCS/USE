@@ -44,6 +44,10 @@
 #include <posting.h>
 #endif
 
+#if HANDLE_INTERRUPT==1
+#include <handle_interrupt.h>
+#endif
+
 #if IPI_SUPPORT==1
 #include <ipi.h>
 #endif
@@ -472,7 +476,6 @@ unsigned int fetch_internal(){
 				//da qui in poi il bound è congelato ed è nel passato rispetto al mio evento
 				/// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///
 				local_next_evt = list_next(lp_ptr->bound);
-				
 				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
                     list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
 					local_next_evt->frame = tid+1;

@@ -731,7 +731,7 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		if(LPS[LP]->state==LP_STATE_SILENT_EXEC){
-			enter_in_preemptable_zone(default_handler,INVALID);
+			enter_in_preemptable_zone(default_handler,(void*)RESUMABLE);
 		}//in forward mode preemptability is already actived in thread_loop
 
 		#if DEBUG==1
@@ -778,8 +778,62 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 }
 
 #if HANDLE_INTERRUPT==1
-void thread_loop(unsigned int thread_id) {
+
+#define next_loop() {\
+	LPS[current_lp]->dummy_bound->state=NEW_EVT;\
+	LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;\
+	LPS[current_lp]->old_valid_bound=NULL;\
+	unlock(current_lp);\
+	continue;\
+};
+
+void do_rollback(void(*rollback_function)(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker)){
 	unsigned int old_state=0;
+	#if DEBUG == 1
+	if(current_msg == LPS[current_lp]->old_valid_bound && current_evt_state != ANTI_MSG) {
+		if(current_evt_monitor == (void*) 0xba4a4a){
+			printf(RED("Ho una banana che non è ANTI-MSG\n"));
+		}
+		printf(RED("Ho ricevuto due volte di fila lo stesso messaggio e non è un antievento\n!!!!!"));
+		print_event(current_msg);
+		gdb_abort;
+	}
+	#endif
+
+	old_state = LPS[current_lp]->state;
+	LPS[current_lp]->state = LP_STATE_ROLLBACK;
+
+#if DEBUG == 1
+	LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
+	#if CONSTANT_CHILD_INVALIDATION==1
+	current_msg->roll_epoch= get_epoch_of_LP(current_lp);
+	#else
+	current_msg->roll_epoch = LPS[current_lp]->epoch;
+	#endif
+	current_msg->rollback_time = CLOCK_READ();
+#endif
+#if VERBOSE > 0
+	printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
+		LPS[current_lp]->old_valid_bound->timestamp, 	LPS[current_lp]->old_valid_bound->tie_breaker,	LPS[current_lp]->old_valid_bound , 
+		current_msg->timestamp,current_msg->tie_breaker,current_msg);
+#endif		
+	rollback_function(current_lp, current_lvt, current_msg->tie_breaker);
+			
+	LPS[current_lp]->state = old_state;
+	statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
+	if(LPS[current_lp]->LP_simulation_state==VALID){//if event was in past before rollback
+		if(current_evt_state != ANTI_MSG) {
+			statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
+		}
+		else{
+			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
+		}
+	}
+	LPS[current_lp]->LP_simulation_state = VALID;//LP state is been restorered by rollback
+}
+
+void thread_loop(unsigned int thread_id) {
+	//unsigned int old_state=0;
 #if ONGVT_PERIOD != -1
 	unsigned int empty_fetch = 0;
 #endif
@@ -965,63 +1019,44 @@ void thread_loop(unsigned int thread_id) {
 		//now bound is current_msg-epsilon,current_msg appares in future in respect of other threads
 		//now bound is corrupted,remember to restore it before next fetch!!
 
-		if ((current_lvt < LPS[current_lp]->old_valid_bound->timestamp || 
+		bool in_past_bound=(current_lvt < LPS[current_lp]->old_valid_bound->timestamp || 
 			(current_lvt == LPS[current_lp]->old_valid_bound->timestamp && current_msg->tie_breaker <= LPS[current_lp]->old_valid_bound->tie_breaker)
-			)
-			|| LPS[current_lp]->LP_simulation_state==INVALID)
-			{
-			//LP state is invalid or current_msg in past: restore LP state before execute current_msg
-			#if DEBUG == 1
-			if(current_msg == LPS[current_lp]->old_valid_bound && current_evt_state != ANTI_MSG) {
-				if(current_evt_monitor == (void*) 0xba4a4a){
-					printf(RED("Ho una banana che non è ANTI-MSG\n"));
-				}
-				printf(RED("Ho ricevuto due volte di fila lo stesso messaggio e non è un antievento\n!!!!!"));
-				print_event(current_msg);
-				gdb_abort;
-			}
-			#endif
+			);
 
-			old_state = LPS[current_lp]->state;
-			LPS[current_lp]->state = LP_STATE_ROLLBACK;
+		if(LPS[current_lp]->LP_simulation_state==INVALID){
+			do_rollback(rollback);
 
-		#if DEBUG == 1
-			LPS[current_lp]->last_rollback_event = current_msg;//DEBUG
-			#if CONSTANT_CHILD_INVALIDATION==1
-			current_msg->roll_epoch= get_epoch_of_LP(current_lp);
-			#else
-			current_msg->roll_epoch = LPS[current_lp]->epoch;
-			#endif
-			current_msg->rollback_time = CLOCK_READ();
-		#endif
-#if VERBOSE > 0
-			printf("*** Sto ROLLBACKANDO LP %u- da\n\t<%f,%u, %p> a \n\t<%f,%u,%p>\n", current_lp, 
-				LPS[current_lp]->old_valid_bound->timestamp, 	LPS[current_lp]->old_valid_bound->tie_breaker,	LPS[current_lp]->old_valid_bound , 
-				current_msg->timestamp,current_msg->tie_breaker,current_msg);
-#endif		
-			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			
-			LPS[current_lp]->state = old_state;
-			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
-			if(LPS[current_lp]->LP_simulation_state==VALID){//if event was in past before rollback
-				if(current_evt_state != ANTI_MSG) {
-					statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
-				}
-				else{
-					statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
-				}
-			}
-			LPS[current_lp]->LP_simulation_state=VALID;//LP state is been restorered by rollback
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
-				LPS[current_lp]->dummy_bound->state=NEW_EVT;
-				LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
-				LPS[current_lp]->old_valid_bound=NULL;
-				unlock(current_lp);//release lock
-				continue;//this event cannot be processed,rollback was used only to restore state,so give up this event and fetch another event
+				next_loop();
+			}
+		}
+		else if (LPS[current_lp]->LP_simulation_state==RESUMABLE){
+			bool in_past_last_silent_evt=(current_lvt < LPS[current_lp]->last_silent_exec_evt->timestamp || 
+			(current_lvt == LPS[current_lp]->last_silent_exec_evt->timestamp && current_msg->tie_breaker <= LPS[current_lp]->last_silent_exec_evt->tie_breaker)
+			);
+			if(in_past_last_silent_evt){
+				do_rollback(rollback);
+				
+				if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
+					next_loop();
+				}
+			}
+			else{
+				do_rollback(rollback_forward);
+				if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
+					next_loop();
+				}
+			}
+		}
+		else if(in_past_bound){
+
+			do_rollback(rollback);
+			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
+				next_loop();
 			}
 		}
 
-		//now LP state is valid current_msg in future respect of dummy_bound and old_valid_bound,but bound corrupted
+		//now LP state is valid, current_msg in future respect of dummy_bound and old_valid_bound,but bound is corrupted
 		#if DEBUG==1//not present in original version
 			check_after_rollback();
 		#endif//DEBUG
@@ -1035,7 +1070,6 @@ void thread_loop(unsigned int thread_id) {
 			unlock(current_lp);//release lock
 			continue;//
 		}
-		
 	#if DEBUG==1
 		if((unsigned long long)current_msg->node & (unsigned long long)0x1){
 			printf(RED("Si sta eseguendo un nodo eliminato"));
@@ -1069,6 +1103,7 @@ void thread_loop(unsigned int thread_id) {
 		#endif
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
+		//in this case the_simulation_state is actually VALID,keep this state instead of change it to INVALID
 		enter_in_preemptable_zone(default_handler,(void*)VALID);
 		#endif
 		// PROCESS //

@@ -99,6 +99,9 @@
 
 #define STAT_EVENT_EXPOSITION_FORWARD_LP       604
 #define STAT_EVENT_EXPOSITION_SILENT_LP       605
+#define STAT_EVENT_RESUME_ROLLBACK_LP           606
+#define STAT_COUNT_RESUME_ROLLBACK_LP           607
+#define STAT_CLOCK_RESUME_ROLLBACK_LP           608
 
 #endif
 
@@ -231,6 +234,12 @@ struct stats_t {
     stat64_t clock_exposition_forward_tot_lp;
     stat64_t clock_exposition_silent_tot_lp;
 
+    stat64_t event_resume_rollback_tot_lp;
+    stat64_t count_resume_rollback_tot_lp;
+    stat64_t clock_resume_rollback_tot_lp;
+
+    stat64_t avg_event_resume_per_rollback_resume;
+    stat64_t avg_clock_resume_per_rollback_resume;
     //statistics related to interruptions
     #endif
 

@@ -261,7 +261,7 @@ void check_events_state(unsigned short int old_state,msg_t*evt,msg_t*local_next_
 		gdb_abort;
 	}
 	if( (old_state==LP_STATE_ONGVT) && local_next_evt->monitor!=(void*)0x5AFE){
-		printf("LP_STATE_ONGVT but event is not been committed\n");
+		printf("LP_STATE_ONGVT but event is not committed\n");
 		gdb_abort;
 	}
 }

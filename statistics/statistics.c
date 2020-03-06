@@ -294,6 +294,18 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_EVENT_EXPOSITION_SILENT_LP:
 			stats[idx].event_exposition_silent_lp += value;
 			break;
+
+		case STAT_EVENT_RESUME_ROLLBACK_LP:
+			stats[idx].event_resume_rollback_tot_lp += value;
+			break;
+
+		case STAT_COUNT_RESUME_ROLLBACK_LP:
+			stats[idx].count_resume_rollback_tot_lp +=value;
+			break;
+
+		case STAT_CLOCK_RESUME_ROLLBACK_LP:
+			stats[idx].clock_resume_rollback_tot_lp += value;
+			break;
 		#endif
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
@@ -524,6 +536,11 @@ void gather_statistics() {
 		system_stats->event_exposition_silent_lp += lp_stats[i].event_exposition_silent_lp;
 		system_stats->event_exposition_forward_lp += lp_stats[i].event_exposition_forward_lp;
 		
+		system_stats->event_resume_rollback_tot_lp += lp_stats[i].event_resume_rollback_tot_lp;
+		system_stats->count_resume_rollback_tot_lp += lp_stats[i].count_resume_rollback_tot_lp;
+
+		system_stats->clock_resume_rollback_tot_lp += lp_stats[i].clock_resume_rollback_tot_lp;
+
 	#endif
 	#if IPI_DECISION_MODEL==1 && REPORT==1
 		system_stats->event_exposition_forward_asynch_interrupted_lp += lp_stats[i].event_exposition_forward_asynch_interrupted_lp;
@@ -609,6 +626,9 @@ void gather_statistics() {
     system_stats->clock_exposition_forward_per_event = system_stats->clock_exposition_forward_tot_lp/ system_stats->event_exposition_forward_tot;
 
     system_stats->clock_exposition_silent_per_event=system_stats->clock_exposition_silent_tot_lp/system_stats->event_exposition_silent_tot;
+
+    system_stats->avg_event_resume_per_rollback_resume = system_stats->event_resume_rollback_tot_lp/system_stats->count_resume_rollback_tot_lp;
+    system_stats->avg_clock_resume_per_rollback_resume = system_stats->clock_resume_rollback_tot_lp/system_stats->count_resume_rollback_tot_lp;
 
     #endif
 
@@ -763,6 +783,14 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Exposition silent Time per event................: %12.2f clocks\n",
 		stats->clock_exposition_silent_per_event);
 
+	printf("\n");
+	
+	printf("Total resumable rollback executed...............: %12lu\n",
+		(unsigned long)stats->count_resume_rollback_tot_lp);
+	printf("Avg events resume per rollback_resume...........: %12lu\n",
+		(unsigned long)stats->avg_event_resume_per_rollback_resume);
+    printf("Avg clock resume per rollback resume............: %12lu clocks\n",
+		(unsigned long)stats->avg_clock_resume_per_rollback_resume);
 	printf("\n");
 
 	#endif

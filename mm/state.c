@@ -299,6 +299,9 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 
 		#if HANDLE_INTERRUPT==1
 		LPS[lid]->last_silent_exec_evt = evt;
+		//update frames and from_last_ckpt
+		LPS[lid]->num_executed_frames++;
+		LPS[lid]->from_last_ckpt = (LPS[lid]->from_last_ckpt+1)%CHECKPOINT_PERIOD;
 		#endif
 
 	}
@@ -322,6 +325,14 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	#endif
 	
 	LPS[lid]->state = old_state;
+
+	#if HANDLE_INTERRUPT==1 && DEBUG==1
+	if(LPS[current_lp]->old_valid_bound->frame != LPS[current_lp]->num_executed_frames-1){
+		printf("silent_execution:invalid frame number in event,frame_event=%d,frame_LP=%d\n",LPS[current_lp]->old_valid_bound->frame,LPS[current_lp]->num_executed_frames);
+		gdb_abort;
+	}
+	#endif
+
 	return events;
 }
 
@@ -539,7 +550,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 //	}
 	// Restore the simulation state and correct the state base pointer
 	log_restore(lid, restore_state);
-	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
+	LPS[lid]->current_base_pointer 	= restore_state->base_pointer;
 	
 	last_restored_event = restore_state->last_event;
 	#if DEBUG==1//not present in original version
@@ -548,6 +559,15 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		gdb_abort;
 	}
 	#endif
+
+	#if HANDLE_INTERRUPT==1
+	//promotes INVALID state to RESUMABLE state
+	if(LPS[lid]->LP_simulation_state==INVALID)
+		LPS[lid]->LP_simulation_state=RESUMABLE;
+	#endif
+
+	rollback_lenght = LPS[lid]->num_executed_frames;//save LP frames before overwrite it
+	LPS[lid]->num_executed_frames = restore_state->num_executed_frames;
 
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 
@@ -562,7 +582,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 
 	//The bound variable is set in silent_execution.
 	if(LPS[lid]->state == LP_STATE_ROLLBACK){
-		rollback_lenght = LPS[lid]->num_executed_frames; 
+		//rollback_lenght = LPS[lid]->num_executed_frames; 
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		rollback_lenght -= LPS[lid]->num_executed_frames;
 
@@ -595,7 +615,39 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 }
 
 
+void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker){
+	msg_t *last_restored_event;
+	unsigned int rollback_forward_length;
 
+	clock_timer rollback_forward_timer;
+
+	// Sanity check
+	if(LPS[lid]->state != LP_STATE_ROLLBACK && LPS[lid]->state != LP_STATE_ONGVT) {
+		rootsim_error(false, "I'm asked to roll back LP %d's execution, but rollback_bound is not set. Ignoring...\n", lid);
+		return;
+	}
+	#if DEBUG==1//this is not present in original version
+	//ProcessEvent requires that current_lp and current_msg are corrected set(e.g. ProcessEvent internally call Random that use current_lp)
+	//this means that LP and current_lp must be equals.
+	//LP and current_lp can be different in case we have lock on lp x and we called this function with value lp y.
+	//this scenario can happen for example if we lock lp x and we don't reset current_lp with instruction current_lp=x
+	if(current_lp!=lid){
+		printf("current_lp different from LP_idx function argument\n");
+		gdb_abort;
+	}
+	#endif
+
+	clock_timer_start(rollback_forward_timer);
+	
+	last_restored_event = LPS[lid]->last_silent_exec_evt;
+
+	rollback_forward_length = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
+	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
+	statistics_post_lp_data(lid, STAT_CLOCK_RESUME_ROLLBACK_LP, (double)clock_timer_value(rollback_forward_timer));
+	statistics_post_lp_data(lid, STAT_EVENT_RESUME_ROLLBACK_LP, (double)rollback_forward_length);
+	statistics_post_lp_data(lid,STAT_COUNT_RESUME_ROLLBACK_LP,1);
+	
+}
 
 /**
 * This function computes the time barrier, namely the first state snapshot
