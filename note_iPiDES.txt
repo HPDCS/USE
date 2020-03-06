@@ -1,12 +1,6 @@
 TODO:
--può avere senso mettere msg_curr_executed && ipi_statistics nella stessa cache line siccome i reader leggono entrambe le informazioni?
 -rimuovere standing ipi
--pointer a funzione per i check su decrement,se parametro è NULL viene chiamata solo la funzione di default,la funzione passata deve essere una preoperazione per la gestione dell'interrupt.
--inserire nuovi handler sul decremento del contatore per lasciare uno stato valido.
--pensare ad altri punti del codice per mantenere lo stato dell'LP valido.
 -rilassare preemption_counter sulla enqueue della coda globale in queue_deliver_msgs
--constant_child_invalidation da debuggare,degrada le performance ma non a causa delle istruzioni atomiche
--rivedere definizione dei field delle struct event e Lp per capire se è meglio dichiararli in un altro modo
 
 
 

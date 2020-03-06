@@ -143,7 +143,7 @@ void *__wrap_malloc(size_t size) {
 	ptr = do_malloc(current_lp, recoverable_state[current_lp], size);
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
-	exit_from_unpreemptable_zone();
+	exit_from_unpreemptable_zone(default_handler,INVALID);
 	#endif
 
 	return ptr;
@@ -176,7 +176,7 @@ void __wrap_free(void *ptr) {
 	do_free(current_lp, recoverable_state[current_lp], ptr);
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
-	exit_from_unpreemptable_zone();
+	exit_from_unpreemptable_zone(default_handler,INVALID);
 	#endif
 }
 
@@ -229,7 +229,7 @@ void *__wrap_realloc(void *ptr, size_t size){
 	__wrap_free(ptr);
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
-	exit_from_unpreemptable_zone();
+	exit_from_unpreemptable_zone(default_handler,INVALID);
 	#endif
 
 	return new_buffer;
@@ -265,7 +265,7 @@ void *__wrap_calloc(size_t nmemb, size_t size){
 	bzero(buffer, nmemb * size);
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1
-	exit_from_unpreemptable_zone();
+	exit_from_unpreemptable_zone(default_handler,INVALID);
 	#endif
 	
 	return buffer;

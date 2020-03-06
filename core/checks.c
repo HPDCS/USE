@@ -41,7 +41,7 @@ void check_after_rollback(){
 		printf("event in past\n");
 		gdb_abort;
 	}
-	if(LPS[current_lp]->LP_state_is_valid==false){
+	if(LPS[current_lp]->LP_simulation_state==INVALID){
 		printf("LP state invalid\n");
 		gdb_abort;
 	}

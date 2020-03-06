@@ -24,7 +24,7 @@ void*default_handler(void*arg){
     //this function assume current_lp and current_msg are set.
     //this function works only with LP->state==LP_STATE_READY or LP->state==LP_STATE_SILENT_EXEC
     //set these variables from caller before call this function
-    (void)arg;
+    unsigned long new_LP_simulation_state=(unsigned long)arg;
     #if DEBUG==1
     check_unpreemptability();
     #endif
@@ -39,7 +39,7 @@ void*default_handler(void*arg){
         msg_t*evt=get_best_LP_info_good(current_lp);
         if(evt!=NULL){
             if(current_msg==NULL){
-            	make_LP_state_invalid_and_long_jmp(LPS[current_lp]->old_valid_bound);
+            	change_LP_state_and_long_jmp(LPS[current_lp]->old_valid_bound,INVALID);
             }
             else{//current_msg not null
             	#if IPI_DECISION_MODEL==1 && REPORT==1
@@ -57,7 +57,7 @@ void*default_handler(void*arg){
 				#endif
 
                 insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
-                make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
+                change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
             }
         }
     }   
@@ -84,7 +84,7 @@ void*default_handler(void*arg){
 				time_gained=0;
 			statistics_post_lp_data(current_lp,STAT_CLOCK_RESIDUAL_TIME_FORWARD_SYNCH_GAINED_LP,time_gained);
             #endif
-            make_LP_state_invalid_and_long_jmp(list_prev(current_msg));
+            change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
         }
     }
     else{
@@ -104,7 +104,8 @@ void enter_in_unpreemptable_zone(){
 	#endif
 	increment_preempt_counter();
 }
-void  exit_from_unpreemptable_zone(){
+
+void  exit_from_unpreemptable_zone(void* (*handler)(void*arg_handler),void*arg_handler){
 	#if DEBUG==1
 	if(nesting_zone_unpreemptable==NO_NESTING){
 		printf("error in exit_from_unpreemptable_zone\n");
@@ -115,12 +116,12 @@ void  exit_from_unpreemptable_zone(){
 	#if SYNCH_CHECK==1
 	//counter can became 0 from 1,before decrement do_check
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
-		default_handler(NULL);
+		handler(arg_handler);
 	#endif
 	decrement_preempt_counter();
 }
 
-void  enter_in_preemptable_zone(){
+void  enter_in_preemptable_zone(void* (*handler)(void*arg_handler),void*arg_handler){
 	#if DEBUG==1
 	if(nesting_zone_preemptable>=MAX_NESTING_ZONE_PREEMPTABLE){
 		printf("error in enter_in_preemptable_zone\n");
@@ -131,7 +132,7 @@ void  enter_in_preemptable_zone(){
 	#if SYNCH_CHECK==1
 	//counter can became 0 from 1,before decrement do_check
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)
-		default_handler(NULL);
+		handler(arg_handler);
 	#endif
 	decrement_preempt_counter();
 }

@@ -137,7 +137,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     }
     
     #if HANDLE_INTERRUPT_WITH_CHECK==1
-    exit_from_unpreemptable_zone();
+    exit_from_unpreemptable_zone(default_handler,INVALID);
     #endif
 
     msg_ptr->sender_id = current_lp;
@@ -262,7 +262,7 @@ void queue_deliver_msgs(void) {
         #endif
 
         #if HANDLE_INTERRUPT_WITH_CHECK==1
-        exit_from_unpreemptable_zone();
+        exit_from_unpreemptable_zone(default_handler,INVALID);
         #endif
 
         #if DEBUG==1//not present in original version

@@ -327,7 +327,7 @@ void LPs_metada_init() {
 
 #if HANDLE_INTERRUPT==1
 		LPS[i]->dummy_bound=NULL;
-		LPS[i]->LP_state_is_valid=true;//start with LP state valid
+		LPS[i]->LP_simulation_state=VALID;//start with LP state valid
 		LPS[i]->old_valid_bound=NULL;
 #endif
 
@@ -513,7 +513,7 @@ void check_OnGVT(unsigned int lp_idx){
 
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
-		exit_from_unpreemptable_zone();
+		exit_from_unpreemptable_zone(default_handler,INVALID);
 		#endif
 		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		if(OnGVT(lp_idx, LPS[lp_idx]->current_base_pointer)){
@@ -532,7 +532,7 @@ void check_OnGVT(unsigned int lp_idx){
 		//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
 		LPS[lp_idx]->state = old_state;
 		#if HANDLE_INTERRUPT==1
-		LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
+		LPS[current_lp]->LP_simulation_state=VALID;//LP state is been restorered by rollback
 		LPS[current_lp]->dummy_bound->state=NEW_EVT;
 		//restore bound,current_lp and current_msg
 		LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
@@ -731,7 +731,7 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		if(LPS[LP]->state==LP_STATE_SILENT_EXEC){
-			enter_in_preemptable_zone();
+			enter_in_preemptable_zone(default_handler,INVALID);
 		}//in forward mode preemptability is already actived in thread_loop
 
 		#if DEBUG==1
@@ -831,7 +831,7 @@ void thread_loop(unsigned int thread_id) {
             	#if DEBUG==1
             	check_CFV_TO_HANDLE_current_msg_null();
             	#endif
-            	make_LP_state_invalid(LPS[current_lp]->old_valid_bound);
+            	change_LP_state(LPS[current_lp]->old_valid_bound,INVALID);
             }
 			else if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 				#if IPI_DECISION_MODEL==1 && REPORT==1
@@ -852,7 +852,7 @@ void thread_loop(unsigned int thread_id) {
 				check_CFV_TO_HANDLE_past();
 				#endif//DEBUG
 				insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
-				make_LP_state_invalid(list_prev(current_msg));
+				change_LP_state(list_prev(current_msg),INVALID);
 			}
 			else{
 				#if IPI_DECISION_MODEL==1 && REPORT==1
@@ -874,7 +874,7 @@ void thread_loop(unsigned int thread_id) {
 				#if DEBUG==1
 				check_CFV_TO_HANDLE_future();
 				#endif
-				make_LP_state_invalid(LPS[current_lp]->old_valid_bound);
+				change_LP_state(LPS[current_lp]->old_valid_bound,INVALID);
 			}
 			#if DEBUG==1
 			reset_nesting_counters();
@@ -968,7 +968,7 @@ void thread_loop(unsigned int thread_id) {
 		if ((current_lvt < LPS[current_lp]->old_valid_bound->timestamp || 
 			(current_lvt == LPS[current_lp]->old_valid_bound->timestamp && current_msg->tie_breaker <= LPS[current_lp]->old_valid_bound->tie_breaker)
 			)
-			|| LPS[current_lp]->LP_state_is_valid==false)
+			|| LPS[current_lp]->LP_simulation_state==INVALID)
 			{
 			//LP state is invalid or current_msg in past: restore LP state before execute current_msg
 			#if DEBUG == 1
@@ -1003,7 +1003,7 @@ void thread_loop(unsigned int thread_id) {
 			
 			LPS[current_lp]->state = old_state;
 			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
-			if(LPS[current_lp]->LP_state_is_valid==true){//if event was in past before rollback
+			if(LPS[current_lp]->LP_simulation_state==VALID){//if event was in past before rollback
 				if(current_evt_state != ANTI_MSG) {
 					statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 				}
@@ -1011,7 +1011,7 @@ void thread_loop(unsigned int thread_id) {
 					statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 				}
 			}
-			LPS[current_lp]->LP_state_is_valid=true;//LP state is been restorered by rollback
+			LPS[current_lp]->LP_simulation_state=VALID;//LP state is been restorered by rollback
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 				LPS[current_lp]->dummy_bound->state=NEW_EVT;
 				LPS[current_lp]->bound=LPS[current_lp]->old_valid_bound;
@@ -1069,7 +1069,7 @@ void thread_loop(unsigned int thread_id) {
 		#endif
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
-		enter_in_preemptable_zone();
+		enter_in_preemptable_zone(default_handler,(void*)VALID);
 		#endif
 		// PROCESS //
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);

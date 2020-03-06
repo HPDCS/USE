@@ -110,9 +110,9 @@ bool bound_is_corrupted(int lp_idx){
 }
 #endif
 
-void make_LP_state_invalid(msg_t*restore_bound){
+void change_LP_state(msg_t*restore_bound,unsigned int new_state){
 	LPS[current_lp]->msg_curr_executed=NULL;
-    LPS[current_lp]->LP_state_is_valid=false;//invalid state
+    LPS[current_lp]->LP_simulation_state=new_state;
     LPS[current_lp]->dummy_bound->state=NEW_EVT;
     LPS[current_lp]->state=LP_STATE_READY;//restore LP_state
     LPS[current_lp]->bound=restore_bound;
@@ -124,11 +124,11 @@ void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker
 	*tie_breaker=LPS[lid]->dummy_bound->tie_breaker;
 }
 
-void make_LP_state_invalid_and_long_jmp(msg_t*restore_bound){
+void change_LP_state_and_long_jmp(msg_t*restore_bound,unsigned int new_state){
 	#if DEBUG==1 && HANDLE_INTERRUPT_WITH_CHECK==1
 	reset_nesting_counters();
 	#endif
-	make_LP_state_invalid(restore_bound);
+	change_LP_state(restore_bound,new_state);
     wrap_long_jmp(&cntx_loop,CFV_ALREADY_HANDLED);
 }
 

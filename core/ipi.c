@@ -248,7 +248,7 @@ void send_ipi_to_lp(msg_t*event){
 
             #endif
 
-            exit_from_unpreemptable_zone();
+            exit_from_unpreemptable_zone(default_handler,INVALID);
         }
     }
     return;
