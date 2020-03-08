@@ -145,6 +145,9 @@
 #define STAT_MAX_CLOCK_DRIFT_TID                        1016
 #endif
 
+#if INVALIDATE_MSG_IN_EXECUTION==1
+#define STAT_INVALID_MSG_IN_EXECUTION 11000
+#endif
 typedef double stat64_t;
 
 struct stats_t {
@@ -331,6 +334,8 @@ struct stats_t {
     stat64_t max_clock_drift_global;
 
     #endif
+    stat64_t invalid_msg_in_execution_lp;
+    stat64_t invalid_msg_in_execution_tot;
     
 } __attribute__((aligned (64)));
 

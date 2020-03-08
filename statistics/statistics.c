@@ -394,7 +394,11 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 				stats[idx].max_clock_drift_tid = value;
             break;
 		#endif
-
+        #if INVALIDATE_MSG_IN_EXECUTION==1
+        case STAT_INVALID_MSG_IN_EXECUTION:
+            stats[idx].invalid_msg_in_execution_lp += value;
+            break;
+        #endif
 		default:
 			printf("Unrecognized stat type (%d)\n", type);
 	}
@@ -588,6 +592,9 @@ void gather_statistics() {
     	system_stats->sync_check_useful_lp += lp_stats[i].sync_check_useful_lp;//per lp num sync_check useful maded by lp
     	
     #endif
+    	#if INVALIDATE_MSG_IN_EXECUTION==1
+    	system_stats->invalid_msg_in_execution_tot += lp_stats[i].invalid_msg_in_execution_lp;
+    	#endif
 
 	}
 	
@@ -899,6 +906,10 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("IPI filtered in decision_model tot..............: %12lu\n",
 		(unsigned long)stats->ipi_filtered_in_decision_model_tot);
 	printf("\n\n");
+	#endif
+	#if INVALIDATE_MSG_IN_EXECUTION==1
+	printf("Num msg in execution invalidated:................ %12lu\n",
+		(unsigned long)stats->invalid_msg_in_execution_tot);
 	#endif
 
     printf("Total allocated space...........................: %lu MB\n", get_memory_allocated()/(1024));

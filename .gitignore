@@ -49,6 +49,7 @@ hash
 /phold
 pholdcount
 /pcs
+pcs_new
 /tcar
 log_test/*
 /pcs_lf

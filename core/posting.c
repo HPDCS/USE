@@ -210,7 +210,14 @@ msg_t* LP_info_is_good(int lp_idx){
     return LP_info;
 }
 
+#define INVALID_MSG_IN_EXECUTION 0x1 //must be different from 0x0
 msg_t* get_best_LP_info_good(int lp_idx){
+    #if INVALIDATE_MSG_IN_EXECUTION==1
+    if(LPS[lp_idx]->msg_curr_executed!=NULL && LPS[lp_idx]->msg_curr_executed->state==ANTI_MSG){
+        statistics_post_lp_data(lp_idx,STAT_INVALID_MSG_IN_EXECUTION,1);
+        return (msg_t*)INVALID_MSG_IN_EXECUTION;
+    }
+    #endif
     if(safe)//if current event is safe then there is not info good
         return NULL;
     return LP_info_is_good(lp_idx);
