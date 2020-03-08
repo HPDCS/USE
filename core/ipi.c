@@ -170,9 +170,11 @@ void check_ipi_capability(){
 }
 
 #if IPI_DECISION_MODEL==1
-static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution,clock_timer*latency){
-    bool ipi_useful;
+static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_ptr, msg_t *event_dest_in_execution,clock_timer*latency,clock_timer*residual_time,clock_timer*average_execution_time){
+    bool ipi_useful=false;
+    *residual_time=0;
     clock_timer avg_timer = (clock_timer) ((lp_evt_stats*)lp_ptr->ipi_statistics)->lp_state[( (event_dest_in_execution->processing_info.execution_mode!=LP_STATE_READY) ? 1 : 0)].evt_type[(unsigned int)event_dest_in_execution->type].avg_exec_time;
+    *average_execution_time=avg_timer;
     if(avg_timer==0){
         ipi_useful = false;
         goto exit;
@@ -181,20 +183,28 @@ static inline __attribute__((always_inline)) bool decision_model(LP_state *lp_pt
     {
         clock_timer executed_time = CLOCK_READ();
 
-        if (event_dest_in_execution->processing_info.evt_start_time > executed_time)
+        if (event_dest_in_execution->processing_info.evt_start_time > executed_time){
+            #if REPORT==1
+            clock_timer clock_drift_between_cores=event_dest_in_execution->processing_info.evt_start_time - executed_time;
+            statistics_post_th_data(tid,STAT_NUM_CLOCK_DRIFT_TID,1);
+            statistics_post_th_data(tid,STAT_CLOCK_DRIFT_TID,clock_drift_between_cores);
+            statistics_post_th_data(tid,STAT_MAX_CLOCK_DRIFT_TID,clock_drift_between_cores);
+            #endif
             executed_time = 0ULL;
-        else
+        }
+        else{
             executed_time -= event_dest_in_execution->processing_info.evt_start_time;
+        }
 
         *latency=executed_time;//latency to notify receiver
 
         if (executed_time < avg_timer)
             if ((avg_timer - executed_time) >= TR_PRIME){
+                *residual_time=avg_timer - executed_time;
                 ipi_useful=true;
                 goto exit;
             }
     }
-    ipi_useful=false;
 exit:
     #if REPORT==1
     if(!ipi_useful){
@@ -221,7 +231,9 @@ void send_ipi_to_lp(msg_t*event){
     if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
         #if IPI_DECISION_MODEL==1
         clock_timer latency;
-        ipi_useful = decision_model(LPS[lp_idx], event_dest_in_execution,&latency);
+        clock_timer residual_time;
+        clock_timer avg_timer;
+        ipi_useful = decision_model(LPS[lp_idx], event_dest_in_execution,&latency,&residual_time,&avg_timer);
         #else
         ipi_useful=true;
         #endif
@@ -233,6 +245,9 @@ void send_ipi_to_lp(msg_t*event){
             #if REPORT==1
             #if IPI_DECISION_MODEL==1
             statistics_post_th_data(tid,STAT_LATENCY_START_EXPOSITION_AND_SEND_IPI_TID,latency);
+            #if VERBOSE > 0
+            printf("latency=%lu,residual_time=%lu,avg_exec_time=%lu\n",(unsigned long)latency,(unsigned long)residual_time,(unsigned long)avg_timer);
+            #endif
             #endif
             clock_timer_start(syscall_time);
             #endif

@@ -614,7 +614,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	LPS[lid]->state = restore_state->state;
 }
 
-
+#if HANDLE_INTERRUPT==1
 void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker){
 	msg_t *last_restored_event;
 	unsigned int rollback_forward_length;
@@ -643,9 +643,14 @@ void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int
 
 	rollback_forward_length = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
+	#if REPORT==1
 	statistics_post_lp_data(lid, STAT_CLOCK_RESUME_ROLLBACK_LP, (double)clock_timer_value(rollback_forward_timer));
 	statistics_post_lp_data(lid, STAT_EVENT_RESUME_ROLLBACK_LP, (double)rollback_forward_length);
 	statistics_post_lp_data(lid,STAT_COUNT_RESUME_ROLLBACK_LP,1);
+	#else
+	(void)rollback_forward_length;
+	(void)rollback_forward_timer;
+	#endif
 
 	//update epoch of LP
 	#if CONSTANT_CHILD_INVALIDATION==1
@@ -658,6 +663,7 @@ void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int
 	LPS[current_lp]->epoch++;
 	#endif
 }
+#endif
 
 /**
 * This function computes the time barrier, namely the first state snapshot

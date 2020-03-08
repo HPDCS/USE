@@ -140,6 +140,9 @@
 #define STAT_CLOCK_RESIDUAL_TIME_SILENT_SYNCH_GAINED_LP   1012
 
 #define STAT_LATENCY_START_EXPOSITION_AND_SEND_IPI_TID 1013
+#define STAT_NUM_CLOCK_DRIFT_TID                        1014
+#define STAT_CLOCK_DRIFT_TID                            1015
+#define STAT_MAX_CLOCK_DRIFT_TID                        1016
 #endif
 
 typedef double stat64_t;
@@ -320,6 +323,13 @@ struct stats_t {
 
     stat64_t latency_start_exposition_and_send_ipi_tot_tid;
     stat64_t latency_start_exposition_and_send_ipi_per_ipi_sent;
+
+    stat64_t num_clock_drift_tot_tid;
+    stat64_t clock_drift_tot_tid;
+    stat64_t avg_clock_drift_per_clock_drift;
+    stat64_t max_clock_drift_tid;
+    stat64_t max_clock_drift_global;
+
     #endif
     
 } __attribute__((aligned (64)));

@@ -383,6 +383,16 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_LATENCY_START_EXPOSITION_AND_SEND_IPI_TID:
 			stats[idx].latency_start_exposition_and_send_ipi_tot_tid += value;
 			break;
+		case STAT_NUM_CLOCK_DRIFT_TID:
+			stats[idx].num_clock_drift_tot_tid += value;
+            break;
+        case STAT_CLOCK_DRIFT_TID:
+            stats[idx].clock_drift_tot_tid += value;
+            break;
+        case STAT_MAX_CLOCK_DRIFT_TID:
+			if(stats[idx].max_clock_drift_tid < value)
+				stats[idx].max_clock_drift_tid = value;
+            break;
 		#endif
 
 		default:
@@ -439,6 +449,13 @@ void gather_statistics() {
 		#if IPI_DECISION_MODEL==1 && REPORT==1
 		system_stats->ipi_filtered_in_decision_model_tid += thread_stats[i].ipi_filtered_in_decision_model_tid;
 		system_stats->latency_start_exposition_and_send_ipi_tot_tid += thread_stats[i].latency_start_exposition_and_send_ipi_tot_tid;
+		
+		system_stats->num_clock_drift_tot_tid += thread_stats[i].num_clock_drift_tot_tid;
+    	system_stats->clock_drift_tot_tid += thread_stats[i].clock_drift_tot_tid;
+    	if(i==0)
+    		system_stats->max_clock_drift_global = thread_stats[i].max_clock_drift_tid;
+    	else if(system_stats->max_clock_drift_global < thread_stats[i].max_clock_drift_tid)
+    		system_stats->max_clock_drift_global = thread_stats[i].max_clock_drift_tid;
 		#endif
 	}
 
@@ -474,7 +491,8 @@ void gather_statistics() {
 	#if IPI_DECISION_MODEL==1 && REPORT==1
 	system_stats->ipi_filtered_in_decision_model_tot = system_stats->ipi_filtered_in_decision_model_tid;
 	system_stats->ipi_filtered_in_decision_model_tid /= n_cores;
-	system_stats->latency_start_exposition_and_send_ipi_per_ipi_sent = system_stats->latency_start_exposition_and_send_ipi_tot_tid/system_stats->ipi_sent_tid;
+	system_stats->latency_start_exposition_and_send_ipi_per_ipi_sent = system_stats->latency_start_exposition_and_send_ipi_tot_tid/system_stats->ipi_sent_tot;
+	system_stats->avg_clock_drift_per_clock_drift = system_stats->clock_drift_tot_tid/system_stats->num_clock_drift_tot_tid;
 	#endif
 	// Aggregate per LP
 	for(i = 0; i < n_prc_tot; i++) {
@@ -561,6 +579,7 @@ void gather_statistics() {
 		system_stats->clock_residual_time_silent_asynch_gained_tot_lp += lp_stats[i].clock_residual_time_silent_asynch_gained_tot_lp;
 		system_stats->clock_residual_time_forward_synch_gained_tot_lp += lp_stats[i].clock_residual_time_forward_synch_gained_tot_lp;
 		system_stats->clock_residual_time_silent_synch_gained_tot_lp += lp_stats[i].clock_residual_time_silent_synch_gained_tot_lp;
+	
 	#endif
 
 	#if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
@@ -787,10 +806,10 @@ static void _print_statistics(struct stats_t *stats) {
 	
 	printf("Total resumable rollback executed...............: %12lu\n",
 		(unsigned long)stats->count_resume_rollback_tot_lp);
-	printf("Avg events resume per rollback_resume...........: %12lu\n",
-		(unsigned long)stats->avg_event_resume_per_rollback_resume);
-    printf("Avg clock resume per rollback resume............: %12lu clocks\n",
-		(unsigned long)stats->avg_clock_resume_per_rollback_resume);
+	printf("Avg events resume per rollback_resume...........: %12.2f\n",
+		stats->avg_event_resume_per_rollback_resume);
+    printf("Avg clock resume per rollback resume............: %12.2f clocks\n",
+		stats->avg_clock_resume_per_rollback_resume);
 	printf("\n");
 
 	#endif
@@ -837,7 +856,13 @@ static void _print_statistics(struct stats_t *stats) {
 		stats->equivalent_events_silent_interrupted_tot);
 	printf("Avg Latency to send ipi................................: %12.2f clocks\n",
 		stats->latency_start_exposition_and_send_ipi_per_ipi_sent);
-    
+
+    printf("Num clock drift tot....................................: %12lu\n",
+		(unsigned long)stats->num_clock_drift_tot_tid);
+    printf("Max clock drift global.................................: %12lu\n",
+		(unsigned long)stats->max_clock_drift_global);
+    printf("Avg Clock drift per clock_drift........................: %12.2f clocks\n",
+		stats->avg_clock_drift_per_clock_drift);
 	printf("\n");
 
     #endif
