@@ -632,7 +632,7 @@ void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int
 	//LP and current_lp can be different in case we have lock on lp x and we called this function with value lp y.
 	//this scenario can happen for example if we lock lp x and we don't reset current_lp with instruction current_lp=x
 	if(current_lp!=lid){
-		printf("current_lp different from LP_idx function argument\n");
+		printf("current_lp different from LP_idx\n");
 		gdb_abort;
 	}
 	#endif
@@ -646,7 +646,17 @@ void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int
 	statistics_post_lp_data(lid, STAT_CLOCK_RESUME_ROLLBACK_LP, (double)clock_timer_value(rollback_forward_timer));
 	statistics_post_lp_data(lid, STAT_EVENT_RESUME_ROLLBACK_LP, (double)rollback_forward_length);
 	statistics_post_lp_data(lid,STAT_COUNT_RESUME_ROLLBACK_LP,1);
-	
+
+	//update epoch of LP
+	#if CONSTANT_CHILD_INVALIDATION==1
+	double new_epoch=get_epoch_of_LP(current_lp)+1;
+	atomic_epoch_and_ts temp;
+	set_epoch(&temp,new_epoch);
+	set_timestamp(&temp,destination_time);
+	atomic_store_epoch_and_ts(&(LPS[current_lp]->atomic_epoch_and_ts),temp);
+	#else
+	LPS[current_lp]->epoch++;
+	#endif
 }
 
 /**

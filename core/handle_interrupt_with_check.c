@@ -58,16 +58,6 @@ void*default_handler(void*arg){
 				
                 insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
                 if(new_LP_simulation_state==RESUMABLE){
-                	//increment epoch of LP
-                	#if CONSTANT_CHILD_INVALIDATION==1
-					double new_epoch=get_epoch_of_LP(current_lp)+1;
-					atomic_epoch_and_ts temp;
-					set_epoch(&temp,new_epoch);
-					set_timestamp(&temp,destination_time);
-					atomic_store_epoch_and_ts(&(LPS[current_lp]->atomic_epoch_and_ts),temp);
-					#else
-					LPS[current_lp]->epoch++;
-					#endif
 					change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
                 }
                 else{
