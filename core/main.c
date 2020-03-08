@@ -103,6 +103,13 @@ void start_simulation() {
     printf("\t- IPI_DECISION_MODEL enabled.\n");
 #endif
 
+#if RESUMABLE_ROLLBACK==1
+    printf("\t- RESUMABLE_ROLLBACK enabled.\n");
+#endif
+#if INVALIDATE_MSG_IN_EXECUTION==1
+    printf("\t- INVALIDATE_MSG_IN_EXECUTION enabled.\n");
+#endif
+
 //#if REVERSIBLE == 1
 //    printf("\t- SPECULATIVE SIMULATION\n");
 //#else
