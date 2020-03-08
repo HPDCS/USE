@@ -58,11 +58,16 @@ void*default_handler(void*arg){
 				
                 insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
                 if(new_LP_simulation_state==RESUMABLE){
+                	#if RESUMABLE_ROLLBACK==1
 					change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
+					#else
+					change_LP_state_and_long_jmp(list_prev(current_msg),INVALID);
+					#endif
                 }
                 else{
                 	change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
                 }
+
             }
         }
     }   
