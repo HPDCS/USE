@@ -7,7 +7,10 @@
 //states reserved for field LP_simulation_state
 #define INVALID 0x0
 #define VALID 0x1
+
+#if RESUMABLE_ROLLBACK==1
 #define RESUMABLE 0x2
+#endif
 
 #define ROLLBACK_ONLY 0x4//state reserved for dummy_bound
 

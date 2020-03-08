@@ -731,7 +731,11 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 
 		#if HANDLE_INTERRUPT_WITH_CHECK==1
 		if(LPS[LP]->state==LP_STATE_SILENT_EXEC){
+			#if RESUMABLE_ROLLBACK==1
 			enter_in_preemptable_zone(default_handler,(void*)RESUMABLE);
+			#else
+			enter_in_preemptable_zone(default_handler,(void*)INVALID);
+			#endif
 		}//in forward mode preemptability is already actived in thread_loop
 
 		#if DEBUG==1
@@ -787,7 +791,7 @@ void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, 
 	continue;\
 };
 
-void do_rollback(void(*rollback_function)(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker)){
+void do_rollback(void(*rollback_function)(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker),bool in_past){
 	unsigned int old_state=0;
 	#if DEBUG == 1
 	if(current_msg == LPS[current_lp]->old_valid_bound && current_evt_state != ANTI_MSG) {
@@ -820,8 +824,9 @@ void do_rollback(void(*rollback_function)(unsigned int lid, simtime_t destinatio
 	rollback_function(current_lp, current_lvt, current_msg->tie_breaker);
 			
 	LPS[current_lp]->state = old_state;
+
 	statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
-	if(LPS[current_lp]->LP_simulation_state==VALID){//if event was in past before rollback
+	if(in_past){//if event was in past before rollback
 		if(current_evt_state != ANTI_MSG) {
 			statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 		}
@@ -1024,33 +1029,35 @@ void thread_loop(unsigned int thread_id) {
 			);
 
 		if(LPS[current_lp]->LP_simulation_state==INVALID){
-			do_rollback(rollback);
+			do_rollback(rollback,in_past_bound);
 
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 				next_loop();
 			}
 		}
+		#if RESUMABLE_ROLLBACK==1
 		else if (LPS[current_lp]->LP_simulation_state==RESUMABLE){
 			bool in_past_last_silent_evt=(current_lvt < LPS[current_lp]->last_silent_exec_evt->timestamp || 
 			(current_lvt == LPS[current_lp]->last_silent_exec_evt->timestamp && current_msg->tie_breaker <= LPS[current_lp]->last_silent_exec_evt->tie_breaker)
 			);
 			if(in_past_last_silent_evt){
-				do_rollback(rollback);
+				do_rollback(rollback,in_past_bound);
 				
 				if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 					next_loop();
 				}
 			}
 			else{
-				do_rollback(rollback_forward);
+				do_rollback(rollback_forward,in_past_bound);
 				if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 					next_loop();
 				}
 			}
 		}
+		#endif
 		else if(in_past_bound){
 
-			do_rollback(rollback);
+			do_rollback(rollback,in_past_bound);
 			if(LPS[current_lp]->dummy_bound->state==ROLLBACK_ONLY){
 				next_loop();
 			}

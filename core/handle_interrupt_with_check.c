@@ -57,6 +57,7 @@ void*default_handler(void*arg){
 				#endif
 				
                 insert_ordered_in_list(current_lp,(struct rootsim_list_node*)LPS[current_lp]->queue_in,LPS[current_lp]->last_silent_exec_evt,current_msg);
+                #if RESUMABLE_ROLLBACK==1
                 if(new_LP_simulation_state==RESUMABLE){
                 	#if RESUMABLE_ROLLBACK==1
 					change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
@@ -67,6 +68,9 @@ void*default_handler(void*arg){
                 else{
                 	change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
                 }
+                #else
+                change_LP_state_and_long_jmp(list_prev(current_msg),new_LP_simulation_state);
+                #endif
 
             }
         }
@@ -127,6 +131,9 @@ void  exit_from_unpreemptable_zone(void* (*handler)(void*arg_handler),void*arg_h
 	//counter can became 0 from 1,before decrement do_check
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)//counter>=1 means NOT_INTERRUPTIBLE,counter==0 means INTERRUPTIBLE
 		handler(arg_handler);
+	#else
+	(void)handler;
+	(void)arg_handler;
 	#endif
 	decrement_preempt_counter();
 }
@@ -143,6 +150,9 @@ void  enter_in_preemptable_zone(void* (*handler)(void*arg_handler),void*arg_hand
 	//counter can became 0 from 1,before decrement do_check
 	if(get_preemption_counter()==PREEMPT_COUNT_INIT)
 		handler(arg_handler);
+	#else
+	(void)handler;
+	(void)arg_handler;
 	#endif
 	decrement_preempt_counter();
 }

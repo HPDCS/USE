@@ -300,8 +300,11 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 		#if HANDLE_INTERRUPT==1
 		LPS[lid]->last_silent_exec_evt = evt;
 		//update frames and from_last_ckpt
-		LPS[lid]->num_executed_frames++;
-		LPS[lid]->from_last_ckpt = (LPS[lid]->from_last_ckpt+1)%CHECKPOINT_PERIOD;
+		#if RESUMABLE_ROLLBACK==1
+		LPS[lid]->num_executed_frames_resumable++;
+		LPS[lid]->from_last_ckpt_resumable = (LPS[lid]->from_last_ckpt_resumable+1)%CHECKPOINT_PERIOD;
+		#endif
+
 		#endif
 
 	}
@@ -325,13 +328,6 @@ unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, 
 	#endif
 	
 	LPS[lid]->state = old_state;
-
-	#if HANDLE_INTERRUPT==1 && DEBUG==1
-	if(LPS[current_lp]->old_valid_bound->frame != LPS[current_lp]->num_executed_frames-1){
-		printf("silent_execution:invalid frame number in event,frame_event=%d,frame_LP=%d\n",LPS[current_lp]->old_valid_bound->frame,LPS[current_lp]->num_executed_frames);
-		gdb_abort;
-	}
-	#endif
 
 	return events;
 }
@@ -560,15 +556,14 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	}
 	#endif
 
-	#if HANDLE_INTERRUPT==1
-	//promotes INVALID state to RESUMABLE state
+	#if RESUMABLE_ROLLBACK==1
+	//we have restore state with checkpoint,this LP_state is actually RESUMABLE,respect of last_silent_exec,so promotes INVALID state to RESUMABLE state
 	if(LPS[lid]->LP_simulation_state==INVALID)
 		LPS[lid]->LP_simulation_state=RESUMABLE;
+	LPS[lid]->num_executed_frames_resumable = restore_state->num_executed_frames;
+	LPS[lid]->from_last_ckpt_resumable=0;
 	#endif
-
-	rollback_lenght = LPS[lid]->num_executed_frames;//save LP frames before overwrite it
-	LPS[lid]->num_executed_frames = restore_state->num_executed_frames;
-
+	
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
@@ -582,10 +577,10 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 
 	//The bound variable is set in silent_execution.
 	if(LPS[lid]->state == LP_STATE_ROLLBACK){
-		//rollback_lenght = LPS[lid]->num_executed_frames; 
+		rollback_lenght = LPS[lid]->num_executed_frames; 
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		rollback_lenght -= LPS[lid]->num_executed_frames;
-
+		
 		#if CONSTANT_CHILD_INVALIDATION==1
 		double new_epoch=get_epoch_of_LP(lid)+1;
 		atomic_epoch_and_ts temp;
@@ -614,7 +609,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	LPS[lid]->state = restore_state->state;
 }
 
-#if HANDLE_INTERRUPT==1
+#if RESUMABLE_ROLLBACK==1
 void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker){
 	msg_t *last_restored_event;
 	unsigned int rollback_forward_length;
@@ -641,6 +636,13 @@ void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int
 	
 	last_restored_event = LPS[lid]->last_silent_exec_evt;
 
+	#if DEBUG==1
+	if(LPS[lid]->last_silent_exec_evt->frame!=LPS[lid]->num_executed_frames_resumable-1){
+		printf("error in frame last\n");
+		gdb_abort;
+	}
+	#endif
+
 	rollback_forward_length = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	#if REPORT==1
@@ -652,16 +654,18 @@ void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int
 	(void)rollback_forward_timer;
 	#endif
 
-	//update epoch of LP
+	//update epoch of LP and restore frames and last_checkpoint
 	#if CONSTANT_CHILD_INVALIDATION==1
 	double new_epoch=get_epoch_of_LP(current_lp)+1;
 	atomic_epoch_and_ts temp;
 	set_epoch(&temp,new_epoch);
 	set_timestamp(&temp,destination_time);
-	atomic_store_epoch_and_ts(&(LPS[current_lp]->atomic_epoch_and_ts),temp);
+	atomic_store_epoch_and_ts(&(LPS[lid]->atomic_epoch_and_ts),temp);
 	#else
-	LPS[current_lp]->epoch++;
+	LPS[lid]->epoch++;
 	#endif
+	LPS[lid]->num_executed_frames=LPS[lid]->num_executed_frames_resumable;
+	LPS[lid]->from_last_ckpt = LPS[lid]->from_last_ckpt_resumable;
 }
 #endif
 

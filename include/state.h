@@ -75,7 +75,9 @@ extern void ParallelSetState(void *new_state);
 extern bool LogState(unsigned int);
 extern unsigned long long RestoreState(unsigned int lid, state_t *restore_state);
 extern void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker);
+#if RESUMABLE_ROLLBACK==1
 extern void rollback_forward(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker);
+#endif
 extern state_t *find_time_barrier(int lid,  simtime_t time);
 extern state_t *update_time_barrier(unsigned int, state_t *, simtime_t);
 extern void clean_queue_states(unsigned int lid, simtime_t new_gvt);

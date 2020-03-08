@@ -756,7 +756,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
 	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
 	printf("Rollback operations.............................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
-	printf("AVG Rollbacked Events per Rollback..............: %12.2f\n", stats->counter_rollbacks_length/stats->counter_rollbacks);
+	printf("AVG Rollbacked Events per Rollback..............: %12.2f\n", (double)stats->counter_rollbacks_length/stats->counter_rollbacks);
 	printf("AVG Reprocessed Events per Rollback.............: %12.2f\n", ((double)stats->events_silent)/stats->counter_rollbacks);
 	printf("CheckOnGVT invocations..........................: %12llu\n", (unsigned long long)stats->counter_ongvt);
 	

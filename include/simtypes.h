@@ -134,6 +134,11 @@ typedef struct _LP_state {
 	void*ipi_statistics;//used to keep track of per-LP event's statistics,any threads need of access concurrently at this field
 #endif
 
+#if RESUMABLE_ROLLBACK==1
+	unsigned int num_executed_frames_resumable;
+	unsigned int	from_last_ckpt_resumable;
+#endif
+	
 #if POSTING==1
 	msg_t* priority_message __attribute__ ((aligned (CACHE_LINE_SIZE)));//used to write priority message,any threads need of access concurrently at this field
 #endif
