@@ -32,6 +32,7 @@ struct run_time_data
   size_t in_stats_ipi_trampoline_received_offset;
   /* "6" */
   size_t sizeof_stats;
+  size_t in_lpstate_msg_curr_executed;
 } __attribute__((packed,aligned(8)));
 
 extern struct run_time_data rt_data;

@@ -471,7 +471,7 @@ TARGET=phold
 
 ifeq ($(NEW_IPI_SUPPORT),1)
 	ASM_SOURCES=core/jmp.S\
-		core/trampoline.S\
+		core/new_tramp.S\
 		core/sync_tramp.S
 else
 	ifeq ($(NEW_LONG_JMP),1)

@@ -1,6 +1,6 @@
-.file	"sync_tramp.S"
+.file	"new_tramp.S"
 .text
-//this function emulates the behavior of trampoline.S, but it can be called in synch way as normal function
+
  .macro countoccurrences varname
  	pushq		%rsi
  	pushq		%rdi
@@ -14,9 +14,9 @@
 .endm
 
 .align 4
-.globl sync_trampoline
-.type sync_trampoline, @function
-sync_trampoline:
+.globl cfv_trampoline
+.type cfv_trampoline, @function
+cfv_trampoline:
 
 /**************************/
 /*     PREAMBLE START     */
@@ -79,7 +79,7 @@ sync_trampoline:
 	movq		LPS(%rip), %rdx
 	movq		(%rdx, %rbx, 8), %rdx
 
-/* %rcx <--- (&rt_data)->in_lpstate_msg_curr_executed (type: size_t) */
+	/* %rcx <--- (&rt_data)->in_lpstate_msg_curr_executed (type: size_t) */
 	/* %rbx <--- LPS[current_lp]->msg_curr_executed (type: msg_t *) */
 	/* ( LPS[current_lp]->msg_curr_executed == NULL ) ? */
 	movq		56(%rax), %rcx
@@ -87,7 +87,6 @@ sync_trampoline:
 	testq		%rbx, %rbx
 	jz			.L4
 
-	countoccurrences trampoline_count7
 	//msg_curr_executed not null
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %ecx <--- LPS[current_lp]->msg_curr_executed->state (type: unsigned int) */
@@ -97,14 +96,13 @@ sync_trampoline:
 	cmpl		$0x3, %ecx
 	jnz			.L4
 
-	countoccurrences trampoline_count8
 	//msg_curr_executed not null and anti_msg
 	jmp .L5
 
 .L4: //(LPS[current_lp]->msg_curr_executed==NULL || (LPS[current_lp]->msg_curr_executed!=NULL && LPS[current_lp]->msg_curr_executed->state!=ANTI_MSG)
 
-	countoccurrences trampoline_count0
-	
+	//countoccurrences trampoline_count0
+
 	/* %rcx <--- (&rt_data)->in_lpstate_priority_message_offset (type: size_t) */
 	/* %rbx <--- LPS[current_lp]->priority_message (type: msg_t *) */
 	/* ( LPS[current_lp]->priority_message == NULL ) ? */
@@ -113,7 +111,7 @@ sync_trampoline:
 	testq		%rbx, %rbx
 	jz			.L1
 
-	countoccurrences trampoline_count1
+	//countoccurrences trampoline_count1
 
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->state (type: unsigned int) */
@@ -123,7 +121,7 @@ sync_trampoline:
 	cmpl		$0x3, %ecx
 	jnz			.L3
 
-	countoccurrences trampoline_count2
+	//countoccurrences trampoline_count2
 
 	/* %rcx <--- (&rt_data)->in_msg_monitor_offset (type: size_t) */
 	/* %rcx <--- LPS[current_lp]->priority_message->monitor (type: unsigned int) */
@@ -134,7 +132,7 @@ sync_trampoline:
 	jz			.L1
 	jmp			.L2
 
-	countoccurrences trampoline_count3
+	//countoccurrences trampoline_count3
 
 .L3:
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
@@ -145,7 +143,7 @@ sync_trampoline:
 	testl		%ecx, %ecx
 	jnz			.L1
 
-	countoccurrences trampoline_count4
+	//countoccurrences trampoline_count4
 
 .L2:
 	/* %rcx <--- (&rt_data)->in_lpstate_bound_offset (type: size_t) */
@@ -156,7 +154,7 @@ sync_trampoline:
 	testq		%rcx, %rcx
 	jz			.L1
 
-	countoccurrences trampoline_count5
+	//countoccurrences trampoline_count5
 
 	/* %rdx <--- (&rt_data)->in_msg_timestamp_offset (type: size_t) */
 	/* %xmm1 <--- LPS[current_lp]->bound->timestamp (type: double) */
@@ -168,12 +166,12 @@ sync_trampoline:
 	comisd		%xmm1, %xmm0
 	jae			.L1
 
-	countoccurrences trampoline_count6
-
+	//countoccurrences trampoline_count6
+.L5:
 /*      PREAMBLE END      */
 /**************************/
-.L5:
-/* %rbx <--- preempt_count_ptr (type: unsigned long long *)  */
+
+	/* %rbx <--- preempt_count_ptr (type: unsigned long long *)  */
 	movq		%fs:0, %rax
 	addq		preempt_count_ptr@gottpoff(%rip), %rax
 	movq		(%rax), %rbx
@@ -182,7 +180,15 @@ sync_trampoline:
 	movq		$0x1, %rax
 	lock xaddq	%rax, (%rbx)
 
-	//nop,don't call lon_jmp
+	/* %rsi <--- 1 */
+	movq		$0x1, %rsi
+
+	/* %rdi <--- context_buffer */
+	movq		%fs:0, %rdi
+	addq		cntx_loop@gottpoff(%rip), %rdi
+
+	/* RESTORES CURRENT CONTEXT */
+	call		_long_jmp
 
 /**************************/
 /*    POSTAMBLE START     */
@@ -199,17 +205,26 @@ sync_trampoline:
 
 	/* New Stack-Frame creation on top
 	   of the old Stack-Pointer */
-	//nop
-
+	movq		32(%rsp), %rax
+	subq		$32, %rax
 
 	/* Copy content of the Alternate-Stack
 	   into the new Stack-Frame */
-	 //nop
 
+	movq		(%rsp), %rbx
+	movq		%rbx, (%rax)
+
+	movq		8(%rsp), %rbx
+	movq		%rbx, 8(%rax)
+
+	movq		16(%rsp), %rbx
+	movq		%rbx, 16(%rax)
+
+	movq		24(%rsp), %rbx
+	movq		%rbx, 24(%rax)
 
 	/* Stack-Switch occurs here */
-	//nop
-
+	movq		%rax, %rsp
 
 	/* restore FLAGS */
 	popq		%rax
@@ -225,4 +240,4 @@ sync_trampoline:
 
 	retq
 
-.size sync_trampoline, .-sync_trampoline
+.size cfv_trampoline, .-cfv_trampoline

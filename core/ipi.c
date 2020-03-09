@@ -46,6 +46,8 @@ double randfrom(double min, double max)
  __thread unsigned long trampoline_count4 = 0;
  __thread unsigned long trampoline_count5 = 0;
  __thread unsigned long trampoline_count6 = 0;
+ __thread unsigned long trampoline_count7 = 0;
+ __thread unsigned long trampoline_count8 = 0;
  
 
 __thread int ipi_registration_error = 0;
@@ -86,6 +88,7 @@ void run_time_data_init (void)
   rt_data.in_stats_ipi_trampoline_received_offset = offsetof(struct stats_t, ipi_trampoline_received_tid);
   #endif
   rt_data.sizeof_stats = sizeof(struct stats_t);
+  rt_data.in_lpstate_msg_curr_executed=offsetof(struct _LP_state,msg_curr_executed);
 }
 
 unsigned long get_max_bytes_lockable(){
@@ -352,17 +355,17 @@ void ipi_print_and_reset_counters(){
 }
 
 #if DEBUG==1
-
+#define NUM_COUNTERS 9
 void print_counters(const char*type,unsigned long*counters){
     printf("%s\n",type);
-    for(int i=0;i<7;i++){
+    for(int i=0;i<NUM_COUNTERS;i++){
         printf("%lu ",counters[i]);
     }
     printf("\n");
     return;
 }
 void print_trampoline_counters(){
-    printf("%lu %lu %lu %lu %lu %lu %lu\n",trampoline_count0,trampoline_count1,trampoline_count2,trampoline_count3,trampoline_count4,trampoline_count5,trampoline_count6);
+    printf("%lu %lu %lu %lu %lu %lu %lu %lu %lu\n",trampoline_count0,trampoline_count1,trampoline_count2,trampoline_count3,trampoline_count4,trampoline_count5,trampoline_count6,trampoline_count7,trampoline_count8);
 }
 void reset_all_trampoline_counters(){
     trampoline_count0 = 0;
@@ -372,6 +375,8 @@ void reset_all_trampoline_counters(){
     trampoline_count4 = 0;
     trampoline_count5 = 0;
     trampoline_count6 = 0;
+    trampoline_count7 = 0;
+    trampoline_count8 = 0;
     return;
 }
 
@@ -383,23 +388,25 @@ void initialize_trampoline_counters(unsigned long*trampoline_counters){
     trampoline_counters[4]=trampoline_count4;
     trampoline_counters[5]=trampoline_count5;
     trampoline_counters[6]=trampoline_count6;
+    trampoline_counters[7]=trampoline_count7;
+    trampoline_counters[8]=trampoline_count8;
 }
 
 bool check_arrays_counters(unsigned long *expected_counters,unsigned long *trampoline_counters){
-    for(unsigned int i=0;i<7;i++){
+    for(unsigned int i=0;i<NUM_COUNTERS;i++){
         if(expected_counters[i]!=trampoline_counters[i])
             return false;
     }
     return true;
 }
 void reset_counters(unsigned long*expected_counters){
-    for(unsigned int i=0;i<7;i++){
+    for(unsigned int i=0;i<NUM_COUNTERS;i++){
         expected_counters[i]=0;
     }
 }
 void call_trampoline_and_check_arrays_counters(char*string_to_print_on_error,unsigned long*expected_counters,bool preemption_counter_incremented){
     sync_trampoline();
-    unsigned long trampoline_counters[7]={0};
+    unsigned long trampoline_counters[NUM_COUNTERS]={0};
     initialize_trampoline_counters(trampoline_counters);
     unsigned long expected_preemption_counter=PREEMPT_COUNT_INIT;
     if(preemption_counter_incremented){
@@ -415,24 +422,44 @@ void call_trampoline_and_check_arrays_counters(char*string_to_print_on_error,uns
     reset_preemption_counter();
     reset_all_trampoline_counters();
 }
+void check_msg_in_execution_not_null_state_anti(msg_t*event_in_execution){
+    LPS[current_lp]->msg_curr_executed=event_in_execution;
+    event_in_execution->state=ANTI_MSG;
+    unsigned long expected_counters[NUM_COUNTERS]={0,0,0,0,0,0,0,1,1};
+    call_trampoline_and_check_arrays_counters("check_msg_in_execution_not_null_state_anti failed",expected_counters,true);
+    LPS[current_lp]->msg_curr_executed=NULL;
+}
+
+void check_msg_in_execution_not_null_state_not_anti(msg_t*event_in_execution){
+    LPS[current_lp]->msg_curr_executed=event_in_execution;
+    event_in_execution->state=NEW_EVT;
+    unsigned long expected_counters[NUM_COUNTERS]={1,0,0,0,0,0,0,1,0};
+    call_trampoline_and_check_arrays_counters("check_msg_in_execution_not_null_state_not_anti failed",expected_counters,false);
+    LPS[current_lp]->msg_curr_executed=NULL;
+}
+
+void check_msg_in_execution_null(){
+    unsigned long expected_counters[NUM_COUNTERS]={1,0,0,0,0,0,0,0,0};
+    call_trampoline_and_check_arrays_counters("check_msg_in_execution_null failed",expected_counters,false);
+}
 
 void check_priority_msg_null(){
     //no one pre operation
-    unsigned long expected_counters[7]={1,0,0,0,0,0,0};
+    unsigned long expected_counters[NUM_COUNTERS]={1,0,0,0,0,0,0,0,0};
     call_trampoline_and_check_arrays_counters("check_priority_msg_null failed",expected_counters,false);
 }
 
 void check_priority_msg_not_null_state_extracted(msg_t*priority_message){
     priority_message->state=EXTRACTED;
     LPS[current_lp]->priority_message=priority_message;
-    unsigned long expected_counters[7]={1,1,0,0,0,0,0};
+    unsigned long expected_counters[NUM_COUNTERS]={1,1,0,0,0,0,0,0,0};
     call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_extracted failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
 void check_priority_msg_not_null_state_eliminated(msg_t*priority_message){
     priority_message->state=ELIMINATED;
     LPS[current_lp]->priority_message=priority_message;
-    unsigned long expected_counters[7]={1,1,0,0,0,0,0};
+    unsigned long expected_counters[NUM_COUNTERS]={1,1,0,0,0,0,0,0,0};
     call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_eliminated failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
@@ -440,7 +467,7 @@ void check_priority_msg_not_null_state_anti_msg_banana(msg_t*priority_message){
     priority_message->state=ANTI_MSG;
     priority_message->monitor=(void*)0xBA4A4A;
     LPS[current_lp]->priority_message=priority_message;
-    unsigned long expected_counters[7]={1,1,1,0,0,0,0};
+    unsigned long expected_counters[NUM_COUNTERS]={1,1,1,0,0,0,0,0,0};
     call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_anti_msg_banana failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
@@ -449,14 +476,14 @@ void check_priority_msg_not_null_state_anti_msg_not_banana(msg_t*priority_messag
     priority_message->state=ANTI_MSG;
     priority_message->monitor=(void*)0x0;
     LPS[current_lp]->priority_message=priority_message;
-    unsigned long expected_counters[7]={1,1,1,0,0,0,0};
+    unsigned long expected_counters[NUM_COUNTERS]={1,1,1,0,0,0,0,0,0};
     call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_anti_msg_not_banana failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
 void check_priority_msg_not_null_state_new_evt(msg_t*priority_message){
     priority_message->state=NEW_EVT;
     LPS[current_lp]->priority_message=priority_message;
-    unsigned long expected_counters[7]={1,1,0,0,1,0,0};
+    unsigned long expected_counters[NUM_COUNTERS]={1,1,0,0,1,0,0,0,0};
     call_trampoline_and_check_arrays_counters("check_priority_msg_null_state_new_evt failed",expected_counters,false);
     LPS[current_lp]->priority_message=NULL;
 }
@@ -465,7 +492,7 @@ void check_priority_msg_not_null_state_anti_msg_not_banana_bound_not_null(msg_t*
     priority_message->monitor=(void*)0x0;
     LPS[current_lp]->priority_message=priority_message;
     LPS[current_lp]->bound=bound;
-    unsigned long expected_counters[7]={0};
+    unsigned long expected_counters[NUM_COUNTERS]={0};
     bool preemption_counter_must_be_incremented=false;
     for(int i=0;i<10000;i++){
         reset_counters(expected_counters);
@@ -500,7 +527,7 @@ void check_priority_msg_not_null_state_new_evt_bound_not_null(msg_t*priority_mes
     priority_message->state=NEW_EVT;
     LPS[current_lp]->priority_message=priority_message;
     LPS[current_lp]->bound=bound;
-    unsigned long expected_counters[7]={0};
+    unsigned long expected_counters[NUM_COUNTERS]={0};
     bool preemption_counter_must_be_incremented=false;
 
     for(int i=0;i<10000;i++){
@@ -543,12 +570,22 @@ void check_trampoline_function(){
         printf("priority_msg not null\n");
         gdb_abort;
     }
+    if(LPS[current_lp]->msg_curr_executed!=NULL){
+        printf("msg_curr_executed not null\n");
+        gdb_abort;
+    }
     srand(time( NULL));//set initial seed
 
     reset_all_trampoline_counters();
     msg_t *evt1=allocate_event(current_lp);
     msg_t *evt2=allocate_event(current_lp);
 
+    check_msg_in_execution_null();
+
+    check_msg_in_execution_not_null_state_not_anti(evt1);
+
+    check_msg_in_execution_not_null_state_anti(evt1);
+    
     check_priority_msg_null();
 
     check_priority_msg_not_null_state_extracted(evt1);
