@@ -132,9 +132,8 @@ void start_simulation() {
     }
 }
 
-void print_commit_hash_and_newline(){
-    printf("commit hash:\n");
-    int res=system("git log --pretty=format:'%H' -n 1");
+void print_git_commit_hash(){
+    int res=system("echo commit hash: `git log --pretty=format:'%H' -n 1`");
     (void)res;
 }
 
@@ -142,7 +141,7 @@ int main(int argn, char *argv[]) {
     timer exec_time;
 
     printf("taken %d parameters\n",argn);
-    print_commit_hash_and_newline();
+    print_git_commit_hash();
 
     if(argn < 3) {
         fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
@@ -168,7 +167,7 @@ int main(int argn, char *argv[]) {
             
         }
     }
-  
+
 #if IPI_SUPPORT==1
     set_program_name(argv[0]);
     check_ipi_capability();
