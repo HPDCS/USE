@@ -116,6 +116,7 @@
 #define STAT_IPI_RECEIVED_TID          501 
 #define STAT_IPI_SYSCALL_TIME_TID       502
 #define STAT_IPI_TRAMPOLINE_RECEIVED_TID 503 //this statistic is not used explicitly, it is used in trampoline.S
+#define STAT_INVALID_EVENT_IN_EXEC_TID 504
 #endif
 
 #if IPI_DECISION_MODEL==1 && REPORT==1
@@ -273,6 +274,8 @@ struct stats_t {
     stat64_t clock_exec_ipi_syscall_tid; //per thread
     stat64_t clock_exec_ipi_syscall_per_syscall;//per syscall
     stat64_t clock_exec_ipi_syscall_tot;
+    stat64_t invalid_event_in_exec_tid;
+    stat64_t invalid_event_in_exec_tot;
     #endif
 
     #if IPI_DECISION_MODEL==1 && REPORT==1

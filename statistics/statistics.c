@@ -331,6 +331,9 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_IPI_SYSCALL_TIME_TID:
 			stats[idx].clock_exec_ipi_syscall_tid += value;
 			break;
+		case STAT_INVALID_EVENT_IN_EXEC_TID:
+			stats[idx].invalid_event_in_exec_tid += value;
+			break;
 		#endif
 
 		#if IPI_DECISION_MODEL==1 && REPORT==1
@@ -448,6 +451,7 @@ void gather_statistics() {
 		system_stats->ipi_trampoline_received_tid += thread_stats[i].ipi_trampoline_received_tid;
 		system_stats->ipi_received_tid += thread_stats[i].ipi_received_tid;
 		system_stats->clock_exec_ipi_syscall_tid += thread_stats[i].clock_exec_ipi_syscall_tid;
+		system_stats->invalid_event_in_exec_tid += thread_stats[i].invalid_event_in_exec_tid;
 		#endif
 
 		#if IPI_DECISION_MODEL==1 && REPORT==1
@@ -490,6 +494,7 @@ void gather_statistics() {
 	system_stats->clock_exec_ipi_syscall_tot=system_stats->clock_exec_ipi_syscall_tid;
 	system_stats->clock_exec_ipi_syscall_tid/=n_cores;
 	system_stats->clock_exec_ipi_syscall_per_syscall=system_stats->clock_exec_ipi_syscall_tot/system_stats->ipi_sent_tot;
+	system_stats->invalid_event_in_exec_tot= system_stats->invalid_event_in_exec_tid;
 	#endif
 
 	#if IPI_DECISION_MODEL==1 && REPORT==1
@@ -899,6 +904,9 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long)stats->clock_exec_ipi_syscall_tot);
 	printf("IPI sent syscall time per 1 syscall.............: %12.2f clocks\n",
 		stats->clock_exec_ipi_syscall_per_syscall);
+	printf("Invalid msg_in_execution tot....................: %12lu\n",
+		(unsigned long)stats->invalid_event_in_exec_tot);
+	
 	printf("\n");
 	#endif
 

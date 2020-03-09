@@ -228,7 +228,7 @@ void send_ipi_to_lp(msg_t*event){
     if(lck_tid==0)
         return;
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
-    if(event_dest_in_execution!=NULL && event->timestamp < event_dest_in_execution->timestamp){
+    if(event_dest_in_execution!=NULL && ( (event->timestamp < event_dest_in_execution->timestamp) || event==event_dest_in_execution)){
         #if IPI_DECISION_MODEL==1
         clock_timer latency;
         clock_timer residual_time;

@@ -12,6 +12,7 @@ bool first_has_greater_ts(msg_t*event1,msg_t*event2);
 msg_t* LP_info_is_good(int lp_idx);
 void reset_LP_info(msg_t*event,int lp_idx);
 msg_t* get_best_LP_info_good(int lp_idx);
+bool flag_event_invalid_as_posted(msg_t*event);
 
 #if REPORT==1
 #define update_LP_statistics(from_info_posted,from_get_next_and_valid,lp_idx) {\

@@ -653,6 +653,18 @@ unsigned int fetch_internal(){
 		#if OPTIMISTIC_MODE == ST_BINDING_LP
 			add_lp_locked_set(lp_idx);
 		#endif
+			#if IPI_SUPPORT==1
+			msg_t*msg_in_execution;
+			msg_in_execution=LPS[lp_idx]->msg_curr_executed;
+			if(msg_in_execution!=NULL && msg_in_execution->state==ANTI_MSG){
+				if(flag_event_invalid_as_posted(msg_in_execution)==true){
+					#if REPORT==1
+					statistics_post_th_data(tid,STAT_INVALID_EVENT_IN_EXEC_TID,1);
+					#endif
+					//send_ipi_to_lp(msg_in_execution);
+				}
+			}
+			#endif
 			#if POSTING==1
 			if(in_past){
 				if(validity){

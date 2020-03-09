@@ -66,61 +66,6 @@ void reset_priority_message(unsigned int lp_idx,msg_t*old_priority_message_to_re
             (unsigned long)old_priority_message_to_reset,(unsigned long)NULL);
 }
 
-bool post_info_event_valid(msg_t*event){
-    unsigned long long value_posted=event->posted;
-    if(value_posted==NEVER_POSTED && CAS_x86((unsigned long long*)&(event->posted),
-        (unsigned long long)NEVER_POSTED,(unsigned long long)POSTED_VALID)==true){
-        #if REPORT==1
-        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
-        #endif
-        return post_information(event,true);
-    }
-    return false;
-}
-
-bool post_info_event_invalid(msg_t*event){
-    int value_posted=event->posted;
-    if(value_posted!=POSTED_INVALID && CAS_x86((unsigned long long*)&(event->posted),
-        (unsigned long long)value_posted,(unsigned long long)POSTED_INVALID)==true){
-        #if REPORT==1
-        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
-        #endif
-        return post_information(event,true);
-    }
-    return false;
-}
-
-msg_t* flag_as_posted(msg_t*event,bool* flagged){
-    //event to flush on calqueue.now it is in thread_pool so it is thread_local
-    unsigned int lp_idx=event->receiver_id;
-    simtime_t bound_ts=0.0;
-    if(LPS[lp_idx]->bound!=NULL){
-        bound_ts=LPS[lp_idx]->bound->timestamp;
-    }
-    msg_t*event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
-    if( event->timestamp<bound_ts && (event_dest_LP == NULL || event->timestamp < event_dest_LP->timestamp))
-    {
-        event->posted=POSTED_VALID;
-        *flagged=true;
-        #if REPORT==1
-        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
-        #endif
-        return event_dest_LP;
-    }
-    *flagged=false;
-    return NULL;
-}
-
-bool post_info_with_oldval(msg_t*event,msg_t*old_priority_message){
-    unsigned int lp_idx=event->receiver_id;
-    if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
-                (unsigned long)old_priority_message,(unsigned long)event)==false)//CAS failed
-        return post_information(event,true);
-    #if REPORT==1
-    statistics_post_th_data(tid,STAT_INFOS_POSTED_TID,1);
-    #endif
-    return true;
-}
 
 bool post_information(msg_t*event,bool retry_loop){
     unsigned int lp_idx=event->receiver_id;
@@ -167,6 +112,102 @@ bool post_information(msg_t*event,bool retry_loop){
     }
 }
 
+msg_t* flag_as_posted(msg_t*event,bool* flagged){
+    //event to flush on calqueue.now it is in thread_pool so it is thread_local
+    unsigned int lp_idx=event->receiver_id;
+    simtime_t bound_ts=0.0;
+    if(LPS[lp_idx]->bound!=NULL){
+        bound_ts=LPS[lp_idx]->bound->timestamp;
+    }
+    msg_t*event_dest_LP=(msg_t *)LPS[lp_idx]->priority_message;
+    if( event->timestamp<bound_ts && (event_dest_LP == NULL || event->timestamp < event_dest_LP->timestamp))
+    {
+        event->posted=POSTED_VALID;
+        *flagged=true;
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
+        #endif
+        return event_dest_LP;
+    }
+    *flagged=false;
+    return NULL;
+}
+
+bool flag_event_valid_as_posted(msg_t*event){
+    unsigned long long value_posted=event->posted;
+    if(value_posted==NEVER_POSTED && CAS_x86((unsigned long long*)&(event->posted),
+        (unsigned long long)NEVER_POSTED,(unsigned long long)POSTED_VALID)==true){
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
+        #endif
+        return true;
+    }
+    return false;
+}
+
+bool flag_event_invalid_as_posted(msg_t*event){
+    unsigned long long value_posted=event->posted;
+    if(value_posted!=POSTED_INVALID && CAS_x86((unsigned long long*)&(event->posted),
+        (unsigned long long)value_posted,(unsigned long long)POSTED_INVALID)==true){
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
+        #endif
+        return true;
+    }
+    return false;
+}
+
+bool post_info_event_valid(msg_t*event){
+    if(flag_event_valid_as_posted(event)==true){
+        return post_information(event,true);
+    }
+    return false;
+}
+
+bool post_info_event_invalid(msg_t*event){
+    if(flag_event_invalid_as_posted(event)==true){
+        return post_information(event,true);
+    }
+    return false;
+}
+
+/*bool post_info_event_valid(msg_t*event){
+    unsigned long long value_posted=event->posted;
+    if(value_posted==NEVER_POSTED && CAS_x86((unsigned long long*)&(event->posted),
+        (unsigned long long)NEVER_POSTED,(unsigned long long)POSTED_VALID)==true){
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
+        #endif
+        return post_information(event,true);
+    }
+    return false;
+}*/
+
+/*bool post_info_event_invalid(msg_t*event){
+    int value_posted=event->posted;
+    if(value_posted!=POSTED_INVALID && CAS_x86((unsigned long long*)&(event->posted),
+        (unsigned long long)value_posted,(unsigned long long)POSTED_INVALID)==true){
+        #if REPORT==1
+        statistics_post_th_data(tid,STAT_INFOS_POSTED_ATTEMPT_TID,1);
+        #endif
+        return post_information(event,true);
+    }
+    return false;
+}*/
+
+bool post_info_with_oldval(msg_t*event,msg_t*old_priority_message){
+    unsigned int lp_idx=event->receiver_id;
+    if(CAS_x86((unsigned long long*)&(LPS[lp_idx]->priority_message),
+                (unsigned long)old_priority_message,(unsigned long)event)==false)//CAS failed
+        return post_information(event,true);
+    #if REPORT==1
+    statistics_post_th_data(tid,STAT_INFOS_POSTED_TID,1);
+    #endif
+    return true;
+}
+
+
+
 msg_t* LP_info_is_good(int lp_idx){
     //return NULL if info is not usable,else return info usable
     msg_t*LP_info;
@@ -211,6 +252,7 @@ msg_t* LP_info_is_good(int lp_idx){
 }
 
 #define INVALID_MSG_IN_EXECUTION 0x1 //must be different from 0x0
+
 msg_t* get_best_LP_info_good(int lp_idx){
     #if INVALIDATE_MSG_IN_EXECUTION==1
     if(LPS[lp_idx]->msg_curr_executed!=NULL && LPS[lp_idx]->msg_curr_executed->state==ANTI_MSG){
