@@ -47,7 +47,7 @@ do
 								for threads in $THREAD_list #$(seq $CORES)
 						    do
 								echo $threads
-									./create_config.sh $STARTING_THREADS $pstate $hmode $pl
+									./create_config.sh $threads $pstate $hmode $pl
 									EX="sudo ./${test}_lf_hi $threads $lp"
 									FILE="${FOLDER}/${test}-lf-dymelor-hijacker-nhs${nhs}-psf${filtering}-w${pl}-h${hmode}-pop${pc_obs_per}-pws${pc_wd_sz}-th${threads}-p${pstate}-${lp}-maxlp-${max_lp}-look-${lookahead}-ck_per-${ck}-fan-${fan_out}-loop-${loop_count}-${run}"; touch $FILE
 
