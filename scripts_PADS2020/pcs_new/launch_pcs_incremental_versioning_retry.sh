@@ -4,17 +4,17 @@
 source $1
 source $2
 
-
+MODEL=pcs
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-VERSION=`cat ./version_pcs_file.txt | grep -c version`
+echo version >> version_${MODEL}_file.txt
 
-echo version >> version_pcs_file.txt
+VERSION=`cat ./version_${MODEL}_file.txt | grep -c version`
+
 cd ../..
 
-echo ${FOLDER}
 PATH_RESULT=${FOLDER}${VERSION}
 mkdir -p ${PATH_RESULT}
 
@@ -40,13 +40,13 @@ for fading_recheck in $FADING_RECHECK_LIST
 do
 	for test in $TEST_list 
 	do
-		COMPILATION_ORI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} FADING_RECHECK_FREQUENCY=${fading_recheck} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} LINEAR_PINNING=1"
+		COMPILATION_ORI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} FADING_RECHECK_FREQUENCY=${fading_recheck} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck}"
 		echo ${COMPILATION_ORI}
-			${COMPILATION_ORI}
+		${COMPILATION_ORI}
 		
 		mv $test ${test}_ori
 		
-		COMPILATION_IPI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} FADING_RECHECK_FREQUENCY=${fading_recheck} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} LINEAR_PINNING=1 ENABLE_IPI_MODULE=1"
+		COMPILATION_IPI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} TA=${ta} TA_DURATION=${ta_duration} CHANNELS_PER_CELL=${channels_per_cell} TA_CHANGE=${ta_change} FADING_RECHECK_FREQUENCY=${fading_recheck} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} ENABLE_IPI_MODULE=1"
 		echo ${COMPILATION_IPI}
 			 ${COMPILATION_IPI}
 		
@@ -58,7 +58,6 @@ do
 			do
 				for threads in $THREAD_list
 				do
-					EX="./${test}_ori $threads $lp $TEST_DURATION ${COMPILATION_ORI}"
 					FILE="${PATH_RESULT}/${test}-ori-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change-$run"; touch $FILE					
 					N=0 
 					while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
@@ -72,7 +71,6 @@ do
 						N=$(( N+1 ))
 					done  
 					
-					EX="./${test}_ipi $threads $lp $TEST_DURATION ${COMPILATION_IPI}"
 					FILE="${PATH_RESULT}/${test}-ipi-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change-$run"; touch $FILE
 											
 					N=0 
