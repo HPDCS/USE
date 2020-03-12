@@ -38,7 +38,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			state_ptr->events = 0;
 
 			if(me == 0) {
-				printf("Running %s a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", MODEL_NAME,LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
+				printf("Running %s a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f,NUM_NEARS=%d\n", MODEL_NAME,LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD,NUM_NEARS);
 			}
 			//TODO print all parameters
 			if(NUM_NEARS<=0){
