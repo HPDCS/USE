@@ -87,6 +87,8 @@ cfv_trampoline:
 	testq		%rbx, %rbx
 	jz			.L4
 
+	//countoccurrences trampoline_count7
+
 	//msg_curr_executed not null
 	/* %rcx <--- (&rt_data)->in_msg_state_offset (type: size_t) */
 	/* %ecx <--- LPS[current_lp]->msg_curr_executed->state (type: unsigned int) */
@@ -96,6 +98,8 @@ cfv_trampoline:
 	cmpl		$0x3, %ecx
 	jnz			.L4
 
+	//countoccurrences trampoline_count8
+	
 	//msg_curr_executed not null and anti_msg
 	jmp .L5
 

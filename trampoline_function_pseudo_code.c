@@ -7,6 +7,19 @@ trampoline_function_pseudo_code(){
 	current_lp=read_current_lp();
 	LPS[current_lp]=read_LP_of_current_lp();
 
+	msg_curr_executed=read_msg_in_execution();
+	if(msg_curr_executed==NULL)
+		goto L4;
+	//msg_curr_executed not null
+	count7++;
+	if(msg_curr_executed->state != ANTI_MSG)
+		goto L4;
+
+	count8++;
+	//msg_curr_executed not null and anti_msg
+	goto L5;
+
+	L4:
 	//nothing 
 	count0++;
 	priority_message=read_priority_message();//don't re-read this value
@@ -47,6 +60,8 @@ trampoline_function_pseudo_code(){
 
 	//priority_msg not null && bound!=NULL && ( (state==ANTI && monitor!=banana) ||  state=NEW_EVT) && (priority_message_is_really_priority==true)
 	count6++;
+
+	L5:
 	goto prepare_to_cfv;
 	prepare_to_cfv:
 		do_cfv() __attribute__(no_return);//in this case we don't return

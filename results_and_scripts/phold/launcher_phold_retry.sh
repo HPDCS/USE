@@ -32,6 +32,7 @@ then
 	echo TEST_CONFIGURATION_AND_SCRIPT...
 else
 	mkdir -p ${PATH_RESULTS}
+	cp ./results_and_scripts/$TEST_list/$2  ./${PATH_RESULTS}/$2
 fi
 
 for max_lp in $MAX_SKIPPED_LP_list
@@ -112,4 +113,4 @@ do
 	done
 done
 
-cd scripts_PADS2020/${TEST_list}
+cd ./results_and_scripts/$TEST_list

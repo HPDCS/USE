@@ -32,6 +32,7 @@ then
 	echo TEST_CONFIGURATION_AND_SCRIPT...
 else
 	mkdir -p ${PATH_RESULTS}
+	cp ./results_and_scripts/$TEST_list/$2  ./${PATH_RESULTS}/$2
 fi
 
 for max_lp in $MAX_SKIPPED_LP_list
@@ -48,16 +49,16 @@ do
 					do
 						for lookahead in $LOOKAHEAD_list
 						do
-							for thr_prob_normal in $THR_PROB_NORMAL_list
+							for num_nears in $NUM_NEARS_list
 							do
 								for test in $TEST_list 
 								do
-									COMPILATION_ORI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0"
+									COMPILATION_ORI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} NUM_NEARS=${num_nears} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0"
 									${COMPILATION_ORI}
 			
 									mv $test ${test}_ori
 			
-									COMPILATION_IPI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0 ENABLE_IPI_MODULE=1"
+									COMPILATION_IPI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} NUM_NEARS=${num_nears} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0 ENABLE_IPI_MODULE=1"
 									${COMPILATION_IPI}
 			
 									mv $test ${test}_ipi
@@ -68,8 +69,8 @@ do
 										do
 											for threads in $THREAD_list
 											do
-												FILE_ORI="${PATH_RESULTS}/${test}-ori-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-prob-${thr_prob_normal}-$run"; touch ${FILE_ORI}
-												FILE_IPI="${PATH_RESULTS}/${test}-ipi-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-prob-${thr_prob_normal}-$run"; touch ${FILE_IPI}
+												FILE_ORI="${PATH_RESULTS}/${test}-ori-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-${num_nears}-$run"; touch ${FILE_ORI}
+												FILE_IPI="${PATH_RESULTS}/${test}-ipi-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-${num_nears}-$run"; touch ${FILE_IPI}
 												
 												echo ${FILE_ORI}
 												echo ${FILE_IPI}
@@ -115,4 +116,4 @@ do
 	done
 done
 
-cd scripts_PADS2020/${TEST_list}
+cd ./results_and_scripts/$TEST_list
