@@ -18,7 +18,9 @@ files_names=[
 "phold-hs-mixed-5",
 ]
 
+tolerance = 1-0.00
 powercap = float(sys.argv[1])
+sys.stderr.write("ideal real powercap "+str(powercap)+ " tolerance "+str(tolerance)+" real powercap "+str(powercap*tolerance)+"\n")
 
 
 fheader = ["strategy"]
@@ -58,7 +60,7 @@ for fth in files:
 			res += [(lth[i][0], header[0][j], float(lth[i][j]), float(lpo[i][j]))]
 
 
-	res.sort(key=lambda x: x[2] if x[3] <= powercap else 0, reverse=True)
+	res.sort(key=lambda x: x[2] if x[3] <= powercap*tolerance else 0, reverse=True)
 	sys.stderr.write(\
         fth.replace("plots_traffic/TH-traffic_137_03_08", "traffic").replace("plots_phold/TH-phold-lf-dymelor-hijacker", "phold")
         .replace("-maxlp-1000000-look-0-ck_per-50-fan-1-loop-500", "")

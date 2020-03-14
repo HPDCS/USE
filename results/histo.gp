@@ -20,13 +20,13 @@ set ylabel "Relative speedup"
 
 
 set output '65.eps'
-set title "Slowdown"
+set title "USE - CAP 65W"
 plot '65.dat' using (column(2)/column(2)) ti columnheader(2), '' u (column(3)/column(2)) ti columnheader(3), '' u (column(4)/column(2)) ti columnheader(4)
 system('epstopdf 65.eps')
 
 
 set output '55.eps'
-set title "Slowdown"
+set title "USE - CAP 55W"
 plot '55.dat' using (column(2)/column(2)) ti columnheader(2), '' u (column(3)/column(2)) ti columnheader(3), '' u (column(4)/column(2)) ti columnheader(4)
 system('epstopdf 55.eps')
 
