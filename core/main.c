@@ -71,6 +71,7 @@ void start_simulation() {
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif
+    printf("\t- THR_POOL_SIZE %u\n",THR_POOL_SIZE);
 
 #if CONSTANT_CHILD_INVALIDATION==1
     printf("\t- CONSTANT_CHILD_INVALIDATION enabled.\n");
