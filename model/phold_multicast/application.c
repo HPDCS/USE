@@ -39,9 +39,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			if(me == 0) {
 				printf("Running %s a traditional loop-based benchmark with counter set to %d, %d total events per lp, lookahead %f,thr_prob_normal=%lf\n",MODEL_NAME, LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD, THR_PROB_NORMAL);
-				printf("lookahead %f,thr_prob_normal=%lf\n",LOOKAHEAD, THR_PROB_NORMAL);
 			}
-			//TODO print all parameters
 
 			timestamp =  (simtime_t)(me) ;// ts normal_evt==i+NUM_LP,ts is integer
 			ScheduleNewEvent(me, timestamp, NORMAL_EVT, NULL, 0);
