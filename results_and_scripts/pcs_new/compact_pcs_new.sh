@@ -1,8 +1,8 @@
 #!/bin/bash
 
-source $1
-source $2
-
+source $1 #machine conf
+source $2 #pcs conf
+VERSION=$3 #version to compact
 SIM_list="ori ipi"
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
@@ -11,6 +11,7 @@ CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H)
 cd ../..
 mkdir -p ${DAT_FOLDER}
 
+PATH_RESULTS=${FOLDER}${VERSION}
 OUT_SPEEDUP=${DAT_FOLDER}/speedup.txt
 
 for max_lp in $MAX_SKIPPED_LP_list
@@ -55,7 +56,7 @@ do
 					sum=0
 					for run in $RUN_list
 					do
-						FILE="${SRC_FOLDER}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change-$run"; 			
+						FILE="${SRC_FOLDER}/${PATH_RESULTS}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change-$run"; 			
 						th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
 						th=`python2 -c "print '$th'.strip()"`
 						sum=`python2 -c "print $th+$sum"`
