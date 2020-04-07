@@ -9,10 +9,11 @@ BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H)
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
 cd ../..
-mkdir -p ${DAT_FOLDER}
+DAT_DIRECTORY="${FOLDER}${VERSION}/dat"
+mkdir -p ${DAT_DIRECTORY}
 
 PATH_RESULTS=${FOLDER}${VERSION}
-OUT_SPEEDUP=${DAT_FOLDER}/speedup.txt
+OUT_SPEEDUP=${DAT_DIRECTORY}/speedup.txt
 
 for max_lp in $MAX_SKIPPED_LP_list
 do
@@ -42,7 +43,7 @@ do
 			 line="$line $sim"
 			done
 			
-			OUT="${DAT_FOLDER}/${test}-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change"; 				
+			OUT="${DAT_DIRECTORY}/${test}-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change"; 				
 			echo $line > $OUT
 			
 			for threads in $THREAD_list
@@ -56,7 +57,7 @@ do
 					sum=0
 					for run in $RUN_list
 					do
-						FILE="${SRC_FOLDER}/${PATH_RESULTS}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change-$run"; 			
+						FILE="${PATH_RESULTS}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-ta-$ta-ta_duration-$ta_duration-chan_per_cell-$channels_per_cell-ta_change-$ta_change-$run"; 			
 						th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
 						th=`python2 -c "print '$th'.strip()"`
 						sum=`python2 -c "print $th+$sum"`
