@@ -82,5 +82,4 @@ done
 done
 done
 
-
-cd scripts_PADS2020/pcs
+cd results_and_scripts/pcs_new
