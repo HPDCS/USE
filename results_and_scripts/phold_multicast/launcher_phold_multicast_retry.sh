@@ -53,12 +53,13 @@ do
 							do
 								for test in $TEST_list 
 								do
-									COMPILATION_ORI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0"
+									#note : THR_POOL_SIZE is 256 and not 128 because multicast generate a great number of child events...
+									COMPILATION_ORI="make $test THR_POOL_SIZE=256 MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0"
 									${COMPILATION_ORI}
 			
 									mv $test ${test}_ori
 			
-									COMPILATION_IPI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0 ENABLE_IPI_MODULE=1"
+									COMPILATION_IPI="make $test THR_POOL_SIZE=256 MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0 ENABLE_IPI_MODULE=1"
 									${COMPILATION_IPI}
 			
 									mv $test ${test}_ipi

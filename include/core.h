@@ -17,7 +17,9 @@
 
 #define MAX_LPs	2048
 
+#ifndef THR_POOL_SIZE
 #define THR_POOL_SIZE		128
+#endif
 
 #define MODE_SAF	1
 #define MODE_STM	2
