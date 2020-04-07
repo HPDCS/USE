@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#usage parameter1:machine.conf parameter2:model.conf parameter3:versioning number,if 0 versioning incremental parameter4:if it is 1 then test_launcher compile and run program with duration 1 sec
+#usage parameter1:machine.conf parameter2:model.conf parameter3:versioning number,if 0 versioning incremental parameter4:if it is 1 then test_launcher compile and run program with duration SEC_TEST_CONFIGURATION_AND_SCRIPT sec
 source $1
 source $2
 
-VERSIONING=$3
+VERSIONING=$3 #versioning number
 TEST_CONFIGURATION_AND_SCRIPT=$4
-SEC_TEST_CONFIGURATION_AND_SCRIPT=1
+SEC_TEST_CONFIGURATION_AND_SCRIPT=1 #num sec to test the script
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
