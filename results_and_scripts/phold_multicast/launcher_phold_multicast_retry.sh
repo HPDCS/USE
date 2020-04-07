@@ -1,5 +1,5 @@
 #!/bin/bash
-#usage parameter1:machine.conf parameter2:model.conf parameter3:versioning number,if 0 versioning incremental parameter4:if it is present then test_launcher compile and run program with duration 1 sec
+#usage parameter1:machine.conf parameter2:model.conf parameter3:versioning number,if 0 versioning incremental parameter4:if it is present then test_launcher compile and run program with duration SEC_TEST_CONFIGURATION_AND_SCRIPT sec
 source $1
 source $2
 

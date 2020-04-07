@@ -10,8 +10,3 @@ echo "./launcher_pcs_new_retry.sh ../machine_conf/${machine}.conf pcs_new_after_
 
 cd ..
 
-#cd phold
-#./launcher_phold_retry.sh ../machine_conf/${machine_thread_list}.conf phold_after_paper1.conf 0 ${test_launcher}
-
-#cd ..
-
