@@ -1,0 +1,639 @@
+commit hash: 36022e4900127990686906e5ed83bf0e5a58a84f
+taken 5 parameters
+Compilation line: make phold_multicast THR_POOL_SIZE=256 MAX_ALLOCABLE_GIGAS=230 LINEAR_PINNING=1 THR_PROB_NORMAL=0.5 NBC=1 MAX_SKIPPED_LP=1000000 REVERSIBLE=0 LOOKAHEAD=0.0 FAN_OUT=1 LOOP_COUNT=300 PERC_USED_BUCKET=0.33 ELEM_PER_BUCKET=3 REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=5 PRINT_SCREEN=0 ENABLE_IPI_MODULE=1
+***START SIMULATION***
+
+
+Starting an execution with 48 THREADs, 100 LPs :
+	- DYMELOR enabled.
+	- CACHELINESIZE 64
+	- CHECKPOINT PERIOD 5
+	- EVTS/LP BEFORE CLEAN CKP 1000
+	- ON_GVT PERIOD 4294967295
+	- REPORT prints enabled.
+	- THR_POOL_SIZE 256
+	- PREEMPT_COUNTER enabled.
+	- LONG_JMP enabled.
+	- HANDLE_INTERRUPT enabled.
+	- HANDLE_INTERRUPT_WITH_CHECK enabled.
+	- POSTING enabled.
+	- IPI_SUPPORT enabled.
+	- SYNCH_CHECK enabled.
+	- IPI_DECISION_MODEL enabled.
+	- RESUMABLE_ROLLBACK enabled.
+	- INVALIDATE_MSG_IN_EXECUTION enabled.
+
+Thread 1 set to CPU no 1
+Thread 2 set to CPU no 2
+Thread 3 set to CPU no 3
+Thread 4 set to CPU no 4
+Thread 5 set to CPU no 5
+Thread 6 set to CPU no 6
+Thread 7 set to CPU no 7
+Thread 8 set to CPU no 8
+Thread 9 set to CPU no 9
+Thread 10 set to CPU no 10
+Thread 11 set to CPU no 11
+Thread 12 set to CPU no 12
+Thread 13 set to CPU no 13
+Thread 14 set to CPU no 14
+Thread 15 set to CPU no 15
+Thread 16 set to CPU no 16
+Thread 17 set to CPU no 17
+Thread 18 set to CPU no 18
+Thread 19 set to CPU no 19
+Thread 20 set to CPU no 20
+Thread 21 set to CPU no 21
+Thread 22 set to CPU no 22
+Thread 23 set to CPU no 23
+Thread 24 set to CPU no 24
+Thread 25 set to CPU no 25
+Thread 26 set to CPU no 26
+Thread 27 set to CPU no 27
+Thread 28 set to CPU no 28
+Thread 29 set to CPU no 29
+Thread 30 set to CPU no 30
+Thread 31 set to CPU no 31
+Thread 32 set to CPU no 32
+Thread 33 set to CPU no 33
+Thread 34 set to CPU no 34
+Thread 35 set to CPU no 35
+Thread 36 set to CPU no 36
+Thread 37 set to CPU no 37
+Thread 38 set to CPU no 38
+Thread 39 set to CPU no 39
+Thread 40 set to CPU no 40
+Thread 41 set to CPU no 41
+Thread 42 set to CPU no 42
+Thread 43 set to CPU no 43
+Thread 44 set to CPU no 44
+Thread 45 set to CPU no 45
+Thread 46 set to CPU no 46
+Thread 0 set to CPU no 0
+Thread 47 set to CPU no 47
+Register thread,code_interruptible_start=94434916741116,code_interruptible_end=94434916741495
+Thread 0 finish registration to IPI module
+LP_metada init finished
+Dymelor_init finished
+Statistics_init finished
+Queue_init finished
+master seed is 100502043749714804
+Numerical_init finished
+Nodes_init finished
+Running PHOLD_MULTICAST a traditional loop-based benchmark with counter set to 300, 5000 total events per lp, lookahead 0.000000,thr_prob_normal=0.500000
+EXECUTED ALL INIT EVENTS
+The process will last 60 seconds
+[22] Execution ended correctly
+[3] Execution ended correctly
+[11] Execution ended correctly
+[45] Execution ended correctly
+[17] Execution ended correctly
+[20] Execution ended correctly
+[2] Execution ended correctly
+[0] Execution ended correctly
+[13] Execution ended correctly
+[28] Execution ended correctly
+[36] Execution ended correctly
+[8] Execution ended correctly
+[10] Execution ended correctly
+[24] Execution ended correctly
+[43] Execution ended correctly
+[33] Execution ended correctly
+[19] Execution ended correctly
+[4] Execution ended correctly
+[32] Execution ended correctly
+[25] Execution ended correctly
+[44] Execution ended correctly
+[1] Execution ended correctly
+[9] Execution ended correctly
+[18] Execution ended correctly
+[6] Execution ended correctly
+[12] Execution ended correctly
+[42] Execution ended correctly
+[40] Execution ended correctly
+[5] Execution ended correctly
+[29] Execution ended correctly
+[16] Execution ended correctly
+[14] Execution ended correctly
+[41] Execution ended correctly
+[37] Execution ended correctly
+[35] Execution ended correctly
+[46] Execution ended correctly
+[15] Execution ended correctly
+[39] Execution ended correctly
+[27] Execution ended correctly
+[23] Execution ended correctly
+[47] Execution ended correctly
+[31] Execution ended correctly
+[30] Execution ended correctly
+[7] Execution ended correctly
+[34] Execution ended correctly
+[21] Execution ended correctly
+[38] Execution ended correctly
+[26] Execution ended correctly
+Simulation final report:
+Thread: 48	LP: 100
+
+LP-ID: 0 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 377006
+LP-ID: 0 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76042
+LP-ID: 0 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 89640
+LP-ID: 0 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 80377
+LP-ID: 1 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 483936
+LP-ID: 1 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 65229
+LP-ID: 1 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 101037
+LP-ID: 1 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 69655
+LP-ID: 2 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 542883
+LP-ID: 2 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 86942
+LP-ID: 2 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 93540
+LP-ID: 2 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 83915
+LP-ID: 3 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 399972
+LP-ID: 3 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 85630
+LP-ID: 3 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 89727
+LP-ID: 3 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 75936
+LP-ID: 4 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 435916
+LP-ID: 4 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 67158
+LP-ID: 4 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 80574
+LP-ID: 4 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 75249
+LP-ID: 5 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 608806
+LP-ID: 5 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73731
+LP-ID: 5 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 93755
+LP-ID: 5 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 79122
+LP-ID: 6 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 441240
+LP-ID: 6 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 86142
+LP-ID: 6 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 101289
+LP-ID: 6 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 75302
+LP-ID: 7 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 541745
+LP-ID: 7 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 75456
+LP-ID: 7 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 82074
+LP-ID: 7 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 85313
+LP-ID: 8 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 331531
+LP-ID: 8 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 69735
+LP-ID: 8 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 91221
+LP-ID: 8 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 74342
+LP-ID: 9 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 439880
+LP-ID: 9 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 77387
+LP-ID: 9 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 102121
+LP-ID: 9 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 91453
+LP-ID: 10 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 518472
+LP-ID: 10 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 75571
+LP-ID: 10 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 82282
+LP-ID: 10 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 87403
+LP-ID: 11 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 344307
+LP-ID: 11 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 75345
+LP-ID: 11 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 81662
+LP-ID: 11 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 83778
+LP-ID: 12 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 392154
+LP-ID: 12 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 85472
+LP-ID: 12 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 72414
+LP-ID: 12 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 83043
+LP-ID: 13 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 383554
+LP-ID: 13 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 62491
+LP-ID: 13 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 81511
+LP-ID: 13 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 77045
+LP-ID: 14 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 475074
+LP-ID: 14 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 83738
+LP-ID: 14 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 96882
+LP-ID: 14 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 85157
+LP-ID: 15 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 493261
+LP-ID: 15 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 68897
+LP-ID: 15 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 98097
+LP-ID: 15 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 75872
+LP-ID: 16 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 352404
+LP-ID: 16 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78426
+LP-ID: 16 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 72972
+LP-ID: 16 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 76261
+LP-ID: 17 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 452894
+LP-ID: 17 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73205
+LP-ID: 17 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 76026
+LP-ID: 17 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 79602
+LP-ID: 18 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 289272
+LP-ID: 18 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 74265
+LP-ID: 18 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 83907
+LP-ID: 18 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 68638
+LP-ID: 19 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 377121
+LP-ID: 19 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76203
+LP-ID: 19 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 89094
+LP-ID: 19 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 68575
+LP-ID: 20 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 639497
+LP-ID: 20 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 72074
+LP-ID: 20 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 101023
+LP-ID: 20 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 76413
+LP-ID: 21 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 380603
+LP-ID: 21 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 82349
+LP-ID: 21 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 97678
+LP-ID: 21 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 96243
+LP-ID: 22 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 569559
+LP-ID: 22 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 75183
+LP-ID: 22 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 97867
+LP-ID: 22 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 65803
+LP-ID: 23 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 483863
+LP-ID: 23 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78397
+LP-ID: 23 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 84118
+LP-ID: 23 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 72283
+LP-ID: 24 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 368611
+LP-ID: 24 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 80622
+LP-ID: 24 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 84104
+LP-ID: 24 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 81446
+LP-ID: 25 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 469125
+LP-ID: 25 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 70615
+LP-ID: 25 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 69968
+LP-ID: 25 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 76456
+LP-ID: 26 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 643494
+LP-ID: 26 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 80304
+LP-ID: 26 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 89249
+LP-ID: 26 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 68704
+LP-ID: 27 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 298647
+LP-ID: 27 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 75078
+LP-ID: 27 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 106514
+LP-ID: 27 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 72149
+LP-ID: 28 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 1077838
+LP-ID: 28 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 69907
+LP-ID: 28 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 93670
+LP-ID: 28 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 90810
+LP-ID: 29 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 348115
+LP-ID: 29 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76329
+LP-ID: 29 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 82296
+LP-ID: 29 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 83092
+LP-ID: 30 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 622145
+LP-ID: 30 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 71895
+LP-ID: 30 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 96202
+LP-ID: 30 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 69771
+LP-ID: 31 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 629779
+LP-ID: 31 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 75291
+LP-ID: 31 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 93098
+LP-ID: 31 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 94767
+LP-ID: 32 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 395935
+LP-ID: 32 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 86656
+LP-ID: 32 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 95721
+LP-ID: 32 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 84526
+LP-ID: 33 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 429744
+LP-ID: 33 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 79356
+LP-ID: 33 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 95241
+LP-ID: 33 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 75664
+LP-ID: 34 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 793617
+LP-ID: 34 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 88365
+LP-ID: 34 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 85988
+LP-ID: 34 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 78083
+LP-ID: 35 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 643679
+LP-ID: 35 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76900
+LP-ID: 35 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 91961
+LP-ID: 35 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 84642
+LP-ID: 36 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 348022
+LP-ID: 36 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 86255
+LP-ID: 36 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 77079
+LP-ID: 36 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 74820
+LP-ID: 37 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 654994
+LP-ID: 37 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78034
+LP-ID: 37 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 93933
+LP-ID: 37 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 74973
+LP-ID: 38 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 322836
+LP-ID: 38 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 71587
+LP-ID: 38 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 80873
+LP-ID: 38 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 89667
+LP-ID: 39 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 360544
+LP-ID: 39 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 82717
+LP-ID: 39 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 88593
+LP-ID: 39 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 84836
+LP-ID: 40 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 423967
+LP-ID: 40 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73239
+LP-ID: 40 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 84419
+LP-ID: 40 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 73136
+LP-ID: 41 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 417569
+LP-ID: 41 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 65516
+LP-ID: 41 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 83195
+LP-ID: 41 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 73928
+LP-ID: 42 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 483883
+LP-ID: 42 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 83939
+LP-ID: 42 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 88315
+LP-ID: 42 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 77599
+LP-ID: 43 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 1346613
+LP-ID: 43 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78613
+LP-ID: 43 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 86579
+LP-ID: 43 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 69285
+LP-ID: 44 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 1380064
+LP-ID: 44 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 86279
+LP-ID: 44 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 97835
+LP-ID: 44 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 80985
+LP-ID: 45 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 503062
+LP-ID: 45 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 89130
+LP-ID: 45 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 85981
+LP-ID: 45 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 89998
+LP-ID: 46 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 495244
+LP-ID: 46 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 68262
+LP-ID: 46 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 82560
+LP-ID: 46 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 71188
+LP-ID: 47 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 359062
+LP-ID: 47 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 65310
+LP-ID: 47 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 90095
+LP-ID: 47 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 82433
+LP-ID: 48 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 502922
+LP-ID: 48 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 70296
+LP-ID: 48 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 86028
+LP-ID: 48 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 73941
+LP-ID: 49 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 366744
+LP-ID: 49 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73331
+LP-ID: 49 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 78689
+LP-ID: 49 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 75567
+LP-ID: 50 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 529568
+LP-ID: 50 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 129838
+LP-ID: 50 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 83135
+LP-ID: 50 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 79077
+LP-ID: 51 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 380506
+LP-ID: 51 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78514
+LP-ID: 51 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 79904
+LP-ID: 51 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 90080
+LP-ID: 52 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 452598
+LP-ID: 52 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 72067
+LP-ID: 52 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 85193
+LP-ID: 52 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 85585
+LP-ID: 53 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 455766
+LP-ID: 53 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 80444
+LP-ID: 53 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 81596
+LP-ID: 53 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 75944
+LP-ID: 54 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 504256
+LP-ID: 54 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 71618
+LP-ID: 54 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 74989
+LP-ID: 54 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 68918
+LP-ID: 55 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 402045
+LP-ID: 55 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73057
+LP-ID: 55 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 80033
+LP-ID: 55 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 89405
+LP-ID: 56 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 580559
+LP-ID: 56 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 70114
+LP-ID: 56 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 113006
+LP-ID: 56 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 78611
+LP-ID: 57 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 400075
+LP-ID: 57 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 80001
+LP-ID: 57 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 81078
+LP-ID: 57 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 67631
+LP-ID: 58 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 548076
+LP-ID: 58 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76411
+LP-ID: 58 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 93687
+LP-ID: 58 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 80901
+LP-ID: 59 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 402626
+LP-ID: 59 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76520
+LP-ID: 59 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 84466
+LP-ID: 59 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 86226
+LP-ID: 60 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 528747
+LP-ID: 60 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 70441
+LP-ID: 60 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 100284
+LP-ID: 60 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 81654
+LP-ID: 61 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 415200
+LP-ID: 61 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 72565
+LP-ID: 61 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 101513
+LP-ID: 61 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 99874
+LP-ID: 62 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 523784
+LP-ID: 62 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78713
+LP-ID: 62 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 80198
+LP-ID: 62 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 89861
+LP-ID: 63 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 402487
+LP-ID: 63 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 86358
+LP-ID: 63 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 75123
+LP-ID: 63 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 87432
+LP-ID: 64 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 350467
+LP-ID: 64 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78932
+LP-ID: 64 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 83344
+LP-ID: 64 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 81367
+LP-ID: 65 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 525946
+LP-ID: 65 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 79882
+LP-ID: 65 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 93073
+LP-ID: 65 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 74422
+LP-ID: 66 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 427525
+LP-ID: 66 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76917
+LP-ID: 66 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 75691
+LP-ID: 66 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 72090
+LP-ID: 67 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 377793
+LP-ID: 67 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 76485
+LP-ID: 67 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 77498
+LP-ID: 67 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 73771
+LP-ID: 68 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 916985
+LP-ID: 68 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 82445
+LP-ID: 68 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 78830
+LP-ID: 68 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 77252
+LP-ID: 69 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 469725
+LP-ID: 69 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 72284
+LP-ID: 69 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 84386
+LP-ID: 69 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 70863
+LP-ID: 70 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 431043
+LP-ID: 70 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 89165
+LP-ID: 70 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 90321
+LP-ID: 70 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 68460
+LP-ID: 71 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 528844
+LP-ID: 71 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 78983
+LP-ID: 71 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 84878
+LP-ID: 71 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 68784
+LP-ID: 72 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 317343
+LP-ID: 72 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 84723
+LP-ID: 72 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 99629
+LP-ID: 72 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 73218
+LP-ID: 73 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 444408
+LP-ID: 73 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 80108
+LP-ID: 73 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 81368
+LP-ID: 73 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 70616
+LP-ID: 74 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 547311
+LP-ID: 74 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 85610
+LP-ID: 74 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 94478
+LP-ID: 74 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 82075
+LP-ID: 75 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 500061
+LP-ID: 75 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 65872
+LP-ID: 75 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 84172
+LP-ID: 75 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 69947
+LP-ID: 76 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 488784
+LP-ID: 76 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 66940
+LP-ID: 76 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 97260
+LP-ID: 76 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 68107
+LP-ID: 77 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 427230
+LP-ID: 77 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 83706
+LP-ID: 77 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 98768
+LP-ID: 77 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 70446
+LP-ID: 78 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 425323
+LP-ID: 78 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 82194
+LP-ID: 78 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 91582
+LP-ID: 78 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 71282
+LP-ID: 79 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 566733
+LP-ID: 79 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 70878
+LP-ID: 79 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 96609
+LP-ID: 79 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 78724
+LP-ID: 80 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 374438
+LP-ID: 80 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 66525
+LP-ID: 80 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 95521
+LP-ID: 80 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 76149
+LP-ID: 81 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 544815
+LP-ID: 81 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73168
+LP-ID: 81 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 85786
+LP-ID: 81 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 72302
+LP-ID: 82 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 866070
+LP-ID: 82 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 64639
+LP-ID: 82 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 78000
+LP-ID: 82 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 89020
+LP-ID: 83 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 381978
+LP-ID: 83 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 67783
+LP-ID: 83 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 91177
+LP-ID: 83 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 70048
+LP-ID: 84 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 380052
+LP-ID: 84 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 82228
+LP-ID: 84 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 73744
+LP-ID: 84 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 73824
+LP-ID: 85 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 481547
+LP-ID: 85 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 75777
+LP-ID: 85 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 74473
+LP-ID: 85 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 77098
+LP-ID: 86 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 581987
+LP-ID: 86 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 80919
+LP-ID: 86 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 99096
+LP-ID: 86 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 66467
+LP-ID: 87 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 536598
+LP-ID: 87 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 74779
+LP-ID: 87 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 83550
+LP-ID: 87 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 80782
+LP-ID: 88 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 489966
+LP-ID: 88 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 67814
+LP-ID: 88 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 79166
+LP-ID: 88 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 71607
+LP-ID: 89 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 493483
+LP-ID: 89 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 81120
+LP-ID: 89 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 81791
+LP-ID: 89 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 95196
+LP-ID: 90 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 399303
+LP-ID: 90 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73958
+LP-ID: 90 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 80969
+LP-ID: 90 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 83783
+LP-ID: 91 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 489024
+LP-ID: 91 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 70138
+LP-ID: 91 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 91117
+LP-ID: 91 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 71761
+LP-ID: 92 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 568257
+LP-ID: 92 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 71860
+LP-ID: 92 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 97940
+LP-ID: 92 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 80895
+LP-ID: 93 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 437313
+LP-ID: 93 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 66328
+LP-ID: 93 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 85040
+LP-ID: 93 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 66805
+LP-ID: 94 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 438024
+LP-ID: 94 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 74138
+LP-ID: 94 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 83079
+LP-ID: 94 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 82388
+LP-ID: 95 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 415704
+LP-ID: 95 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 68999
+LP-ID: 95 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 88225
+LP-ID: 95 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 73607
+LP-ID: 96 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 420910
+LP-ID: 96 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 81991
+LP-ID: 96 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 94973
+LP-ID: 96 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 85752
+LP-ID: 97 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 508158
+LP-ID: 97 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 73764
+LP-ID: 97 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 76074
+LP-ID: 97 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 71126
+LP-ID: 98 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 439456
+LP-ID: 98 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 66233
+LP-ID: 98 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 81849
+LP-ID: 98 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 69481
+LP-ID: 99 - LP-Exe-State: Forward - EVENT-Type: 1 - Avg-Exe-Time: 518387
+LP-ID: 99 - LP-Exe-State: Forward - EVENT-Type: 2 - Avg-Exe-Time: 84161
+LP-ID: 99 - LP-Exe-State: Silent - EVENT-Type: 1 - Avg-Exe-Time: 87941
+LP-ID: 99 - LP-Exe-State: Silent - EVENT-Type: 2 - Avg-Exe-Time: 79830
+===== SYSTEM-WIDE STATISTICS =====
+Total events....................................:     44048891
+Committed events................................:     14460301 (32.83%)
+Events executed and committed tot...............:        77976
+Straggler events................................:      3328696 (7.56%)
+Anti events.....................................:      4312326 (9.79%)
+Useless events..................................:     11625036 (26.39%)
+Silent events...................................:     17963427 (40.78%)
+Silent events for GVT...........................:            0 (0.00%)
+
+Flushed events..................................:     33631167 (76.35%)
+Fetched operations..............................:     32326955 (73.23%)
+   Fetch succeed................................:     32258874 (99.79%)
+   Fetch failed.................................:        68081 (0.21%)
+   Avg node traversed during fetch..............:       116.82
+
+Average time to process any event...............:     78604.04 clocks
+   Average time spent in standard execution.....:     73747.38 clocks
+   Average time spent in silent execution.......:     85656.60 clocks (0.00%)
+Average time spent to fetch.....................:     67730.33 clocks (0.00%)
+   Average time in successfull fetch............:     63834.58 clocks (0.00%)
+   Average time in unsuccessfull fetch..........:   1913657.83 clocks (0.00%)
+Average time spent to Enqueue...................:      6690.48 clocks (0.00%)
+
+Save Checkpoint operations......................:      4602718
+Restore Checkpoint operations...................:     10326945
+Rollback operations.............................:     10283578
+AVG Rollbacked Events per Rollback..............:         0.88
+AVG Reprocessed Events per Rollback.............:         1.75
+CheckOnGVT invocations..........................:            0
+
+Save Checkpoint time............................:      4386.74 clocks (3.04%)
+Restore Checkpoint time.........................:      3238.04 clocks (2.24%)
+Rollback time...................................:    144335.01 clocks
+Checkpoint mem..................................:          360 B
+Checkpoint recalculations.......................:            0
+Checkpoint period...............................:            0
+
+Num attempts Info posted tot....................:     10731370
+Info posted tot.................................:      7490735
+Info posted useful tot..........................:       207600
+
+Event not flushed tot...........................:     17347127
+Exposition forward Time tot.....................: 2078633068821 clocks
+Exposition forward Time per event...............:     86708.87 clocks
+Exposition silent Time tot......................: 1545872853059 clocks
+Exposition silent Time per event................:     78760.77 clocks
+
+Total resumable rollback executed...............:       530451
+Avg events resume per rollback_resume...........:         1.66
+Avg clock resume per rollback resume............:    125929.64 clocks
+
+Events forward asynch interrupted tot... .......:      2445337
+Events forward synch interrupted tot............:       908580
+Events silent asynch interrupted tot............:        43087
+Events silent synch interrupted tot.............:       543043
+
+Exposition forward asynch interrupted Time per event...: 41176.636877 clocks
+Exposition silent asynch interrupted Time per event....:     43285.81 clocks
+Exposition forward synch interrupted Time per event....: 175178.419077 clocks
+Exposition silent synch interrupted Time per event.....:       862.94 clocks
+Residual Time forward asynch gained per event..........: 93740.204429 clocks
+Residual Time forward synch gained per event...........: 232246.105009 clocks
+Residual Time silent asynch gained per event...........:     35355.93 clocks
+Residual Time silent synch gained per event............:     78569.25 clocks
+
+Equivalent events forward entirely interrupted.........: 5077226.100452
+Equivalent events silent entirely interrupted..........:    561064.37
+Avg Latency to send ipi................................:     60626.76 clocks
+Num clock drift tot....................................:            4
+Max clock drift global.................................:          256
+Avg Clock drift per clock_drift........................:       148.00 clocks
+
+Sync check Forward Execution tot................:    113936409
+Sync check Silent Execution tot.................:     20213578
+Sync check useful tot...........................:      1451623
+
+IPI sent tot....................................:      3221039
+IPI handled in trampoline tot...................:      2536749
+IPI received tot................................:      2488424
+
+IPI sent syscall time...........................:   4282156940 clocks
+IPI sent syscall time per 1 syscall.............:      1329.43 clocks
+Invalid msg_in_execution tot....................:       706485
+
+IPI filtered in decision_model tot..............:       286579
+
+
+Num msg in execution invalidated:................       144586
+Total allocated space...........................: 19519 MB
+
+
+Total Clock.....................................: 6323156151667 clocks
+Event Processing................................: 3462420671314 clocks (54.76%)
+Safe Processing.................................: 1923734650836 clocks (30.42%)
+Frame Processing................................: 1066426067137 clocks (16.87%)
+
+Simulation ended (seconds):        60.05
+Simulation ended  (clocks): 131806952431
+Last gvt: 286222.500000
+EventsPerSec:    240800.34
+EventsPerThreadPerSec:      5016.67
+Execution ended correctly
