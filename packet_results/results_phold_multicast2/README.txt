@@ -1,1 +1,0 @@
-risultati phold multicast dopo consegna paper
