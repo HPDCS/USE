@@ -65,10 +65,11 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			ScheduleNewEvent(me, now+n_prc_tot+LOOKAHEAD, NORMAL_EVT, NULL, 0);//it generates my next evt
 
-			timestamp= now + SHIFT+LOOKAHEAD;
-
-			ScheduleNewEvent(state_ptr->next_neighbohor, timestamp, ABNORMAL_EVT, NULL, 0);
-
+			random_num = Random();
+			if(THR_PROB_NORMAL >= random_num){
+				timestamp= now + SHIFT+LOOKAHEAD;
+				ScheduleNewEvent(state_ptr->next_neighbohor, timestamp, ABNORMAL_EVT, NULL, 0);
+			}
 			state_ptr->num_neighbohors_notified++;
 			if(state_ptr->num_neighbohors_notified == NUM_NEARS){
 				state_ptr->num_neighbohors_notified = 0;

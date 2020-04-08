@@ -51,61 +51,64 @@ do
 						do
 							for num_nears in $NUM_NEARS_list
 							do
-								for test in $TEST_list 
+								for thr_prob_normal in $THR_PROB_NORMAL_list
 								do
-									COMPILATION_ORI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} NUM_NEARS=${num_nears} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0"
-									${COMPILATION_ORI}
-			
-									mv $test ${test}_ori
-			
-									COMPILATION_IPI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} NUM_NEARS=${num_nears} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0 ENABLE_IPI_MODULE=1"
-									${COMPILATION_IPI}
-			
-									mv $test ${test}_ipi
-			
-									for run in $RUN_list
+									for test in $TEST_list 
 									do
-										for lp in $LP_list
-										do
-											for threads in $THREAD_list
-											do
-												FILE_ORI="${PATH_RESULTS}/${test}-ori-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-${num_nears}-$run"; touch ${FILE_ORI}
-												FILE_IPI="${PATH_RESULTS}/${test}-ipi-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-${num_nears}-$run"; touch ${FILE_IPI}
-												
-												echo ${FILE_ORI}
-												echo ${FILE_IPI}
-
-												if [ ${TEST_CONFIGURATION_AND_SCRIPT} -eq 1 ]
-												then
-													
-													./${test}_ori $threads $lp ${SEC_TEST_CONFIGURATION_AND_SCRIPT} "${COMPILATION_ORI}"
-													./${test}_ipi $threads $lp ${SEC_TEST_CONFIGURATION_AND_SCRIPT} "${COMPILATION_IPI}"
-												else
+										COMPILATION_ORI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NUM_NEARS=${num_nears} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0"
+										${COMPILATION_ORI}
 				
-													N=0 
-													while [[ $(grep -c "Simulation ended" ${FILE_ORI}) -eq 0 ]]
-													do
-														echo $BEGIN
-														./${test}_ori $threads $lp $TEST_DURATION "${COMPILATION_ORI}" &> ${FILE_ORI}
+										mv $test ${test}_ori
+				
+										COMPILATION_IPI="make $test MAX_ALLOCABLE_GIGAS=${MAX_GIGAS} LINEAR_PINNING=${PINNING_IS_LINEAR} THR_PROB_NORMAL=${thr_prob_normal} NUM_NEARS=${num_nears} NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT=${loop_count} PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 CHECKPOINT_PERIOD=${ck} PRINT_SCREEN=0 ENABLE_IPI_MODULE=1"
+										${COMPILATION_IPI}
+				
+										mv $test ${test}_ipi
+				
+										for run in $RUN_list
+										do
+											for lp in $LP_list
+											do
+												for threads in $THREAD_list
+												do
+													FILE_ORI="${PATH_RESULTS}/${test}-ori-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-${num_nears}-prob-${thr_prob_normal}-$run"; touch ${FILE_ORI}
+													FILE_IPI="${PATH_RESULTS}/${test}-ipi-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-${num_nears}-prob-${thr_prob_normal}-$run"; touch ${FILE_IPI}
+													
+													echo ${FILE_ORI}
+													echo ${FILE_IPI}
+
+													if [ ${TEST_CONFIGURATION_AND_SCRIPT} -eq 1 ]
+													then
 														
-														if test $N -ge $MAX_RETRY ; then echo break; break; fi
-														N=$(( N+1 ))
-													done  
-																
-													N=0 
-													while [[ $(grep -c "Simulation ended" ${FILE_IPI}) -eq 0 ]]
-													do
-														echo $BEGIN
-														./${test}_ipi $threads $lp $TEST_DURATION "${COMPILATION_IPI}" &> ${FILE_IPI}
-														
-														if test $N -ge $MAX_RETRY ; then echo break; break; fi
-														N=$(( N+1 ))
-													done
-												fi   
+														./${test}_ori $threads $lp ${SEC_TEST_CONFIGURATION_AND_SCRIPT} "${COMPILATION_ORI}"
+														./${test}_ipi $threads $lp ${SEC_TEST_CONFIGURATION_AND_SCRIPT} "${COMPILATION_IPI}"
+													else
+					
+														N=0 
+														while [[ $(grep -c "Simulation ended" ${FILE_ORI}) -eq 0 ]]
+														do
+															echo $BEGIN
+															./${test}_ori $threads $lp $TEST_DURATION "${COMPILATION_ORI}" &> ${FILE_ORI}
+															
+															if test $N -ge $MAX_RETRY ; then echo break; break; fi
+															N=$(( N+1 ))
+														done  
+																	
+														N=0 
+														while [[ $(grep -c "Simulation ended" ${FILE_IPI}) -eq 0 ]]
+														do
+															echo $BEGIN
+															./${test}_ipi $threads $lp $TEST_DURATION "${COMPILATION_IPI}" &> ${FILE_IPI}
+															
+															if test $N -ge $MAX_RETRY ; then echo break; break; fi
+															N=$(( N+1 ))
+														done
+													fi   
+												done
 											done
 										done
+										rm ${test}_ori ${test}_ipi
 									done
-									rm ${test}_ori ${test}_ipi
 								done
 							done
 						done

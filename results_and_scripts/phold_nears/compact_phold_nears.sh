@@ -27,47 +27,50 @@ do
 				do
 					for num_nears in $NUM_NEARS_list
 					do
-						for fan_out in $FAN_OUT_list
+						for thr_prob_normal in $THR_PROB_NORMAL_list
 						do
-							for lookahead in $LOOKAHEAD_list
+							for fan_out in $FAN_OUT_list
 							do
-								for test in $TEST_list 
+								for lookahead in $LOOKAHEAD_list
 								do
-									for lp in $LP_list
+									for test in $TEST_list 
 									do
-										line="THREADS "
-										for sim in $SIM_list
+										for lp in $LP_list
 										do
-					 						line="$line $sim"
-										done
-							
-										for threads in $THREAD_list
-										do
-											OUT="${DAT_DIRECTORY}/${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears"
-											echo $line > $OUT
-											line="$threads "
-											list_avg=""
+											line="THREADS "
 											for sim in $SIM_list
 											do
-												th=0
-												count=0
-												sum=0
-												for run in $RUN_list
-												do
-													FILE="${PATH_RESULTS}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears-$run"; 
-													th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
-													th=`python2 -c "print '$th'.strip()"`
-													sum=`python2 -c "print $th+$sum"`
-													count=$(($count+1))
-												done
-												avg=`python2 -c "print $sum/$count"`
-												list_avg="$list_avg $avg "
-												line="$line $avg"
+						 						line="$line $sim"
 											done
-											arr=($list_avg)
-											speedup=`python2 -c "print ${arr[1]}/${arr[0]}"`
-											echo "${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears speedup: ${speedup}" >> ${OUT_SPEEDUP}
-											echo $line >> $OUT
+								
+											for threads in $THREAD_list
+											do
+												OUT="${DAT_DIRECTORY}/${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears-prob-${thr_prob_normal}"
+												echo $line > $OUT
+												line="$threads "
+												list_avg=""
+												for sim in $SIM_list
+												do
+													th=0
+													count=0
+													sum=0
+													for run in $RUN_list
+													do
+														FILE="${PATH_RESULTS}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears-prob-${thr_prob_normal}-$run"; 
+														th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
+														th=`python2 -c "print '$th'.strip()"`
+														sum=`python2 -c "print $th+$sum"`
+														count=$(($count+1))
+													done
+													avg=`python2 -c "print $sum/$count"`
+													list_avg="$list_avg $avg "
+													line="$line $avg"
+												done
+												arr=($list_avg)
+												speedup=`python2 -c "print ${arr[1]}/${arr[0]}"`
+												echo "${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears-prob-${thr_prob_normal} speedup: ${speedup}" >> ${OUT_SPEEDUP}
+												echo $line >> $OUT
+											done
 										done
 									done
 								done
