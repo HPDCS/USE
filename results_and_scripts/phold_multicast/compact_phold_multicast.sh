@@ -41,11 +41,10 @@ do
 				 							line="$line $sim"
 										done
 
-										OUT="${DAT_DIRECTORY}/${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-prob-${thr_prob_normal}";
-										echo $line > $OUT
-
 										for threads in $THREAD_list
 										do
+											OUT="${DAT_DIRECTORY}/${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-prob-${thr_prob_normal}";
+											echo $line > $OUT
 											line="$threads "
 											list_avg=""
 											for sim in $SIM_list

@@ -1,82 +1,81 @@
 #!/bin/bash
 
-MAX_SKIPPED_LP_list="1000000"
-LP_list="36 64 121"							#numero di lp
-THREAD_list="4 8 12 16 20 24 28 32"		#numero di thread
-TEST_list="phold"						#test
-RUN_list="1 2"							#lista del numero di run
-
-FAN_OUT_list="1"						#lista fan out
-LOOKAHEAD_list="0" 						#lookahead
-LOOP_COUNT_list="33 100 300 900 2700" 	#loop_count #50 100 150 250 400 600" 400=60micsec
-
-CKP_PER_list="10"
-
-PUB_list="0.33"
-EPB_list="3"
-
-MAX_RETRY="10"
-TEST_DURATION="60"
+source $1 #machine conf
+source $2 #pcs conf
+VERSION=$3 #version to compact
 SIM_list="ori ipi"
 
-SRC_FOLDER="results/results_phold" 
-FOLDER="results/results_phold/dat" 
+BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
+CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-mkdir -p ${FOLDER}
+cd ../..
+DAT_DIRECTORY="${FOLDER}${VERSION}/dat"
+mkdir -p ${DAT_DIRECTORY}
+
+PATH_RESULTS=${FOLDER}${VERSION}
+OUT_SPEEDUP=${DAT_DIRECTORY}/speedup.txt
 
 for max_lp in $MAX_SKIPPED_LP_list
 do
-for ck in $CKP_PER_list
-do
-for pub in $PUB_list
-do
-for epb in $EPB_list
-do
-for loop_count in $LOOP_COUNT_list
-do
-for fan_out in $FAN_OUT_list
-do
-for lookahead in $LOOKAHEAD_list
-do
-	for test in $TEST_list 
+	for ck in $CKP_PER_list
 	do
-		for lp in $LP_list
+		for pub in $PUB_list
+		do
+			for epb in $EPB_list
 			do
-				line="THREADS "
-				for sim in $SIM_list
+				for loop_count in $LOOP_COUNT_list
 				do
-				 line="$line $sim"
-				done
-				OUT="${FOLDER}/${test}-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count"
-				echo $line > $OUT
-				for threads in $THREAD_list
-				do
-					line="$threads "
-					
-					for sim in $SIM_list
+					for num_nears in $NUM_NEARS_list
 					do
-						th=0
-						count=0
-						sum=0
-						for run in $RUN_list
+						for fan_out in $FAN_OUT_list
 						do
-							FILE="${SRC_FOLDER}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; 
-							th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
-							th=`python2 -c "print '$th'.strip()"`
-							sum=`python2 -c "print $th+$sum"`
-							count=$(($count+1))
+							for lookahead in $LOOKAHEAD_list
+							do
+								for test in $TEST_list 
+								do
+									for lp in $LP_list
+									do
+										line="THREADS "
+										for sim in $SIM_list
+										do
+					 						line="$line $sim"
+										done
+							
+										for threads in $THREAD_list
+										do
+											OUT="${DAT_DIRECTORY}/${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears"
+											echo $line > $OUT
+											line="$threads "
+											list_avg=""
+											for sim in $SIM_list
+											do
+												th=0
+												count=0
+												sum=0
+												for run in $RUN_list
+												do
+													FILE="${PATH_RESULTS}/${test}-$sim-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears-$run"; 
+													th=`grep "EventsPerSec"     $FILE | cut -f2 -d':'`
+													th=`python2 -c "print '$th'.strip()"`
+													sum=`python2 -c "print $th+$sum"`
+													count=$(($count+1))
+												done
+												avg=`python2 -c "print $sum/$count"`
+												list_avg="$list_avg $avg "
+												line="$line $avg"
+											done
+											arr=($list_avg)
+											speedup=`python2 -c "print ${arr[1]}/${arr[0]}"`
+											echo "${test}-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-nears-$num_nears speedup: ${speedup}" >> ${OUT_SPEEDUP}
+											echo $line >> $OUT
+										done
+									done
+								done
+							done
 						done
-						avg=`python2 -c "print $sum/$count"`
-						line="$line $avg"
 					done
-					echo $line >> $OUT
 				done
+			done
 		done
 	done
-done
-done
-done
-done
-done
-done
 done
