@@ -834,6 +834,9 @@ void do_rollback(void(*rollback_function)(unsigned int lid, simtime_t destinatio
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 		}
 	}
+	else{
+		statistics_post_lp_data(current_lp, STAT_ROLLBACK_TO_RESUME_STATE_LP, 1);
+	}
 	LPS[current_lp]->LP_simulation_state = VALID;//LP state is been restorered by rollback
 }
 
@@ -1021,7 +1024,7 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH_SUCC, (double)clock_timer_value(fetch_timer));
 #endif
 		change_bound_with_current_msg();
-		//now bound is current_msg-epsilon,current_msg appares in future in respect of other threads
+		//now bound is current_msg-epsilon,current_msg appares in future respect to other threads
 		//now bound is corrupted,remember to restore it before next fetch!!
 
 		bool in_past_bound=(current_lvt < LPS[current_lp]->old_valid_bound->timestamp || 
@@ -1065,7 +1068,7 @@ void thread_loop(unsigned int thread_id) {
 
 		//now LP state is valid, current_msg in future respect of dummy_bound and old_valid_bound,but bound is corrupted
 		#if DEBUG==1//not present in original version
-			check_after_rollback();
+		check_after_rollback();
 		#endif//DEBUG
 		//now LP state is valid and event is in future
 		if(current_evt_state == ANTI_MSG) {

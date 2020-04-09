@@ -277,6 +277,9 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 
 		#if HANDLE_INTERRUPT==1 && REPORT==1
+		case STAT_ROLLBACK_TO_RESUME_STATE_LP:
+			stats[idx].counter_rollbacks_to_resume_state_lp += value;
+			break;
 		case STAT_EVENT_NOT_FLUSHED_LP:
 			stats[idx].event_not_flushed_lp += value;
 			break;
@@ -555,6 +558,7 @@ void gather_statistics() {
     #endif
 
 	#if HANDLE_INTERRUPT==1 && REPORT==1
+    	system_stats->counter_rollbacks_to_resume_state_tot += lp_stats[i].counter_rollbacks_to_resume_state_lp;
 		system_stats->event_not_flushed_lp  += lp_stats[i].event_not_flushed_lp;//per lp event that lp father doesn't flush
 		
 		system_stats->clock_exposition_silent_tot_lp += lp_stats[i].clock_exposition_silent_tot_lp;
@@ -767,6 +771,10 @@ static void _print_statistics(struct stats_t *stats) {
 
 	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
 	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
+	#if HANDLE_INTERRUPT==1 && REPORT==1
+	printf("Rollback operations to resume LP state..........: %12llu (%4.2f%%)\n", 
+		(unsigned long long)stats->counter_rollbacks_to_resume_state_tot,percentage(stats->counter_rollbacks_to_resume_state_tot, stats->counter_rollbacks));
+	#endif
 	printf("Rollback operations.............................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
 	printf("AVG Rollbacked Events per Rollback..............: %12.2f\n", (double)stats->counter_rollbacks_length/stats->counter_rollbacks);
 	printf("AVG Reprocessed Events per Rollback.............: %12.2f\n", ((double)stats->events_silent)/stats->counter_rollbacks);
