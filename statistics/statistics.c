@@ -280,6 +280,12 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_ROLLBACK_TO_RESUME_STATE_LP:
 			stats[idx].counter_rollbacks_to_resume_state_lp += value;
 			break;
+		case STAT_ROLLBACK_TO_RESUME_STATE_AND_REEXECUTE_INTERR_EVT_LP:
+			stats[idx].counter_rollbacks_to_resume_state_and_reexecute_interr_evt_lp += value;
+			break;
+		case STAT_ROLLBACK_TO_RESUME_STATE_AND_EXECUTE_EVT_FUTURE_LP:
+			stats[idx].counter_rollbacks_to_resume_state_and_execute_evt_future_lp += value;
+			break;
 		case STAT_EVENT_NOT_FLUSHED_LP:
 			stats[idx].event_not_flushed_lp += value;
 			break;
@@ -559,6 +565,8 @@ void gather_statistics() {
 
 	#if HANDLE_INTERRUPT==1 && REPORT==1
     	system_stats->counter_rollbacks_to_resume_state_tot += lp_stats[i].counter_rollbacks_to_resume_state_lp;
+		system_stats->counter_rollbacks_to_resume_state_and_reexecute_interr_evt_tot += lp_stats[i].counter_rollbacks_to_resume_state_and_reexecute_interr_evt_lp;
+		system_stats->counter_rollbacks_to_resume_state_and_execute_evt_future_tot += lp_stats[i].counter_rollbacks_to_resume_state_and_execute_evt_future_lp;
 		system_stats->event_not_flushed_lp  += lp_stats[i].event_not_flushed_lp;//per lp event that lp father doesn't flush
 		
 		system_stats->clock_exposition_silent_tot_lp += lp_stats[i].clock_exposition_silent_tot_lp;
@@ -769,16 +777,21 @@ static void _print_statistics(struct stats_t *stats) {
 	
 	printf("\n");
 
-	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
-	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
+	printf("Save Checkpoint operations.........................................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
+	printf("Restore Checkpoint operations......................................: %12llu\n", (unsigned long long)stats->counter_recoveries);
 	#if HANDLE_INTERRUPT==1 && REPORT==1
-	printf("Rollback operations to resume LP state..........: %12llu (%4.2f%%)\n", 
+	printf("Rollback operations to resume LP state.............................: %12llu (%4.2f%%)\n", 
 		(unsigned long long)stats->counter_rollbacks_to_resume_state_tot,percentage(stats->counter_rollbacks_to_resume_state_tot, stats->counter_rollbacks));
+	printf("Rollback ops to resume LP state and re-execute evt interrupted.....: %12llu (%4.2f%%)\n", 
+		(unsigned long long)stats->counter_rollbacks_to_resume_state_and_reexecute_interr_evt_tot,percentage(stats->counter_rollbacks_to_resume_state_and_reexecute_interr_evt_tot, stats->counter_rollbacks));
+	printf("Rollback ops to resume LP state and execute evt in future..........: %12llu (%4.2f%%)\n", 
+		(unsigned long long)stats->counter_rollbacks_to_resume_state_and_execute_evt_future_tot,percentage(stats->counter_rollbacks_to_resume_state_and_execute_evt_future_tot, stats->counter_rollbacks));
+	
 	#endif
-	printf("Rollback operations.............................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
-	printf("AVG Rollbacked Events per Rollback..............: %12.2f\n", (double)stats->counter_rollbacks_length/stats->counter_rollbacks);
-	printf("AVG Reprocessed Events per Rollback.............: %12.2f\n", ((double)stats->events_silent)/stats->counter_rollbacks);
-	printf("CheckOnGVT invocations..........................: %12llu\n", (unsigned long long)stats->counter_ongvt);
+	printf("Rollback operations................................................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
+	printf("AVG Rollbacked Events per Rollback.................................: %12.2f\n", (double)stats->counter_rollbacks_length/stats->counter_rollbacks);
+	printf("AVG Reprocessed Events per Rollback................................: %12.2f\n", ((double)stats->events_silent)/stats->counter_rollbacks);
+	printf("CheckOnGVT invocations.............................................: %12llu\n", (unsigned long long)stats->counter_ongvt);
 	
 	printf("\n");
 
@@ -849,19 +862,19 @@ static void _print_statistics(struct stats_t *stats) {
 
 	printf("\n");
 
-	printf("Exposition forward asynch interrupted Time per event...: %12lf clocks\n",
+	printf("Exposition forward asynch interrupted Time per event...: %12.2f clocks\n",
 		stats->clock_exposition_forward_asynch_interrupted_per_event);
 	printf("Exposition silent asynch interrupted Time per event....: %12.2f clocks\n",
 		stats->clock_exposition_silent_asynch_interrupted_per_event);
 
-	printf("Exposition forward synch interrupted Time per event....: %12lf clocks\n",
+	printf("Exposition forward synch interrupted Time per event....: %12.2f clocks\n",
 		stats->clock_exposition_forward_synch_interrupted_per_event);
 	printf("Exposition silent synch interrupted Time per event.....: %12.2f clocks\n",
 		stats->clock_exposition_silent_synch_interrupted_per_event);
 
-	printf("Residual Time forward asynch gained per event..........: %12lf clocks\n",
+	printf("Residual Time forward asynch gained per event..........: %12.2f clocks\n",
 		stats->clock_residual_time_forward_asynch_gained_per_event);
-	printf("Residual Time forward synch gained per event...........: %12lf clocks\n",
+	printf("Residual Time forward synch gained per event...........: %12.2f clocks\n",
 		stats->clock_residual_time_forward_synch_gained_per_event);
 
 	printf("Residual Time silent asynch gained per event...........: %12.2f clocks\n",
@@ -870,7 +883,7 @@ static void _print_statistics(struct stats_t *stats) {
 		stats->clock_residual_time_silent_synch_gained_per_event);
 
 	printf("\n");
-    printf("Equivalent events forward entirely interrupted.........: %12lf\n",
+    printf("Equivalent events forward entirely interrupted.........: %12.2f\n",
 		stats->equivalent_events_forward_interrupted_tot);
 	printf("Equivalent events silent entirely interrupted..........: %12.2f\n",
 		stats->equivalent_events_silent_interrupted_tot);

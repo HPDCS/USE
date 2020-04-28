@@ -1,0 +1,2 @@
+Concetto fondamentale per implementare resumable rollback:
+-Gli eventi "dopo" old_valid_bound vanno eseguiti in modo forward, anche se old_valid_bound non corrisponde allo stato attuale dell'LP corrisponde al punto logico dopo il quale è necessario eseguire gli eventi forward, quindi è corretto sapere che lo stato è valido in last_silent_exec (lo stato attuale dell'LP matcha con last_silent_exec) ed è possibile continuare ad eseguire gli eventi in modo silent fino al punto old_valid_bound

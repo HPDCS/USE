@@ -61,6 +61,6 @@ void set_numa_topology(){
 		set_cores_id_on_numa_topology(id_numa_node,num_cores_per_numa_node);
 	}
 	for(int i=0;i<N_CPU;i++){
-		printf("NUMA_TOPOLOGY i=%d\n",NUMA_TOPOLOGY[i]);
+		printf("NUMA_TOPOLOGY[i]=%d,i=%d\n",NUMA_TOPOLOGY[i],i);
 	}
 }

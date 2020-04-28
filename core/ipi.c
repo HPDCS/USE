@@ -228,7 +228,7 @@ void send_ipi_to_lp(msg_t*event){
     bool ipi_useful=false;
     lp_idx=event->receiver_id;
     lck_tid=(lp_lock[(lp_idx)*CACHE_LINE_SIZE/4]);
-    if(lck_tid==0)
+    if(lck_tid==0) //LP is unlocked
         return;
     msg_t*event_dest_in_execution = LPS[lp_idx]->msg_curr_executed;
     if(event_dest_in_execution!=NULL && ( (event->timestamp < event_dest_in_execution->timestamp) || event==event_dest_in_execution)){
@@ -255,7 +255,7 @@ void send_ipi_to_lp(msg_t*event){
             clock_timer_start(syscall_time);
             #endif
 
-            if (ipi_syscall(lck_tid-1)){
+            if (ipi_syscall(ARRAY_PINNING[lck_tid-1])){
                 printf("[IPI_4_USE] - Syscall to send IPI has failed!!!\n");
                 gdb_abort;
             }

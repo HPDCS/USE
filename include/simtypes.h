@@ -126,7 +126,7 @@ typedef struct _LP_state {
 	msg_t* old_valid_bound;//is private if we have lock on LP
 	msg_t* dummy_bound;//is private if we have lock on LP
 	unsigned int  LP_simulation_state;//is private if we have lock on LP
-
+	msg_t* last_interrupted_evt;//is private if we have lock on LP. No need to reset, it is overwritten at each interruption 
 	msg_t* msg_curr_executed;//this is NULL if there is no event in execution,any threads need of access concurrently at this field 
 #endif
 

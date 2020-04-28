@@ -222,24 +222,29 @@ void _mkdir(const char *path) {
 	}
 }
 
+unsigned int ARRAY_PINNING[N_CPU]={ 0 };//it keeps binding tid-cpucore.
 void set_affinity(unsigned int tid){
 #if PINNING == 0
 return 0;
 #endif
 	unsigned int id_cpu;
-	cpu_set_t mask;	
+	cpu_set_t mask;
+
+	//set variable id_cpu given a tid
 	#if LINEAR_PINNING==1
-	id_cpu = tid;
+	id_cpu = tid;//tid x pinned to cpu core x
 	if(tid >= N_CPU){
 		printf("Unable to linear pinning thread %u\n",tid);
 		exit(-1);
 	}
 	#else
-	id_cpu = NUMA_TOPOLOGY[tid];
-	id_cpu = ( (tid % 8) * 4 + (tid/((unsigned int)8))) % N_CPU;//the statement "% N_CPU" is a safe way to generate id_cpu beetween 0 and N_CPU-1
+	id_cpu = NUMA_TOPOLOGY[tid];//generic way to bind tid to cpu core to fill a numa_node at a time
+	//id_cpu = ( (tid % 8) * 4 + (tid/((unsigned int)8))) % N_CPU;//the statement "% N_CPU" is a safe way to generate id_cpu beetween 0 and N_CPU-1
 	#endif
 
-	my_core = id_cpu;
+	ARRAY_PINNING[tid] = id_cpu;//set pinning on global data structure ARRAY_PINNING
+	my_core = id_cpu;//set per thread_variable my_core
+	
 	printf("Thread %u set to CPU no %u\n", tid, id_cpu);
 
 	CPU_ZERO(&mask);
@@ -329,6 +334,8 @@ void LPs_metada_init() {
 		LPS[i]->dummy_bound=NULL;
 		LPS[i]->LP_simulation_state=VALID;//start with LP state valid
 		LPS[i]->old_valid_bound=NULL;
+		LPS[i]->msg_curr_executed=NULL;
+		LPS[i]->last_interrupted_evt=NULL;
 #endif
 
 #if IPI_DECISION_MODEL==1
@@ -835,6 +842,15 @@ void do_rollback(void(*rollback_function)(unsigned int lid, simtime_t destinatio
 		}
 	}
 	else{
+		if(LPS[current_lp]->last_interrupted_evt==current_msg){
+			statistics_post_lp_data(current_lp, STAT_ROLLBACK_TO_RESUME_STATE_AND_REEXECUTE_INTERR_EVT_LP, 1);
+			//printf("interrotto 2 volte lo stesso evento\n");
+			//gdb_abort;
+		}
+		else{
+			statistics_post_lp_data(current_lp, STAT_ROLLBACK_TO_RESUME_STATE_AND_EXECUTE_EVT_FUTURE_LP, 1);
+		}
+
 		statistics_post_lp_data(current_lp, STAT_ROLLBACK_TO_RESUME_STATE_LP, 1);
 	}
 	LPS[current_lp]->LP_simulation_state = VALID;//LP state is been restorered by rollback

@@ -14,6 +14,10 @@
 #include <sys/mman.h>
 #include <memory_limit.h>
 
+#if LINEAR_PINNING!=1
+#include <numa.h>
+#endif
+
 extern volatile bool sim_error;
 extern volatile bool stop_timer;
 extern volatile bool stop;
@@ -179,7 +183,9 @@ int main(int argn, char *argv[]) {
     test_memory_limit();
     #endif
 
-    //set_numa_topology();
+    #if LINEAR_PINNING!=1
+    set_numa_topology();
+    #endif
 
     printf("***START SIMULATION***\n\n");
 

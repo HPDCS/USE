@@ -117,6 +117,7 @@ void change_LP_state(msg_t*restore_bound,unsigned int new_state){
     LPS[current_lp]->state=LP_STATE_READY;//restore LP_state
     LPS[current_lp]->bound=restore_bound;
     LPS[current_lp]->old_valid_bound=NULL;
+    LPS[current_lp]->last_interrupted_evt=current_msg;
 }
 
 void change_dest_ts(unsigned int lid,simtime_t*until_ts,unsigned int*tie_breaker){

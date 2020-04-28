@@ -31,7 +31,6 @@ extern char _fini;
 
 static __thread int fd;
 static __thread int cpu;
-//static __thread cpu_set_t oldset;
 
 static inline int alloc_alternate_stack_area(void ** stack, unsigned long stack_size)
 {

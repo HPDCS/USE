@@ -103,6 +103,8 @@
 #define STAT_COUNT_RESUME_ROLLBACK_LP           607
 #define STAT_CLOCK_RESUME_ROLLBACK_LP           608
 #define STAT_ROLLBACK_TO_RESUME_STATE_LP        609
+#define STAT_ROLLBACK_TO_RESUME_STATE_AND_REEXECUTE_INTERR_EVT_LP 610
+#define STAT_ROLLBACK_TO_RESUME_STATE_AND_EXECUTE_EVT_FUTURE_LP 611
 #endif
 
 #if HANDLE_INTERRUPT_WITH_CHECK==1 && REPORT==1
@@ -228,6 +230,12 @@ struct stats_t {
     #if HANDLE_INTERRUPT==1 && REPORT==1
     stat64_t counter_rollbacks_to_resume_state_lp;
     stat64_t counter_rollbacks_to_resume_state_tot;
+
+    stat64_t counter_rollbacks_to_resume_state_and_reexecute_interr_evt_lp;
+    stat64_t counter_rollbacks_to_resume_state_and_reexecute_interr_evt_tot;
+
+    stat64_t counter_rollbacks_to_resume_state_and_execute_evt_future_lp;
+    stat64_t counter_rollbacks_to_resume_state_and_execute_evt_future_tot;
     
     stat64_t event_not_flushed_lp;//per lp, event that lp father doesn't flush
     stat64_t event_not_flushed_tot;

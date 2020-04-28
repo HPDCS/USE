@@ -143,5 +143,5 @@ extern bool ctrl_del_elim;
 extern bool ctrl_del_banana;
 
 extern __thread unsigned int my_core;
-
+extern unsigned int ARRAY_PINNING[N_CPU];
 #endif
