@@ -75,7 +75,8 @@ __thread unsigned long long * lp_unsafe_set_debug;
 
 __thread unsigned long long * lp_locked_set;
 
-__thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
+__thread __temp_thread_pool * _thr_pool_ptr  __attribute__ ((aligned (64)));
+#define _thr_pool (*_thr_pool_ptr)
 
 __thread list(msg_t) to_remove_local_evts_old = NULL;
 __thread list(msg_t) to_remove_local_evts = NULL;

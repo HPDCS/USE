@@ -62,7 +62,9 @@ extern nb_calqueue* nbcalqueue;
 extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
 extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
 extern __thread bool  safe;
-extern __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
+extern __thread __temp_thread_pool *_thr_pool_ptr  __attribute__ ((aligned (64)));
+
+#define _thr_pool (*_thr_pool_ptr)
 
 extern volatile unsigned int *lp_lock;
 extern __thread unsigned long long * lp_unsafe_set;

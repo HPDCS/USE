@@ -589,6 +589,7 @@ void init_simulation(unsigned int thread_id){
 	
 	// Initialize the set ??
 	unsafe_set_init();
+	_thr_pool_ptr = (void*) malloc(sizeof(_thr_pool));
 
 	for(;i<THR_POOL_SIZE;i++)
 	{
@@ -681,6 +682,7 @@ void init_simulation(unsigned int thread_id){
 
 	if(tid == 0)
 	{
+		printf("CALLING SLEEPING THREAD\n");
 	    int ret;
 		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
 	            fprintf(stderr, "%s\n", strerror(errno));
