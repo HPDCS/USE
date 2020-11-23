@@ -953,7 +953,12 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long long)stats->clock_safe_tot, percentage(stats->clock_safe_tot,stats->clock_loop_tot));
 	printf("Frame Processing................................: %12llu clocks (%4.2f%%)\n", 
 		(unsigned long long)stats->clock_frame_tot, percentage(stats->clock_frame_tot,stats->clock_loop_tot));
-
+	printf("Rollback Processing.............................: %12llu clocks (%4.2f%%)\n",
+                (unsigned long long)(stats->clock_rollback*stats->counter_rollbacks), percentage((stats->clock_rollback*stats->counter_rollbacks),stats->clock_loop_tot));
+	printf("Checkpoint Saving...............................: %12llu clocks (%4.2f%%)\n",
+                (unsigned long long)(stats->clock_checkpoint*stats->counter_checkpoints), percentage((stats->clock_checkpoint*stats->counter_checkpoints),stats->clock_loop_tot));
+	printf("Fetch Successful................................: %12llu clocks (%4.2f%%)\n",
+                (unsigned long long)(stats->events_fetched_succ*stats->clock_fetch_succ), percentage((stats->events_fetched_succ*stats->clock_fetch_succ),stats->clock_loop_tot));
 	printf(COLOR_RESET"\n");
 }
 
