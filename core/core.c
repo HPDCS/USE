@@ -25,6 +25,7 @@
 #include <statistics.h>
 
 #include "core.h"
+#include "scheduler.h"
 #include "queue.h"
 #include "nb_calqueue.h"
 #include "simtypes.h"
@@ -188,7 +189,7 @@ unsigned int get_current_numa_node(){
 	if(numa_available() != -1){
 		return numa_node_of_cpu(sched_getcpu());
 	}
-	return 1;
+	return 0;
 }
 
 void set_affinity(unsigned int tid){
@@ -429,6 +430,9 @@ void init_simulation(unsigned int thread_id){
 		queue_init();
 		numerical_init();
 		nodes_init();
+	#if DISTRIBUTED_FETCH == 1
+		scheduler_init();
+	#endif	
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
        		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
@@ -799,7 +803,10 @@ end_loop:
 		
 		//LOCAL LISTS PRUNING
 		nbc_prune();
-		
+
+#if DISTRIBUTED_FETCH == 1
+		scheduler_update_state();
+#endif	
 		//PRINT REPORT
 #if VERBOSE > 0
 		if(tid == MAIN_PROCESS) {

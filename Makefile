@@ -57,7 +57,7 @@ CFLAGS:=$(CFLAGS) -DHAVE_PARALLEL_ALLOCATOR
 endif
 
 ifdef DISTRIBUTED_FETCH
-CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=1
+CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=$(DISTRIBUTED_FETCH)
 endif
 
 ifdef MBIND
@@ -251,6 +251,7 @@ TARGET=phold
 CORE_SOURCES =  core/core.c\
 		core/calqueue.c\
 		core/nb_calqueue.c\
+		core/scheduler.c\
 		core/x86.c\
 		core/topology.c\
 		core/queue.c\

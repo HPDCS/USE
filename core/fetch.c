@@ -40,6 +40,7 @@
 #include "queue.h"
 #include "prints.h"
 #include "timer.h"
+#include "scheduler.h"
 
 
 #define LOG_DEQUEUE 0
@@ -142,11 +143,13 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		event->local_previous 	= (void*) node;        //DEBUG
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
 		event->deletion_time 	= CLOCK_READ();
-#endif
+	#endif
 
 		statistics_post_th_data(tid, STAT_EVENT_COMMIT, 1);
-
+	#if DISTRIBUTED_FETCH == 1
+		scheduler_statistics_update_committed();
 		return true;
+	#endif
 	}
 	return false;
 }
@@ -212,10 +215,13 @@ unsigned int fetch_internal(){
 #if DEBUG == 1 || REPORT ==1
 	unsigned int c = 0;
 #endif
+#if DISTRIBUTED_FETCH == 1
+	scheduler_statistics_init_skipped();
+	scheduler_statistics_init_current_min();
+#endif
 	
 	// Get the minimum node from the calendar queue
-    if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
-		return 0;
+    if((node = min_node = getMin(nbcalqueue, &h)) == NULL) 	return 0;
 		
 	//used by get_next
 	bucket_width = h->bucket_width;
@@ -313,7 +319,10 @@ unsigned int fetch_internal(){
 		diff_lp--;
 #endif		
 		//read_new_min = false;
-
+#if DISTRIBUTED_FETCH == 1
+	scheduler_statistics_update_skipped();
+	scheduler_statistics_update_current_min(ts);
+#endif
 		if(
 #if OPTIMISTIC_MODE != FULL_SPECULATIVE
 	#if OPTIMISTIC_MODE == ONE_EVT_PER_LP
@@ -323,7 +332,7 @@ unsigned int fetch_internal(){
 	#endif
 #endif
 #if DISTRIBUTED_FETCH == 1
-		is_lp_on_my_numa_node(lp_idx) &&
+		(is_lp_on_my_numa_node(lp_idx) || scheduler_query()) &&
 #endif
 		tryLock(lp_idx)
 		) {
