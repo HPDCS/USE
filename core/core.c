@@ -78,7 +78,7 @@ __thread clock_timer main_loop_time,		//total execution time on single core
 				;
 #endif
 
-unsigned int ready_wt = 0;
+volatile unsigned int ready_wt = 0;
 
 simulation_configuration rootsim_config;
 
