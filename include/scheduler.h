@@ -8,6 +8,13 @@
 #define NUMA_POLICY_GREEDY_TS 1
 #define NUMA_POLICY_PERIODIC  2
 
+/*
+#if DISTRIBUTED_FETCH == 1
+	#ifndef NUMA_POLICY
+		#define NUMA_POLICY NUMA_POLICY_GREEDY_EV
+	#endif
+#endif 
+*/
 extern __thread unsigned int fetch_mercy_period;
 extern __thread int fetch_mercy_period_step; //se negativo, indica che lo sto riducendo
 
