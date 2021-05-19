@@ -3,6 +3,7 @@
 #include "scheduler.h"
 
 
+/* Variables for greedy heuristc */
 
 
 __thread unsigned int fetch_mercy_period = 64;
@@ -17,6 +18,57 @@ __thread unsigned int events_committed = 0;
 __thread unsigned int mercy_period_recalc = 0;
 __thread unsigned int skipped_events;
 __thread simtime_t min_fetchable;
+
+
+
+
+
+/* Variables for periodic heuristc */
+
+
+__thread unsigned long long avg_clock_remote_execution; //eliminabile
+__thread unsigned long long avg_clock_local_execution; //eliminabile
+__thread unsigned long long tot_clock_local_execution;
+__thread unsigned int num_local_execution;
+__thread unsigned long long tot_clock_remote_execution;
+__thread unsigned int num_remote_execution;
+__thread unsigned long long tot_clock_remote_fetch;
+__thread unsigned int num_remote_fetch;
+__thread unsigned long long avg_clock_remote_fetch;
+__thread unsigned long long tot_clock_local_fetch;
+__thread unsigned int num_local_fetch;
+__thread unsigned long long avg_clock_local_fetch;
+__thread bool partitioned_LP = true;
+__thread unsigned int decision_period=0;
+__thread unsigned int decision_period_lenght=1000;
+
+
+
+
+void scheduler_statistics_update_execution_times(clock_timer event_processing_timer){
+	if(decision_period == 1){
+		num_local_execution += 1; // MACOTS 2018
+		tot_clock_local_execution += clock_timer_value(event_processing_timer); // MACOTS 2018
+	}
+	else if(decision_period == 2){
+		num_remote_execution += 1; // MACOTS 2018
+		tot_clock_remote_execution += clock_timer_value(event_processing_timer); // MACOTS 2018
+	}
+}
+
+
+
+void scheduler_statistics_update_fetch_times(clock_timer fetch_timer){
+	if(decision_period == 1){
+		num_local_fetch += 1; // MACOTS 2018
+		tot_clock_local_fetch += clock_timer_value(fetch_timer); // MACOTS 2018
+	}
+	else if(decision_period == 2){
+		num_remote_fetch += 1; // MACOTS 2018
+		tot_clock_remote_fetch += clock_timer_value(fetch_timer); // MACOTS 2018
+	}
+}
+
 
 
 void scheduler_update_state(){
@@ -67,5 +119,33 @@ void scheduler_update_state(){
 
 			mercy_period_recalc = 0;
 		}
+
+		if(mercy_period_recalc > decision_period_lenght){
+			if (decision_period == 0){  //FINITO IL PERIODO 0 - STABILIZZAZIONE NUMA
+				tot_clock_local_execution=0;
+				tot_clock_remote_execution=0;
+				num_remote_execution=0;
+				num_local_execution=0;
+
+				tot_clock_remote_fetch=0;
+				tot_clock_local_fetch=0;
+				num_local_fetch=0;
+				num_remote_fetch=0;
+
+			} else if (decision_period == 1){ //FINITO IL PERIODO 1 - ESECUZIONE PARTITIONED
+				avg_clock_local_execution =  (num_local_execution > 0) * (((double)tot_clock_local_execution) / num_local_execution); 
+				avg_clock_local_fetch = (num_local_fetch > 0) * (((double)tot_clock_local_fetch) / num_local_fetch); 
+				partitioned_LP = false;
+			} else if(decision_period == 2){ //FINITO IL PERIODO 2 - ESECUZIONE SUL MINIMO
+				avg_clock_remote_execution =  (num_remote_execution > 0) * (((double)tot_clock_remote_execution) / num_remote_execution); 
+				avg_clock_remote_fetch = (num_remote_fetch > 0) * (((double)tot_clock_remote_fetch) / num_remote_fetch); 
+
+				partitioned_LP = (avg_clock_remote_execution - avg_clock_local_execution) > (avg_clock_local_fetch - avg_clock_remote_fetch);
+				mercy_period_recalc = 100000;
+			}
+			decision_period = (decision_period + 1) % 4; 
+			mercy_period_recalc = 0;
+		}
+
 
 }

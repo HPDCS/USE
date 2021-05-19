@@ -530,6 +530,9 @@ stat64_t execute_time;
 		statistics_post_lp_data(LP, STAT_CLOCK_REV, clock_timer_value(stm_event_processing_time));
 		clock_timer_start(stm_safety_wait);
 #endif
+#if DISTRIBUTED_FETCH == 1
+		scheduler_statistics_update_execution_times(event_processing_timer);
+#endif
 	}
 #endif
 		
@@ -588,7 +591,11 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
-		
+
+#if DISTRIBUTED_FETCH == 1
+		scheduler_statistics_update_fetch_times(fetch_timer);
+#endif
+
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
 		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH_SUCC, (double)clock_timer_value(fetch_timer));
@@ -835,6 +842,7 @@ end_loop:
 	} else if (stop || stop_timer){
 		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
+		printf(GREEN( "[%u] Execution ended correctly with mercy period equal to %d\n"), tid, fetch_mercy_period);
 		if(tid==0){
 			pthread_join(sleeper, NULL);
 

@@ -4,6 +4,7 @@
 #include <core.h>
 #include <hpdcs_utils.h>
 #include <simtypes.h>
+#include <scheduler.h>
 
 
 extern double delta_count;
@@ -384,6 +385,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("   Fetch failed.................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_fetched_unsucc, percentage(stats->events_fetched_unsucc, stats->events_fetched));
 	printf("   Avg node traversed during fetch..............: %12.2f\n", stats->events_get_next_fetch);
+	printf("   Final mercy period...........................: %12u\n", fetch_mercy_period);
 	
 	printf("\n");
 	
