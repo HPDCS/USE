@@ -3,12 +3,12 @@
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 
-FLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O3
+CFLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O3
 
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
 #CLS = 64#"getconf LEVEL1_DCACHE_LINESIZE"
-FLAGS:=$(FLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
+CFLAGS:=$(CFLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 #-DNUM_NUMA_NODES=$(shell lscpu | grep 'NUMA node(s)' | head -1 | awk '{print $3}')
 
 INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
@@ -16,10 +16,15 @@ LIBS=-pthread -lm -lnuma
 ARCH_X86=1
 ARCH_X86_64=1
 
+
+ifdef ENFORCE_LOCALITY
+CFLAGS:=$(CFLAGS) -DENFORCE_LOCALITY=1
+endif
+
 ifdef MAX_SKIPPED_LP
-CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=$(MAX_SKIPPED_LP)
+CFLAGS:=$(CFLAGS) -DMAX_SKIPPED_LP=$(MAX_SKIPPED_LP)
 else
-CFLAGS:=$(FLAGS) -DMAX_SKIPPED_LP=100000
+CFLAGS:=$(CFLAGS) -DMAX_SKIPPED_LP=100000
 endif
 
 ifdef OPTIMISTIC_LEVEL
@@ -354,7 +359,7 @@ reverse: $(REVERSE_OBJ)
 	@ld -r -g $(REVERSE_OBJ) -o reverse/__reverse.o
 
 %.o: %.c
-	@echo "[CC] $@"
+	@echo "[CC] $@ $(CFLAGS)"
 	@$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@ $(LIBS)
 
 

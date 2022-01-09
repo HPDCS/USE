@@ -13,7 +13,7 @@
 
 #define LA (50)
 
-inline void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
+void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
