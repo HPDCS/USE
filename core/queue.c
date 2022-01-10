@@ -154,6 +154,11 @@ void queue_deliver_msgs(void) {
 #if REPORT == 1
 		clock_timer_start(queue_op);
 #endif
+#if ENFORCE_LOCALITY == 1
+        nb_stack_node_t *local_index_node = (nb_stack_node_t*) node_malloc(NULL, 0, 0);
+        local_index_node->payload = new_hole;
+        nb_push(&LPS[new_hole->receiver_id]->pending_evts, local_index_node);
+#endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 
 #if REPORT == 1

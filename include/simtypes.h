@@ -8,6 +8,7 @@
 #include <events.h>
 #include <state.h>
 #include <numerical.h>
+#include <stack.h>
 
 
 /// Infinite timestamp: this is the highest timestamp in a simulation run
@@ -108,7 +109,11 @@ typedef struct _LP_state {
 #if DEBUG == 1
 	msg_t* 	last_rollback_event;
 #endif
-	
+
+#if ENFORCE_LOCALITY == 1
+	volatile nb_stack_t pending_evts;
+#endif
+
 	simtime_t commit_horizon_ts;
 	unsigned long long commit_horizon_tb;
 	

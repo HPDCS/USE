@@ -141,6 +141,11 @@ extern void nbc_enqueue(nb_calqueue *queue, double timestamp, void* payload, uns
 extern void nbc_prune(void);
 extern nb_calqueue* nb_calqueue_init(unsigned int threashold, double perc_used_bucket, unsigned int elem_per_bucket);
 
+
+extern nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned int tie_breaker);
+extern void node_free(nbc_bucket_node *pointer);
+
+
 extern nbc_bucket_node* getMin(nb_calqueue *queue, table ** h);
 extern nbc_bucket_node* getNext(nbc_bucket_node* node, table *h);
 extern bool delete(nb_calqueue *queue, nbc_bucket_node* node);
