@@ -11,10 +11,28 @@ typedef struct lp_local_struct {
 	double hotness;
 	simtime_t distance_curr_evt_from_gvt; //"delta_C ??"
 	simtime_t distance_last_ooo_from_gvt; //"delta_R ??"
+   bool evicted; //logical flag to signal eviction for the field
 
 } lp_local_struct;
 
-lp_local_struct local_array[SIZE];
+
+/*
+
+typedef struct lp_local_struct {
+
+   state_t *lp; //array di lp -> hotness, delta_C e delta_R sarebbero attributi dell'lp
+   unsigned int last_inserted_idx; //tiene traccia dell'ultimo indice in cui è stato inserito l'lp
+   unsigned int last_evicted_idx; //tiene traccia dell'ultimo indice in cui è stato eliminato l'lp
+   unsigned int max_size;
+   unsigned int limit; //dove inizia la sezione dell'array con gli lp warm
+
+} lp_local_struct;
+
+
+*/
+
+
+
 
 /* init the structure */
 void init_struct(void);
@@ -35,10 +53,10 @@ void compute_hotness(lp_local_struct *lp_local);
 /* lp_local_struct field creation and lp insertion into local array
    hotness is 1 when the lp is locked
    distance_curr_evt_from_gvt and distance_last_ooo_from_gvt must be computed later */
-void insert_lp(unsigned int new_lp, double hotness);
+void insert_lp(unsigned int new_lp);
 
 /* choose the lp to be evicted among the warm ones
-   use hotness function to determine which one must go
+   use hotness function to determine which one must go -> min hotness
    return the index of the lp (or the position in the array?) to be evicted */
 unsigned int detect_lp_to_be_evicted(void);
 
