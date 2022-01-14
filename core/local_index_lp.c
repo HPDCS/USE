@@ -11,7 +11,7 @@
 int seeded = 0; //to check if the rng has to be set
 
 
-/* The functions initializes the skiplist
+/* The function initializes the skiplist
 @ param: list The skiplist
 It return the skiplist on success, NULL on failure
 */
@@ -174,8 +174,7 @@ int skiplist_delete(skiplist *list, int ts) {
 /* The function cleans the list
 @ param: list Skiplist to be freed
 */
-void skiplist_free_all(skiplist *list)
-{
+void skiplist_free_all(skiplist *list) {
     node *current_node = list->head->next[1];
     while(current_node != list->head) {
         node *next_node = current_node->next[1];
@@ -189,36 +188,4 @@ void skiplist_free_all(skiplist *list)
 }
 
 
-int main() {
-    int arr[] = { 3, 6, 9, 2, 11, 1, 4 }, i;
-    skiplist * list;
-    list = (skiplist *)malloc(sizeof(skiplist));
-    skiplist_init(list);
-
-    printf("Insert:--------------------\n");
-    for (i = 0; i < sizeof(arr) / sizeof(arr[0]); i++) {
-        skiplist_insert(list, arr[i], arr[i]);
-    }
-    skiplist_dump(list);
-
-    printf("Search:--------------------\n");
-    int tss[] = { 3, 4, 7, 10, 111 };
-
-    for (i = 0; i < sizeof(tss) / sizeof(tss[0]); i++) {
-        node *x = skiplist_search(list, tss[i]);
-        if (x) {
-            printf("ts = %d, event = %d\n", tss[i], x->event);
-        } else {
-            printf("ts = %d, not fuound\n", tss[i]);
-        }
-    }
-
-    printf("Search:--------------------\n");
-    skiplist_delete(list, 3);
-    skiplist_delete(list, 9);
-    skiplist_dump(list);
-    skiplist_free_all(list);
-
-    return 0;
-}
 
