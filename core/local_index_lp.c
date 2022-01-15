@@ -8,7 +8,7 @@
 
 #define SKIPLIST_MAX_LEVEL 32
 
-int seeded = 0; //to check if the rng has to be set
+int init_rng = 0; //to check if the rng has to be set
 
 
 /* The function initializes the skiplist
@@ -18,9 +18,10 @@ It return the skiplist on success, NULL on failure
 skiplist *skiplist_init(skiplist *list) {
     int i;
 
-    if (!seeded) {
+    //set seed for rng
+    if (!init_rng) {
         srand((unsigned int) time(NULL));
-        seeded = 1;
+        init_rng = 1;
     }
 
     node *head = (node *) malloc(sizeof(struct node));
