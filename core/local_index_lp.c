@@ -3,12 +3,14 @@
 #include <limits.h>
 #include <time.h>
 
+#include <ROOT-Sim.h>
 #include "local_index_lp.h"
+#include "numerical.h"
 
 
 #define SKIPLIST_MAX_LEVEL 32
 
-int init_rng = 0; //to check if the rng has to be set
+//int init_rng = 0; //to check if the rng has to be set
 
 
 /* The function initializes the skiplist
@@ -18,11 +20,11 @@ It return the skiplist on success, NULL on failure
 skiplist *skiplist_init(skiplist *list) {
     int i;
 
-    //set seed for rng
+    /*//set seed for rng
     if (!init_rng) {
         srand((unsigned int) time(NULL));
         init_rng = 1;
-    }
+    }*/
 
     node *head = (node *) malloc(sizeof(struct node));
     if (!head) return NULL;
@@ -46,7 +48,7 @@ skiplist *skiplist_init(skiplist *list) {
 */
 int rand_level() {
     int level = 1;
-    while (rand() < RAND_MAX / 2 && level < SKIPLIST_MAX_LEVEL)
+    while (Random() < RAND_MAX / 2 && level < SKIPLIST_MAX_LEVEL) //changed from rand() to Random()
         level++;
     return level;
 }
