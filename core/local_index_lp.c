@@ -5,7 +5,6 @@
 
 #include <ROOT-Sim.h>
 #include "local_index_lp.h"
-#include "numerical.h"
 
 
 #define SKIPLIST_MAX_LEVEL 32

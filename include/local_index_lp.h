@@ -2,6 +2,10 @@
 #define __LOCAL_INDEX_LP_H
 
 
+#include "ROOT-Sim.h"
+#include <simtypes.h>
+#include "events.h"
+
 
 typedef struct node {
     simtime_t ts;
