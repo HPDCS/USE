@@ -292,6 +292,10 @@ void LPs_metada_init() {
 		LPS[i]->epoch 					= 1;
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
+	  #if ENFORCE_LOCALITY == 1
+		LPS[i]->pending_evts.top		= NULL;
+		LPS[i]->local_index.top			= NULL;
+	  #endif
 
 	}
 	
@@ -687,6 +691,7 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 	#if DEBUG == 1
+			if(BEFORE(current_msg, LPS[current_lp]->bound)){		printf("added event < bound after bound\n");    gdb_abort;}    
 			if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
 			if(list_prev(current_msg) != bound_t){					printf("list_prev(current_msg) != bound_t\n");	gdb_abort;}
 			if(list_next(bound_t) != current_msg){					printf("list_next(bound_t) != current_msg\n");	gdb_abort;}

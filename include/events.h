@@ -9,6 +9,9 @@
 #define ELIMINATED	0x2
 #define ANTI_MSG	0x3
 
+
+#define BEFORE(x,y)  ( (x->timestamp<y->timestamp) || (x->timestamp == y->timestamp && x->tie_breaker<y->tie_breaker)  ) 
+
 typedef struct __msg_t
 {
 	/* event's attributes */

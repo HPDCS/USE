@@ -3,6 +3,7 @@
 
 typedef struct _stack_node{
 	struct _stack_node * volatile next;
+	struct _stack_node * lnext[4];
 	void *payload;
 }nb_stack_node_t;
 

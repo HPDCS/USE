@@ -112,6 +112,7 @@ typedef struct _LP_state {
 
 #if ENFORCE_LOCALITY == 1
 	volatile nb_stack_t pending_evts;
+	nb_stack_t local_index;
 #endif
 
 	simtime_t commit_horizon_ts;

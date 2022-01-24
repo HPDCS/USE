@@ -33,14 +33,13 @@
 #include <pthread.h>
 #include <math.h>
 
-//#include "atomic.h"
 #include "nb_calqueue.h"
 #include "hpdcs_utils.h"
 #include "core.h"
 #include "queue.h"
 #include "prints.h"
 #include "timer.h"
-
+#include "stack.h"
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
@@ -102,13 +101,12 @@
 #define ST_BINDING_LP		1
 #define FULL_SPECULATIVE	2
 
-
 #ifndef OPTIMISTIC_MODE
 #define OPTIMISTIC_MODE ONE_EVT_PER_LP
 #endif
 
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
-#if DEBUG == 1
+ #if DEBUG == 1
 	LP_state *lp_ptr = LPS[lp_idx];
 	msg_t  * bound_ptr = lp_ptr->bound;
 
@@ -116,7 +114,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 		printf(RED("IS NOT VALID"));
 		print_event(event);
 	}
-#endif
+ #endif
 
 	(void)event;
 	
@@ -134,15 +132,12 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 				LPS[lp_idx]->commit_horizon_tb = node->counter;	
 		}
 		
-	#if DEBUG == 1
-		//event->node = 0x5AFE;                //DEBUG
-		//assert(__sync_val_compare_and_swap(&event->monitor, 0x0, 0x5AFE) == 0x0);
-		//event->monitor = 0x5AFE;
+ #if DEBUG == 1
 		event->local_next 		= bound_ptr;       //DEBUG
 		event->local_previous 	= (void*) node;        //DEBUG
 		event->previous_seed 	= lp_ptr->epoch;//DEBUG
 		event->deletion_time 	= CLOCK_READ();
-#endif
+ #endif
 
 		statistics_post_th_data(tid, STAT_EVENT_COMMIT, 1);
 
@@ -190,15 +185,125 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 
 
-//#define set_commit_state_as_safe(event)				{	unsigned long long old = __sync_val_compare_and_swap(&((event)->monitor), 0x0, 0x5afe); 	old;}
-//#define set_commit_state_as_banana(event)				{	unsigned long long old = __sync_val_compare_and_swap(&((event)->monitor), 0x0, 0xba4a4a); 	old;}
-//#define set_commit_state_as_delete(event)				{	unsigned long long old = __sync_val_compare_and_swap(&((event)->monitor), 0x0, 0xde1); 		old;}
 
 #define set_commit_state_as_safe(event)					(	(event)->monitor =  (void*) 0x5afe 		)		
 #define set_commit_state_as_banana(event)				(	(event)->monitor =  (void*) 0xBA4A4A  	) 
 
+#define EVT_SAFE   ((void*)0x5AFE)
+#define EVT_BANANA ((void*)0xBA4A4A)
+															
+
 
 __thread unsigned int diff_lp = 0;
+
+
+static msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
+	msg_t *local_next_evt = list_next(current);
+				
+	while(local_next_evt != NULL && !is_valid(local_next_evt)) {
+		list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
+		local_next_evt->frame = tid;
+		list_node_clean_by_content(local_next_evt); //SHOULD NOT BE USEFUL
+		list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
+		local_next_evt->state = ANTI_MSG; //__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);
+		set_commit_state_as_banana(local_next_evt); //not required: it is an optimization to reduce the number of rollback
+		local_next_evt = list_next(current);
+	}
+	return local_next_evt; 
+}
+
+#if ENFORCE_LOCALITY == 1
+static void local_ordered_insert_from_bound(LP_state *lp_ptr, nb_stack_node_t *node){
+ 	
+ 	nb_stack_node_t *cur = lp_ptr->local_index.top;
+ 	msg_t *cur_evt;
+
+ 	nb_stack_node_t *prev  = cur;
+	msg_t *pre_evt;
+
+ 	msg_t *evt = node->payload;
+	node->lnext[0] = NULL;
+
+	do{
+	 	if(prev == NULL){
+			lp_ptr->local_index.top = node;
+			return;
+		}
+
+		cur = NULL;
+		cur_evt = NULL;
+		pre_evt = prev->payload;
+
+		while(prev!=NULL){
+			pre_evt = prev->payload;
+			if(pre_evt->monitor!=EVT_SAFE && pre_evt->monitor!=EVT_BANANA) break;
+			lp_ptr->local_index.top = prev->lnext[0];
+			node_free((nbc_bucket_node*)prev);
+			prev = lp_ptr->local_index.top; 			
+		}
+	}while(prev == NULL);
+
+	if(BEFORE(evt, pre_evt)){
+		lp_ptr->local_index.top = node;
+		node->lnext[0] = prev;
+		return;
+	}
+
+
+	cur = prev->lnext[0];
+ 	while(cur != NULL){
+		cur_evt = cur->payload;
+		if( cur_evt->monitor!=EVT_SAFE   && 
+			cur_evt->monitor!=EVT_BANANA){
+			if(BEFORE(evt, cur_evt)){
+				break;
+			}
+		}
+		else{
+			prev->lnext[0] = cur->lnext[0];
+		    node_free((nbc_bucket_node*)cur);
+		    cur = prev;
+		    cur_evt = cur->payload;
+		}
+
+		prev = cur;
+ 		pre_evt = cur_evt;
+ 		cur  = cur->lnext[0];
+ 	}
+
+  #if DEBUG == 1
+ 	if(prev == NULL) gdb_abort;
+ 	if(BEFORE(evt, pre_evt)) gdb_abort;
+  #endif
+
+ 	prev->lnext[0] = node;
+ 	if(cur == NULL) return;
+
+  #if DEBUG == 1
+ 	if(BEFORE(cur_evt, evt)) gdb_abort;
+  #endif
+ 	node->lnext[0] = cur;
+
+	return;
+}
+
+
+static inline void local_fetch(LP_state *ptr){
+	msg_t *min_evt = NULL;
+	nb_stack_node_t *tmp, *top =  nb_popAll(&ptr->pending_evts);
+    while(top){
+    	msg_t *evt = top->payload;
+    	tmp = top;
+    	top = top->next;
+    	if(evt->monitor == EVT_SAFE || evt->monitor == EVT_BANANA){
+    		node_free((nbc_bucket_node*)tmp);
+    		continue;
+    	}
+    	if(min_evt == NULL || BEFORE(evt, min_evt))	min_evt = evt;
+    	local_ordered_insert_from_bound(ptr, tmp);
+    }
+}
+#endif
 
 unsigned int fetch_internal(){
 	table *h;
@@ -209,9 +314,9 @@ unsigned int fetch_internal(){
 	LP_state *lp_ptr;
 	msg_t *event, *local_next_evt, * bound_ptr;
 	bool validity, in_past, read_new_min = true, from_get_next_and_valid;
-#if DEBUG == 1 || REPORT ==1
+ #if DEBUG == 1 || REPORT ==1
 	unsigned int c = 0;
-#endif
+ #endif
 	
 	// Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
@@ -241,12 +346,12 @@ unsigned int fetch_internal(){
 		
     while(node != NULL){
 		
-#if DEBUG == 1 || REPORT ==1
+ #if DEBUG == 1 || REPORT ==1
 		c++;
-#endif
-#if VERBOSE > 0
+ #endif
+ #if VERBOSE > 0
 		diff_lp++;
-#endif
+ #endif
 	
 		if(c==MAX_SKIPPED_LP*n_cores){	return 0; } //DEBUG
 
@@ -308,23 +413,23 @@ unsigned int fetch_internal(){
 			}
 			
 		}
-		
-#if VERBOSE > 0
+
+ #if VERBOSE > 0
 		diff_lp--;
-#endif		
+ #endif		
 		//read_new_min = false;
 
 		if(
-#if OPTIMISTIC_MODE != FULL_SPECULATIVE
+ #if OPTIMISTIC_MODE != FULL_SPECULATIVE
 	#if OPTIMISTIC_MODE == ONE_EVT_PER_LP
 		!is_in_lp_unsafe_set(lp_idx) &&
 	#else
 		!is_in_lp_locked_set(lp_idx) &&
 	#endif
-#endif
-#if DISTRIBUTED_FETCH == 1
+ #endif
+ #if DISTRIBUTED_FETCH == 1
 		is_lp_on_my_numa_node(lp_idx) &&
-#endif
+ #endif
 		tryLock(lp_idx)
 		) {
 			
@@ -340,20 +445,12 @@ unsigned int fetch_internal(){
 			curr_evt_state = event->state;
 		
 			if(validity) {
-		
+			 #if ENFORCE_LOCALITY == 1
+				local_fetch(lp_ptr);
+			 #endif
 				//from this point the bound variable is freezed and of course is in the past
 				/// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///
-				local_next_evt = list_next(lp_ptr->bound);
-				
-				while(local_next_evt != NULL && !is_valid(local_next_evt)) {
-					list_extract_given_node(lp_ptr->lid, lp_ptr->queue_in, local_next_evt);
-					local_next_evt->frame = tid;
-					list_node_clean_by_content(local_next_evt); //SHOULD NOT BE USEFUL
-					list_insert_tail_by_content(to_remove_local_evts, local_next_evt);
-					local_next_evt->state = ANTI_MSG; //__sync_or_and_fetch(&local_next_evt->state, ELIMINATED);
-					set_commit_state_as_banana(local_next_evt); //not required: it is an optimization to reduce the number of rollback
-					local_next_evt = list_next(lp_ptr->bound);
-				}
+				local_next_evt = get_next_and_valid(lp_ptr, lp_ptr->bound);
 				
 				if( local_next_evt != NULL && 
 					(
@@ -461,7 +558,7 @@ unsigned int fetch_internal(){
 		}
 	
 
-get_next:
+  get_next:
 		// GET NEXT NODE PRECEDURE
 		// From this point over the code is to retrieve the next event on the queue
 		do {
@@ -507,19 +604,19 @@ get_next:
  	if(from_get_next_and_valid)
         node = NULL;
  
-#if DEBUG == 1
+ #if DEBUG == 1
 	if(node == (void*)0x5afe){
 		printf(RED("NON VA"));
 		print_event(event);
 	}
-#endif
+ #endif
     // Set the global variables with the selected event to be processed
     // in the thread main loop.
     current_msg =  event;//(msg_t *) node->payload;
 	current_node = node;
-#if REPORT == 1
+ #if REPORT == 1
 	statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)c);
-#endif
+ #endif
 
     return 1;
 }
