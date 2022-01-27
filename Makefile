@@ -266,6 +266,7 @@ CORE_SOURCES =  core/core.c\
 		core/numerical.c\
 		core/hpdcs_math.c\
 		core/parseparam.c\
+		core/local_scheduler.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
 

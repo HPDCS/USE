@@ -8,6 +8,7 @@
 #include "core.h"
 #include "lookahead.h"
 #include "hpdcs_utils.h"
+#include "local_index/local_index.h"
 
 
 //used to take locks on LPs
@@ -155,9 +156,7 @@ void queue_deliver_msgs(void) {
 		clock_timer_start(queue_op);
 #endif
 #if ENFORCE_LOCALITY == 1
-        nb_stack_node_t *local_index_node = (nb_stack_node_t*) node_malloc(NULL, 0, 0);
-        local_index_node->payload = new_hole;
-        nb_push(&LPS[new_hole->receiver_id]->pending_evts, local_index_node);
+        nb_push(LPS[new_hole->receiver_id], new_hole);
 #endif
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 

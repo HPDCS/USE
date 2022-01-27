@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <pthread.h>
-#include <string.h>
+//#include <string.h>
 //#include <immintrin.h> //hardware transactional support
 #include <stdarg.h>
 #include <dirent.h>
@@ -29,6 +29,7 @@
 #include "nb_calqueue.h"
 #include "simtypes.h"
 #include "lookahead.h"
+#include "local_index/local_index.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
 #include <utmpx.h>
@@ -154,7 +155,7 @@ void _mkdir(const char *path) {
 	char *p;
 	size_t len;
 
-	strncpy(opath, path, sizeof(opath));
+	strncpy(opath, path, MAX_PATHLEN-1);
 	len = strlen(opath);
 	if (opath[len - 1] == '/')
 		opath[len - 1] = '\0';
@@ -293,8 +294,7 @@ void LPs_metada_init() {
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
 	  #if ENFORCE_LOCALITY == 1
-		LPS[i]->pending_evts.top		= NULL;
-		LPS[i]->local_index.top			= NULL;
+		bzero(&LPS[i]->local_index, sizeof(LPS[i]->local_index));
 	  #endif
 
 	}
@@ -473,7 +473,7 @@ void init_simulation(unsigned int thread_id){
 	            abort();
 	    }
 	}
-	
+	local_binding_init();
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -563,6 +563,14 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
 		clock_timer_start(fetch_timer);
 #endif
+
+#if ENFORCE_LOCALITY == 1
+		if(local_fetch() != 0){
+
+		}
+		else
+#endif
+
 		if(fetch_internal() == 0) {
 #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
@@ -576,6 +584,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			goto end_loop;
 		}
+
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
 #endif
@@ -666,7 +675,9 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 
 			delete(nbcalqueue, current_node);
+		  #if ENFORCE_LOCALITY == 0
 			unlock(current_lp);
+		  #endif
 			continue;
 		}
 
@@ -757,7 +768,7 @@ void thread_loop(unsigned int thread_id) {
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
-
+  #if ENFORCE_LOCALITY == 0
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
@@ -765,6 +776,7 @@ void thread_loop(unsigned int thread_id) {
 			printlp("ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp]);
 		}
 	#endif
+  #endif
 
 #if REPORT == 1
 		clock_timer_start(queue_op);

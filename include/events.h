@@ -2,6 +2,8 @@
 #ifndef __EVENTS_H
 #define __EVENTS_H
 
+#include "../reverse/reverse.h"
+
 #define MAX_DATA_SIZE		128
 
 #define NEW_EVT 	0x0
@@ -10,7 +12,17 @@
 #define ANTI_MSG	0x3
 
 
+#define EVT_SAFE   ((void*)0x5AFE)
+#define EVT_BANANA ((void*)0xBA4A4A)
+
+
 #define BEFORE(x,y)  ( (x->timestamp<y->timestamp) || (x->timestamp == y->timestamp && x->tie_breaker<y->tie_breaker)  ) 
+
+
+/// This defines the type with whom timestamps are represented
+typedef double simtime_t;
+
+
 
 typedef struct __msg_t
 {
