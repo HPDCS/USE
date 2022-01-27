@@ -226,8 +226,7 @@ unsigned int fetch_internal(){
  #endif
 	
 	// Get the minimum node from the calendar queue
-    if((node = min_node = getMin(nbcalqueue, &h)) == NULL)
-		return 0;
+    if((node = min_node = getMin(nbcalqueue, &h)) == NULL) return 0;
 		
 	//used by get_next
 	bucket_width = h->bucket_width;
@@ -351,10 +350,10 @@ unsigned int fetch_internal(){
 		
 			curr_evt_state = event->state;
 		
+		 #if ENFORCE_LOCALITY == 1
+			process_input_channel(lp_ptr);
+		 #endif
 			if(validity) {
-			 #if ENFORCE_LOCALITY == 1
-				process_input_channel(lp_ptr);
-			 #endif
 				//from this point the bound variable is freezed and of course is in the past
 				/// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///
 				local_next_evt = get_next_and_valid(lp_ptr, lp_ptr->bound);
