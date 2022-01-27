@@ -39,7 +39,10 @@
 #include "queue.h"
 #include "prints.h"
 #include "timer.h"
+
+#if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
+#endif
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
