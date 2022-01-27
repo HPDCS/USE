@@ -29,11 +29,14 @@
 #include "nb_calqueue.h"
 #include "simtypes.h"
 #include "lookahead.h"
-#include "local_index/local_index.h"
 #include <hpdcs_utils.h>
 #include <prints.h>
 #include <utmpx.h>
 
+#if ENFORCE_LOCALITY == 1
+#include "local_index/local_index.h"
+#include "local_scheduler.h"
+#endif
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
@@ -473,7 +476,9 @@ void init_simulation(unsigned int thread_id){
 	            abort();
 	    }
 	}
+  #if ENFORCE_LOCALITY == 1
 	local_binding_init();
+  #endif
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -597,6 +602,14 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+#if DEBUG == 1
+		assertf(current_evt_state == ELIMINATED, "got elimintated message %p\n", current_msg);
+#endif
+
+  #if ENFORCE_LOCALITY == 1
+		local_binding_push(current_lp);
+  #endif
 		
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
@@ -628,8 +641,10 @@ void thread_loop(unsigned int thread_id) {
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
-		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
-			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
+		if(
+			BEFORE_OR_CONCURRENT(current_msg, LPS[current_lp]->bound)
+			//current_lvt < LPS[current_lp]->current_LP_lvt || 
+			//(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
 
 	#if DEBUG == 1
@@ -639,7 +654,7 @@ void thread_loop(unsigned int thread_id) {
 				}
 				printf(RED("Received multiple time the same event that is not an anti one\n!!!!!"));
 				print_event(current_msg);
-				//gdb_abort;
+				gdb_abort;
 			}
 	#endif
 			old_state = LPS[current_lp]->state;
