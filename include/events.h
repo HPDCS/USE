@@ -2,6 +2,7 @@
 #ifndef __EVENTS_H
 #define __EVENTS_H
 
+#include <stdbool.h>
 #include "../reverse/reverse.h"
 
 #define MAX_DATA_SIZE		128
@@ -112,5 +113,38 @@ typedef struct _outgoing_t {
 	unsigned int max_size;
 	simtime_t *min_in_transit;
 } outgoing_t;
+
+
+#define set_commit_state_as_banana(event)				(	EVT_TRANSITION_ANT_BAN(event)  	) 
+
+static inline bool EVT_TRANSITION_ANT_BAN(msg_t *event){
+	event->monitor =  (void*) EVT_BANANA;
+	return true;
+}
+
+static inline bool EVT_TRANSITION_NEW_EXT(msg_t *event){
+	int res = __sync_or_and_fetch(&(event->state),EXTRACTED) == EXTRACTED;
+	
+	//or it was eliminated, or it was and antimessage in the future...in any case it has to be considered as executed (?)
+	
+	// the event was NEW_EVT and after the extraction is not EXTRACTED
+	// consequently it is now ANTI
+	// regardless if it is in the present or in the past it has been annihilited before it was executed
+	// so consider its rollback as executed
+	if(!res) set_commit_state_as_banana(event);
+
+	return res;
+} 
+#define EVT_TRANSITION_NEW_ELI(x) {}
+#define EVT_TRANSITION_EXT_ANT(x) {}
+#define EVT_TRANSITION_ELI_ANT(x) {}
+
+
+
+
+
+
+
+
 
 #endif
