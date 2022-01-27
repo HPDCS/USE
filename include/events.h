@@ -16,7 +16,12 @@
 #define EVT_BANANA ((void*)0xBA4A4A)
 
 
-#define BEFORE(x,y)  ( (x->timestamp<y->timestamp) || (x->timestamp == y->timestamp && x->tie_breaker<y->tie_breaker)  ) 
+#define CONCURRENT(x,y)    		   ( (x->timestamp == y->timestamp && x->tie_breaker<=y->tie_breaker)  )
+
+#define BEFORE(x,y)  			   ( (x->timestamp< y->timestamp) || (x->timestamp == y->timestamp && x->tie_breaker< y->tie_breaker)  ) 
+#define BEFORE_OR_CONCURRENT(x,y)  ( (x->timestamp< y->timestamp) || (x->timestamp == y->timestamp && x->tie_breaker<=y->tie_breaker)  ) 
+#define AFTER_OR_CONCURRENT(x,y)   ( (x->timestamp> y->timestamp) || (x->timestamp == y->timestamp && x->tie_breaker>=y->tie_breaker)  ) 
+#define AFTER(x,y)  			   ( (x->timestamp> y->timestamp) || (x->timestamp == y->timestamp && x->tie_breaker> y->tie_breaker)  ) 
 
 
 /// This defines the type with whom timestamps are represented
