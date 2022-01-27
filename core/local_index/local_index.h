@@ -3,12 +3,34 @@
 
 #include <simtypes.h>
 #include <nb_calqueue.h>
+#include <queue.h>
+#include <hpdcs_utils.h>
 
 static inline nb_stack_node_t* nb_popAll(volatile nb_stack_t *s){
 	return __sync_lock_test_and_set(&s->top, NULL);
 }
 
+static void local_clean_prefix(LP_state *lp_ptr){
+ 	local_index_t *local_idx_ptr = &lp_ptr->local_index;
+ 	nb_stack_t *actual_idx_ptr 	 = &local_idx_ptr->actual_index;
+ 	nb_stack_node_t *prev  = actual_idx_ptr->top;;
+	msg_t *pre_evt;
 
+	do{
+	 	if(prev == NULL) return;
+
+		pre_evt = prev->payload;
+
+		while(prev!=NULL){
+			pre_evt = prev->payload;
+			if(pre_evt->state != ELIMINATED && pre_evt->monitor!=EVT_SAFE && pre_evt->monitor!=EVT_BANANA) break;
+			actual_idx_ptr->top = prev->lnext[0];
+			node_free((nbc_bucket_node*)prev);
+			prev = actual_idx_ptr->top; 			
+		}
+	}while(prev == NULL);
+
+}
 
 static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
  	local_index_t *local_idx_ptr = &lp_ptr->local_index;
@@ -18,6 +40,8 @@ static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
 
  	nb_stack_node_t *prev  = cur;
 	msg_t *pre_evt;
+	msg_t *first_prev;
+	msg_t *last_next;
 
  	msg_t *evt = node->payload;
 	node->lnext[0] = NULL;
@@ -34,7 +58,10 @@ static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
 
 		while(prev!=NULL){
 			pre_evt = prev->payload;
-			if(pre_evt->monitor!=EVT_SAFE && pre_evt->monitor!=EVT_BANANA) break;
+			if( pre_evt->state   != ELIMINATED && 
+				pre_evt->monitor != EVT_SAFE   && 
+				pre_evt->monitor!=EVT_BANANA)
+			  break;
 			actual_idx_ptr->top = prev->lnext[0];
 			node_free((nbc_bucket_node*)prev);
 			prev = actual_idx_ptr->top; 			
@@ -47,21 +74,26 @@ static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
 		return;
 	}
 
+	first_prev = pre_evt;
 
 	cur = prev->lnext[0];
  	while(cur != NULL){
 		cur_evt = cur->payload;
-		if( cur_evt->monitor!=EVT_SAFE   && 
-			cur_evt->monitor!=EVT_BANANA){
+		if( cur_evt->state  != ELIMINATED && 
+			cur_evt->monitor!= EVT_SAFE   && 
+			cur_evt->monitor!= EVT_BANANA){
+
 			if(BEFORE(evt, cur_evt)){
+				last_next = cur_evt;
 				break;
-			}
+			}	
+			
 		}
 		else{
 			prev->lnext[0] = cur->lnext[0];
 		    node_free((nbc_bucket_node*)cur);
-		    cur = prev;
-		    cur_evt = cur->payload;
+		    cur = prev->lnext[0];
+		    continue;
 		}
 
 		prev = cur;
@@ -121,6 +153,7 @@ static inline int process_input_channel(LP_state *ptr){
     	local_ordered_insert(ptr, tmp);
     	res = 1;
     }
+    local_clean_prefix(ptr);
     return res;
 }
 
