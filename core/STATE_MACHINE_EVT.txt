@@ -1,0 +1,17 @@
+STATE MACHINE EVT
+=================
+
+All transitions can be executed while holding the lp lock.
+The one marked with + can be performed without the lp lock
+
+                                                            :                            :
+	NEW_EVT ------------------------> EXTRACTED -+-+-+-+-+-+-+-+-+-+-> EVT_SAFE  -+-+-+-+-+-+-+->  UNLINKED
+	   +                                  |                 :                         |  :
+	   |                                  +                 :                         |  :
+	   +                                  |                 :                         +  :
+	   |                                  v                 :                         |  :
+	   +-+-+-+-> ELIMINATED ---------> ANTI_MSG -------------------> EVT_BANNED  -+-+-+  :
+                      |                                     :                         |  :
+                      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  :
+                                                            :                            :
+                 event->state                               :    event->monitor          :     node in the scheduling queue
