@@ -39,10 +39,7 @@
 #include "queue.h"
 #include "prints.h"
 #include "timer.h"
-
-#if ENFORCE_LOCALITY == 1
-#include "local_index/local_index.h"
-#endif
+#include "stack.h"
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
@@ -191,7 +188,10 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 #define set_commit_state_as_safe(event)					(	(event)->monitor =  (void*) 0x5afe 		)		
 #define set_commit_state_as_banana(event)				(	(event)->monitor =  (void*) 0xBA4A4A  	) 
-													
+
+#define EVT_SAFE   ((void*)0x5AFE)
+#define EVT_BANANA ((void*)0xBA4A4A)
+															
 
 
 __thread unsigned int diff_lp = 0;
@@ -211,6 +211,99 @@ static msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
 	}
 	return local_next_evt; 
 }
+
+#if ENFORCE_LOCALITY == 1
+static void local_ordered_insert_from_bound(LP_state *lp_ptr, nb_stack_node_t *node){
+ 	
+ 	nb_stack_node_t *cur = lp_ptr->local_index.top;
+ 	msg_t *cur_evt;
+
+ 	nb_stack_node_t *prev  = cur;
+	msg_t *pre_evt;
+
+ 	msg_t *evt = node->payload;
+	node->lnext[0] = NULL;
+
+	do{
+	 	if(prev == NULL){
+			lp_ptr->local_index.top = node;
+			return;
+		}
+
+		cur = NULL;
+		cur_evt = NULL;
+		pre_evt = prev->payload;
+
+		while(prev!=NULL){
+			pre_evt = prev->payload;
+			if(pre_evt->monitor!=EVT_SAFE && pre_evt->monitor!=EVT_BANANA) break;
+			lp_ptr->local_index.top = prev->lnext[0];
+			node_free((nbc_bucket_node*)prev);
+			prev = lp_ptr->local_index.top; 			
+		}
+	}while(prev == NULL);
+
+	if(BEFORE(evt, pre_evt)){
+		lp_ptr->local_index.top = node;
+		node->lnext[0] = prev;
+		return;
+	}
+
+
+	cur = prev->lnext[0];
+ 	while(cur != NULL){
+		cur_evt = cur->payload;
+		if( cur_evt->monitor!=EVT_SAFE   && 
+			cur_evt->monitor!=EVT_BANANA){
+			if(BEFORE(evt, cur_evt)){
+				break;
+			}
+		}
+		else{
+			prev->lnext[0] = cur->lnext[0];
+		    node_free((nbc_bucket_node*)cur);
+		    cur = prev;
+		    cur_evt = cur->payload;
+		}
+
+		prev = cur;
+ 		pre_evt = cur_evt;
+ 		cur  = cur->lnext[0];
+ 	}
+
+  #if DEBUG == 1
+ 	if(prev == NULL) gdb_abort;
+ 	if(BEFORE(evt, pre_evt)) gdb_abort;
+  #endif
+
+ 	prev->lnext[0] = node;
+ 	if(cur == NULL) return;
+
+  #if DEBUG == 1
+ 	if(BEFORE(cur_evt, evt)) gdb_abort;
+  #endif
+ 	node->lnext[0] = cur;
+
+	return;
+}
+
+
+static inline void local_fetch(LP_state *ptr){
+	msg_t *min_evt = NULL;
+	nb_stack_node_t *tmp, *top =  nb_popAll(&ptr->pending_evts);
+    while(top){
+    	msg_t *evt = top->payload;
+    	tmp = top;
+    	top = top->next;
+    	if(evt->monitor == EVT_SAFE || evt->monitor == EVT_BANANA){
+    		node_free((nbc_bucket_node*)tmp);
+    		continue;
+    	}
+    	if(min_evt == NULL || BEFORE(evt, min_evt))	min_evt = evt;
+    	local_ordered_insert_from_bound(ptr, tmp);
+    }
+}
+#endif
 
 unsigned int fetch_internal(){
 	table *h;
@@ -353,7 +446,7 @@ unsigned int fetch_internal(){
 		
 			if(validity) {
 			 #if ENFORCE_LOCALITY == 1
-				process_input_channel(lp_ptr);
+				local_fetch(lp_ptr);
 			 #endif
 				//from this point the bound variable is freezed and of course is in the past
 				/// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///

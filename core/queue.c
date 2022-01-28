@@ -9,9 +9,6 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
-#if ENFORCE_LOCALITY == 1
-#include "local_index/local_index.h"
-#endif
 
 //used to take locks on LPs
 volatile unsigned int *lp_lock;
@@ -157,12 +154,13 @@ void queue_deliver_msgs(void) {
 #if REPORT == 1
 		clock_timer_start(queue_op);
 #endif
-
-        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
 #if ENFORCE_LOCALITY == 1
-        nb_push(LPS[new_hole->receiver_id], new_hole);
+        nb_stack_node_t *local_index_node = (nb_stack_node_t*) node_malloc(NULL, 0, 0);
+        local_index_node->payload = new_hole;
+        nb_push(&LPS[new_hole->receiver_id]->pending_evts, local_index_node);
 #endif
-        
+        nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
+
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));
 		statistics_post_lp_data(current_lp, STAT_EVENT_ENQUEUE, 1);

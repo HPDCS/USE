@@ -8,7 +8,7 @@
 #include <events.h>
 #include <state.h>
 #include <numerical.h>
-#include <local_index/local_index_types.h>
+#include <stack.h>
 
 
 /// Infinite timestamp: this is the highest timestamp in a simulation run
@@ -19,6 +19,9 @@
 #ifndef CLEAN_CKP_INTERVAL
 #define CLEAN_CKP_INTERVAL 1000
 #endif
+
+/// This defines the type with whom timestamps are represented
+typedef double simtime_t;
 
 
 typedef struct _LP_state {
@@ -108,7 +111,8 @@ typedef struct _LP_state {
 #endif
 
 #if ENFORCE_LOCALITY == 1
-	local_index_t local_index;
+	volatile nb_stack_t pending_evts;
+	nb_stack_t local_index;
 #endif
 
 	simtime_t commit_horizon_ts;
