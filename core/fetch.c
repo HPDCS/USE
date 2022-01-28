@@ -168,7 +168,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                                                                             unlock(lp_idx); /* goto get_next; */    }while(0)
 
         
-#define return_evt_to_main_loop()                                       {   assert(event->monitor != EVT_BANANA);\
+#define return_evt_to_main_loop()                                       {   __event_from = 1;assert(event->monitor != EVT_BANANA);\
                                                                             break;  }
         
 
@@ -418,7 +418,7 @@ unsigned int fetch_internal(){
             else {
                                 
                 ///* MARK NON VALID NODE *///
-                if( (curr_evt_state == NEW_EVT)   )    EVT_TRANSITION_NEW_ELI(event);
+                if( (curr_evt_state == NEW_EVT)   )    {EVT_TRANSITION_NEW_ELI(event);do_unlink_removed_inside_lock_and_goto_next(event,node,lp_idx);}
                 if( (curr_evt_state == EXTRACTED) )    EVT_TRANSITION_EXT_ANT(event);
                 
                 curr_evt_state = event->state;
