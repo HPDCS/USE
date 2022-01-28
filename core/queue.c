@@ -172,20 +172,3 @@ void queue_deliver_msgs(void) {
     _thr_pool._thr_pool_count = 0;
 }
 
-
-bool is_valid(msg_t * event){
-	return  
-			(event->monitor == (void *)0x5afe) 
-			||
-            (
-                (event->state & ELIMINATED) != ELIMINATED  
-                &&  (
-                        event->father == NULL 
-                        ||  (
-                                (event->father->state  & ELIMINATED) != ELIMINATED  
-                                &&   event->fatherEpoch == event->father->epoch 
-                            )
-                    )       
-            );
-}
-

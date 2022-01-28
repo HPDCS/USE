@@ -46,7 +46,7 @@ typedef struct __msg_t
 	/*volatile*/ unsigned int epoch;			//F					//LP's epoch at executing time		
 	unsigned int frame; 						//F					//debug//order of execution of the event in the tymeling
 	
-	void * monitor;//unsigned int monitor;//								//F			
+	void * volatile monitor;//unsigned int monitor;//								//F			
 					
 					
 	/* validity attributes */				
@@ -56,11 +56,11 @@ typedef struct __msg_t
 	simtime_t max_outgoing_ts; 					//ALTRO				//maximum timestamp of produced events used for garbage collection of msg_t due to lazy invalidation 
 		
 	unsigned int fatherFrame;	 				//F					//order of execution of the father in the tymeling	
-	/*volatile*/ unsigned int fatherEpoch;		//ALTRO			//father LP's epoch at executing time
+	volatile unsigned int fatherEpoch;		//ALTRO			//father LP's epoch at executing time
 	
 		
 			
-	/*volatile*/ unsigned int state;				//F			//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
+	volatile unsigned int state;				//F			//state of the node (EXTRACTED, ELIMINATED OR ANTI-EVENT)
 		
 	unsigned char data[MAX_DATA_SIZE];						//payload of the event
 
@@ -113,6 +113,26 @@ typedef struct _outgoing_t {
 	unsigned int max_size;
 	simtime_t *min_in_transit;
 } outgoing_t;
+
+
+
+static inline bool is_valid(msg_t * event){
+	return  
+			(event->monitor == EVT_SAFE) 
+			||
+            (
+                (event->state & ELIMINATED) != ELIMINATED  
+                &&  (
+                        event->father == NULL 
+                        ||  (
+                                (event->father->state  & ELIMINATED) != ELIMINATED  
+                                &&   event->fatherEpoch == event->father->epoch 
+                            )
+                    )       
+            );
+}
+
+
 
 
 #define set_commit_state_as_banana(event)				(	EVT_TRANSITION_ANT_BAN(event)  	) 
