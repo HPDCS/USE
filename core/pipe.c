@@ -47,7 +47,7 @@ void init_evicted_pipe(evicted_pipe_t *pipe) {
 
 /* The function inserts an lp into a pipe, might be the evicted pipe too
 @param: lp The array of lp
-@param: new_lp The index of a new lp being inserted
+@param: new_lp The new lp to insert
 @param: size The size of the pipe
 @param last_inserted The index of the most recent element inserted into the pipe
 @param next_to_insert The index of the next element to insert

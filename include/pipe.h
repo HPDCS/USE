@@ -6,7 +6,7 @@
 #define EVICTED_PIPE_SIZE 4
 
 /* Structures pipe_t and evicted_pipe_t might only differ for their sizes
-They are managed as a circular buffer-like structure
+They are managed as a circular buffer structure
 lp[]: array of lp indexes
 next_to_insert: index of the next position available to insert an lp
 last_inserted: most recent lp inserted in the array
