@@ -64,6 +64,9 @@ __thread unsigned int check_ongvt_period = 0;
 __thread unsigned int current_numa_node;
 __thread unsigned int current_cpu;
 
+
+__thread int __event_from = 0;
+
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
@@ -568,7 +571,7 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
 		clock_timer_start(fetch_timer);
 #endif
-
+	__event_from = 0;
 #if ENFORCE_LOCALITY == 1
 		if(local_fetch() != 0){
 
@@ -604,7 +607,8 @@ void thread_loop(unsigned int thread_id) {
 		current_evt_monitor = current_msg->monitor;
 
 #if DEBUG == 1
-		assertf(current_evt_state == ELIMINATED, "got elimintated message %p\n", current_msg);
+		assertf(current_evt_state == ELIMINATED, "got eliminatated message %p\n", current_msg);
+		assertf(current_evt_state == NEW_EVT,    "got new_evt message %p\n", current_msg);
 #endif
 
   #if ENFORCE_LOCALITY == 1
