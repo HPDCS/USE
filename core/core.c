@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <pthread.h>
-#include <string.h>
+//#include <string.h>
 //#include <immintrin.h> //hardware transactional support
 #include <stdarg.h>
 #include <dirent.h>
@@ -33,6 +33,10 @@
 #include <prints.h>
 #include <utmpx.h>
 
+#if ENFORCE_LOCALITY == 1
+#include "local_index/local_index.h"
+#include "local_scheduler.h"
+#endif
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
@@ -154,7 +158,7 @@ void _mkdir(const char *path) {
 	char *p;
 	size_t len;
 
-	strncpy(opath, path, sizeof(opath));
+	strncpy(opath, path, MAX_PATHLEN-1);
 	len = strlen(opath);
 	if (opath[len - 1] == '/')
 		opath[len - 1] = '\0';
@@ -293,8 +297,7 @@ void LPs_metada_init() {
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
 	  #if ENFORCE_LOCALITY == 1
-		LPS[i]->pending_evts.top		= NULL;
-		LPS[i]->local_index.top			= NULL;
+		bzero(&LPS[i]->local_index, sizeof(LPS[i]->local_index));
 	  #endif
 
 	}
@@ -473,7 +476,9 @@ void init_simulation(unsigned int thread_id){
 	            abort();
 	    }
 	}
-	
+  #if ENFORCE_LOCALITY == 1
+	local_binding_init();
+  #endif
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
@@ -563,6 +568,14 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
 		clock_timer_start(fetch_timer);
 #endif
+
+#if ENFORCE_LOCALITY == 1
+		if(local_fetch() != 0){
+
+		}
+		else
+#endif
+
 		if(fetch_internal() == 0) {
 #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
@@ -576,6 +589,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			goto end_loop;
 		}
+
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
 #endif
@@ -588,6 +602,14 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+#if DEBUG == 1
+		assertf(current_evt_state == ELIMINATED, "got elimintated message %p\n", current_msg);
+#endif
+
+  #if ENFORCE_LOCALITY == 1
+		local_binding_push(current_lp);
+  #endif
 		
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
@@ -619,8 +641,10 @@ void thread_loop(unsigned int thread_id) {
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
-		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
-			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
+		if(
+			BEFORE_OR_CONCURRENT(current_msg, LPS[current_lp]->bound)
+			//current_lvt < LPS[current_lp]->current_LP_lvt || 
+			//(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
 
 	#if DEBUG == 1
@@ -630,7 +654,7 @@ void thread_loop(unsigned int thread_id) {
 				}
 				printf(RED("Received multiple time the same event that is not an anti one\n!!!!!"));
 				print_event(current_msg);
-				//gdb_abort;
+				gdb_abort;
 			}
 	#endif
 			old_state = LPS[current_lp]->state;
@@ -666,7 +690,9 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 
 			delete(nbcalqueue, current_node);
+		  #if ENFORCE_LOCALITY == 0
 			unlock(current_lp);
+		  #endif
 			continue;
 		}
 
@@ -757,7 +783,7 @@ void thread_loop(unsigned int thread_id) {
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
-
+  #if ENFORCE_LOCALITY == 0
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
@@ -765,6 +791,7 @@ void thread_loop(unsigned int thread_id) {
 			printlp("ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp]);
 		}
 	#endif
+  #endif
 
 #if REPORT == 1
 		clock_timer_start(queue_op);
