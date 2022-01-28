@@ -1303,7 +1303,7 @@ bool delete(nb_calqueue *queue, nbc_bucket_node* node){
         node_next = FETCH_AND_OR(&tmp->next, DEL);
        
     }
-    if(is_marked(node_next, VAL)){
+    if(is_marked(node_next, DEL)){
 		ATOMIC_DEC(&(h->counter));
 	#if DEBUG==1
 		node->payload->del_node = node;
@@ -1313,7 +1313,7 @@ bool delete(nb_calqueue *queue, nbc_bucket_node* node){
 #if DEBUG == 1
 	tmp->deleted = tmp->deleted + 1;
 #endif
-    return is_marked(node_next, VAL);
+    return is_marked(node_next, DEL);
 }
 
 
