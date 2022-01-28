@@ -121,7 +121,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
     (void)event;
     
-    event->monitor = (void*)0x5AFE;
+    event->monitor = EVT_SAFE;
     
     if(node == NULL){
         return false;
@@ -151,40 +151,43 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 
 
-#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)          {   commit_event(event,node,lp_idx);\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)          do{   commit_event(event,node,lp_idx);\
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
         
-#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)          {   delete(nbcalqueue, node);\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+#define do_unlink_inside_lock_and_goto_next(event,node,lp_idx)          do{   delete(nbcalqueue, node);\
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
                                                                             
-#define do_skip_inside_lock_and_goto_next(lp_idx)                       {   add_lp_unsafe_set(lp_idx);\
+#define do_skip_inside_lock_and_goto_next(lp_idx)                       do{   add_lp_unsafe_set(lp_idx);\
                                                                             read_new_min = false;\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
+
+#define do_unlink_removed_inside_lock_and_goto_next(event,node,lp_idx)  do{   if(delete(nbcalqueue, node)){\
+                                                                                list_node_clean_by_content(event);\
+                                                                                list_insert_tail_by_content(to_remove_local_evts, event);\
+                                                                            }\
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
+
         
-#define return_evt_to_main_loop()                                       {   assert(event->monitor != (void*) EVT_BANANA);\
+#define return_evt_to_main_loop()                                       {   assert(event->monitor != EVT_BANANA);\
                                                                             break;  }
         
+
+
+
 #define do_commit_outside_lock_and_goto_next(event,node,lp_idx)         {   commit_event(event,node,lp_idx);\
                                                                             goto get_next;  }
         
-#define do_remove_outside_lock_and_goto_next(event,node,lp_idx)         {   delete(nbcalqueue, node);\
+#define do_unlink_outside_lock_and_goto_next(event,node,lp_idx)         {   delete(nbcalqueue, node);\
                                                                             goto get_next;  }
         
 #define do_skip_outside_lock_and_goto_next(lp_idx)                      {   add_lp_unsafe_set(lp_idx);\
                                                                             read_new_min = false;\
                                                                             goto get_next;  }
 
-#define do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx) {   if(delete(nbcalqueue, node)){\
-                                                                                list_node_clean_by_content(event);\
-                                                                                list_insert_tail_by_content(to_remove_local_evts, event);\
-                                                                            }\
+#define do_unlink_removed_outside_lock_and_goto_next(event,node,lp_idx) {   delete(nbcalqueue, node);\
                                                                             goto get_next;  }
 
-#define do_remove_removed_inside_lock(event,node,lp_idx)                {   if(delete(nbcalqueue, node)){\
-                                                                                list_node_clean_by_content(event);\
-                                                                                list_insert_tail_by_content(to_remove_local_evts, event);\
-                                                                            }\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+
 
 
 
@@ -304,16 +307,18 @@ unsigned int fetch_internal(){
         ///* NOT VALID *///
         else{
             ///* MARK NON VALID NODE *///
-            if((curr_evt_state & ELIMINATED) == 0){
-                curr_evt_state = __sync_or_and_fetch(&event->state, ELIMINATED);
-            }
+            if(curr_evt_state == NEW_EVT)   EVT_TRANSITION_NEW_ELI(event);
+            if(curr_evt_state == EXTRACTED) EVT_TRANSITION_EXT_ANT(event);
+
+            curr_evt_state = event->state;
+
             ///* DELETE ELIMINATED *///
             if(curr_evt_state == ELIMINATED){
-                do_remove_removed_outside_lock_and_goto_next(event,node,lp_idx);            //<<-ELIMINATED 
+                do_unlink_removed_outside_lock_and_goto_next(event,node,lp_idx);            //<<-ELIMINATED 
             }
             ///* DELETE BANANA NODE *///
-            if(curr_evt_state == ANTI_MSG && event->monitor == (void*) 0xba4a4a){
-                do_remove_outside_lock_and_goto_next(event,node,lp_idx);
+            if(curr_evt_state == ANTI_MSG && event->monitor == EVT_BANANA){
+                do_unlink_outside_lock_and_goto_next(event,node,lp_idx);
             }
             
         }
@@ -363,7 +368,7 @@ unsigned int fetch_internal(){
                     )
                 ){
                 #if DEBUG==1
-                    if(local_next_evt->monitor == (void*) 0x5AFE){ //DEBUG
+                    if(local_next_evt->monitor == EVT_SAFE){ //DEBUG
                         printf("[%u]GET_NEXT_AND_VALID: \n",tid); 
                         printf("\tevent         : ");print_event(event);
                         printf("\tlocal_next_evt: ");print_event(local_next_evt);
@@ -387,7 +392,7 @@ unsigned int fetch_internal(){
                 /// GET_NEXT_EXECUTED_AND_VALID: FINE ///
                 if(curr_evt_state == NEW_EVT) {
                     // never extracted so never execectured. Try to extract
-                    if(!EVT_TRANSITION_NEW_EXT(event))   do_remove_removed_inside_lock(event,node,lp_idx);      // the transition has failed, so now it is an anti
+                    if(!EVT_TRANSITION_NEW_EXT(event))   do_unlink_removed_inside_lock_and_goto_next(event,node,lp_idx);      // the transition has failed, so now it is an anti
                     else                                 return_evt_to_main_loop();                             // the transition succeeded, execute it
                 }
 
@@ -400,12 +405,12 @@ unsigned int fetch_internal(){
                     // ANTI in the future, just set as processed and go on
                     if(!in_past)                        EVT_TRANSITION_ANT_BAN(event);                          
                     // it is an ANTI already processed, skip and go to the next event
-                    if(event->monitor == EVT_BANANA)    do_remove_inside_lock_and_goto_next(event,node,lp_idx); 
+                    if(event->monitor == EVT_BANANA)    do_unlink_inside_lock_and_goto_next(event,node,lp_idx); 
                     // it is an ANTI not processed in the past, so go to the main loop and process the rollback
                     else                                return_evt_to_main_loop();
                 }
                 else if(curr_evt_state == ELIMINATED){
-                    do_remove_removed_inside_lock(event,node,lp_idx);           //<<-ELIMINATED
+                    do_unlink_removed_inside_lock_and_goto_next(event,node,lp_idx);           //<<-ELIMINATED
                 }
                 
             }
@@ -413,31 +418,22 @@ unsigned int fetch_internal(){
             else {
                                 
                 ///* MARK NON VALID NODE *///
-                if( (curr_evt_state & ELIMINATED) == 0 ){ 
-                    curr_evt_state = __sync_or_and_fetch(&(event->state),ELIMINATED);
-                }
+                if( (curr_evt_state == NEW_EVT)   )    EVT_TRANSITION_NEW_ELI(event);
+                if( (curr_evt_state == EXTRACTED) )    EVT_TRANSITION_EXT_ANT(event);
+                
+                curr_evt_state = event->state;
 
-                ///* DELETE ELIMINATED *///
-                if( (curr_evt_state & EXTRACTED) == 0 ){
-                    do_remove_removed_inside_lock(event,node,lp_idx);                   //<<-ELIMINATED
-                }
+                if( (curr_evt_state == ELIMINATED) )   do_unlink_removed_inside_lock_and_goto_next(event,node,lp_idx); // it is eliminated (never executed)
                 else{
                   #if DEBUG==1
                     assert(curr_evt_state == ANTI_MSG);
                   #endif
-                    ///* ANTI-MESSAGE IN THE FUTURE*///
-                    if(!in_past){
-                            set_commit_state_as_banana(event);
-                    }   
-
-                    ///* DELETE BANANA NODE *///
-                    if(event->monitor == (void*) 0xba4a4a){
-                        do_remove_inside_lock_and_goto_next(event,node,lp_idx);
-                    }
+                    // ANTI in the future, just set as processed and go on
+                    if(!in_past)                        EVT_TRANSITION_ANT_BAN(event);   
+                    // it is an ANTI already processed, skip and go to the next event
+                    if(event->monitor == EVT_BANANA)    do_unlink_inside_lock_and_goto_next(event,node,lp_idx); 
                     ///* ANTI-MESSAGE IN THE PAST*///
-                    else{
-                        return_evt_to_main_loop();
-                    }
+                    else                                return_evt_to_main_loop();
                 }
             }
         }
