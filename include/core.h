@@ -101,6 +101,7 @@ extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
 extern __thread unsigned int current_numa_node;
 extern __thread unsigned int current_cpu;
+extern __thread int __event_from;
 
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
