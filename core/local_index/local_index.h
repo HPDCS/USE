@@ -13,23 +13,35 @@ static inline nb_stack_node_t* nb_popAll(volatile nb_stack_t *s){
 static void local_clean_prefix(LP_state *lp_ptr){
  	local_index_t *local_idx_ptr = &lp_ptr->local_index;
  	nb_stack_t *actual_idx_ptr 	 = &local_idx_ptr->actual_index;
- 	nb_stack_node_t *prev  = actual_idx_ptr->top;;
+ 	nb_stack_node_t *prev  = actual_idx_ptr->top;
 	msg_t *pre_evt;
 
 	do{
 	 	if(prev == NULL) return;
 
-		pre_evt = prev->payload;
-
+		// this loop starts from head and disconnect each node that is not worth executing it
 		while(prev!=NULL){
 			pre_evt = prev->payload;
-			if(pre_evt->state != ELIMINATED && pre_evt->monitor!=EVT_SAFE && pre_evt->monitor!=EVT_BANANA) break;
+			if(pre_evt->state != ELIMINATED && pre_evt->monitor!=EVT_SAFE && pre_evt->monitor!=EVT_BANANA) return;
 			actual_idx_ptr->top = prev->lnext[0];
 			node_free((nbc_bucket_node*)prev);
 			prev = actual_idx_ptr->top; 			
 		}
 	}while(prev == NULL);
 
+}
+
+
+static void local_remove_minimum(LP_state *lp_ptr){
+ 	local_index_t *local_idx_ptr = &lp_ptr->local_index;
+ 	nb_stack_t *actual_idx_ptr 	 = &local_idx_ptr->actual_index;
+ 	nb_stack_node_t *tmp;
+
+ 	if(actual_idx_ptr->top != NULL){
+ 		tmp = actual_idx_ptr->top;
+ 		actual_idx_ptr->top = tmp->lnext[0];
+ 		node_free((nbc_bucket_node*)tmp);
+ 	}
 }
 
 static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
@@ -40,8 +52,6 @@ static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
 
  	nb_stack_node_t *prev  = cur;
 	msg_t *pre_evt;
-	msg_t *first_prev;
-	msg_t *last_next;
 
  	msg_t *evt = node->payload;
 	node->lnext[0] = NULL;
@@ -74,7 +84,6 @@ static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
 		return;
 	}
 
-	first_prev = pre_evt;
 
 	cur = prev->lnext[0];
  	while(cur != NULL){
@@ -84,7 +93,6 @@ static void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
 			cur_evt->monitor!= EVT_BANANA){
 
 			if(BEFORE(evt, cur_evt)){
-				last_next = cur_evt;
 				break;
 			}	
 			
