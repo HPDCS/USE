@@ -131,13 +131,25 @@ static inline bool EVT_TRANSITION_NEW_EXT(msg_t *event){
 	// consequently it is now ANTI
 	// regardless if it is in the present or in the past it has been annihilited before it was executed
 	// so consider its rollback as executed
-	if(!res) set_commit_state_as_banana(event);
+	if(!res) EVT_TRANSITION_ANT_BAN(event);
 
 	return res;
-} 
-#define EVT_TRANSITION_NEW_ELI(x) {}
-#define EVT_TRANSITION_EXT_ANT(x) {}
-#define EVT_TRANSITION_ELI_ANT(x) {}
+}
+
+
+static inline bool EVT_TRANSITION_NEW_ELI(msg_t *event){
+	int res = __sync_or_and_fetch(&(event->state),ELIMINATED) == ELIMINATED;
+	return res;
+}
+
+static inline bool EVT_TRANSITION_EXT_ANT(msg_t *event){
+	int res = __sync_or_and_fetch(&(event->state),ELIMINATED) == ELIMINATED;
+	return res;
+}
+
+
+// the transition ELI to ANTI should never be called explicitely
+//#define EVT_TRANSITION_ELI_ANT(x) {}
 
 
 
