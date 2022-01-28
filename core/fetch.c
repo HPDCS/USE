@@ -198,7 +198,7 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 __thread unsigned int diff_lp = 0;
 
 
-static msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
+msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
     msg_t *local_next_evt = list_next(current);
                 
     while(local_next_evt != NULL && !is_valid(local_next_evt)) {
