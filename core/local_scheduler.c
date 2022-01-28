@@ -6,12 +6,13 @@
 #include <fetch.h>
 #include <prints.h>
 
-
+#define MAX_EVENTS_FROM_LOCAL_SCHEDULER 100
 #define CURRENT_BINDING_SIZE        1
 #define MAX_LOCAL_DISTANCE_FROM_GVT 0.1
 
 __thread lp_local_struct thread_locked_binding[CURRENT_BINDING_SIZE];
 __thread lp_local_struct thread_unlocked_binding[CURRENT_BINDING_SIZE];
+__thread local_schedule_count = 0;
 
 void local_binding_init(){
     int i;
@@ -47,12 +48,15 @@ void local_binding_push(int lp){
 
 
 int local_fetch(){
-    int cur_lp, i, res, min_lp;
+    int cur_lp, i, res = 0, min_lp;
     simtime_t minimum_diff, current_lp_distance;
     msg_t *next_evt, *min_local_evt, *local_next_evt;
     int current_state, valid, in_past;
     bool from_get_next_and_valid;
-
+    if(local_schedule_count == MAX_EVENTS_FROM_LOCAL_SCHEDULER){
+        local_schedule_count = 0;
+        return res;
+    }
   retry:
     res = 0;
     min_lp = -1;
@@ -98,6 +102,7 @@ int local_fetch(){
                     printf("\tlocal_next_evt: ");print_event(local_next_evt);
                     gdb_abort;
                 }
+                assertf(local_next_evt->state != EXTRACTED && local_next_evt->state != ANTI_MSG, "found a not extracted event from local_queue%s", "\n");
               #endif  
                 min_local_evt = local_next_evt;
                 from_get_next_and_valid = true;
@@ -123,10 +128,13 @@ int local_fetch(){
                 if(!in_past) EVT_TRANSITION_ANT_BAN(min_local_evt);
                 if(min_local_evt->monitor == EVT_BANANA) goto retry;
             }
+            assertf(min_local_evt->state == NEW_EVT, "local scheduler is returning a valid NEW_EVT event %p\n", min_local_evt);
         }
         else{
-            if(current_state == NEW_EVT)   EVT_TRANSITION_NEW_ELI(min_local_evt);
-            if(current_state == EXTRACTED) EVT_TRANSITION_EXT_ANT(min_local_evt);
+            int state_before_trans = min_local_evt->state;
+            current_state = state_before_trans;
+            if(current_state == NEW_EVT)   {EVT_TRANSITION_NEW_ELI(min_local_evt); goto retry;}
+            if(current_state == EXTRACTED)  EVT_TRANSITION_EXT_ANT(min_local_evt);
             current_state = min_local_evt->state;
 
             if(current_state == ELIMINATED) goto retry;
@@ -134,6 +142,7 @@ int local_fetch(){
                 if(!in_past) EVT_TRANSITION_ANT_BAN(min_local_evt);   
                 if(min_local_evt->monitor == EVT_BANANA)   goto retry; 
             }
+            assertf(min_local_evt->state == NEW_EVT, "local scheduler is returning an invalid NEW_EVT event %p, %d\n", min_local_evt, state_before_trans);
         }
 
 
@@ -141,8 +150,11 @@ int local_fetch(){
         // preprare global variable before completion
         current_msg  = min_local_evt;
         current_node = NULL; 
+        assertf(current_msg->state == NEW_EVT, "local scheduler is returning a NEW_EVT event %p\n", current_msg);
         safe = false;
         res = 1;
+        __event_from =2;
+        local_schedule_count++;
     }
     
     return res;
