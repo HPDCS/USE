@@ -1,7 +1,8 @@
 #ifndef __LP_LOCAL_STRUCT_H_
 #define __LP_LOCAL_STRUCT_H_
 
-
+#include <events.h>
+#include <stdbool.h>
 
 //array of structures -- each field represents the state of the lp being locked
 typedef struct lp_local_struct {
@@ -58,7 +59,7 @@ void compute_hotness(lp_local_struct *lp_local); //, lp.delta_C, lp.delta_R);
 /* lp_local_struct field creation and lp insertion into local array
    hotness is 1 when the lp is locked
    distance_curr_evt_from_gvt and distance_last_ooo_from_gvt must be computed later */
-void insert_lp(unsigned int new_lp) //LP_state *new_lp??);
+void insert_lp(unsigned int new_lp); //LP_state *new_lp??);
 
 
 /* choose the lp to be evicted among the warm ones
