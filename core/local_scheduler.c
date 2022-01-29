@@ -43,17 +43,23 @@ void local_binding_push(int lp){
     int lp_to_evict = -1;
 
     // STEP 1. release lock on evicted lp
-    if(!thread_locked_binding[0].evicted && thread_locked_binding[0].lp != lp) unlock(thread_locked_binding[0].lp);
+    if(!thread_locked_binding[next_to_insert].evicted && thread_locked_binding[next_to_insert].lp != lp) unlock(thread_locked_binding[next_to_insert].lp);
 
     // STEP 2. flush input channel in local index
     process_input_channel(LPS[lp]); // Fix input channel
 
     // STEP 3. update pipe entry
     //thread_locked_binding[0].lp = lp;
-    thread_locked_binding[0].hotness                    = -1;
-    thread_locked_binding[0].distance_curr_evt_from_gvt = INFTY;
-    thread_locked_binding[0].distance_last_ooo_from_gvt = INFTY;
-    thread_locked_binding[0].evicted = false;
+    thread_locked_binding[next_to_insert].hotness                    = -1;
+    thread_locked_binding[next_to_insert].distance_curr_evt_from_gvt = INFTY;
+    thread_locked_binding[next_to_insert].distance_last_ooo_from_gvt = INFTY;
+    thread_locked_binding[next_to_insert].evicted = false;
+
+    // STEP 4. update pipe entry
+    if(LPS[lp]->actual_index_top != NULL){
+        msg_t *next_evt = LPS[lp]->actual_index_top->payload;
+        thread_locked_binding[next_to_insert].distance_curr_evt_from_gvt = next_evt->timestamp - local_gvt;
+    }
 
     //insertion into pipe
     lp_to_evict = insert_lp_in_pipe(&thread_locked_binding[next_to_insert].lp, lp, 
@@ -66,11 +72,7 @@ void local_binding_push(int lp){
                              CURRENT_BINDING_SIZE, &last_inserted_evicted, &next_to_insert_evicted);
     }
 
-    // STEP 4. update pipe entry
-    if(LPS[lp]->actual_index_top != NULL){
-        msg_t *next_evt = LPS[lp]->actual_index_top->payload;
-        thread_locked_binding[0].distance_curr_evt_from_gvt = next_evt->timestamp - local_gvt;
-    }
+    
 }
 
 
