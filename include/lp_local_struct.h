@@ -5,34 +5,21 @@
 #include <stdbool.h>
 
 //array of structures -- each field represents the state of the lp being locked
-typedef struct lp_local_struct {
+//note: avere un unico array di size pipe+evicted_pipe per locked ed evicted, indice che segna 
+//l'inizio della zona per gli evicted, e poi i due indici last_inserted e next_to_insert sia per
+//zona locked che zona evicted
+typedef struct pipe {
 
-	unsigned int lp;
+	int lp;
 	double hotness;
-	simtime_t distance_curr_evt_from_gvt; //"delta_C ??"
-	simtime_t distance_last_ooo_from_gvt; //"delta_R ??"
+	simtime_t distance_curr_evt_from_gvt; 
+	simtime_t distance_last_ooo_from_gvt; 
    bool evicted; //flag to signal eviction for the field
-   //local-queue ptr for each lp -- to search the next event to be processed
-
-} lp_local_struct;
-
-
-/*
-circular-buffer-like structure -- attributes relative to the local array state
-
-typedef struct lp_local_struct {
-
-   LP_state *lp_array; //array of lp used -> hotness, delta_C and delta_R are lp's attributes 
-   unsigned int last_inserted_idx; //index in lp_array of the last inserted element
-   unsigned int last_evicted_idx; //index in lp_array of the last evicted element
-   unsigned int elements; //current number of elements being inserted
-   unsignet int capacity; //total capacity
    
 
-} lp_local_struct;
+} pipe;
 
 
-*/
 
 
 
@@ -47,19 +34,53 @@ void clean_struct(void);
 /* ------ Metrics computing functions ------ */
 
 /* function to compute "delta_C" and "delta_R" */
-void compute_distance_from_gvt(lp_local_struct *lp_local); //,event.timestamp, last_ooo.timestamp);
+void compute_distance_from_gvt(pipe *lp_local); //,event.timestamp, last_ooo.timestamp);
 
 /* function to compute hotness */
-void compute_hotness(lp_local_struct *lp_local); //, lp.delta_C, lp.delta_R);
+void compute_hotness(pipe *lp_local); //, lp.delta_C, lp.delta_R);
 
 
 
 /*------ Array management functions ------ */
 
-/* lp_local_struct field creation and lp insertion into local array
-   hotness is 1 when the lp is locked
-   distance_curr_evt_from_gvt and distance_last_ooo_from_gvt must be computed later */
-void insert_lp(unsigned int new_lp); //LP_state *new_lp??);
+
+
+/* The function inserts an lp into a pipe, might be the evicted pipe too
+@param: lp The array of lp
+@param: new_lp The new lp to insert
+@param: size The size of the pipe
+@param last_inserted The index of the most recent element inserted into the pipe
+@param next_to_insert The index of the next element to insert
+It return the index of an element to be evicted, or -1 if no eviction must take place
+
+
+
+If lp_to_evict is >= 0 this function can be called to perform an eviction, where lp is the array
+of the evicted pipe and new_lp is lp_to_evict
+*/
+static inline int insert_lp_in_pipe(int *lp, int new_lp, size_t size, int *last_inserted, int *next_to_insert) {
+
+   int lp_to_evict = -1;
+
+   if (*last_inserted == *next_to_insert) { //empty pipe 
+      *lp = new_lp;
+      *next_to_insert = (*next_to_insert + 1) % size;
+      return -1;
+   } 
+   
+
+   if (*lp != -1) { lp_to_evict = *lp; } //lp to be evicted
+        
+
+   *lp = new_lp; 
+   
+
+   *last_inserted = *next_to_insert;
+   *next_to_insert = (*next_to_insert + 1) % size;
+   
+
+   return lp_to_evict;
+}
 
 
 /* choose the lp to be evicted among the warm ones

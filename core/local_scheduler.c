@@ -10,9 +10,15 @@
 #define CURRENT_BINDING_SIZE        1
 #define MAX_LOCAL_DISTANCE_FROM_GVT 0.1
 
-__thread lp_local_struct thread_locked_binding[CURRENT_BINDING_SIZE];
-__thread lp_local_struct thread_unlocked_binding[CURRENT_BINDING_SIZE];
+__thread pipe thread_locked_binding[CURRENT_BINDING_SIZE];
+__thread pipe thread_unlocked_binding[CURRENT_BINDING_SIZE];
 __thread local_schedule_count = 0;
+
+__thread unsigned int next_to_insert; //next index of the array where to insert an lp
+__thread unsigned int last_inserted; //last index of the array where an lp has being inserted
+
+__thread unsigned int next_to_insert_evicted;
+__thread unsigned int last_inserted_evicted;
 
 void local_binding_init(){
     int i;
@@ -22,10 +28,20 @@ void local_binding_init(){
         thread_locked_binding[i].distance_curr_evt_from_gvt = 0;
         thread_locked_binding[i].distance_last_ooo_from_gvt = 0;
         thread_locked_binding[i].evicted = true;
+
+        thread_unlocked_binding[i].lp = -1;
     }
+    next_to_insert = 0;
+    last_inserted = 0;
+
+    next_to_insert_evicted = 0;
+    last_inserted_evicted = 0;
 }
 
 void local_binding_push(int lp){
+
+    int lp_to_evict = -1;
+
     // STEP 1. release lock on evicted lp
     if(!thread_locked_binding[0].evicted && thread_locked_binding[0].lp != lp) unlock(thread_locked_binding[0].lp);
 
@@ -33,11 +49,22 @@ void local_binding_push(int lp){
     process_input_channel(LPS[lp]); // Fix input channel
 
     // STEP 3. update pipe entry
-    thread_locked_binding[0].lp = lp;
+    //thread_locked_binding[0].lp = lp;
     thread_locked_binding[0].hotness                    = -1;
     thread_locked_binding[0].distance_curr_evt_from_gvt = INFTY;
     thread_locked_binding[0].distance_last_ooo_from_gvt = INFTY;
     thread_locked_binding[0].evicted = false;
+
+    //insertion into pipe
+    lp_to_evict = insert_lp_in_pipe(&thread_locked_binding[next_to_insert].lp, lp, 
+                                                 CURRENT_BINDING_SIZE, &last_inserted, &next_to_insert);
+
+    //eviction of an lp
+    if (lp_to_evict != -1) {
+        unlock(lp_to_evict);
+        insert_lp_in_pipe(&thread_unlocked_binding[next_to_insert_evicted].lp, lp_to_evict, 
+                             CURRENT_BINDING_SIZE, &last_inserted_evicted, &next_to_insert_evicted);
+    }
 
     // STEP 4. update pipe entry
     if(LPS[lp]->actual_index_top != NULL){
