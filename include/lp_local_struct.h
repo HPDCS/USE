@@ -2,6 +2,7 @@
 #define __LP_LOCAL_STRUCT_H_
 
 #include <events.h>
+#include <core.h>
 #include <stdbool.h>
 
 //array of structures -- each field represents the state of the lp being locked
@@ -14,8 +15,8 @@ typedef struct pipe {
 	double hotness;
 	simtime_t distance_curr_evt_from_gvt; 
 	simtime_t distance_last_ooo_from_gvt; 
-   bool evicted; //flag to signal eviction for the field
-   
+   //bool evicted; //flag to signal eviction for the field
+
 
 } pipe;
 
@@ -60,7 +61,7 @@ of the evicted pipe and new_lp is lp_to_evict
 */
 static inline int insert_lp_in_pipe(int *lp, int new_lp, size_t size, int *last_inserted, int *next_to_insert) {
 
-   int lp_to_evict = -1;
+   int lp_to_evict = UNDEFINED_LP;
 
    if (*last_inserted == *next_to_insert) { //empty pipe 
       *lp = new_lp;

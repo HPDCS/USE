@@ -17,6 +17,9 @@
 #define THR_POOL_SIZE		1024//128
 
 
+#define UNDEFINED_LP (MAX_LPs + 1)
+
+
 #define MODE_SAF	1
 #define MODE_STM	2
 

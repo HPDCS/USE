@@ -23,13 +23,13 @@ __thread unsigned int last_inserted_evicted;
 void local_binding_init(){
     int i;
     for(i = 0; i < CURRENT_BINDING_SIZE; i++){
-        thread_locked_binding[i].lp = -1;
+        thread_locked_binding[i].lp = UNDEFINED_LP;
         thread_locked_binding[i].hotness = 0;
         thread_locked_binding[i].distance_curr_evt_from_gvt = 0;
         thread_locked_binding[i].distance_last_ooo_from_gvt = 0;
-        thread_locked_binding[i].evicted = true;
+        //thread_locked_binding[i].evicted = true;
 
-        thread_unlocked_binding[i].lp = -1;
+        thread_unlocked_binding[i].lp = UNDEFINED_LP;
     }
     next_to_insert = 0;
     last_inserted = 0;
@@ -40,10 +40,10 @@ void local_binding_init(){
 
 void local_binding_push(int lp){
 
-    int lp_to_evict = -1;
+    int lp_to_evict = UNDEFINED_LP;
 
     // STEP 1. release lock on evicted lp
-    if(!thread_locked_binding[next_to_insert].evicted && thread_locked_binding[next_to_insert].lp != lp) unlock(thread_locked_binding[next_to_insert].lp);
+    //if(!thread_locked_binding[next_to_insert].evicted && thread_locked_binding[next_to_insert].lp != lp) unlock(thread_locked_binding[next_to_insert].lp);
 
     // STEP 2. flush input channel in local index
     process_input_channel(LPS[lp]); // Fix input channel
@@ -53,7 +53,7 @@ void local_binding_push(int lp){
     thread_locked_binding[next_to_insert].hotness                    = -1;
     thread_locked_binding[next_to_insert].distance_curr_evt_from_gvt = INFTY;
     thread_locked_binding[next_to_insert].distance_last_ooo_from_gvt = INFTY;
-    thread_locked_binding[next_to_insert].evicted = false;
+    //thread_locked_binding[next_to_insert].evicted = false;
 
     // STEP 4. update pipe entry
     if(LPS[lp]->actual_index_top != NULL){
@@ -66,7 +66,7 @@ void local_binding_push(int lp){
                                                  CURRENT_BINDING_SIZE, &last_inserted, &next_to_insert);
 
     //eviction of an lp
-    if (lp_to_evict != -1) {
+    if (lp_to_evict != UNDEFINED_LP) {
         unlock(lp_to_evict);
         insert_lp_in_pipe(&thread_unlocked_binding[next_to_insert_evicted].lp, lp_to_evict, 
                              CURRENT_BINDING_SIZE, &last_inserted_evicted, &next_to_insert_evicted);
@@ -92,19 +92,24 @@ int local_fetch(){
     minimum_diff = INFTY;
     from_get_next_and_valid = false;
 
+    //todo: farla diventare la funzione di pipe
     for(i = 0; i < CURRENT_BINDING_SIZE; i++){
         // skip evicted entries
-        if(thread_locked_binding[i].evicted == true) continue;
+        //if(thread_locked_binding[i].evicted == true) continue;
+
         // get lp of the current entry
         cur_lp = thread_locked_binding[i].lp;
+
         // flush input channel
         process_input_channel(LPS[cur_lp]);
+
         // get the next event and compute its distance from current_lvt
         next_evt = LPS[cur_lp]->actual_index_top->payload;
         current_lp_distance = next_evt->timestamp - local_gvt;
 
         thread_locked_binding[i].distance_curr_evt_from_gvt = current_lp_distance;
 
+        //todo: mettere in lp_local_struct
         if(current_lp_distance < MAX_LOCAL_DISTANCE_FROM_GVT && current_lp_distance < minimum_diff){
             min_lp       = thread_locked_binding[i].lp;
             minimum_diff = thread_locked_binding[i].distance_curr_evt_from_gvt;
