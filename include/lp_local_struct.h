@@ -4,11 +4,13 @@
 #include <events.h>
 #include <core.h>
 #include <stdbool.h>
+#include <simtypes.h>
+
+#define CURRENT_BINDING_SIZE        3
+#define MAX_LOCAL_DISTANCE_FROM_GVT 0.1
+
 
 //array of structures -- each field represents the state of the lp being locked
-//note: avere un unico array di size pipe+evicted_pipe per locked ed evicted, indice che segna 
-//l'inizio della zona per gli evicted, e poi i due indici last_inserted e next_to_insert sia per
-//zona locked che zona evicted
 typedef struct pipe {
 
 	int lp;
@@ -19,8 +21,6 @@ typedef struct pipe {
 
 
 } pipe;
-
-
 
 
 
@@ -59,18 +59,19 @@ It return the index of an element to be evicted, or -1 if no eviction must take 
 If lp_to_evict is >= 0 this function can be called to perform an eviction, where lp is the array
 of the evicted pipe and new_lp is lp_to_evict
 */
-static inline int insert_lp_in_pipe(int *lp, int new_lp, size_t size, int *last_inserted, int *next_to_insert) {
+static inline unsigned int insert_lp_in_pipe(unsigned int *lp, unsigned int new_lp, size_t size, int *last_inserted, int *next_to_insert) {
 
-   int lp_to_evict = UNDEFINED_LP;
+   unsigned int lp_to_evict = UNDEFINED_LP;
+
 
    if (*last_inserted == *next_to_insert) { //empty pipe 
       *lp = new_lp;
       *next_to_insert = (*next_to_insert + 1) % size;
-      return -1;
-   } 
+      return UNDEFINED_LP;
+   }
    
 
-   if (*lp != -1) { lp_to_evict = *lp; } //lp to be evicted
+   if (*lp != UNDEFINED_LP) { lp_to_evict = *lp; } //lp to be evicted
         
 
    *lp = new_lp; 
@@ -96,11 +97,7 @@ unsigned int detect_lp_to_be_evicted(void);
 void evict_lp(void);
 
 
-/* choose the best candidate to be executed next
-   first look at the events for current lp, otherwise use hotness function to determine the best lp
-   if there is an empty spot in the array choose from global queue
-   return possibly a different lp_idx */
-unsigned int schedule_next_event(unsigned int curr_lp); //, LP_state *curr_lp);
+
 
 
 
