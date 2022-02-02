@@ -1,23 +1,12 @@
 #if ENFORCE_LOCALITY == 1
 #include <lp_local_struct.h>
-#include <local_index/local_index.h>
-#include <queue.h>
 #include <hpdcs_utils.h>
 #include <fetch.h>
-#include <prints.h>
 
 #define MAX_EVENTS_FROM_LOCAL_SCHEDULER 100
 
 
-__thread pipe thread_locked_binding[CURRENT_BINDING_SIZE];
-__thread pipe thread_unlocked_binding[CURRENT_BINDING_SIZE];
-__thread local_schedule_count = 0;
 
-__thread int next_to_insert; //next index of the array where to insert an lp
-__thread int last_inserted; //last index of the array where an lp has being inserted
-
-__thread int next_to_insert_evicted;
-__thread int last_inserted_evicted;
 
 void local_binding_init(){
 
@@ -93,39 +82,16 @@ void local_binding_push(unsigned int lp){
         }
     }
 
-
     
 }
 
 
-/* The function finds the next event from one lp 
-@param : index The index of the current pipe field to check
-@param : cur_lp The index of the lp being processed
-@param : current_lp_distance The distance of next event from local gvt to update
-It returns the event to be analyzed
-*/
-msg_t * find_next_event_from_lp(unsigned *cur_lp, simtime_t *current_lp_distance, simtime_t *distance_curr_evt_from_gvt) {
-
-
-    // flush input channel
-    process_input_channel(LPS[*cur_lp]);
-
-    // get the next event and compute its distance from current_lvt
-    msg_t *next_evt = LPS[*cur_lp]->actual_index_top->payload;
-    *current_lp_distance = next_evt->timestamp - local_gvt;
-
-    *distance_curr_evt_from_gvt = *current_lp_distance;
-
-    return next_evt;
-
-}
-
 
 int local_fetch(){
-    unsigned int cur_lp, min_lp, best_lp; 
-    int i, j, res = 0;
-    simtime_t minimum_diff, current_lp_distance, last_inserted_distance, best_diff;
-    msg_t *next_evt, *last_inserted_evt, *min_local_evt, *local_next_evt;
+    unsigned int min_lp; 
+    int res = 0;
+    simtime_t minimum_diff;
+    msg_t *min_local_evt, *local_next_evt;
     int current_state, valid, in_past;
     bool from_get_next_and_valid;
     if(local_schedule_count == MAX_EVENTS_FROM_LOCAL_SCHEDULER){
@@ -141,57 +107,10 @@ int local_fetch(){
     //no local fetch if the pipe is empty
     if (thread_locked_binding[0].lp == UNDEFINED_LP) return res;
 
-    //get last inserted lp as the best one to compare with others
-    best_lp = thread_locked_binding[last_inserted].lp;
-    last_inserted_evt = find_next_event_from_lp(&best_lp, &last_inserted_distance, 
-                &thread_locked_binding[last_inserted].distance_curr_evt_from_gvt);
-
-    if (last_inserted_distance < MAX_LOCAL_DISTANCE_FROM_GVT) {
-            min_lp = best_lp;
-            minimum_diff = best_diff;
-            min_local_evt = last_inserted_evt;
-    }
+    //find the best event to schedule into pipe
+    detect_best_event_to_schedule(thread_locked_binding, &min_lp, &minimum_diff, &min_local_evt);
     
-
-    //iterate over pipe from the last inserted lps 
-    i = last_inserted == 0 ? CURRENT_BINDING_SIZE-1 : last_inserted;
-    j = 0;
-    while (i+j != last_inserted) {
-
-
-        //get lp
-        cur_lp = thread_locked_binding[i+j].lp;
-
-        if (cur_lp == UNDEFINED_LP) break;
-
-        //find the next event for the current lp
-        next_evt = find_next_event_from_lp(&cur_lp, &current_lp_distance, &thread_locked_binding[i+j].distance_curr_evt_from_gvt);
-
-        #if DEBUG == 1
-            printlp("[%u]BEST_LP : %u ", tid, best_lp);printf("\t last_inserted_distance %f\n", last_inserted_distance);
-            printlp("[%u]CUR_LP : %u ", tid, cur_lp);printf("\t current_lp_distance %f\n", current_lp_distance);
-        #endif
-
-        //if best_lp already satisfies the condition skip this and just flush events into local index of other lps
-        if(min_lp != best_lp && current_lp_distance < MAX_LOCAL_DISTANCE_FROM_GVT){ //&& current_lp_distance < minimum_diff){
-            
-            min_lp       = thread_locked_binding[i+j].lp;
-            minimum_diff = thread_locked_binding[i+j].distance_curr_evt_from_gvt;
-            min_local_evt= next_evt;
-            
-        }
-
-        if (i+j == 0) j = CURRENT_BINDING_SIZE-1;
-        i--;
-        
-    }
-
-
     //NB if in the local pipe there is no event with distance < MAX we go in global queue
-
-    #if DEBUG == 1
-            printlp("[%u] MIN_LP : %u\n", tid, min_lp);
-    #endif
 
     if(min_lp != UNDEFINED_LP){
         // its time to run the get_next_and_valid
