@@ -76,19 +76,21 @@ void local_binding_push(unsigned int lp){
         printf("[%u] lp_to_evict %u\n", tid, lp_to_evict);
     #endif
 
-    //eviction of an lp
-    if (lp_to_evict != UNDEFINED_LP) {
+    if (!is_in_pipe(thread_locked_binding, lp_to_evict)) {
+        //eviction of an lp
+        if (lp_to_evict != UNDEFINED_LP) {
 
-        unlock(lp_to_evict);
-        insert_lp_in_pipe(&thread_unlocked_binding[next_to_insert_evicted].lp, lp_to_evict, 
-                             CURRENT_BINDING_SIZE, &last_inserted_evicted, &next_to_insert_evicted);
-        #if DEBUG == 1
-            printf("[%u] after eviction: \n", tid);
-            for (int j = 0; j < CURRENT_BINDING_SIZE; j++) {
-                printf("|%d| ", thread_unlocked_binding[j].lp);
-            }
-            printf("\n");
-        #endif
+            unlock(lp_to_evict);
+            insert_lp_in_pipe(&thread_unlocked_binding[next_to_insert_evicted].lp, lp_to_evict, 
+                                 CURRENT_BINDING_SIZE, &last_inserted_evicted, &next_to_insert_evicted);
+            #if DEBUG == 1
+                printf("[%u] after eviction: \n", tid);
+                for (int j = 0; j < CURRENT_BINDING_SIZE; j++) {
+                    printf("|%d| ", thread_unlocked_binding[j].lp);
+                }
+                printf("\n");
+            #endif
+        }
     }
 
 

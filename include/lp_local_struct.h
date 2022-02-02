@@ -44,7 +44,20 @@ void compute_hotness(pipe *lp_local); //, lp.delta_C, lp.delta_R);
 
 /*------ Array management functions ------ */
 
+static inline bool is_in_pipe(pipe pipe[], unsigned int lp) {
 
+   int i, sum = 0;
+   for (i = 0; i < CURRENT_BINDING_SIZE; i++) {
+      if (pipe[i].lp == lp) sum++;
+   }
+
+   if (sum >= 1) {
+      return true;
+   } else {
+      return false;
+   }
+
+}
 
 /* The function inserts an lp into a pipe, might be the evicted pipe too
 @param: lp The array of lp
