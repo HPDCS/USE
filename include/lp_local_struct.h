@@ -13,7 +13,7 @@
 //array of structures -- each field represents the state of the lp being locked
 typedef struct pipe {
 
-	int lp;
+	unsigned int lp;
 	double hotness;
 	simtime_t distance_curr_evt_from_gvt; 
 	simtime_t distance_last_ooo_from_gvt; 
