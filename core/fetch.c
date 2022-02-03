@@ -339,7 +339,12 @@ unsigned int fetch_internal(){
  #if DISTRIBUTED_FETCH == 1
         is_lp_on_my_numa_node(lp_idx) &&
  #endif
-        tryLock(lp_idx)
+        (
+ #if ENFORCE_LOCALITY == 1
+            havelock(lp_idx) ||
+ #endif 
+            tryLock(lp_idx)
+        )
         ) {
             
             validity = is_valid(event);

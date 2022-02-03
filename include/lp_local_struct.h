@@ -18,7 +18,7 @@ __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = 0.1;
 // TODO revise implementation of pipe. Specification is: LIFO SET
 // TODO implentation of dynamic MAX_LOCAL_DISTANCE_FROM_GVT
 // TODO hierarchical arragement of evicted pipe
-// TODO Implement a global fetch that might get already locked events
+// TODO Implement a global fetch that might get already locked events -- DONE
 
 
 //array of structures -- each field represents the state of the lp being locked
