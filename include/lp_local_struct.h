@@ -15,30 +15,40 @@
 
 
 //array of structures -- each field represents the state of the lp being locked
-typedef struct pipe {
-
+typedef struct pipe_entry {
 	unsigned int lp;
 	double hotness;
 	simtime_t distance_curr_evt_from_gvt; 
 	simtime_t distance_last_ooo_from_gvt; 
-   //bool evicted; //flag to signal eviction for the field
+} pipe_entry_t;
 
+typedef struct pipe{
+  pipe_entry_t entries[CURRENT_BINDING_SIZE];
+  int next_to_insert;   //next index of the array where to insert an lp
+  int last_inserted;    //last index of the array where an lp has being inserted
+  size_t size;
+} pipe_t;
 
-} pipe;
-
-__thread pipe thread_locked_binding[CURRENT_BINDING_SIZE];
-__thread pipe thread_unlocked_binding[CURRENT_BINDING_SIZE];
-__thread local_schedule_count = 0;
-
-__thread int next_to_insert; //next index of the array where to insert an lp
-__thread int last_inserted; //last index of the array where an lp has being inserted
-
-__thread int next_to_insert_evicted;
-__thread int last_inserted_evicted;
+__thread pipe_t thread_locked_binding;
+__thread pipe_t thread_unlocked_binding;
+__thread int local_schedule_count = 0;
 
 
 /* init the structure */
-void init_struct(void);
+static void init_struct(pipe_t *pipe){
+    size_t i;
+    pipe->size           = CURRENT_BINDING_SIZE;
+    pipe->next_to_insert = 0;
+    pipe->last_inserted  = 0;
+
+    for(i = 0; i < thread_locked_binding.size; i++){
+        pipe->entries[i].lp = UNDEFINED_LP;
+        pipe->entries[i].hotness = 0;
+        pipe->entries[i].distance_curr_evt_from_gvt = 0;
+        pipe->entries[i].distance_last_ooo_from_gvt = 0;
+    }
+
+}
 
 /* clean the structure */
 void clean_struct(void);
@@ -47,10 +57,10 @@ void clean_struct(void);
 /* ------ Metrics computing functions ------ */
 
 /* function to compute "delta_C" and "delta_R" */
-void compute_distance_from_gvt(pipe *lp_local); //,event.timestamp, last_ooo.timestamp);
+void compute_distance_from_gvt(pipe_t *lp_local); //,event.timestamp, last_ooo.timestamp);
 
 /* function to compute hotness */
-void compute_hotness(pipe *lp_local); //, lp.delta_C, lp.delta_R);
+void compute_hotness(pipe_t *lp_local); //, lp.delta_C, lp.delta_R);
 
 
 
@@ -62,11 +72,11 @@ void compute_hotness(pipe *lp_local); //, lp.delta_C, lp.delta_R);
 @param : lp The index of the lp candidate for the eviction
 It returns true if the lp had more than one occurence in pipe, false otherwise
 */
-static inline bool is_in_pipe(pipe pipe[], unsigned int lp) {
-
-   int i, sum = 0;
-   for (i = 0; i < CURRENT_BINDING_SIZE; i++) {
-      if (pipe[i].lp == lp) sum++;
+static inline bool is_in_pipe(pipe_t *pipe, unsigned int lp) {
+   pipe_entry_t *pipe_entries = (pipe_entry_t*)&pipe->entries;
+   size_t i, sum = 0;
+   for (i = 0; i < pipe->size; i++) {
+      if (pipe_entries[i].lp == lp) sum++;
    }
 
    if (sum >= 1) {
@@ -78,7 +88,7 @@ static inline bool is_in_pipe(pipe pipe[], unsigned int lp) {
 }
 
 /* The function inserts an lp into a pipe, might be the evicted pipe too
-@param: lp The array of lp
+@param: pipe a pointer to the to-be-updated pipe
 @param: new_lp The new lp to insert
 @param: size The size of the pipe
 @param last_inserted The index of the most recent element inserted into the pipe
@@ -89,10 +99,13 @@ It return the index of an element to be evicted, or -1 if no eviction must take 
 If lp_to_evict is >= 0 this function can be called to perform an eviction, where lp is the array
 of the evicted pipe and new_lp is lp_to_evict
 */
-static inline unsigned int insert_lp_in_pipe(unsigned int *lp, unsigned int new_lp, size_t size, int *last_inserted, int *next_to_insert) {
+static inline unsigned int insert_lp_in_pipe(pipe_t *pipe, unsigned int new_lp) {
 
    unsigned int lp_to_evict = UNDEFINED_LP;
-
+   int *last_inserted  = &pipe->last_inserted;
+   int *next_to_insert = &pipe->next_to_insert;
+   size_t size         = pipe->size;
+   unsigned int *lp    = &pipe->entries[*next_to_insert].lp;
 
    if (*last_inserted == *next_to_insert) { //empty pipe 
       *lp = new_lp;
@@ -144,13 +157,14 @@ static inline msg_t * find_next_event_from_lp(unsigned *cur_lp, simtime_t *curre
 @param: minimum_diff The minimum interval between next event and local gvt
 @param min_local_evt The next event to schedule of the best lp chosen
 */
-static inline void detect_best_event_to_schedule(pipe local_pipe[], unsigned int *min_lp, simtime_t *minimum_diff, msg_t **min_local_evt) {
+static inline void detect_best_event_to_schedule(pipe_t *pipe, unsigned int *min_lp, simtime_t *minimum_diff, msg_t **min_local_evt) {
 
     unsigned int best_lp, cur_lp;
     msg_t *last_inserted_evt, *next_evt;
     simtime_t last_inserted_distance, current_lp_distance;
-
+    pipe_entry_t  *local_pipe = (pipe_entry_t*)&pipe->entries;
     int i, j;
+    int last_inserted = pipe->last_inserted;
 
     //get last inserted lp as the best one to compare with others
     best_lp = local_pipe[last_inserted].lp;
@@ -182,7 +196,7 @@ static inline void detect_best_event_to_schedule(pipe local_pipe[], unsigned int
         //find the next event for the current lp
         next_evt = find_next_event_from_lp(&cur_lp, &current_lp_distance, &local_pipe[i+j].distance_curr_evt_from_gvt);
 
-        #if DEBUG == 1
+        #if VERBOSE == 1
             printlp("[%u]BEST_LP : %u ", tid, best_lp);printf("\t last_inserted_distance %f\n", last_inserted_distance);
             printlp("[%u]CUR_LP : %u ", tid, cur_lp);printf("\t current_lp_distance %f\n", current_lp_distance);
         #endif
@@ -201,13 +215,14 @@ static inline void detect_best_event_to_schedule(pipe local_pipe[], unsigned int
         
     }
 
-    #if DEBUG == 1
+    #if VERBOSE == 1
             printlp("[%u] MIN_LP : %u\n", tid, *min_lp);
     #endif
 
 
 }
 
+#undef CURRENT_BINDING_SIZE
 
 
 

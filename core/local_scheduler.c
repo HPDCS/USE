@@ -10,75 +10,55 @@
 
 void local_binding_init(){
 
-    int i;
-    for(i = 0; i < CURRENT_BINDING_SIZE; i++){
-        thread_locked_binding[i].lp = UNDEFINED_LP;
-        thread_locked_binding[i].hotness = 0;
-        thread_locked_binding[i].distance_curr_evt_from_gvt = 0;
-        thread_locked_binding[i].distance_last_ooo_from_gvt = 0;
-        //thread_locked_binding[i].evicted = true;
-
-        thread_unlocked_binding[i].lp = UNDEFINED_LP;
-        thread_unlocked_binding[i].hotness = 0;
-        thread_unlocked_binding[i].distance_curr_evt_from_gvt = 0;
-        thread_unlocked_binding[i].distance_last_ooo_from_gvt = 0;
-    }
-
-    next_to_insert = 0;
-    last_inserted = 0;
-
-    next_to_insert_evicted = 0;
-    last_inserted_evicted = 0;
+    init_struct(&thread_locked_binding);
+    init_struct(&thread_unlocked_binding);
 }
 
 void local_binding_push(unsigned int lp){
 
     unsigned int lp_to_evict;
-
+    int next_to_insert = thread_locked_binding.next_to_insert;
     // STEP 1. flush input channel in local index
     process_input_channel(LPS[lp]); // Fix input channel
 
 
     // STEP 2. update pipe entry
-    thread_locked_binding[next_to_insert].hotness                    = -1;
-    thread_locked_binding[next_to_insert].distance_curr_evt_from_gvt = INFTY;
-    thread_locked_binding[next_to_insert].distance_last_ooo_from_gvt = INFTY;
+    thread_locked_binding.entries[next_to_insert].hotness                    = -1;
+    thread_locked_binding.entries[next_to_insert].distance_curr_evt_from_gvt = INFTY;
+    thread_locked_binding.entries[next_to_insert].distance_last_ooo_from_gvt = INFTY;
 
 
     // STEP 3. update pipe entry
     if(LPS[lp]->actual_index_top != NULL){
         msg_t *next_evt = LPS[lp]->actual_index_top->payload;
-        thread_locked_binding[next_to_insert].distance_curr_evt_from_gvt = next_evt->timestamp - local_gvt;
+        thread_locked_binding.entries[next_to_insert].distance_curr_evt_from_gvt = next_evt->timestamp - local_gvt;
     }
 
 
     //insertion into pipe
-    lp_to_evict = insert_lp_in_pipe(&thread_locked_binding[next_to_insert].lp, lp, 
-                                                 CURRENT_BINDING_SIZE, &last_inserted, &next_to_insert);
+    lp_to_evict = insert_lp_in_pipe(&thread_locked_binding, lp);
 
-    #if DEBUG == 1
-        printf("[%u] after insertion: \n", tid);
-        for (int j = 0; j < CURRENT_BINDING_SIZE; j++) {
-            printf("|%d| ", thread_locked_binding[j].lp);
-        }
-        printf("\n");
-        printf("[%u] lp_to_evict %u\n", tid, lp_to_evict);
-    #endif
+  #if VERBOSE == 1
+    printf("[%u] after insertion: \n", tid);
+    for (size_t j = 0; j < thread_locked_binding.size; j++) {
+        printf("|%d| ", thread_locked_binding.entries[j].lp);
+    }
+    printf("\n");
+    printf("[%u] lp_to_evict %u\n", tid, lp_to_evict);
+  #endif
 
-    if (!is_in_pipe(thread_locked_binding, lp_to_evict)) {
+    if (!is_in_pipe(&thread_locked_binding, lp_to_evict)) {
         //eviction of an lp
         if (lp_to_evict != UNDEFINED_LP) {
-
             unlock(lp_to_evict);
-            insert_lp_in_pipe(&thread_unlocked_binding[next_to_insert_evicted].lp, lp_to_evict, 
-                                 CURRENT_BINDING_SIZE, &last_inserted_evicted, &next_to_insert_evicted);
-            #if DEBUG == 1
-                printf("[%u] after eviction: \n", tid);
-                for (int j = 0; j < CURRENT_BINDING_SIZE; j++) {
-                    printf("|%d| ", thread_unlocked_binding[j].lp);
-                }
-                printf("\n");
-            #endif
+            insert_lp_in_pipe(&thread_unlocked_binding, lp_to_evict);
+          #if VERBOSE == 1
+            printf("[%u] after eviction: \n", tid);
+            for (size_t j = 0; j < thread_unlocked_binding.size; j++) {
+                printf("|%d| ", thread_unlocked_binding.entries[j].lp);
+            }
+            printf("\n");
+          #endif
         }
     }
 
@@ -105,10 +85,10 @@ int local_fetch(){
     from_get_next_and_valid = false;
 
     //no local fetch if the pipe is empty
-    if (thread_locked_binding[0].lp == UNDEFINED_LP) return res;
+    if (thread_locked_binding.entries[0].lp == UNDEFINED_LP) return res;
 
     //find the best event to schedule into pipe
-    detect_best_event_to_schedule(thread_locked_binding, &min_lp, &minimum_diff, &min_local_evt);
+    detect_best_event_to_schedule(&thread_locked_binding, &min_lp, &minimum_diff, &min_local_evt);
     
     //NB if in the local pipe there is no event with distance < MAX we go in global queue
 
