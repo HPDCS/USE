@@ -341,7 +341,7 @@ unsigned int fetch_internal(){
  #endif
         (
  #if ENFORCE_LOCALITY == 1
-            havelock(lp_idx) ||
+            haveLock(lp_idx) ||
  #endif 
             tryLock(lp_idx)
         )
