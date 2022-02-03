@@ -147,8 +147,7 @@ static inline void nb_push(LP_state *ptr, msg_t *evt)
 // THIS WILL BE PUBLIC
 static inline int process_input_channel(LP_state *ptr){
   #if DEBUG == 1
-	assertf(!haveLock(ptr->lid), "trying to process an input_channel of lp %u without" 
-		"holding its lock\n", ptr->lid);
+	assertf(!haveLock(ptr->lid), "trying to process an input_channel of lp %u without holding its lock\n", ptr->lid);
   #endif
 	msg_t *min_evt = NULL;
 	nb_stack_node_t *tmp, *top =  nb_popAll(&ptr->local_index.input_channel);
