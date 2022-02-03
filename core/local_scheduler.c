@@ -50,7 +50,7 @@ void local_binding_push(unsigned int lp){
         //eviction of an lp
         if (lp_to_evict != UNDEFINED_LP) {
             unlock(lp_to_evict);
-            insert_lp_in_pipe(&thread_unlocked_binding, lp_to_evict);
+            eviction(&thread_unlocked_binding, lp_to_evict);
           #if VERBOSE == 1
             printf("[%u] after eviction: \n", tid);
             for (size_t j = 0; j < thread_unlocked_binding.size; j++) {
