@@ -11,7 +11,14 @@
 
 
 #define CURRENT_BINDING_SIZE        3
-#define MAX_LOCAL_DISTANCE_FROM_GVT 0.1
+
+__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = 0.1;
+
+
+// TODO revise implementation of pipe. Specification is: LIFO SET
+// TODO implentation of dynamic MAX_LOCAL_DISTANCE_FROM_GVT
+// TODO hierarchical arragement of evicted pipe
+// TODO Implement a global fetch that might get already locked events
 
 
 //array of structures -- each field represents the state of the lp being locked
@@ -31,6 +38,7 @@ typedef struct pipe{
 
 __thread pipe_t thread_locked_binding;
 __thread pipe_t thread_unlocked_binding;
+
 __thread int local_schedule_count = 0;
 
 
@@ -53,7 +61,6 @@ static void init_struct(pipe_t *pipe){
 /* clean the structure */
 void clean_struct(void);
 
-
 /* ------ Metrics computing functions ------ */
 
 /* function to compute "delta_C" and "delta_R" */
@@ -66,6 +73,25 @@ void compute_hotness(pipe_t *lp_local); //, lp.delta_C, lp.delta_R);
 
 /*------ Array management functions ------ */
 
+static inline void init_pipe_entry(pipe_t *pipe, int index){
+    pipe->entries[index].hotness                    = -1;
+    pipe->entries[index].distance_curr_evt_from_gvt = INFTY;
+    pipe->entries[index].distance_last_ooo_from_gvt = INFTY;
+}
+
+static inline void init_next_pipe_entry(pipe_t *pipe){
+    int index = pipe->next_to_insert;
+    init_pipe_entry(pipe, index);
+}
+
+
+static inline void update_pipe_entry(pipe_t *pipe, int index, unsigned int lp, 
+                    simtime_t distance_curr_evt_from_gvt, simtime_t distance_last_ooo_from_gvt){
+    pipe->entries[index].lp = lp;
+    pipe->entries[index].distance_curr_evt_from_gvt = distance_curr_evt_from_gvt;
+    pipe->entries[index].distance_last_ooo_from_gvt = distance_last_ooo_from_gvt;
+
+}
 
 /* The function checks if the lp to be evicted has more than one occurrence in pipe 
 @param : pipe The local pipe

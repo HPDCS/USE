@@ -9,7 +9,6 @@
 
 
 void local_binding_init(){
-
     init_struct(&thread_locked_binding);
     init_struct(&thread_unlocked_binding);
 }
@@ -21,17 +20,16 @@ void local_binding_push(unsigned int lp){
     // STEP 1. flush input channel in local index
     process_input_channel(LPS[lp]); // Fix input channel
 
+    //TODO: respost metadata of the evicted LP from pipe to evicted pipe
 
     // STEP 2. update pipe entry
-    thread_locked_binding.entries[next_to_insert].hotness                    = -1;
-    thread_locked_binding.entries[next_to_insert].distance_curr_evt_from_gvt = INFTY;
-    thread_locked_binding.entries[next_to_insert].distance_last_ooo_from_gvt = INFTY;
-
+    init_next_pipe_entry(&thread_locked_binding);
 
     // STEP 3. update pipe entry
     if(LPS[lp]->actual_index_top != NULL){
         msg_t *next_evt = LPS[lp]->actual_index_top->payload;
-        thread_locked_binding.entries[next_to_insert].distance_curr_evt_from_gvt = next_evt->timestamp - local_gvt;
+        simtime_t diff_from_gvt = next_evt->timestamp - local_gvt;
+        update_pipe_entry(&thread_locked_binding, next_to_insert, lp, diff_from_gvt, INFTY);
     }
 
 
@@ -47,6 +45,7 @@ void local_binding_push(unsigned int lp){
     printf("[%u] lp_to_evict %u\n", tid, lp_to_evict);
   #endif
 
+    // TODO remove check for double entry in a locked pipe
     if (!is_in_pipe(&thread_locked_binding, lp_to_evict)) {
         //eviction of an lp
         if (lp_to_evict != UNDEFINED_LP) {
