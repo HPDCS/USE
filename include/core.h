@@ -18,6 +18,7 @@
 
 
 #define UNDEFINED_LP (MAX_LPs + 1)
+#define UNDEFINED_WT (512)
 
 
 #define MODE_SAF	1

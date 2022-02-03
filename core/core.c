@@ -301,6 +301,7 @@ void LPs_metada_init() {
 		LPS[i]->until_clean_ckp			= 0;
 	  #if ENFORCE_LOCALITY == 1
 		bzero(&LPS[i]->local_index, sizeof(LPS[i]->local_index));
+		LPS[i]->wt_binding = UNDEFINED_WT;
 	  #endif
 
 	}
