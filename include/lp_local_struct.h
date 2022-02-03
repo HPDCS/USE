@@ -33,6 +33,7 @@ typedef struct pipe{
   pipe_entry_t entries[CURRENT_BINDING_SIZE];
   int next_to_insert;   //next index of the array where to insert an lp
   int last_inserted;    //last index of the array where an lp has being inserted
+  int oldest;           //oldest element index, might not be equal to last_inserted
   size_t size;
 } pipe_t;
 
@@ -48,6 +49,7 @@ static void init_struct(pipe_t *pipe){
     pipe->size           = CURRENT_BINDING_SIZE;
     pipe->next_to_insert = 0;
     pipe->last_inserted  = 0;
+    pipe->oldest         = 0;
 
     for(i = 0; i < thread_locked_binding.size; i++){
         pipe->entries[i].lp = UNDEFINED_LP;
@@ -115,7 +117,7 @@ static inline bool is_in_pipe(pipe_t *pipe, unsigned int lp) {
 @param : lp The index of the lp becoming the standing element
 @param : limit The limit from which starting the shift
 */
-void shift_values_from_limit(pipe_t *pipe, int lp, int limit) {
+void shift_values_from_limit(pipe_t *pipe, unsigned int lp, int limit) {
 
    if (limit == -1) return;
    for (unsigned int i = limit; i > 0; i--) {
@@ -126,6 +128,29 @@ void shift_values_from_limit(pipe_t *pipe, int lp, int limit) {
 }
 
 
+static inline void eviction(pipe_t *pipe, unsigned int lp_to_evict) {
+
+   int *last_inserted  = &pipe->last_inserted;
+   int *next_to_insert = &pipe->next_to_insert;
+   size_t size         = pipe->size;
+
+   unsigned int *lp    = &pipe->entries[*next_to_insert].lp;   
+
+   if (*last_inserted == *next_to_insert) { //empty pipe 
+      *lp = lp_to_evict;
+      *next_to_insert = (*next_to_insert + 1) % size;
+      return ;
+   }
+
+   *lp = lp_to_evict; 
+   
+
+   *last_inserted = *next_to_insert;
+   *next_to_insert = (*next_to_insert + 1) % size;
+
+}
+
+
 
 /* The function inserts an lp into a pipe, might be the evicted pipe too
 @param: pipe a pointer to the to-be-updated pipe
@@ -133,21 +158,22 @@ void shift_values_from_limit(pipe_t *pipe, int lp, int limit) {
 @param: size The size of the pipe
 @param last_inserted The index of the most recent element inserted into the pipe
 @param next_to_insert The index of the next element to insert
-It return the index of an element to be evicted, or -1 if no eviction must take place
-
-
-If lp_to_evict is >= 0 this function can be called to perform an eviction, where lp is the array
-of the evicted pipe and new_lp is lp_to_evict
+It return the index of an element to be evicted, or UNDEFINED_LP if no eviction must take place
 */
 static inline unsigned int insert_lp_in_pipe(pipe_t *pipe, unsigned int new_lp) {
 
    unsigned int lp_to_evict = UNDEFINED_LP;
+   
    int *last_inserted  = &pipe->last_inserted;
    int *next_to_insert = &pipe->next_to_insert;
+   int *oldest         = &pipe->oldest;
    size_t size         = pipe->size;
-   unsigned int *lp    = &pipe->entries[*next_to_insert].lp;
+   unsigned int *lp;
 
-   if (*last_inserted == *next_to_insert) { //empty pipe 
+   unsigned int last_lp_inserted = pipe->entries[*last_inserted].lp; //last lp inserted
+   lp = &pipe->entries[*next_to_insert].lp;    
+
+   if (pipe->entries[0].lp == UNDEFINED_LP) { //empty pipe 
       *lp = new_lp;
       *next_to_insert = (*next_to_insert + 1) % size;
       return UNDEFINED_LP;
@@ -157,20 +183,33 @@ static inline unsigned int insert_lp_in_pipe(pipe_t *pipe, unsigned int new_lp) 
    if (is_in_pipe(pipe, new_lp)) {
       shift_values_from_limit(pipe, new_lp, *last_inserted-1);
       *last_inserted = 0; //reset last_inserted
+      //increment oldest only if the new lp to insert is not the same of the previous insertion request
+      if(last_lp_inserted != new_lp) *oldest = (*oldest + 1) % size;
+      if (*lp != UNDEFINED_LP) *next_to_insert = *oldest;
+      #if DEBUG == 1
+         printf("OLDEST: %d - \t LAST_INSERTED: %d - \t NEXT_TO_INSERT: %d \n", *oldest, *last_inserted, *next_to_insert);
+      #endif
       return UNDEFINED_LP;
    }
    
-   //NB quando si fa eviction è possibile che venga eliminato un lp inserito di recente
 
-   if (*lp != UNDEFINED_LP) { lp_to_evict = *lp; } //lp to be evicted
-        
-
+   //lp to be evicted
+   if (*lp != UNDEFINED_LP) { 
+      lp = &pipe->entries[*oldest].lp;
+      lp_to_evict = *lp;
+      *last_inserted = *oldest;
+      if(last_lp_inserted != new_lp) *oldest = (*oldest + 1) % size;
+      *next_to_insert = *oldest;
+   } else {
+      *last_inserted = *next_to_insert;
+      *next_to_insert = (*next_to_insert + 1) % size;
+   }
+   
    *lp = new_lp; 
-   
 
-   *last_inserted = *next_to_insert;
-   *next_to_insert = (*next_to_insert + 1) % size;
-   
+   #if DEBUG == 1
+      printf("OLDEST: %d - \t LAST_INSERTED: %d - \t NEXT_TO_INSERT: %d \n", *oldest, *last_inserted, *next_to_insert);
+   #endif
 
    return lp_to_evict;
 }
