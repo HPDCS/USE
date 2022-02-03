@@ -100,18 +100,32 @@ It returns true if the lp had more than one occurence in pipe, false otherwise
 */
 static inline bool is_in_pipe(pipe_t *pipe, unsigned int lp) {
    pipe_entry_t *pipe_entries = (pipe_entry_t*)&pipe->entries;
-   size_t i, sum = 0;
+   size_t i;
    for (i = 0; i < pipe->size; i++) {
-      if (pipe_entries[i].lp == lp) sum++;
+      if (pipe_entries[i].lp == lp) return true;
    }
 
-   if (sum >= 1) {
-      return true;
-   } else {
-      return false;
-   }
+   return false;
 
 }
+
+
+/* The function shifts the elements between 1 and limit, and replaces the standing element
+@param : pipe The local pipe
+@param : lp The index of the lp becoming the standing element
+@param : limit The limit from which starting the shift
+*/
+void shift_values_from_limit(pipe_t *pipe, int lp, int limit) {
+
+   if (limit == -1) return;
+   for (unsigned int i = limit; i > 0; i--) {
+      pipe->entries[i].lp = pipe->entries[i-1].lp;
+   }
+      
+   pipe->entries[0].lp = lp;
+}
+
+
 
 /* The function inserts an lp into a pipe, might be the evicted pipe too
 @param: pipe a pointer to the to-be-updated pipe
@@ -138,7 +152,15 @@ static inline unsigned int insert_lp_in_pipe(pipe_t *pipe, unsigned int new_lp) 
       *next_to_insert = (*next_to_insert + 1) % size;
       return UNDEFINED_LP;
    }
+
+   //if the lp is in pipe it becomes a standing element
+   if (is_in_pipe(pipe, new_lp)) {
+      shift_values_from_limit(pipe, new_lp, *last_inserted-1);
+      *last_inserted = 0; //reset last_inserted
+      return UNDEFINED_LP;
+   }
    
+   //NB quando si fa eviction è possibile che venga eliminato un lp inserito di recente
 
    if (*lp != UNDEFINED_LP) { lp_to_evict = *lp; } //lp to be evicted
         
