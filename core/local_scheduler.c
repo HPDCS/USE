@@ -83,9 +83,6 @@ int local_fetch(){
     minimum_diff = INFTY;
     from_get_next_and_valid = false;
 
-    //no local fetch if the pipe is empty
-    if (thread_locked_binding.entries[0].lp == UNDEFINED_LP) return res;
-
     //find the best event to schedule into pipe
     detect_best_event_to_schedule(&thread_locked_binding, &min_lp, &minimum_diff, &min_local_evt);
     
