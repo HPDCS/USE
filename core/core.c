@@ -67,6 +67,16 @@ __thread unsigned int current_cpu;
 
 __thread int __event_from = 0;
 
+#if ENFORCE_LOCALITY == 1
+window w;
+__thread unsigned int comm_evts;
+__thread simtime_t sum_granularity;
+__thread unsigned int comm_evts_ref;
+__thread simtime_t granularity_ref;
+__thread clock_timer start_window_interval;
+__thread stat64_t time_interval_for_window_management;
+#endif
+
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
@@ -482,6 +492,11 @@ void init_simulation(unsigned int thread_id){
 	}
   #if ENFORCE_LOCALITY == 1
 	local_binding_init();
+	comm_evts = 0;
+	sum_granularity = 0.0;
+	comm_evts_ref = 0;
+	granularity_ref = 0.0;
+	init_window(&w);
   #endif
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
@@ -514,7 +529,20 @@ stat64_t execute_time;
 		clock_timer_start(event_processing_timer);
 #endif
 
+#if ENFORCE_LOCALITY == 1
+		//start clock timer for window management
+		clock_timer_start(start_window_interval);
+#endif
+
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
+
+#if ENFORCE_LOCALITY == 1
+		//take execute_time to update granularity
+		time_interval_for_window_management = clock_timer_value(start_window_interval);
+
+		//serve discriminare un'esecuzione silente?
+		sum_granularity+=time_interval_for_window_management;
+#endif
 
 #if REPORT == 1
 		execute_time = clock_timer_value(event_processing_timer);
@@ -573,8 +601,9 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(fetch_timer);
 #endif
 	__event_from = 0;
+
 #if ENFORCE_LOCALITY == 1
-		if(local_fetch() != 0){
+		if(local_fetch() != 0){ //if w->size > 0
 
 		}
 		else
@@ -751,6 +780,16 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
+				
+#if ENFORCE_LOCALITY == 1
+		compute_metrics(&w, sum_granularity, granularity_ref , time_interval_for_window_management, comm_evts, comm_evts_ref);
+		if (window_resizing(&w, comm_evts) == 0) {
+			//restart computing granularity_ref and commit_event_rate_ref
+			granularity_ref = 0.0;
+			comm_evts_ref = 0.0;
+		}
+#endif
+
 
 		///* FLUSH */// 
 		queue_deliver_msgs();
