@@ -11,6 +11,9 @@
 #include <limits.h>
 #include <nb_calqueue.h>
 #include <numa.h>
+#if ENFORCE_LOCALITY == 1
+#include <window.h>
+#endif
 
 #define MAX_LPs	2048
 
@@ -106,6 +109,14 @@ extern __thread struct __bucket_node *current_node;
 extern __thread unsigned int current_numa_node;
 extern __thread unsigned int current_cpu;
 extern __thread int __event_from;
+
+#if ENFORCE_LOCALITY == 1
+extern window w;
+extern __thread unsigned int comm_evts;
+extern __thread simtime_t sum_granularity;
+extern __thread unsigned int comm_evts_ref;
+extern __thread simtime_t granularity_ref;
+#endif
 
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
