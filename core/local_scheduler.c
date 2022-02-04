@@ -5,6 +5,9 @@
 
 #define MAX_EVENTS_FROM_LOCAL_SCHEDULER 100
 
+__thread pipe_t thread_locked_binding;
+__thread pipe_t thread_unlocked_binding;
+__thread int local_schedule_count = 0;
 
 
 
@@ -15,27 +18,21 @@ void local_binding_init(){
 
 void local_binding_push(unsigned int lp){
 
+    pipe_entry_t entry_to_be_evicted;
     unsigned int lp_to_evict;
-    int next_to_insert = thread_locked_binding.next_to_insert;
+    simtime_t next_ts = INFTY;
+    LPS[lp]->wt_binding = tid;
+
     // STEP 1. flush input channel in local index
     process_input_channel(LPS[lp]); // Fix input channel
-
-    //TODO: respost metadata of the evicted LP from pipe to evicted pipe
-
-    // STEP 2. update pipe entry
-    init_next_pipe_entry(&thread_locked_binding);
-
-    // STEP 3. update pipe entry
+    // STEP 2. get next ts 
     if(LPS[lp]->actual_index_top != NULL){
         msg_t *next_evt = LPS[lp]->actual_index_top->payload;
-        simtime_t diff_from_gvt = next_evt->timestamp - local_gvt;
-        update_pipe_entry(&thread_locked_binding, next_to_insert, lp, diff_from_gvt, INFTY);
+        next_ts = next_evt->timestamp;
     }
 
-
     //insertion into pipe
-    lp_to_evict = insert_lp_in_pipe(&thread_locked_binding, lp);
-
+    lp_to_evict = insert_lp_in_pipe(&thread_locked_binding, lp, next_ts, &entry_to_be_evicted);
   #if VERBOSE == 1
     printf("[%u] after insertion: \n", tid);
     for (size_t j = 0; j < thread_locked_binding.size; j++) {
@@ -45,23 +42,20 @@ void local_binding_push(unsigned int lp){
     printf("[%u] lp_to_evict %u\n", tid, lp_to_evict);
   #endif
 
-    // TODO remove check for double entry in a locked pipe
-    if (!is_in_pipe(&thread_locked_binding, lp_to_evict)) {
-        //eviction of an lp
-        if (lp_to_evict != UNDEFINED_LP) {
-            unlock(lp_to_evict);
-            eviction(&thread_unlocked_binding, lp_to_evict);
-          #if VERBOSE == 1
-            printf("[%u] after eviction: \n", tid);
-            for (size_t j = 0; j < thread_unlocked_binding.size; j++) {
-                printf("|%d| ", thread_unlocked_binding.entries[j].lp);
-            }
-            printf("\n");
-          #endif
+    //TODO: respost metadata of the evicted LP from pipe to evicted pipe
+    if(lp_to_evict != UNDEFINED_LP && lp_to_evict != lp){
+        LPS[lp_to_evict]->wt_binding = UNDEFINED_WT;
+        unlock(lp_to_evict);
+        next_ts = entry_to_be_evicted.next_ts;
+        insert_lp_in_pipe(&thread_unlocked_binding, lp_to_evict, next_ts, &entry_to_be_evicted);
+      #if VERBOSE == 1
+        printf("[%u] after eviction: \n", tid);
+        for (size_t j = 0; j < thread_unlocked_binding.size; j++) {
+            printf("|%d| ", thread_unlocked_binding.entries[j].lp);
         }
+        printf("\n");
+      #endif
     }
-
-    
 }
 
 
@@ -69,7 +63,6 @@ void local_binding_push(unsigned int lp){
 int local_fetch(){
     unsigned int min_lp; 
     int res = 0;
-    simtime_t minimum_diff;
     msg_t *min_local_evt, *local_next_evt;
     int current_state, valid, in_past;
     bool from_get_next_and_valid;
@@ -80,11 +73,10 @@ int local_fetch(){
   retry:
     res = 0;
     min_lp = UNDEFINED_LP;
-    minimum_diff = INFTY;
     from_get_next_and_valid = false;
 
     //find the best event to schedule into pipe
-    detect_best_event_to_schedule(&thread_locked_binding, &min_lp, &minimum_diff, &min_local_evt);
+    detect_best_event_to_schedule(&thread_locked_binding, &min_lp, &min_local_evt);
     
     //NB if in the local pipe there is no event with distance < MAX we go in global queue
 

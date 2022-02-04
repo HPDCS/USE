@@ -109,7 +109,7 @@ typedef struct _LP_state {
 
 #if ENFORCE_LOCALITY == 1
 	local_index_t local_index;
-	int wt_binding;
+	unsigned int wt_binding;
 #endif
 
 	simtime_t commit_horizon_ts;
