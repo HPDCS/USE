@@ -1,0 +1,45 @@
+import sys
+
+d = {}
+rd = {}
+count=0
+for line in open(sys.argv[1]).readlines():
+  count+=1
+  if count == 1: continue
+  if "Instruction" in line: continue
+  line = line.strip()
+  line = line.split(' ')
+  cache_id = (line[0],line[2])
+  if cache_id not in d:
+     d[cache_id] = []
+  d[cache_id] += [line[1]]
+
+for k in d:
+ nk = frozenset(d[k])
+ if nk not in rd:
+   rd[nk] = []
+ rd[nk] += [k]
+
+for k in rd:
+  nv = []
+  for v in rd[k]:
+    nv += [(int(v[0]), int(v[1].replace('index', '')))]
+  rd[k] = sorted(nv, key=lambda x:x[1])[-1]
+  #print(k,rd[k])
+
+res={}
+for k in rd:
+  l = list(k)
+  for i in range(len(l)-1):
+    for j in range(len(l))[i+1:]:
+      a = int(l[i].replace('cpu', ''))
+      b = int(l[j].replace('cpu', ''))
+      if a not in res: res[a] = []
+      if b not in res: res[b] = []
+      res[a] += [(b,rd[k][1])]
+      res[b] += [(a,rd[k][1])]
+
+for k in res:
+  res[k] = sorted(res[k], key=lambda x:x[1])
+  print(str(k)+":"+str(res[k]))
+
