@@ -11,7 +11,7 @@ CFLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm
 CFLAGS:=$(CFLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 #-DNUM_NUMA_NODES=$(shell lscpu | grep 'NUMA node(s)' | head -1 | awk '{print $3}')
 
-INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
+INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes -Iinclude-gen
 LIBS=-pthread -lm -lnuma
 ARCH_X86=1
 ARCH_X86_64=1
@@ -327,7 +327,7 @@ robot_explore: clean _robot_explore executable
 hash: TARGET=hash 
 hash: clean _hash executable
 
-executable: mm core reverse link
+executable: cache_conf mm core reverse link
 
 
 link:
@@ -358,6 +358,20 @@ mm: $(MM_OBJ)
 
 core: $(CORE_OBJ)
 	@ld -r -g $(CORE_OBJ) -o core/__core.o
+
+cache_conf: include-gen build_scripts/cache.db include-gen/hpipe.h
+
+
+include-gen/hpipe.h:
+	cd build_scripts; python3 build_cache_map.py cache.db > hpipe.h; mv hpipe.h ../include-gen
+
+
+build_scripts/cache.db:
+	cd build_scripts; ./get_cache_data.sh	; cd ..;
+
+
+include-gen:
+	mkdir -p include-gen
 
 reverse: $(REVERSE_OBJ)
 	@ld -r -g $(REVERSE_OBJ) -o reverse/__reverse.o
@@ -408,3 +422,6 @@ clean:
 	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
+	-rm -r include-gen
+
+.PHONY: clean
