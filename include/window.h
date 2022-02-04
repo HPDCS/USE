@@ -1,57 +1,121 @@
-#ifndef __LP_LOCAL_STRUCT_H_
-#define __LP_LOCAL_STRUCT_H_
+#ifndef __WINDOW_H_
+#define __WINDOW_H_
 
 #include <events.h>
+#include <core.h>
 #include <simtypes.h>
 #include <stdbool.h>
-
-/*
-Algorithm: Hill Climbing 
-Evaluate the initial state. 
-Loop until a solution is found or there are no new operators left to be applied: 
-   - Select and apply a new operator 
-   - Evaluate the new state: 
-      goal -→ quit 
-      better than current state -→ new current state 
-
-*/
+#include "timer.h"
 
 
 typedef struct window {
 
 	simtime_t size;
-	simtime_t last_reset_time;
-	double event_rate_ref;
-	double granularity_ref; //granularity must be computed after execution of each event
-	double last_comm_event_rate;
-	double last_granularity;
+	simtime_t time_interval;
+	simtime_t step;
+	double throughput;
+	double granularity; //granularity must be computed after execution of each event
+	unsigned int last_comm_evts;
 
 } window;
 
 
+/* init window parameters*/
+static inline void init_window(window *w) {
 
-bool window_resizing(window *w, double comm_event_rate, double avg_granularity, simtime_t step) {
+	w->size = 0.0;
 
-	double er = event_rate_ref/comm_event_rate;
-	double granularity = avg_granularity/granularity_ref;
+	w->step = 0.1;
+	w->time_interval = 0.0;
 
-	if (comm_event_rate > w->last_comm_event_rate) {
+	w->granularity = 0.0;
+	w->throughput = 0.0;
 
-		//check reset condition
-		if ((er < 0.9) || (((granularity > 0.6) && (granularity < 1.4)))) {
-			w->size = 0; //reset
-			//update w->last_reset_time 
-		} else {
-			//enlarge window
-			w->size += step;
-			w->last_comm_event_rate = comm_event_rate;
-			w->last_granularity = avg_granularity;
-			return 1;
-		}
-	}
-
-	return 0;
+	w->last_comm_evts = 0;
 
 }
+
+
+
+
+/* The function computes window management metrics for resizing purposes
+@param: w The window
+@param: sum_granularity The granularity at the current observation time
+@param: granularity_ref The granularity computed from the last window reset
+@param: time_interval The time observation period
+@param: comm_evts The committed events at the current observation time
+@param: comm_evts_ref The committed events computed from the last window reset
+*/
+static inline void compute_metrics(window *w, double sum_granularity, double granularity_ref, simtime_t time_interval, unsigned int comm_evts, unsigned int comm_evts_ref) {
+
+	granularity_ref += sum_granularity;
+	comm_evts_ref += comm_evts;
+
+	w->granularity = sum_granularity / granularity_ref;
+	w->throughput = comm_evts_ref/time_interval;
+	
+	/*#if DEBUG == 1
+		printf("THROUGHPUT %f - GRANULARITY %f \n", w->throughput, w->granularity);
+	#endif*/
+
+}
+
+
+
+/*The function sets the window size to zero if the reset condition is met
+@param: w The window
+It returns true if the reset took place, false otherwise
+*/
+static inline bool reset_window(window *w) {
+
+	double throughput = w->throughput;
+	double granularity = w->granularity;
+
+
+	//check reset condition
+	if ((throughput < 0.9) || (((granularity > 0.6) && (granularity < 1.4)))) {
+		w->size = 0.0; //reset
+		w->step = 0.1;
+		return true; 
+	}
+
+	return false;
+}
+
+/* The function adapts the window size based on the committed events
+@param: w The window
+@param: comm_evts The committed events at the current observation time
+It returns the current size of the window
+*/
+static inline simtime_t window_resizing(window *w, unsigned int comm_evts) {
+
+	double increase;
+
+	#if VERBOSE == 1
+		printf("COMM EVTS %d - LAST COMM EVTS %u \n", comm_evts, w->last_comm_evts);
+	#endif
+
+	//first step increment if window size is zero
+	if (w->size == 0) w->size += w->step;
+	
+	increase = w->step*0.5;
+	w->step += increase;
+
+	//enlarge window after modifying the step of increase
+	if (comm_evts > w->last_comm_evts) w->size += w->step;
+
+	#if VERBOSE == 1
+	printf("window size after increment %f\n", w->size);
+	#endif
+	
+	w->last_comm_evts = comm_evts;
+
+	//check if a reset must take place
+	if (reset_window(w)) return w->size;
+
+	return w->size;
+
+}
+
 
 #endif
