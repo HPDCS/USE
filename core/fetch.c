@@ -108,6 +108,11 @@
 #define OPTIMISTIC_MODE ONE_EVT_PER_LP
 #endif
 
+#if ENFORCE_LOCALITY == 1
+window w;
+#endif
+
+
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
  #if DEBUG == 1
     LP_state *lp_ptr = LPS[lp_idx];
@@ -134,6 +139,11 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                 LPS[lp_idx]->commit_horizon_ts = node->timestamp; //time min ← evt.ts
                 LPS[lp_idx]->commit_horizon_tb = node->counter; 
         }
+
+ #if ENFORCE_LOCALITY == 1
+    comm_evts++;
+    comm_evts_ref += comm_evts;
+ #endif
         
  #if DEBUG == 1
         event->local_next       = bound_ptr;       //DEBUG
