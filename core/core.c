@@ -221,7 +221,7 @@ void set_affinity(unsigned int tid){
 	
 	CPU_ZERO(&mask);
 	CPU_SET(current_cpu, &mask);
-	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
@@ -442,30 +442,32 @@ void init_simulation(unsigned int thread_id){
 		nodes_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
-       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-       		current_msg->sender_id 		= -1;//
-       		current_msg->receiver_id 	= current_lp;//
-       		current_msg->timestamp 		= 0.0;//
-       		current_msg->type 			= INIT;//
-       		current_msg->state 			= 0x0;//
-       		current_msg->father 		= NULL;//
-       		current_msg->epoch 		= LPS[current_lp]->epoch;//
-       		current_msg->monitor 		= 0x0;//
-			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
-			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-			queue_deliver_msgs();
-			LPS[current_lp]->bound = current_msg;
-			LPS[current_lp]->num_executed_frames++;
-			LPS[current_lp]->state_log_forced = true;
-			LogState(current_lp);
-			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
-			LPS[current_lp]->state_log_forced = false;
-			LPS[current_lp]->until_ongvt = 0;
-			LPS[current_lp]->until_ckpt_recalc = 0;
-			LPS[current_lp]->ckpt_period = 20;
-			//LPS[current_lp]->epoch = 1;
+     		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+     		current_msg->sender_id 		= -1;//
+     		current_msg->receiver_id 	= current_lp;//
+     		current_msg->timestamp 		= 0.0;//
+     		current_msg->type 			= INIT;//
+     		current_msg->state 			= 0x0;//
+     		current_msg->father 		= NULL;//
+     		current_msg->epoch 		= LPS[current_lp]->epoch;//
+     		current_msg->monitor 		= 0x0;//
+				list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
+				ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
+				queue_deliver_msgs();
+				LPS[current_lp]->bound = current_msg;
+				LPS[current_lp]->num_executed_frames++;
+				LPS[current_lp]->state_log_forced = true;
+				LogState(current_lp);
+				((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
+				LPS[current_lp]->state_log_forced = false;
+				LPS[current_lp]->until_ongvt = 0;
+				LPS[current_lp]->until_ckpt_recalc = 0;
+				LPS[current_lp]->ckpt_period = 20;
+				//LPS[current_lp]->epoch = 1;
 		}
-
+              #if ENFORCE_LOCALITY==1
+		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
+              #endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -480,15 +482,16 @@ void init_simulation(unsigned int thread_id){
 	            abort();
 	    }
 	}
-  #if ENFORCE_LOCALITY == 1
-	local_binding_init();
-  #endif
+	
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
-	
 	// Set the CPU affinity
 	set_affinity(tid);
+  #if ENFORCE_LOCALITY == 1
+	local_binding_init();
+  #endif
+	
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
@@ -627,7 +630,7 @@ void thread_loop(unsigned int thread_id) {
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Executing without lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
-		if(current_cpu != sched_getcpu()){
+		if(current_cpu != (unsigned int)sched_getcpu()){
 			printf("[%u] Current cpu changed form %u to %u\n", tid, current_cpu, sched_getcpu());
 		}
 	#endif
