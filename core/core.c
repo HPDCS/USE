@@ -574,9 +574,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	__event_from = 0;
 #if ENFORCE_LOCALITY == 1
-		if(local_fetch() != 0){
-
-		}
+		if(local_fetch() != 0){}
 		else
 #endif
 
@@ -612,6 +610,8 @@ void thread_loop(unsigned int thread_id) {
 		assertf(current_evt_state == NEW_EVT,    "got new_evt message %p\n", current_msg);
 #endif
 
+		if(__event_from == 2) statistics_post_th_data(tid, STAT_EVT_FROM_LOCAL_FETCH, 1);
+		if(__event_from == 1) statistics_post_th_data(tid, STAT_EVT_FROM_GLOBAL_FETCH, 1);
   #if ENFORCE_LOCALITY == 1
 		local_binding_push(current_lp);
   #endif
