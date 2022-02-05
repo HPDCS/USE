@@ -167,6 +167,10 @@ ifdef LOOP_COUNT
 CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
 endif
 
+ifdef LOOP_COUNT_US
+CFLAGS:= $(CFLAGS) -DLOOP_COUNT_US=$(LOOP_COUNT_US)
+endif
+
 #TCAR
 ifdef NUM_CELLE_OCCUPATE
 CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
@@ -301,34 +305,41 @@ ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
-pcs: clean _pcs executable
+pcs: clean conf _pcs executable
 
 pcs-prealloc: TARGET=pcs-prealloc 
 pcs-prealloc: clean _pcs_prealloc executable
 
 traffic: TARGET=traffic 
-traffic: clean _traffic executable
+traffic: clean conf _traffic executable
 
 tcar: TARGET=tcar 
-tcar: clean _tcar executable
+tcar: clean conf _tcar executable
 
 phold: TARGET=phold 
-phold: clean  _phold executable
+phold: clean  conf _phold executable
 
 pholdcount: TARGET=pholdcount 
-pholdcount: clean  _pholdcount executable
+pholdcount: clean conf  _pholdcount executable
 
 pholdhotspot: TARGET=pholdhotspot 
-pholdhotspot: clean  _pholdhotspot executable
+pholdhotspot: clean  conf _pholdhotspot executable
 
 robot_explore: TARGET=robot_explore 
-robot_explore: clean _robot_explore executable
+robot_explore: clean conf _robot_explore executable
 
 hash: TARGET=hash 
-hash: clean _hash executable
+hash: clean conf _hash executable
 
 executable: cache_conf mm core reverse link
 
+conf: include-gen/clock_constant.h
+
+include-gen:
+	mkdir include-gen
+
+include-gen/clock_constant.h: include-gen
+	cd build_scripts; ./gen_clock_header.sh
 
 link:
 ifeq ($(REVERSIBLE),1)
@@ -370,8 +381,6 @@ build_scripts/cache.db:
 	cd build_scripts; ./get_cache_data.sh	; cd ..;
 
 
-include-gen:
-	mkdir -p include-gen
 
 reverse: $(REVERSE_OBJ)
 	@ld -r -g $(REVERSE_OBJ) -o reverse/__reverse.o
@@ -422,6 +431,7 @@ clean:
 	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
-	-rm -r include-gen
 
 .PHONY: clean
+
+
