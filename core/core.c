@@ -695,9 +695,7 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 
 			delete(nbcalqueue, current_node);
-		  #if ENFORCE_LOCALITY == 0
 			unlock(current_lp);
-		  #endif
 			continue;
 		}
 
@@ -788,7 +786,6 @@ void thread_loop(unsigned int thread_id) {
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
-  #if ENFORCE_LOCALITY == 0
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
@@ -796,7 +793,6 @@ void thread_loop(unsigned int thread_id) {
 			printlp("ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp]);
 		}
 	#endif
-  #endif
 
 #if REPORT == 1
 		clock_timer_start(queue_op);
