@@ -221,7 +221,7 @@ void set_affinity(unsigned int tid){
 	
 	CPU_ZERO(&mask);
 	CPU_SET(current_cpu, &mask);
-	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
@@ -627,7 +627,7 @@ void thread_loop(unsigned int thread_id) {
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Executing without lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
-		if(current_cpu != sched_getcpu()){
+		if(current_cpu != ((unsigned int)sched_getcpu())){
 			printf("[%u] Current cpu changed form %u to %u\n", tid, current_cpu, sched_getcpu());
 		}
 	#endif
