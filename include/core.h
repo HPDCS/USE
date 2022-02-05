@@ -116,6 +116,9 @@ extern __thread unsigned int comm_evts;
 extern __thread simtime_t sum_granularity;
 extern __thread unsigned int comm_evts_ref;
 extern __thread simtime_t granularity_ref;
+
+extern __thread clock_timer start_window_interval; 
+extern __thread stat64_t time_interval_for_window_management;
 #endif
 
 extern size_t node_size_msg_t;
