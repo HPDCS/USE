@@ -109,7 +109,7 @@
 #endif
 
 #if ENFORCE_LOCALITY == 1
-window w;
+__thread unsigned int comm_evts;
 #endif
 
 
@@ -127,6 +127,11 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
     (void)event;
     
     event->monitor = EVT_SAFE;
+
+ #if ENFORCE_LOCALITY == 1
+    //increment commit events variable
+    comm_evts++;
+ #endif
     
     if(node == NULL){
         return false;
@@ -140,10 +145,6 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                 LPS[lp_idx]->commit_horizon_tb = node->counter; 
         }
 
- #if ENFORCE_LOCALITY == 1
-    comm_evts++;
-    comm_evts_ref += comm_evts;
- #endif
         
  #if DEBUG == 1
         event->local_next       = bound_ptr;       //DEBUG
