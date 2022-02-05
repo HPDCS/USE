@@ -99,8 +99,8 @@ int local_fetch(){
     i = 0;
     while(min_lp == UNDEFINED_LP && i<HPIPE_INDEX2_LEN){
         min_lp = detect_best_event_to_schedule(evicted_pipe_pointers[hpipe_index1[current_cpu][i++]]);
+        if(min_lp != UNDEFINED_LP && !tryLock(min_lp)) min_lp = UNDEFINED_LP;
     }
-    if(i!=HPIPE_INDEX2_LEN && !tryLock(min_lp)) min_lp = UNDEFINED_LP;
     
     //NB if in the local pipe there is no event with distance < MAX we go in global queue
 
