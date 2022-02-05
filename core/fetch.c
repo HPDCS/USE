@@ -151,15 +151,15 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 
 
-#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)          {   commit_event(event,node,lp_idx);\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+#define do_commit_inside_lock_and_goto_next(event,node,lp_idx)          do{   commit_event(event,node,lp_idx);\
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
         
-#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)          {   delete(nbcalqueue, node);\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+#define do_remove_inside_lock_and_goto_next(event,node,lp_idx)          do{   delete(nbcalqueue, node);\
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
                                                                             
-#define do_skip_inside_lock_and_goto_next(lp_idx)                       {   add_lp_unsafe_set(lp_idx);\
+#define do_skip_inside_lock_and_goto_next(lp_idx)                       do{   add_lp_unsafe_set(lp_idx);\
                                                                             read_new_min = false;\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
         
 #define return_evt_to_main_loop()                                       {   assert(event->monitor != (void*) EVT_BANANA);\
                                                                             break;  }
@@ -180,11 +180,11 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                                                                             }\
                                                                             goto get_next;  }
 
-#define do_remove_removed_inside_lock(event,node,lp_idx)                {   if(delete(nbcalqueue, node)){\
+#define do_remove_removed_inside_lock(event,node,lp_idx)                do{   if(delete(nbcalqueue, node)){\
                                                                                 list_node_clean_by_content(event);\
                                                                                 list_insert_tail_by_content(to_remove_local_evts, event);\
                                                                             }\
-                                                                            unlock(lp_idx); /* goto get_next; */    }
+                                                                            unlock(lp_idx); /* goto get_next; */    }while(0)
 
 
 
