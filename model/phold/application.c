@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <ROOT-Sim.h>
 #include <errno.h>
-
 #include <lookahead.h>
 
 #include "application.h"
@@ -18,7 +17,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
 	//event_content_type new_event;
-	unsigned int loops; 
+	unsigned long long loops, tmp; 
 	//lp_state_type *state_ptr = &(LPS[me]); //(lp_state_type*)state;
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
@@ -70,7 +69,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			state_ptr->events = 0;
 
 			if(me == 0) {
-				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
+				printf("Running a traditional loop-based PHOLD benchmark with counter set to %f, %d total events per LP, lookahead %f\n", LOOP_COUNT_US*CLOCKS_PER_US, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
 			for(i = 0; i < EVENTS_PER_LP; i++) {
@@ -84,11 +83,17 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 		case LOOP:
 			//timer_start(tm_ex);
 
-			loops = LOOP_COUNT * 29;// * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
-
-			for(i = 0; i < loops ; i++) {
-					j = i*i;
-			}
+			//loops = LOOP_COUNT * 29;// * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
+			tmp = CLOCK_READ();
+                        loops = tmp;
+                        while( (tmp-loops) < (LOOP_COUNT_US*CLOCKS_PER_US) ){
+                            tmp = CLOCK_READ();
+                        }
+			if((tmp - loops) < (LOOP_COUNT_US*CLOCKS_PER_US)) printf("error looping less than required\n");
+			//else printf("che passed %llu %llu %llu %llu\n", tmp, loops, tmp-loops, LOOP_COUNT*CLOCKS_PER_US);
+			//for(i = 0; i < loops ; i++) {
+			//		j = i*i;
+			//}
 			//printf("timer: %d\n", timer_value_micro(tm_ex));
 
 			state_ptr->events++;
