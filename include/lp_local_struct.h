@@ -13,7 +13,7 @@
 #define CURRENT_BINDING_SIZE       10
 
 __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = 0.1;
-
+window w;
 
 // TODO revise implementation of pipe. Specification is: LIFO SET
 // TODO implentation of dynamic MAX_LOCAL_DISTANCE_FROM_GVT
@@ -166,7 +166,12 @@ static inline void detect_best_event_to_schedule(pipe_t *pipe, unsigned int *min
     msg_t *next_evt;
     *min_lp = UNDEFINED_LP;
     *min_local_evt = NULL;
-  
+
+    simtime_t *window_size = &w.size;
+  #if VERBOSE == 1
+    printf("WINDOW SIZE %f\n", window_size);
+  #endif
+    
   #if DEBUG == 1
     assertf(pipe != &thread_locked_binding, "trying to schedule from a non locked pipe%s", "\n");
   #endif
@@ -182,7 +187,7 @@ static inline void detect_best_event_to_schedule(pipe_t *pipe, unsigned int *min
         if(!next_evt) continue;
 
         update_pipe_entry(pipe, idx, lp, next_evt->timestamp);
-        if(pipe->entries[idx].distance_curr_evt_from_gvt < MAX_LOCAL_DISTANCE_FROM_GVT){
+        if(pipe->entries[idx].distance_curr_evt_from_gvt < *window_size){
             *min_lp = lp;
             *min_local_evt = next_evt;
             break;
