@@ -69,13 +69,16 @@ __thread int __event_from = 0;
 
 #if ENFORCE_LOCALITY == 1
 window w;
+__thread simtime_t *window_size;
 
 __thread simtime_t sum_granularity;
-__thread unsigned int comm_evts_ref;
 __thread simtime_t granularity_ref;
+__thread unsigned int comm_evts_ref;
 
+__thread clock_timer start_window_reset;
 __thread clock_timer start_window_interval;
 __thread stat64_t time_interval_for_window_management;
+__thread stat64_t time_interval_for_window_reset;
 #endif
 
 //__thread simtime_t 		commit_horizon_ts = 0;
@@ -498,6 +501,7 @@ void init_simulation(unsigned int thread_id){
 	comm_evts_ref = 0;
 	granularity_ref = 0.0;
 	init_window(&w);
+	window_size = &w.size;
   #endif
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
@@ -542,7 +546,7 @@ stat64_t execute_time;
 		execute_time = clock_timer_value(event_processing_timer);
 
 		sum_granularity+=execute_time;
-		time_interval_for_window_management = clock_timer_value(start_window_interval);
+		
 #endif
 
 #if REPORT == 1
@@ -604,13 +608,14 @@ void thread_loop(unsigned int thread_id) {
 	__event_from = 0;
 
 #if ENFORCE_LOCALITY == 1
+		//start timer for window management
+		if (*window_size == 0) clock_timer_start(start_window_reset);
 		clock_timer_start(start_window_interval);
-		if(local_fetch() != 0){ //if w->size > 0
+		if(*window_size > 0 && local_fetch() != 0){ //if window_size > 0 try local_fetch
 
-		}
-		else
+		} else 
 #endif
-
+		
 		if(fetch_internal() == 0) {
 #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
@@ -624,6 +629,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			goto end_loop;
 		}
+
 
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
@@ -783,20 +789,7 @@ void thread_loop(unsigned int thread_id) {
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
 				
-#if ENFORCE_LOCALITY == 1
-	
-		compute_granularity(&w, sum_granularity, granularity_ref);
-		compute_throughput(&w, time_interval_for_window_management, comm_evts);
-		comm_evts_ref += comm_evts;
-		compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_management);
-		if (window_resizing(&w) != -1) { //if the window has been enlarged
-			if (reset_window(&w)) {
-				granularity_ref = 0.0;
-				comm_evts_ref = 0;
-				clock_timer_start(start_window_interval);
-			}
-		}
-#endif
+
 
 
 		///* FLUSH */// 
@@ -855,6 +848,24 @@ void thread_loop(unsigned int thread_id) {
 			commit_event(current_msg, current_node, current_lp);
 		}
 
+#if ENFORCE_LOCALITY == 1
+		
+		time_interval_for_window_management = clock_timer_value(start_window_interval);
+		time_interval_for_window_reset = clock_timer_value(start_window_reset);
+
+		compute_granularity(&w, sum_granularity, granularity_ref);
+		compute_throughput(&w, time_interval_for_window_management, comm_evts);
+
+		comm_evts_ref += comm_evts;
+		compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
+		if (window_resizing(&w) != -1) { //if the window has been enlarged
+			if (reset_window(&w)) {
+				granularity_ref = 0.0;
+				comm_evts_ref = 0;
+			}
+		}
+#endif
+
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
 		//statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
@@ -901,6 +912,10 @@ end_loop:
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
+
+/*#if ENFORCE_LOCALITY == 1
+	time_interval_for_window_management = clock_timer_value(start_window_interval);
+#endif*/
 
 
 	// Unmount statistical data
