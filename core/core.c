@@ -73,7 +73,7 @@ __thread simtime_t *window_size;
 
 __thread simtime_t sum_granularity;
 __thread simtime_t granularity_ref;
-__thread unsigned int comm_evts_ref;
+
 
 __thread clock_timer start_window_reset;
 __thread clock_timer start_window_interval;
@@ -534,10 +534,6 @@ stat64_t execute_time;
 		clock_timer_start(event_processing_timer);
 #endif
 
-/*#if ENFORCE_LOCALITY == 1
-		//start clock timer for window management
-		clock_timer_start(start_window_interval);
-#endif*/
 
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 
@@ -545,7 +541,8 @@ stat64_t execute_time;
 		//take execute_time to update granularity
 		execute_time = clock_timer_value(event_processing_timer);
 
-		sum_granularity+=execute_time;
+		sum_granularity += execute_time;
+		granularity_ref += execute_time;
 		
 #endif
 
@@ -851,19 +848,18 @@ void thread_loop(unsigned int thread_id) {
 #if ENFORCE_LOCALITY == 1
 		
 		time_interval_for_window_management = clock_timer_value(start_window_interval);
-		time_interval_for_window_reset = clock_timer_value(start_window_reset);
+		if (*window_size == 0) time_interval_for_window_reset = clock_timer_value(start_window_reset);
 
 		compute_granularity(&w, sum_granularity, granularity_ref);
 		compute_throughput(&w, time_interval_for_window_management, comm_evts);
 
-		comm_evts_ref += comm_evts;
 		compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
-		if (window_resizing(&w) != -1) { //if the window has been enlarged
-			if (reset_window(&w)) {
-				granularity_ref = 0.0;
-				comm_evts_ref = 0;
-			}
+
+		window_resizing(&w); //do resizing operations -- window might be enlarged or not
+		if (reset_window(&w)) {
+			clock_timer_start(start_window_reset);
 		}
+		
 #endif
 
 #if REPORT == 1
