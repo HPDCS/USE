@@ -13,7 +13,7 @@
 #define CURRENT_BINDING_SIZE       10
 
 __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = 0.1;
-window w;
+//window w;
 
 // TODO revise implementation of pipe. Specification is: LIFO SET
 // TODO implentation of dynamic MAX_LOCAL_DISTANCE_FROM_GVT
@@ -168,6 +168,7 @@ static inline void detect_best_event_to_schedule(pipe_t *pipe, unsigned int *min
     *min_local_evt = NULL;
 
     simtime_t *window_size = &w.size;
+
   #if VERBOSE == 1
     printf("WINDOW SIZE %f\n", window_size);
   #endif

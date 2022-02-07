@@ -541,7 +541,7 @@ stat64_t execute_time;
 		//take execute_time to update granularity
 		execute_time = clock_timer_value(event_processing_timer);
 
-		sum_granularity += execute_time;
+		sum_granularity += execute_time; //devo discriminare le esecuzioni silenti?
 		granularity_ref += execute_time;
 		
 #endif
@@ -848,16 +848,18 @@ void thread_loop(unsigned int thread_id) {
 #if ENFORCE_LOCALITY == 1
 		
 		time_interval_for_window_management = clock_timer_value(start_window_interval);
-		if (*window_size == 0) time_interval_for_window_reset = clock_timer_value(start_window_reset);
+		//time_interval_for_window_reset = clock_timer_value(start_window_reset);
 
 		compute_granularity(&w, sum_granularity, granularity_ref);
 		compute_throughput(&w, time_interval_for_window_management, comm_evts);
 
-		compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
+		//compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
 
 		window_resizing(&w); //do resizing operations -- window might be enlarged or not
-		if (reset_window(&w)) {
-			clock_timer_start(start_window_reset);
+		if (*window_size > 0 && reset_window(&w)) {
+			time_interval_for_window_reset = clock_timer_value(start_window_reset);
+			compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
+			//clock_timer_start(start_window_reset);
 		}
 		
 #endif
