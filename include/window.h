@@ -47,8 +47,7 @@ static inline void init_window(window *w) {
 */
 static inline void compute_granularity(window *w, double sum_granularity, double granularity_ref) {
 
-	granularity_ref += sum_granularity;
-	w->granularity = sum_granularity / granularity_ref; //right now this is 1
+	w->granularity = sum_granularity / granularity_ref; 
 
 } 
 
@@ -88,7 +87,7 @@ static inline bool reset_window(window *w) {
 	double throughput_ratio = w->throughput / w->throughput_ref;
 	double granularity = w->granularity;
 
-#if VERBOSE == 1
+#if DEBUG == 1
 	printf("THROUGHPUT RATIO %f \n", throughput_ratio);
 #endif
 
