@@ -11,7 +11,7 @@ CFLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm
 CFLAGS:=$(CFLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 #-DNUM_NUMA_NODES=$(shell lscpu | grep 'NUMA node(s)' | head -1 | awk '{print $3}')
 
-INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
+INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes -Iinclude-gen
 LIBS=-pthread -lm -lnuma
 ARCH_X86=1
 ARCH_X86_64=1
@@ -21,6 +21,10 @@ ifdef ENFORCE_LOCALITY
 CFLAGS:=$(CFLAGS) -DENFORCE_LOCALITY=$(ENFORCE_LOCALITY)
 else
 CFLAGS:=$(CFLAGS) -DENFORCE_LOCALITY=0	
+endif
+
+ifdef START_WINDOW
+CFLAGS:=$(CFLAGS) -DSTART_WINDOW=$(START_WINDOW)
 endif
 
 ifdef MAX_SKIPPED_LP
@@ -167,6 +171,10 @@ ifdef LOOP_COUNT
 CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
 endif
 
+ifdef LOOP_COUNT_US
+CFLAGS:= $(CFLAGS) -DLOOP_COUNT_US=$(LOOP_COUNT_US)
+endif
+
 #TCAR
 ifdef NUM_CELLE_OCCUPATE
 CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
@@ -301,34 +309,41 @@ ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
-pcs: clean _pcs executable
+pcs: clean conf _pcs executable
 
 pcs-prealloc: TARGET=pcs-prealloc 
 pcs-prealloc: clean _pcs_prealloc executable
 
 traffic: TARGET=traffic 
-traffic: clean _traffic executable
+traffic: clean conf _traffic executable
 
 tcar: TARGET=tcar 
-tcar: clean _tcar executable
+tcar: clean conf _tcar executable
 
 phold: TARGET=phold 
-phold: clean  _phold executable
+phold: clean  conf _phold executable
 
 pholdcount: TARGET=pholdcount 
-pholdcount: clean  _pholdcount executable
+pholdcount: clean conf  _pholdcount executable
 
 pholdhotspot: TARGET=pholdhotspot 
-pholdhotspot: clean  _pholdhotspot executable
+pholdhotspot: clean  conf _pholdhotspot executable
 
 robot_explore: TARGET=robot_explore 
-robot_explore: clean _robot_explore executable
+robot_explore: clean conf _robot_explore executable
 
 hash: TARGET=hash 
-hash: clean _hash executable
+hash: clean conf _hash executable
 
-executable: mm core reverse link
+executable: cache_conf mm core reverse link
 
+conf: include-gen/clock_constant.h
+
+include-gen:
+	mkdir include-gen
+
+include-gen/clock_constant.h: include-gen
+	cd build_scripts; ./gen_clock_header.sh
 
 link:
 ifeq ($(REVERSIBLE),1)
@@ -358,6 +373,18 @@ mm: $(MM_OBJ)
 
 core: $(CORE_OBJ)
 	@ld -r -g $(CORE_OBJ) -o core/__core.o
+
+cache_conf: include-gen build_scripts/cache.db include-gen/hpipe.h
+
+
+include-gen/hpipe.h:
+	cd build_scripts; python3 build_cache_map.py cache.db > hpipe.h; mv hpipe.h ../include-gen
+
+
+build_scripts/cache.db:
+	cd build_scripts; ./get_cache_data.sh	; cd ..;
+
+
 
 reverse: $(REVERSE_OBJ)
 	@ld -r -g $(REVERSE_OBJ) -o reverse/__reverse.o
@@ -408,3 +435,7 @@ clean:
 	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
+
+.PHONY: clean
+
+

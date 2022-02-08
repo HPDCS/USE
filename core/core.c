@@ -67,20 +67,6 @@ __thread unsigned int current_cpu;
 
 __thread int __event_from = 0;
 
-#if ENFORCE_LOCALITY == 1
-window w;
-__thread simtime_t *window_size;
-
-__thread simtime_t sum_granularity;
-__thread simtime_t granularity_ref;
-
-
-__thread clock_timer start_window_reset;
-__thread clock_timer start_window_interval;
-__thread stat64_t time_interval_for_window_management;
-__thread stat64_t time_interval_for_window_reset;
-#endif
-
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
 
@@ -235,7 +221,7 @@ void set_affinity(unsigned int tid){
 	
 	CPU_ZERO(&mask);
 	CPU_SET(current_cpu, &mask);
-	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
@@ -456,30 +442,32 @@ void init_simulation(unsigned int thread_id){
 		nodes_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
-       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-       		current_msg->sender_id 		= -1;//
-       		current_msg->receiver_id 	= current_lp;//
-       		current_msg->timestamp 		= 0.0;//
-       		current_msg->type 			= INIT;//
-       		current_msg->state 			= 0x0;//
-       		current_msg->father 		= NULL;//
-       		current_msg->epoch 		= LPS[current_lp]->epoch;//
-       		current_msg->monitor 		= 0x0;//
-			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
-			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-			queue_deliver_msgs();
-			LPS[current_lp]->bound = current_msg;
-			LPS[current_lp]->num_executed_frames++;
-			LPS[current_lp]->state_log_forced = true;
-			LogState(current_lp);
-			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
-			LPS[current_lp]->state_log_forced = false;
-			LPS[current_lp]->until_ongvt = 0;
-			LPS[current_lp]->until_ckpt_recalc = 0;
-			LPS[current_lp]->ckpt_period = 20;
-			//LPS[current_lp]->epoch = 1;
+     		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+     		current_msg->sender_id 		= -1;//
+     		current_msg->receiver_id 	= current_lp;//
+     		current_msg->timestamp 		= 0.0;//
+     		current_msg->type 			= INIT;//
+     		current_msg->state 			= 0x0;//
+     		current_msg->father 		= NULL;//
+     		current_msg->epoch 		= LPS[current_lp]->epoch;//
+     		current_msg->monitor 		= 0x0;//
+				list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
+				ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
+				queue_deliver_msgs();
+				LPS[current_lp]->bound = current_msg;
+				LPS[current_lp]->num_executed_frames++;
+				LPS[current_lp]->state_log_forced = true;
+				LogState(current_lp);
+				((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
+				LPS[current_lp]->state_log_forced = false;
+				LPS[current_lp]->until_ongvt = 0;
+				LPS[current_lp]->until_ckpt_recalc = 0;
+				LPS[current_lp]->ckpt_period = 20;
+				//LPS[current_lp]->epoch = 1;
 		}
-
+              #if ENFORCE_LOCALITY==1
+		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
+              #endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -494,21 +482,16 @@ void init_simulation(unsigned int thread_id){
 	            abort();
 	    }
 	}
-  #if ENFORCE_LOCALITY == 1
-	local_binding_init();
-	comm_evts = 0;
-	sum_granularity = 0.0;
-	comm_evts_ref = 0;
-	granularity_ref = 0.0;
-	init_window(&w);
-	window_size = &w.size;
-  #endif
+	
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
-	
 	// Set the CPU affinity
 	set_affinity(tid);
+  #if ENFORCE_LOCALITY == 1
+	local_binding_init();
+  #endif
+	
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
@@ -534,17 +517,7 @@ stat64_t execute_time;
 		clock_timer_start(event_processing_timer);
 #endif
 
-
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
-
-#if ENFORCE_LOCALITY == 1
-		//take execute_time to update granularity
-		execute_time = clock_timer_value(event_processing_timer);
-
-		sum_granularity += execute_time; //devo discriminare le esecuzioni silenti?
-		granularity_ref += execute_time;
-		
-#endif
 
 #if REPORT == 1
 		execute_time = clock_timer_value(event_processing_timer);
@@ -603,16 +576,11 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(fetch_timer);
 #endif
 	__event_from = 0;
-
 #if ENFORCE_LOCALITY == 1
-		//start timer for window management
-		if (*window_size == 0) clock_timer_start(start_window_reset);
-		clock_timer_start(start_window_interval);
-		if(*window_size > 0 && local_fetch() != 0){ //if window_size > 0 try local_fetch
-
-		} else 
+		if(local_fetch() != 0){}
+		else
 #endif
-		
+
 		if(fetch_internal() == 0) {
 #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
@@ -626,7 +594,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			goto end_loop;
 		}
-
 
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
@@ -646,6 +613,8 @@ void thread_loop(unsigned int thread_id) {
 		assertf(current_evt_state == NEW_EVT,    "got new_evt message %p\n", current_msg);
 #endif
 
+		if(__event_from == 2) statistics_post_th_data(tid, STAT_EVT_FROM_LOCAL_FETCH, 1);
+		if(__event_from == 1) statistics_post_th_data(tid, STAT_EVT_FROM_GLOBAL_FETCH, 1);
   #if ENFORCE_LOCALITY == 1
 		local_binding_push(current_lp);
   #endif
@@ -661,7 +630,7 @@ void thread_loop(unsigned int thread_id) {
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Executing without lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
-		if(current_cpu != sched_getcpu()){
+		if(current_cpu != ((unsigned int)sched_getcpu())){
 			printf("[%u] Current cpu changed form %u to %u\n", tid, current_cpu, sched_getcpu());
 		}
 	#endif
@@ -729,9 +698,7 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_lp_data(current_lp, STAT_EVENT_ANTI, 1);
 
 			delete(nbcalqueue, current_node);
-		  #if ENFORCE_LOCALITY == 0
 			unlock(current_lp);
-		  #endif
 			continue;
 		}
 
@@ -785,9 +752,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
 		///* PROCESS *///
 		executeEvent(current_lp, current_lvt, current_msg->type, current_msg->data, current_msg->data_size, LPS[current_lp]->current_base_pointer, safe, current_msg);
-				
-
-
 
 		///* FLUSH */// 
 		queue_deliver_msgs();
@@ -825,7 +789,6 @@ void thread_loop(unsigned int thread_id) {
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
-  #if ENFORCE_LOCALITY == 0
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
@@ -833,7 +796,6 @@ void thread_loop(unsigned int thread_id) {
 			printlp("ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp]);
 		}
 	#endif
-  #endif
 
 #if REPORT == 1
 		clock_timer_start(queue_op);
@@ -844,25 +806,6 @@ void thread_loop(unsigned int thread_id) {
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 		}
-
-#if ENFORCE_LOCALITY == 1
-		
-		time_interval_for_window_management = clock_timer_value(start_window_interval);
-		//time_interval_for_window_reset = clock_timer_value(start_window_reset);
-
-		compute_granularity(&w, sum_granularity, granularity_ref);
-		compute_throughput(&w, time_interval_for_window_management, comm_evts);
-
-		//compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
-
-		window_resizing(&w); //do resizing operations -- window might be enlarged or not
-		if (*window_size > 0 && reset_window(&w)) {
-			time_interval_for_window_reset = clock_timer_value(start_window_reset);
-			compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
-			//clock_timer_start(start_window_reset);
-		}
-		
-#endif
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
@@ -910,10 +853,6 @@ end_loop:
 #if REPORT == 1
 	statistics_post_th_data(tid, STAT_CLOCK_LOOP, clock_timer_value(main_loop_time));
 #endif
-
-/*#if ENFORCE_LOCALITY == 1
-	time_interval_for_window_management = clock_timer_value(start_window_interval);
-#endif*/
 
 
 	// Unmount statistical data

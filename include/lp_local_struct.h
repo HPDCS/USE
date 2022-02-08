@@ -8,14 +8,18 @@
 #include <stdbool.h>
 #include <simtypes.h>
 #include <prints.h>
+#include <hpipe.h>
+
+#define CURRENT_BINDING_SIZE       1
+
+#ifndef START_WINDOW
+#define START_WINDOW		   0.4
+#endif
+
+__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
 
 
-#define CURRENT_BINDING_SIZE       10
-
-__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = 0.1;
-//window w;
-
-// TODO revise implementation of pipe. Specification is: LIFO SET
+// TODO revise implementation of pipe. Specification is: LIFO SET - DONE
 // TODO implentation of dynamic MAX_LOCAL_DISTANCE_FROM_GVT
 // TODO hierarchical arragement of evicted pipe
 // TODO Implement a global fetch that might get already locked events -- DONE
@@ -39,6 +43,7 @@ typedef struct pipe{
 extern __thread pipe_t thread_locked_binding;
 extern __thread pipe_t thread_unlocked_binding;
 extern  __thread int local_schedule_count;
+extern pipe_t *evicted_pipe_pointers[HPIPE_INDEX1_LEN];
 
 
 /* init the structure */
@@ -69,10 +74,9 @@ void compute_distance_from_gvt(pipe_t *lp_local); //,event.timestamp, last_ooo.t
 void compute_hotness(pipe_t *lp_local); //, lp.delta_C, lp.delta_R);
 
 
-
 static inline void update_pipe_entry(pipe_t *pipe, unsigned int index, unsigned int lp, simtime_t next_ts){
   #if DEBUG==1
-    assertf(index >= pipe->size, "out-of-boundary insertion in pipe %llu %u\n", pipe->size, index);
+    assertf(index >= pipe->size, "out-of-boundary insertion in pipe %lu %u\n", pipe->size, index);
   #endif
     pipe->entries[index].lp = lp;
     pipe->entries[index].next_ts = INFTY;
@@ -99,7 +103,7 @@ static inline unsigned int insert_lp_in_pipe(pipe_t *pipe, unsigned int new_lp, 
     unsigned int last_inserted = pipe->next_to_insert == 0 ? (pipe->size-1) : (pipe->next_to_insert-1);
   #endif
     unsigned int oldest = (pipe->next_to_insert+1) % pipe->size;
-    size_t prev_idx = 0, idx = 0,  i = 0;
+    size_t idx = 0,  i = 0;
 
 
     //if the lp is in pipe it becomes a standing element
@@ -118,7 +122,7 @@ static inline unsigned int insert_lp_in_pipe(pipe_t *pipe, unsigned int new_lp, 
     next_to_insert = pipe->next_to_insert = idx;
 
   #if DEBUG == 1
-    assertf(idx != next_to_insert, "idx != next_to_insert %u %u\n", idx, next_to_insert); 
+    assertf(idx != next_to_insert, "idx != next_to_insert %lu %u\n", idx, next_to_insert); 
   #endif
     *entry_to_be_evicted = pipe->entries[next_to_insert];
     update_pipe_entry(pipe, next_to_insert, new_lp, next_ts);
@@ -159,43 +163,30 @@ static inline msg_t * find_next_event_from_lp(unsigned cur_lp) {
 @param: minimum_diff The minimum interval between next event and local gvt
 @param min_local_evt The next event to schedule of the best lp chosen
 */
-static inline void detect_best_event_to_schedule(pipe_t *pipe, unsigned int *min_lp, msg_t **min_local_evt) {
-
-    size_t i,idx;
-    size_t last_inserted = pipe->next_to_insert == 0 ? (pipe->size-1) : (pipe->next_to_insert-1);
-    msg_t *next_evt;
-    *min_lp = UNDEFINED_LP;
-    *min_local_evt = NULL;
-
-    simtime_t *window_size = &w.size;
-
-  #if VERBOSE == 1
-    printf("WINDOW SIZE %f\n", window_size);
-  #endif
-    
+static inline unsigned int detect_best_event_to_schedule(pipe_t *pipe) {
   #if DEBUG == 1
-    assertf(pipe != &thread_locked_binding, "trying to schedule from a non locked pipe%s", "\n");
+    assertf(!pipe, "trying to schedule from a %p pipe\n", pipe);
   #endif
-
+    size_t i,idx;
+    size_t next_to_insert = pipe->next_to_insert; 
+    size_t last_inserted = next_to_insert == 0 ? (pipe->size-1) : (next_to_insert-1);
+    unsigned int min_lp = UNDEFINED_LP;
+  
     idx = last_inserted;
     for(i=0;i<pipe->size;i++){
         unsigned int lp = pipe->entries[idx].lp; 
       #if DEBUG == 1
-        assertf(lp != UNDEFINED_LP && !haveLock(lp), "found %u in the locked pipe without lock\n", lp);
+        assertf(pipe == &thread_locked_binding && lp != UNDEFINED_LP && !haveLock(lp), "found %u in the locked pipe without lock\n", lp);
       #endif
         if(lp == UNDEFINED_LP) continue;
-        next_evt = find_next_event_from_lp(lp);
-        if(!next_evt) continue;
-
-        update_pipe_entry(pipe, idx, lp, next_evt->timestamp);
-        if(pipe->entries[idx].distance_curr_evt_from_gvt < *window_size){
-            *min_lp = lp;
-            *min_local_evt = next_evt;
+        if(pipe->entries[idx].distance_curr_evt_from_gvt < MAX_LOCAL_DISTANCE_FROM_GVT){
+            min_lp = lp;
             break;
         }
 
         idx = idx == 0 ? (pipe->size-1) : (idx-1);
     }
+    return min_lp;
 }
 
 #undef CURRENT_BINDING_SIZE

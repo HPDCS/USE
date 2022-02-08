@@ -2,6 +2,7 @@
 #include <lp_local_struct.h>
 #include <hpdcs_utils.h>
 #include <fetch.h>
+#include <pthread.h>
 
 #define MAX_EVENTS_FROM_LOCAL_SCHEDULER 100
 
@@ -9,11 +10,15 @@ __thread pipe_t thread_locked_binding;
 __thread pipe_t thread_unlocked_binding;
 __thread int local_schedule_count = 0;
 
+pipe_t *evicted_pipe_pointers[HPIPE_INDEX1_LEN];
 
+pthread_barrier_t local_schedule_init_barrier;
 
 void local_binding_init(){
     init_struct(&thread_locked_binding);
     init_struct(&thread_unlocked_binding);
+    evicted_pipe_pointers[current_cpu] = &thread_unlocked_binding; 
+    pthread_barrier_wait(&local_schedule_init_barrier);
 }
 
 void local_binding_push(unsigned int lp){
@@ -63,8 +68,10 @@ void local_binding_push(unsigned int lp){
 int local_fetch(){
     unsigned int min_lp; 
     int res = 0;
+    msg_t *next_evt;
     msg_t *min_local_evt, *local_next_evt;
     int current_state, valid, in_past;
+    size_t i;
     bool from_get_next_and_valid;
     if(local_schedule_count == MAX_EVENTS_FROM_LOCAL_SCHEDULER){
         local_schedule_count = 0;
@@ -75,13 +82,34 @@ int local_fetch(){
     min_lp = UNDEFINED_LP;
     from_get_next_and_valid = false;
 
+    // update local pipe
+    for(i=0;i<thread_locked_binding.size;i++){
+         unsigned int lp = thread_locked_binding.entries[i].lp; 
+      #if DEBUG == 1
+        assertf(lp != UNDEFINED_LP && !haveLock(lp), "found %u in the locked pipe without lock\n", lp);
+      #endif
+        if(lp == UNDEFINED_LP) continue;
+        next_evt = find_next_event_from_lp(lp);
+        if(!next_evt) continue;
+        update_pipe_entry(&thread_locked_binding, i, lp, next_evt->timestamp);
+    }
     //find the best event to schedule into pipe
-    detect_best_event_to_schedule(&thread_locked_binding, &min_lp, &min_local_evt);
+
+    min_lp = detect_best_event_to_schedule(&thread_locked_binding);
+    i = 0;
+    while(min_lp == UNDEFINED_LP && i<HPIPE_INDEX2_LEN){
+        pipe_t *pipe_to_check = evicted_pipe_pointers[hpipe_index1[current_cpu][i++]];
+        if(!pipe_to_check) continue;
+        min_lp = detect_best_event_to_schedule(pipe_to_check);
+        if(min_lp != UNDEFINED_LP && !tryLock(min_lp)) min_lp = UNDEFINED_LP;
+    }
     
     //NB if in the local pipe there is no event with distance < MAX we go in global queue
 
     if(min_lp != UNDEFINED_LP){
         // its time to run the get_next_and_valid
+        min_local_evt = find_next_event_from_lp(min_lp);
+        if(!min_local_evt) goto retry;
 
         valid = is_valid(min_local_evt);
         in_past = BEFORE_OR_CONCURRENT(min_local_evt, LPS[min_lp]->bound);

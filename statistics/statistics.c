@@ -223,6 +223,13 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_CLOCK_FETCH_UNSUCC:
 			stats[idx].clock_fetch_unsucc += value;
 			break;
+
+		case STAT_EVT_FROM_GLOBAL_FETCH:
+			stats[idx].events_from_global_index += value;
+			break;
+		case STAT_EVT_FROM_LOCAL_FETCH:
+			stats[idx].events_from_local_index += value;
+			break;
 		
 
 		default:
@@ -262,6 +269,8 @@ void gather_statistics() {
 		system_stats->events_fetched_unsucc+= thread_stats[i].events_fetched_unsucc;
 		system_stats->clock_fetch_unsucc   += thread_stats[i].clock_fetch_unsucc;
 		system_stats->events_get_next_fetch+= thread_stats[i].events_get_next_fetch;
+		system_stats->events_from_local_index += thread_stats[i].events_from_local_index;
+		system_stats->events_from_global_index += thread_stats[i].events_from_global_index;
 	}
 
 	system_stats->clock_prune /= system_stats->counter_prune;
@@ -384,6 +393,10 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("   Fetch failed.................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_fetched_unsucc, percentage(stats->events_fetched_unsucc, stats->events_fetched));
 	printf("   Avg node traversed during fetch..............: %12.2f\n", stats->events_get_next_fetch);
+	printf("   Fetch from global index......................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_from_global_index, percentage(stats->events_from_global_index, stats->events_from_global_index+stats->events_from_local_index));
+	printf("   Fetch from local index.......................: %12llu (%4.2f%%)\n",
+		(unsigned long long)stats->events_from_local_index, percentage(stats->events_from_local_index, stats->events_from_global_index+stats->events_from_local_index));
 	
 	printf("\n");
 	

@@ -204,7 +204,6 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
 
 
 
-
                                                     
 
 
