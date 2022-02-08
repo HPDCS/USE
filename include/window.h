@@ -8,16 +8,29 @@
 #include "timer.h"
 
 
+#define INIT_WINDOW_STEP 0.04
+#define DECREASE_PERC 0.05
+#define THROUGHPUT_DRIFT 0.05
+
+#define THROUGHPUT_UPPER_BOUND 0.9
+#define GRANULARITY_LOWER_BOUND 0.6
+#define GRANULARITY_UPPER_BOUND 1.4
+
+
 typedef struct window {
 
-	simtime_t size;
-	simtime_t time_interval;
-	simtime_t step;
-	double throughput;
-	double throughput_ref;
-	double thr_ratio;
-	double granularity; //granularity must be computed after execution of each event
-	double last_comm_rate;
+	simtime_t size; //window size
+	simtime_t time_interval; //observation interval
+	simtime_t step; //step of resizing operations
+
+	double throughput; //throughput
+	double throughput_ref; //reference throughput
+	double thr_ratio; //throughput ratio
+	double granularity_ratio; //granularity_ratio of events
+	double old_throughput; //previous throughput used for the resizing operation
+
+	double perc_increase; //percentage increase for enlarging the window
+	bool enlarged; //set to true if the window was enlarged, used for modifying perc_increase
 
 } window;
 
@@ -27,15 +40,17 @@ static inline void init_window(window *w) {
 
 	w->size = 0.0;
 
-	w->step = 0.1;
+	w->step = INIT_WINDOW_STEP; //tempo di interarrivo medio (per ora come costante)
 	w->time_interval = 0.0;
 
-	w->granularity = 0.0;
+	w->granularity_ratio = 0.0;
 	w->throughput = 0.0;
 	w->throughput_ref = 0.0;
 	w->thr_ratio = 0.0;
 
-	w->last_comm_rate = 0;
+	w->old_throughput = 0;
+	w->perc_increase = 1.0;
+	w->enlarged = false;
 
 }
 
@@ -47,7 +62,7 @@ static inline void init_window(window *w) {
 */
 static inline void compute_granularity(window *w, double sum_granularity, double granularity_ref) {
 
-	w->granularity = sum_granularity / granularity_ref; 
+	w->granularity_ratio = sum_granularity / granularity_ref; 
 
 } 
 
@@ -68,6 +83,11 @@ static inline void compute_throughput(window *w, simtime_t time_interval, unsign
 }
 
 
+/* The function computes the reference throughput for committed events 
+@param: w The window
+@param: comm_evts_ref The committed events counted from last window reset
+@param: time_interval The time observation period since the last window reset
+*/
 static inline void compute_throughput_ref(window *w, unsigned int comm_evts_ref, simtime_t time_interval) {
 
 	w->throughput_ref = comm_evts_ref/time_interval;
@@ -85,16 +105,16 @@ It returns true if the reset took place, false otherwise
 static inline bool reset_window(window *w) {
 
 	double throughput_ratio = w->throughput / w->throughput_ref;
-	double granularity = w->granularity;
+	double granularity_ratio = w->granularity_ratio;
 
-#if DEBUG == 1
+#if VERBOSE == 1
 	printf("THROUGHPUT RATIO %f \n", throughput_ratio);
 #endif
 
 	//check reset condition
-	if ((throughput_ratio < 0.9) || (((granularity > 0.6) && (granularity < 1.4)))) {
+	if ((throughput_ratio < THROUGHPUT_UPPER_BOUND) || (((granularity_ratio > GRANULARITY_LOWER_BOUND) && (granularity_ratio < GRANULARITY_UPPER_BOUND)))) {
 		w->size = 0.0; //reset
-		w->step = 0.1;
+		w->step = INIT_WINDOW_STEP;
 		return true; 
 	}
 
@@ -102,22 +122,35 @@ static inline bool reset_window(window *w) {
 }
 
 
+/*The function sets the new percentage for increasing the window
+@param: perc_increase The current percentage
+@param: enlarged Boolean value to signal a previous enlargement of the window
+*/
+static inline void compute_percentage(double *perc_increase, bool enlarged) {
+
+	*perc_increase = (enlarged) ? *perc_increase/2.0 : 1.0;
+
+}
+
 
 /* The function adapts the window size based on the committed events
 @param: w The window
 @param: comm_evts The committed events at the current observation time
 It returns 0 if the window was updated for the first time after a reset, 
-			  1 if the window was updated with a 50% increase
+			  1 if the window was enlarged
+			  2 if the window was decreased
 			 -1 if the window was not updated
 */
 static inline int window_resizing(window *w) {
 
-	double increase;
+	double increase, decrease;
 	int res = -1;
 
 	#if VERBOSE == 1
-		printf("COMM EVTS %f - LAST COMM EVTS %f \n", w->throughput, w->last_comm_rate);
+		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", w->throughput, w->old_throughput);
 	#endif
+
+	compute_percentage(&w->perc_increase, w->enlarged);
 
 	//first step increment if window size is zero
 	if (w->size == 0) {
@@ -126,18 +159,32 @@ static inline int window_resizing(window *w) {
 		return res;
 	}
 	
+	#if VERBOSE == 1
+		printf("window size before resizing %f\n", w->size);
+	#endif
 
-	//enlarge window after modifying the step of increase
-	if (w->throughput > w->last_comm_rate) {
-		increase = w->step*0.5;
+
+	//enlarge window if throughput increases
+	if ((w->throughput - w->old_throughput)/w->throughput >= THROUGHPUT_DRIFT) { 
+		increase = w->step*w->perc_increase;
 		w->step += increase;
 		w->size += w->step;
-		w->last_comm_rate = w->throughput;
+		w->enlarged = true;
 		res = 1;
+	} else {
+		decrease = w->step*DECREASE_PERC;
+		w->step -= decrease;
+		w->size -= w->step;
+		if (w->size < 0) w->size = INIT_WINDOW_STEP;
+		w->enlarged = false;
+		res = 2;
 	}
 
+	w->old_throughput = w->throughput;
+
+
 	#if VERBOSE == 1
-		printf("window size after increment %f\n", w->size);
+		printf("window size after resizing %f\n", w->size);
 	#endif
 	
 
