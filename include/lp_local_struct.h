@@ -10,9 +10,13 @@
 #include <prints.h>
 #include <hpipe.h>
 
-#define CURRENT_BINDING_SIZE       10
+#define CURRENT_BINDING_SIZE       1
 
-__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = 0.1;
+#ifndef START_WINDOW
+#define START_WINDOW		   0.4
+#endif
+
+__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
 
 
 // TODO revise implementation of pipe. Specification is: LIFO SET - DONE
