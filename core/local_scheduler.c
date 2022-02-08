@@ -98,7 +98,9 @@ int local_fetch(){
     min_lp = detect_best_event_to_schedule(&thread_locked_binding);
     i = 0;
     while(min_lp == UNDEFINED_LP && i<HPIPE_INDEX2_LEN){
-        min_lp = detect_best_event_to_schedule(evicted_pipe_pointers[hpipe_index1[current_cpu][i++]]);
+        pipe_t *pipe_to_check = evicted_pipe_pointers[hpipe_index1[current_cpu][i++]];
+        if(!pipe_to_check) continue;
+        min_lp = detect_best_event_to_schedule(pipe_to_check);
         if(min_lp != UNDEFINED_LP && !tryLock(min_lp)) min_lp = UNDEFINED_LP;
     }
     
