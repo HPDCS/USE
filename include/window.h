@@ -159,22 +159,20 @@ static inline int window_resizing(window *w) {
 		return res;
 	}
 	
-	#if VERBOSE == 1
+	#if DEBUG == 1
 		printf("window size before resizing %f\n", w->size);
 	#endif
 
 
 	//enlarge window if throughput increases
 	if ((w->throughput - w->old_throughput)/w->throughput >= THROUGHPUT_DRIFT) { 
-		increase = w->step*w->perc_increase;
-		w->step += increase;
-		w->size += w->step;
+		increase = w->step + w->step*w->perc_increase;
+		w->size += increase;
 		w->enlarged = true;
 		res = 1;
 	} else {
-		decrease = w->step*DECREASE_PERC;
-		w->step -= decrease;
-		w->size -= w->step;
+		decrease = w->step - w->step*DECREASE_PERC;
+		w->size -= decrease;
 		if (w->size < 0) w->size = INIT_WINDOW_STEP;
 		w->enlarged = false;
 		res = 2;
@@ -183,7 +181,7 @@ static inline int window_resizing(window *w) {
 	w->old_throughput = w->throughput;
 
 
-	#if VERBOSE == 1
+	#if DEBUG == 1
 		printf("window size after resizing %f\n", w->size);
 	#endif
 	
