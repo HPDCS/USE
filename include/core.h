@@ -110,16 +110,6 @@ extern __thread unsigned int current_numa_node;
 extern __thread unsigned int current_cpu;
 extern __thread int __event_from;
 
-#if ENFORCE_LOCALITY == 1
-extern window w;
-extern __thread unsigned int comm_evts;
-extern __thread simtime_t sum_granularity;
-extern __thread unsigned int comm_evts_ref;
-extern __thread simtime_t granularity_ref;
-
-extern __thread clock_timer start_window_interval; 
-extern __thread stat64_t time_interval_for_window_management;
-#endif
 
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
@@ -138,6 +128,19 @@ extern unsigned int sec_stop;
 /* Number of numa nodes on the current machine */
 extern unsigned int num_numa_nodes;
 extern bool numa_available_bool;
+
+#if ENFORCE_LOCALITY == 1
+extern window w;
+extern __thread simtime_t *window_size;
+
+extern __thread unsigned int comm_evts;
+extern __thread simtime_t sum_granularity;
+extern unsigned int comm_evts_ref;
+extern __thread simtime_t granularity_ref;
+
+extern __thread clock_timer start_window_interval; 
+extern __thread stat64_t time_interval_for_window_management;
+#endif
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
