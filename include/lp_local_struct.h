@@ -17,6 +17,7 @@
 #endif
 
 __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
+__thread simtime_t *window_size = &w.size;
 
 
 // TODO revise implementation of pipe. Specification is: LIFO SET - DONE
@@ -179,7 +180,7 @@ static inline unsigned int detect_best_event_to_schedule(pipe_t *pipe) {
         assertf(pipe == &thread_locked_binding && lp != UNDEFINED_LP && !haveLock(lp), "found %u in the locked pipe without lock\n", lp);
       #endif
         if(lp == UNDEFINED_LP) continue;
-        if(pipe->entries[idx].distance_curr_evt_from_gvt < MAX_LOCAL_DISTANCE_FROM_GVT){
+        if(pipe->entries[idx].distance_curr_evt_from_gvt < *window_size){
             min_lp = lp;
             break;
         }

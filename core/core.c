@@ -111,6 +111,20 @@ pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
 unsigned int sec_stop = 0;
 unsigned long long *sim_ended;
 
+#if ENFORCE_LOCALITY == 1
+window w;
+__thread simtime_t *window_size;
+
+__thread simtime_t sum_granularity;
+__thread simtime_t granularity_ref;
+
+
+__thread clock_timer start_window_reset;
+__thread clock_timer start_window_interval;
+__thread stat64_t time_interval_for_window_management;
+__thread stat64_t time_interval_for_window_reset;
+#endif
+
 
 unsigned int num_numa_nodes;
 bool numa_available_bool;
@@ -490,6 +504,12 @@ void init_simulation(unsigned int thread_id){
 	set_affinity(tid);
   #if ENFORCE_LOCALITY == 1
 	local_binding_init();
+	comm_evts = 0;
+	sum_granularity = 0.0;
+	comm_evts_ref = 0;
+	granularity_ref = 0.0;
+	init_window(&w);
+	window_size = &w.size;
   #endif
 	
 }
@@ -528,6 +548,15 @@ stat64_t execute_time;
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
 		}
+#endif
+
+#if ENFORCE_LOCALITY == 1
+		//take execute_time to update granularity
+		execute_time = clock_timer_value(event_processing_timer);
+
+		sum_granularity += execute_time; //devo saltare le esecuzioni silenti?
+		granularity_ref += execute_time;
+		
 #endif
 
 #if REVERSIBLE == 1
@@ -577,8 +606,12 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	__event_from = 0;
 #if ENFORCE_LOCALITY == 1
-		if(local_fetch() != 0){}
-		else
+		//start timer for window management
+		if (*window_size == 0) clock_timer_start(start_window_reset);
+		clock_timer_start(start_window_interval);
+		if(*window_size > 0 && local_fetch() != 0){ //if window_size > 0 try local_fetch
+
+		} else 
 #endif
 
 		if(fetch_internal() == 0) {
@@ -806,6 +839,25 @@ void thread_loop(unsigned int thread_id) {
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 		}
+
+
+#if ENFORCE_LOCALITY == 1
+		
+		time_interval_for_window_management = clock_timer_value(start_window_interval);
+
+		compute_granularity(&w, sum_granularity, granularity_ref);
+		compute_throughput(&w, time_interval_for_window_management, comm_evts);
+
+		//TODO: aggregate per-thread throughput and granularity values
+		
+		window_resizing(&w); //do resizing operations -- window might be enlarged or not
+		if (*window_size > 0 && reset_window(&w)) {
+			time_interval_for_window_reset = clock_timer_value(start_window_reset);
+			compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
+			//clock_timer_start(start_window_reset);
+		}
+		
+#endif
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
