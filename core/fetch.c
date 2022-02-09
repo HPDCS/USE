@@ -110,7 +110,6 @@
 
 #if ENFORCE_LOCALITY == 1
 __thread unsigned int comm_evts;
-__thread unsigned int comm_evts_ref;
 #endif
 
 
@@ -132,7 +131,6 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
  #if ENFORCE_LOCALITY == 1
     //increment commit events variable
     comm_evts++;
-    comm_evts_ref++;
  #endif
     
     if(node == NULL){
