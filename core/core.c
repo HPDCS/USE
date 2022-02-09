@@ -113,18 +113,21 @@ unsigned long long *sim_ended;
 
 #if ENFORCE_LOCALITY == 1
 window w;
-__thread simtime_t *window_size;
+unsigned int *comm_evts_array;
+double *granularity_array;
+int counter_threads;
 
 __thread simtime_t sum_granularity;
 __thread simtime_t granularity_ref;
-
+unsigned int comm_evts_ref;
 
 __thread clock_timer start_window_reset;
 __thread clock_timer start_window_interval;
 __thread stat64_t time_interval_for_window_management;
 __thread stat64_t time_interval_for_window_reset;
-#endif
 
+pthread_mutex_t stat_mutex;
+#endif
 
 unsigned int num_numa_nodes;
 bool numa_available_bool;
@@ -481,6 +484,13 @@ void init_simulation(unsigned int thread_id){
 		}
               #if ENFORCE_LOCALITY==1
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
+		init_window(&w);
+		comm_evts_ref = 0;
+		
+		comm_evts_array = (unsigned int *) calloc(n_cores, sizeof(unsigned int));
+		pthread_mutex_init(&stat_mutex, NULL);
+		counter_threads = 0;
+		//granularity_array = (double *) calloc(n_cores, sizeof(double));
               #endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
@@ -506,9 +516,7 @@ void init_simulation(unsigned int thread_id){
 	local_binding_init();
 	comm_evts = 0;
 	sum_granularity = 0.0;
-	comm_evts_ref = 0;
 	granularity_ref = 0.0;
-	init_window(&w);
 	window_size = &w.size;
   #endif
 	
@@ -554,8 +562,10 @@ stat64_t execute_time;
 		//take execute_time to update granularity
 		execute_time = clock_timer_value(event_processing_timer);
 
-		sum_granularity += execute_time; //devo saltare le esecuzioni silenti?
-		granularity_ref += execute_time;
+		if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC) {
+			sum_granularity += execute_time; 
+			granularity_ref += execute_time;
+		}
 		
 #endif
 
@@ -606,6 +616,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	__event_from = 0;
 #if ENFORCE_LOCALITY == 1
+
 		//start timer for window management
 		if (*window_size == 0) clock_timer_start(start_window_reset);
 		clock_timer_start(start_window_interval);
@@ -845,17 +856,38 @@ void thread_loop(unsigned int thread_id) {
 		
 		time_interval_for_window_management = clock_timer_value(start_window_interval);
 
-		compute_granularity(&w, sum_granularity, granularity_ref);
+		compute_granularity_ratio(&w, sum_granularity, granularity_ref);
 		compute_throughput(&w, time_interval_for_window_management, comm_evts);
 
-		//TODO: aggregate per-thread throughput and granularity values
+		comm_evts_array[tid] = comm_evts; //save committed events per-thread
+		//granularity_array[tid] = sum_granularity;
 		
-		window_resizing(&w); //do resizing operations -- window might be enlarged or not
-		if (*window_size > 0 && reset_window(&w)) {
-			time_interval_for_window_reset = clock_timer_value(start_window_reset);
-			compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
-			//clock_timer_start(start_window_reset);
+		window_resizing(&w); //do resizing operations -- window might be enlarged, decreased or stay the same
+
+		pthread_mutex_lock(&stat_mutex);
+		counter_threads++;
+		if (counter_threads == n_cores) {
+
+			for (int j = 0; j < n_cores; j++) { 
+				//comm_evts_ref = __sync_add_and_fetch(&comm_evts_ref, comm_evts_array[j]);
+				comm_evts_ref += comm_evts_array[j];
+				//granularity_ref += granularity_array[j];
+			}
+
+			if (*window_size > 0 && reset_window(&w)) {
+				time_interval_for_window_reset = clock_timer_value(start_window_reset);
+				compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
+				//__sync_lock_test_and_set(&comm_evts_ref,0);
+				comm_evts_ref = 0;
+			}
+			counter_threads = 0;
+
 		}
+		pthread_mutex_unlock(&stat_mutex);
+
+		
+
+		
 		
 #endif
 
@@ -887,7 +919,7 @@ end_loop:
 		
 		//LOCAL LISTS PRUNING
 		nbc_prune();
-		
+
 		//PRINT REPORT
 #if VERBOSE > 0
 		if(tid == MAIN_PROCESS) {
