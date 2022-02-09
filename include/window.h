@@ -6,6 +6,7 @@
 #include <simtypes.h>
 #include <stdbool.h>
 #include "timer.h"
+#include <math.h>
 
 
 #define INIT_WINDOW_STEP 0.04
@@ -23,7 +24,7 @@ typedef struct window {
 	simtime_t time_interval; //observation interval
 	simtime_t step; //step of resizing operations
 
-	double throughput; //throughput
+	double throughput; //throughput per-thread
 	double throughput_ref; //reference throughput
 	double thr_ratio; //throughput ratio
 	double granularity_ratio; //granularity_ratio of events
@@ -60,7 +61,7 @@ static inline void init_window(window *w) {
 @param: sum_granularity The sum of granularities of events
 @param: granularity_ref The granularity of events computed from last window reset
 */
-static inline void compute_granularity(window *w, double sum_granularity, double granularity_ref) {
+static inline void compute_granularity_ratio(window *w, double sum_granularity, double granularity_ref) {
 
 	w->granularity_ratio = sum_granularity / granularity_ref; 
 
@@ -107,15 +108,15 @@ static inline bool reset_window(window *w) {
 	double throughput_ratio = w->throughput / w->throughput_ref;
 	double granularity_ratio = w->granularity_ratio;
 
-#if VERBOSE == 1
-	printf("THROUGHPUT RATIO %f \n", throughput_ratio);
+#if DEBUG == 1
+	printf("THROUGHPUT RATIO %f \t GRANULARITY RATIO %f \n", throughput_ratio, granularity_ratio);
 #endif
 
 	//check reset condition
 	if ((throughput_ratio < THROUGHPUT_UPPER_BOUND) || (((granularity_ratio > GRANULARITY_LOWER_BOUND) && (granularity_ratio < GRANULARITY_UPPER_BOUND)))) {
 		w->size = 0.0; //reset
 		w->step = INIT_WINDOW_STEP;
-		return true; 
+		return true;
 	}
 
 	return false;
@@ -159,18 +160,19 @@ static inline int window_resizing(window *w) {
 		return res;
 	}
 	
-	#if DEBUG == 1
+	#if VERBOSE == 1
 		printf("window size before resizing %f\n", w->size);
 	#endif
 
+	//se ho tanti aumenti di meno del 5% e quindi non incremento mai la finestra?
 
 	//enlarge window if throughput increases
-	if ((w->throughput - w->old_throughput)/w->throughput >= THROUGHPUT_DRIFT) { 
+	if ((w->throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
 		increase = w->step + w->step*w->perc_increase;
 		w->size += increase;
 		w->enlarged = true;
 		res = 1;
-	} else {
+	} else if (abs((w->throughput - w->old_throughput)/w->old_throughput) >= THROUGHPUT_DRIFT) {
 		decrease = w->step - w->step*DECREASE_PERC;
 		w->size -= decrease;
 		if (w->size < 0) w->size = INIT_WINDOW_STEP;
@@ -181,7 +183,7 @@ static inline int window_resizing(window *w) {
 	w->old_throughput = w->throughput;
 
 
-	#if DEBUG == 1
+	#if VERBOSE == 1
 		printf("window size after resizing %f\n", w->size);
 	#endif
 	
