@@ -21,7 +21,6 @@
 typedef struct window {
 
 	simtime_t size; //window size
-	simtime_t time_interval; //observation interval
 	simtime_t step; //step of resizing operations
 
 	double throughput; //throughput per-thread
@@ -42,7 +41,6 @@ static inline void init_window(window *w) {
 	w->size = 0.0;
 
 	w->step = INIT_WINDOW_STEP; //tempo di interarrivo medio (per ora come costante)
-	w->time_interval = 0.0;
 
 	w->granularity_ratio = 0.0;
 	w->throughput = 0.0;
@@ -65,7 +63,7 @@ static inline void compute_granularity_ratio(window *w, double sum_granularity, 
 
 	w->granularity_ratio = sum_granularity / granularity_ref; 
 
-} 
+}
 
 
 /* The function computes the throughput for committed events 
