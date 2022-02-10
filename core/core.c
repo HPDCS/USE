@@ -115,7 +115,7 @@ unsigned long long *sim_ended;
 window w;
 unsigned int *comm_evts_array;
 double *granularity_array;
-int counter_threads;
+unsigned int counter_threads;
 
 __thread simtime_t sum_granularity;
 __thread simtime_t granularity_ref;
@@ -486,11 +486,10 @@ void init_simulation(unsigned int thread_id){
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
 		init_window(&w);
 		comm_evts_ref = 0;
-		
-		comm_evts_array = (unsigned int *) calloc(n_cores, sizeof(unsigned int));
+		//comm_evts_array = (unsigned int *) calloc(n_cores, sizeof(unsigned int));
 		pthread_mutex_init(&stat_mutex, NULL);
 		counter_threads = 0;
-		//granularity_array = (double *) calloc(n_cores, sizeof(double));
+		granularity_array = (double *) calloc(n_cores, sizeof(double));
               #endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
@@ -514,9 +513,9 @@ void init_simulation(unsigned int thread_id){
 	set_affinity(tid);
   #if ENFORCE_LOCALITY == 1
 	local_binding_init();
-	comm_evts = 0;
+	//comm_evts = 0;
 	sum_granularity = 0.0;
-	granularity_ref = 0.0;
+	granularity_ref = 1.0;
 	window_size = &w.size;
   #endif
 	
@@ -545,6 +544,7 @@ stat64_t execute_time;
 		clock_timer_start(event_processing_timer);
 #endif
 
+
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 
 #if REPORT == 1
@@ -558,16 +558,6 @@ stat64_t execute_time;
 		}
 #endif
 
-#if ENFORCE_LOCALITY == 1
-		//take execute_time to update granularity
-		execute_time = clock_timer_value(event_processing_timer);
-
-		if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC) {
-			sum_granularity += execute_time; 
-			granularity_ref += execute_time;
-		}
-		
-#endif
 
 #if REVERSIBLE == 1
 	}
@@ -854,30 +844,37 @@ void thread_loop(unsigned int thread_id) {
 
 #if ENFORCE_LOCALITY == 1
 		
+
 		time_interval_for_window_management = clock_timer_value(start_window_interval);
 
-		compute_granularity_ratio(&w, sum_granularity, granularity_ref);
-		compute_throughput(&w, time_interval_for_window_management, comm_evts);
-
-		comm_evts_array[tid] = comm_evts; //save committed events per-thread
-		//granularity_array[tid] = sum_granularity;
+		sum_granularity += lp_stats[tid].clock_event;
+		granularity_ref += lp_stats[tid].clock_event;
 		
+		compute_throughput(&w, time_interval_for_window_management, thread_stats[tid].events_committed);
+		
+		//must be done after window has been reset
+		compute_granularity_ratio(&w, sum_granularity, granularity_ref);
+
+		//comm_evts_array[tid] = comm_evts; //save committed events per-thread
+		granularity_array[tid] = sum_granularity;
+
 		window_resizing(&w); //do resizing operations -- window might be enlarged, decreased or stay the same
 
 		pthread_mutex_lock(&stat_mutex);
 		counter_threads++;
 		if (counter_threads == n_cores) {
 
-			for (int j = 0; j < n_cores; j++) { 
-				//comm_evts_ref = __sync_add_and_fetch(&comm_evts_ref, comm_evts_array[j]);
-				comm_evts_ref += comm_evts_array[j];
-				//granularity_ref += granularity_array[j];
-			}
+			if (reset_window(&w)) {
 
-			if (*window_size > 0 && reset_window(&w)) {
+				//aggregate per-thread values
+				for (int j = 0; j < n_cores; j++) { 
+					comm_evts_ref += thread_stats[j].events_committed; //comm_evts_array[j];
+					//granularity_ref += granularity_array[j];
+				}
+
 				time_interval_for_window_reset = clock_timer_value(start_window_reset);
+
 				compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
-				//__sync_lock_test_and_set(&comm_evts_ref,0);
 				comm_evts_ref = 0;
 			}
 			counter_threads = 0;
