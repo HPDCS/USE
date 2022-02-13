@@ -108,9 +108,6 @@
 #define OPTIMISTIC_MODE ONE_EVT_PER_LP
 #endif
 
-/*#if ENFORCE_LOCALITY == 1
-__thread unsigned int comm_evts;
-#endif*/
 
 
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
@@ -128,10 +125,6 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
     
     event->monitor = EVT_SAFE;
 
- /*#if ENFORCE_LOCALITY == 1
-    //increment commit events variable
-    comm_evts++;
- #endif*/
     
     if(node == NULL){
         return false;
