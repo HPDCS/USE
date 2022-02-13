@@ -10,7 +10,7 @@
 
 
 #define INIT_WINDOW_STEP 0.04
-#define DECREASE_PERC 0.05
+#define DECREASE_PERC 0.02
 #define THROUGHPUT_DRIFT 0.05
 
 #define THROUGHPUT_UPPER_BOUND 0.9
@@ -19,6 +19,8 @@
 
 
 typedef struct window {
+
+	int enabled; //flag to enable window management (initially zero)
 
 	simtime_t size; //window size
 	simtime_t step; //step of resizing operations
@@ -38,16 +40,18 @@ typedef struct window {
 /* init window parameters*/
 static inline void init_window(window *w) {
 
+	w->enabled = 0;
+
 	w->size = 0.0;
 
 	w->step = INIT_WINDOW_STEP; //tempo di interarrivo medio (per ora come costante)
 
 	w->granularity_ratio = 0.0;
 	w->throughput = 0.0;
-	w->throughput_ref = 0.0;
+	w->throughput_ref = 1.0;
 	w->thr_ratio = 0.0;
 
-	w->old_throughput = 0;
+	w->old_throughput = 0.0;
 	w->perc_increase = 1.0;
 	w->enlarged = false;
 
@@ -111,7 +115,7 @@ static inline bool reset_window(window *w) {
 #endif
 
 	//check reset condition
-	if ((throughput_ratio < THROUGHPUT_UPPER_BOUND) || (((granularity_ratio > GRANULARITY_LOWER_BOUND) && (granularity_ratio < GRANULARITY_UPPER_BOUND)))) {
+	if ( (throughput_ratio < THROUGHPUT_UPPER_BOUND) || ((granularity_ratio > GRANULARITY_LOWER_BOUND) && (granularity_ratio < GRANULARITY_UPPER_BOUND)) ) {
 		w->size = 0.0; //reset
 		w->step = INIT_WINDOW_STEP;
 		return true;
@@ -145,27 +149,29 @@ static inline int window_resizing(window *w) {
 	double increase, decrease;
 	int res = -1;
 
+
 	#if VERBOSE == 1
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", w->throughput, w->old_throughput);
 	#endif
 
 	compute_percentage(&w->perc_increase, w->enlarged);
 
-	//first step increment if window size is zero
-	if (w->size == 0) {
-		w->size += w->step;
-		res = 0;
-		return res;
-	}
-	
 	#if VERBOSE == 1
 		printf("window size before resizing %f\n", w->size);
 	#endif
 
-	//se ho tanti aumenti di meno del 5% e quindi non incremento mai la finestra?
 
-	//enlarge window if throughput increases
-	if ((w->throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
+	//first step increment if window size is zero
+	if (w->size == 0) {
+		w->size += w->step;
+		res = 0;
+		w->old_throughput = w->throughput;
+		return res;
+	}
+	
+
+	//enlarge window if throughput increases of a certain percentage
+	if (w->old_throughput != 0.0 && (w->throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
 		increase = w->step + w->step*w->perc_increase;
 		w->size += increase;
 		w->enlarged = true;
