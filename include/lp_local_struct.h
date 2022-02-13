@@ -17,7 +17,7 @@
 #endif
 
 __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
-__thread simtime_t *window_size;
+simtime_t *window_size;
 
 
 // TODO revise implementation of pipe. Specification is: LIFO SET - DONE
@@ -105,6 +105,7 @@ static inline unsigned int insert_lp_in_pipe(pipe_t *pipe, unsigned int new_lp, 
   #endif
     unsigned int oldest = (pipe->next_to_insert+1) % pipe->size;
     size_t idx = 0,  i = 0;
+
 
     //if the lp is in pipe it becomes a standing element
 
