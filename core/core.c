@@ -118,13 +118,16 @@ double *granularity_array;
 unsigned int counter_threads;
 
 __thread simtime_t sum_granularity;
-__thread simtime_t granularity_ref;
-unsigned int comm_evts_ref;
 
-__thread clock_timer start_window_reset;
-__thread clock_timer start_window_interval;
-__thread stat64_t time_interval_for_window_management;
-__thread stat64_t time_interval_for_window_reset;
+double old_thr;
+simtime_t granularity_ref;
+unsigned int comm_evts_ref;
+unsigned int comm_evts;
+
+clock_timer start_window_reset;
+__thread clock_timer start_metrics_interval;
+__thread stat64_t time_interval_for_metrics_comput;
+stat64_t time_interval_for_window_reset;
 
 pthread_mutex_t stat_mutex;
 #endif
@@ -486,9 +489,13 @@ void init_simulation(unsigned int thread_id){
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
 		init_window(&w);
 		comm_evts_ref = 0;
+		comm_evts = 0;
+		window_size = &w.size;
 		//comm_evts_array = (unsigned int *) calloc(n_cores, sizeof(unsigned int));
 		pthread_mutex_init(&stat_mutex, NULL);
 		counter_threads = 0;
+		granularity_ref = 1.0;
+		old_thr = 0.0;
 		granularity_array = (double *) calloc(n_cores, sizeof(double));
               #endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
@@ -513,10 +520,7 @@ void init_simulation(unsigned int thread_id){
 	set_affinity(tid);
   #if ENFORCE_LOCALITY == 1
 	local_binding_init();
-	//comm_evts = 0;
 	sum_granularity = 0.0;
-	granularity_ref = 1.0;
-	window_size = &w.size;
   #endif
 	
 }
@@ -608,13 +612,20 @@ void thread_loop(unsigned int thread_id) {
 #if ENFORCE_LOCALITY == 1
 
 		//start timer for window management
-		if (*window_size == 0) clock_timer_start(start_window_reset);
-		clock_timer_start(start_window_interval);
-		if(*window_size > 0 && local_fetch() != 0){ //if window_size > 0 try local_fetch
+		clock_timer_start(start_metrics_interval);
 
+		//TODO: non-blocking approach!!!!
+		pthread_mutex_lock(&stat_mutex);
+		if (!w.enabled && *window_size == 0) clock_timer_start(start_window_reset);
+		if (*window_size > 0) {
+			pthread_mutex_unlock(&stat_mutex);
+
+			if(local_fetch() != 0){ //if window_size > 0 try local_fetch
+
+			}
 		} else 
 #endif
-
+		pthread_mutex_unlock(&stat_mutex);
 		if(fetch_internal() == 0) {
 #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
@@ -844,45 +855,66 @@ void thread_loop(unsigned int thread_id) {
 
 #if ENFORCE_LOCALITY == 1
 		
+		//time_interval_for_metrics_comput is a __thread variable
+		time_interval_for_metrics_comput = clock_timer_value(start_metrics_interval);
 
-		time_interval_for_window_management = clock_timer_value(start_window_interval);
+		//sum_granularity is a __thread variable		
+		sum_granularity += lp_stats[current_lp].clock_event;
 
-		sum_granularity += lp_stats[tid].clock_event;
-		granularity_ref += lp_stats[tid].clock_event;
-		
-		compute_throughput(&w, time_interval_for_window_management, thread_stats[tid].events_committed);
-		
-		//must be done after window has been reset
-		compute_granularity_ratio(&w, sum_granularity, granularity_ref);
 
-		//comm_evts_array[tid] = comm_evts; //save committed events per-thread
+		//comm_evts is a global variable
+		__sync_fetch_and_add(&comm_evts, thread_stats[tid].events_committed);
+
+		//granularity_array is a global variable
 		granularity_array[tid] = sum_granularity;
 
-		window_resizing(&w); //do resizing operations -- window might be enlarged, decreased or stay the same
-
+		//TODO: non-blocking approach!!!
 		pthread_mutex_lock(&stat_mutex);
-		counter_threads++;
-		if (counter_threads == n_cores) {
 
-			if (reset_window(&w)) {
+		if (counter_threads == 0) { //just one thread executes the underlying block
+
+			//check if it is necessary to enable window operations
+			//by comparing thr currently with the previous one
+			if ( !(w.enabled) && (old_thr != 0.0) && ( (comm_evts/time_interval_for_metrics_comput - old_thr)/old_thr) >= 0.01 ) {
+				__sync_bool_compare_and_swap(&w.enabled, 0, 1);
+			}
+			old_thr = comm_evts/time_interval_for_metrics_comput;
+			
+
+			if (&w.enabled) {
+
+				compute_throughput(&w, time_interval_for_metrics_comput, comm_evts);
+				__sync_lock_test_and_set(&comm_evts, 0);
+				window_resizing(&w); //do resizing operations -- window might be enlarged, decreased or stay the same
+
 
 				//aggregate per-thread values
-				for (int j = 0; j < n_cores; j++) { 
-					comm_evts_ref += thread_stats[j].events_committed; //comm_evts_array[j];
-					//granularity_ref += granularity_array[j];
+				for (int j = 0; j < n_cores; j++) {
+					//comm_evts_ref and granularity_ref are global variable
+					//__sync_fetch_and_add(&comm_evts_ref, thread_stats[j].events_committed);
+					comm_evts_ref += thread_stats[j].events_committed;
+					granularity_ref += granularity_array[j];
 				}
 
-				time_interval_for_window_reset = clock_timer_value(start_window_reset);
-
+				//time_interval_for_window_reset is a global variable
+				/*time_interval_for_window_reset = clock_timer_value(start_window_reset);
 				compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
-				comm_evts_ref = 0;
+				compute_granularity_ratio(&w, sum_granularity, granularity_ref);*/
+
+				if (reset_window(&w)) {
+
+					time_interval_for_window_reset = clock_timer_value(start_window_reset);
+					compute_throughput_ref(&w, comm_evts_ref, time_interval_for_window_reset);
+					compute_granularity_ratio(&w, sum_granularity, granularity_ref);
+					comm_evts_ref = 0;
+					granularity_ref = 1.0;
+					clock_timer_start(start_window_reset);
+				}
 			}
-			counter_threads = 0;
 
 		}
+		counter_threads = (counter_threads +1) % n_cores;
 		pthread_mutex_unlock(&stat_mutex);
-
-		
 
 		
 		
