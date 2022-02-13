@@ -131,15 +131,7 @@ extern bool numa_available_bool;
 
 #if ENFORCE_LOCALITY == 1
 extern window w;
-extern __thread simtime_t *window_size;
-
-//extern __thread unsigned int comm_evts;
-//extern __thread simtime_t sum_granularity;
-//extern unsigned int comm_evts_ref;
-//extern __thread simtime_t granularity_ref;
-
-//extern __thread clock_timer start_window_interval; 
-//extern __thread stat64_t time_interval_for_window_management;
+extern simtime_t *window_size;
 #endif
 
 //Esegue il loop del singolo thread
