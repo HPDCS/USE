@@ -6,8 +6,8 @@
 
 #define MAX_EVENTS_FROM_LOCAL_SCHEDULER 100
 
-__thread pipe_t thread_locked_binding;
-__thread pipe_t thread_unlocked_binding;
+__thread pipe_t *thread_locked_binding;
+__thread pipe_t *thread_unlocked_binding;
 __thread int local_schedule_count = 0;
 
 pipe_t *evicted_pipe_pointers[HPIPE_INDEX1_LEN];
@@ -15,9 +15,9 @@ pipe_t *evicted_pipe_pointers[HPIPE_INDEX1_LEN];
 pthread_barrier_t local_schedule_init_barrier;
 
 void local_binding_init(){
-    init_struct(&thread_locked_binding);
-    init_struct(&thread_unlocked_binding);
-    evicted_pipe_pointers[current_cpu] = &thread_unlocked_binding; 
+    thread_locked_binding   = init_struct(CURRENT_BINDING_SIZE);
+    thread_unlocked_binding = init_struct(EVICTED_BINDING_SIZE);
+    evicted_pipe_pointers[current_cpu] = thread_unlocked_binding; 
     pthread_barrier_wait(&local_schedule_init_barrier);
 }
 
@@ -37,11 +37,11 @@ void local_binding_push(unsigned int lp){
     }
 
     //insertion into pipe
-    lp_to_evict = insert_lp_in_pipe(&thread_locked_binding, lp, next_ts, &entry_to_be_evicted);
+    lp_to_evict = insert_lp_in_pipe(thread_locked_binding, lp, next_ts, &entry_to_be_evicted);
   #if VERBOSE == 1
     printf("[%u] after insertion: \n", tid);
-    for (size_t j = 0; j < thread_locked_binding.size; j++) {
-        printf("|%d| ", thread_locked_binding.entries[j].lp);
+    for (size_t j = 0; j < thread_locked_binding->size; j++) {
+        printf("|%d| ", thread_locked_binding->entries[j].lp);
     }
     printf("\n");
     printf("[%u] lp_to_evict %u\n", tid, lp_to_evict);
@@ -52,11 +52,11 @@ void local_binding_push(unsigned int lp){
         LPS[lp_to_evict]->wt_binding = UNDEFINED_WT;
         unlock(lp_to_evict);
         next_ts = entry_to_be_evicted.next_ts;
-        insert_lp_in_pipe(&thread_unlocked_binding, lp_to_evict, next_ts, &entry_to_be_evicted);
+        insert_lp_in_pipe(thread_unlocked_binding, lp_to_evict, next_ts, &entry_to_be_evicted);
       #if VERBOSE == 1
         printf("[%u] after eviction: \n", tid);
-        for (size_t j = 0; j < thread_unlocked_binding.size; j++) {
-            printf("|%d| ", thread_unlocked_binding.entries[j].lp);
+        for (size_t j = 0; j < thread_unlocked_binding->size; j++) {
+            printf("|%d| ", thread_unlocked_binding->entries[j].lp);
         }
         printf("\n");
       #endif
@@ -83,19 +83,19 @@ int local_fetch(){
     from_get_next_and_valid = false;
 
     // update local pipe
-    for(i=0;i<thread_locked_binding.size;i++){
-         unsigned int lp = thread_locked_binding.entries[i].lp; 
+    for(i=0;i<thread_locked_binding->size;i++){
+         unsigned int lp = thread_locked_binding->entries[i].lp; 
       #if DEBUG == 1
         assertf(lp != UNDEFINED_LP && !haveLock(lp), "found %u in the locked pipe without lock\n", lp);
       #endif
         if(lp == UNDEFINED_LP) continue;
         next_evt = find_next_event_from_lp(lp);
         if(!next_evt) continue;
-        update_pipe_entry(&thread_locked_binding, i, lp, next_evt->timestamp);
+        update_pipe_entry(thread_locked_binding, i, lp, next_evt->timestamp);
     }
     //find the best event to schedule into pipe
 
-    min_lp = detect_best_event_to_schedule(&thread_locked_binding);
+    min_lp = detect_best_event_to_schedule(thread_locked_binding);
     i = 0;
     while(min_lp == UNDEFINED_LP && i<HPIPE_INDEX2_LEN){
         pipe_t *pipe_to_check = evicted_pipe_pointers[hpipe_index1[current_cpu][i++]];
