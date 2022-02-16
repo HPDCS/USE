@@ -36,6 +36,8 @@ typedef struct window {
 
 } window;
 
+extern window w;
+
 
 /* init window parameters*/
 static inline void init_window(window *w) {
@@ -105,17 +107,20 @@ static inline void compute_throughput_ref(window *w, unsigned int comm_evts_ref,
 @param: w The window
 It returns true if the reset took place, false otherwise
 */
-static inline bool reset_window(window *w) {
+static inline bool reset_window(window *w, double thr_ratio, double avg_granularity_ratio) {
 
-	double throughput_ratio = w->throughput / w->throughput_ref;
-	double granularity_ratio = w->granularity_ratio;
 
-#if DEBUG == 1
-	printf("THROUGHPUT RATIO %f \t GRANULARITY RATIO %f \n", throughput_ratio, granularity_ratio);
+#if VERBOSE == 1
+	printf("THROUGHPUT RATIO %f \t GRANULARITY RATIO %f \n", thr_ratio, avg_granularity_ratio);
+
+
+	printf("thr_ratio < THROUGHPUT_UPPER_BOUND %d\n", thr_ratio < THROUGHPUT_UPPER_BOUND);
+	printf("(avg_granularity_ratio > GRANULARITY_LOWER_BOUND) %d\n", (avg_granularity_ratio > GRANULARITY_LOWER_BOUND));
+	printf("(avg_granularity_ratio < GRANULARITY_UPPER_BOUND) %d\n", (avg_granularity_ratio < GRANULARITY_UPPER_BOUND));
 #endif
 
 	//check reset condition
-	if ( (throughput_ratio < THROUGHPUT_UPPER_BOUND) || ((granularity_ratio > GRANULARITY_LOWER_BOUND) && (granularity_ratio < GRANULARITY_UPPER_BOUND)) ) {
+	if ( (thr_ratio < THROUGHPUT_UPPER_BOUND) || ( (avg_granularity_ratio > GRANULARITY_LOWER_BOUND) && (avg_granularity_ratio < GRANULARITY_UPPER_BOUND) ) ) {
 		w->size = 0.0; //reset
 		w->step = INIT_WINDOW_STEP;
 		return true;
@@ -144,14 +149,14 @@ It returns 0 if the window was updated for the first time after a reset,
 			  2 if the window was decreased
 			 -1 if the window was not updated
 */
-static inline int window_resizing(window *w) {
+static inline int window_resizing(window *w, double throughput) {
 
 	double increase, decrease;
 	int res = -1;
 
 
 	#if VERBOSE == 1
-		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", w->throughput, w->old_throughput);
+		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
 	#endif
 
 	compute_percentage(&w->perc_increase, w->enlarged);
@@ -165,18 +170,18 @@ static inline int window_resizing(window *w) {
 	if (w->size == 0) {
 		w->size += w->step;
 		res = 0;
-		w->old_throughput = w->throughput;
+		w->old_throughput = throughput;
 		return res;
 	}
 	
 
 	//enlarge window if throughput increases of a certain percentage
-	if (w->old_throughput != 0.0 && (w->throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
+	if ( (w->old_throughput != 0.0) && (throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
 		increase = w->step + w->step*w->perc_increase;
 		w->size += increase;
 		w->enlarged = true;
 		res = 1;
-	} else if (abs((w->throughput - w->old_throughput)/w->old_throughput) >= THROUGHPUT_DRIFT) {
+	} else if (abs((throughput - w->old_throughput)/w->old_throughput) >= THROUGHPUT_DRIFT) {
 		decrease = w->step - w->step*DECREASE_PERC;
 		w->size -= decrease;
 		if (w->size < 0) w->size = INIT_WINDOW_STEP;
@@ -184,7 +189,7 @@ static inline int window_resizing(window *w) {
 		res = 2;
 	}
 
-	w->old_throughput = w->throughput;
+	w->old_throughput = throughput;
 
 
 	#if VERBOSE == 1
