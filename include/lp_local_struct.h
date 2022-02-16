@@ -9,6 +9,7 @@
 #include <simtypes.h>
 #include <prints.h>
 #include <hpipe.h>
+#include <metrics_for_window.h>
 
 #define CURRENT_BINDING_SIZE       1
 
