@@ -11,9 +11,7 @@
 #include <limits.h>
 #include <nb_calqueue.h>
 #include <numa.h>
-#if ENFORCE_LOCALITY == 1
-#include <window.h>
-#endif
+
 
 #define MAX_LPs	2048
 
@@ -129,10 +127,6 @@ extern unsigned int sec_stop;
 extern unsigned int num_numa_nodes;
 extern bool numa_available_bool;
 
-#if ENFORCE_LOCALITY == 1
-extern window w;
-extern simtime_t *window_size;
-#endif
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
