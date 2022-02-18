@@ -113,9 +113,9 @@ unsigned int sec_stop = 0;
 unsigned long long *sim_ended;
 
 #if ENFORCE_LOCALITY == 1
-__thread timer measurement_phase_timer;
-__thread int *_enabled;
-__thread simtime_t *_window_size;
+__thread clock_timer measurement_phase_timer;
+__thread stat64_t time_interval_for_measurement_phase;
+__thread double elapsed_time;
 #endif
 
 unsigned int num_numa_nodes;
@@ -497,8 +497,6 @@ void init_simulation(unsigned int thread_id){
 	set_affinity(tid);
   #if ENFORCE_LOCALITY == 1
 	local_binding_init();
-	_enabled = &w.enabled;
-	_window_size = &w.size;
   #endif
 	
 }
@@ -593,7 +591,7 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(start_metrics_interval);
 
 		//timer for measurement phase
-		timer_start(measurement_phase_timer);
+		clock_timer_start(measurement_phase_timer);
 
 		if (!(*enabled) && *window_size == 0) clock_timer_start(start_window_reset);
 		if(*window_size > 0 && local_fetch() != 0){ //if window_size > 0 try local_fetch
@@ -832,13 +830,12 @@ void thread_loop(unsigned int thread_id) {
 		
 
 		//check if elapsed time since fetching an event is large enough to start computing stats
-		timer_value_milli(measurement_phase_timer);
-		if (measurement_phase_timer.tv_sec > 500) { 
-			aggregate_metrics_for_window_management(&w);
-		} 
-		
 
-		
+		time_interval_for_measurement_phase = clock_timer_value(measurement_phase_timer);
+		elapsed_time = time_interval_for_measurement_phase / CLOCKS_PER_SEC;
+		if (elapsed_time*1000 > 500.0) {
+			aggregate_metrics_for_window_management(&w);
+		} 		
 		
 #endif
 
