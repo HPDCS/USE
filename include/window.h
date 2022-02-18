@@ -7,28 +7,26 @@
 #include <stdbool.h>
 #include "timer.h"
 #include <math.h>
+#include "queue.h"
 
 
 #define INIT_WINDOW_STEP 0.04
-#define DECREASE_PERC 0.02
+#define DECREASE_PERC 0.2
 #define THROUGHPUT_DRIFT 0.05
 
 #define THROUGHPUT_UPPER_BOUND 0.9
-#define GRANULARITY_LOWER_BOUND 0.6
 #define GRANULARITY_UPPER_BOUND 1.4
+
 
 
 typedef struct window {
 
 	int enabled; //flag to enable window management (initially zero)
+	int direction; //ascent or descent direction for window resizing
 
 	simtime_t size; //window size
 	simtime_t step; //step of resizing operations
 
-	double throughput; //throughput per-thread
-	double throughput_ref; //reference throughput
-	double thr_ratio; //throughput ratio
-	double granularity_ratio; //granularity_ratio of events
 	double old_throughput; //previous throughput used for the resizing operation
 
 	double perc_increase; //percentage increase for enlarging the window
@@ -37,68 +35,25 @@ typedef struct window {
 } window;
 
 extern window w;
+nb_calqueue* nbcalqueue;
+
 
 
 /* init window parameters*/
 static inline void init_window(window *w) {
 
 	w->enabled = 0;
+	w->direction = 1;
 
 	w->size = 0.0;
 
-	w->step = INIT_WINDOW_STEP; //tempo di interarrivo medio (per ora come costante)
+	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot; //tempo di interarrivo medio (per ora come costante)
 
-	w->granularity_ratio = 0.0;
-	w->throughput = 0.0;
-	w->throughput_ref = 1.0;
-	w->thr_ratio = 0.0;
 
 	w->old_throughput = 0.0;
 	w->perc_increase = 1.0;
 	w->enlarged = false;
 
-}
-
-
-/* The function computes the granularity ratio 
-@param: w The window
-@param: sum_granularity The sum of granularities of events
-@param: granularity_ref The granularity of events computed from last window reset
-*/
-static inline void compute_granularity_ratio(window *w, double sum_granularity, double granularity_ref) {
-
-	w->granularity_ratio = sum_granularity / granularity_ref; 
-
-}
-
-
-/* The function computes the throughput for committed events 
-@param: w The window
-@param: time_interval The time observation period
-@param: comm_evts The committed events at the current observation time
-*/
-static inline void compute_throughput(window *w, simtime_t time_interval, unsigned int comm_evts) {
-
-	w->throughput = comm_evts/time_interval;
-
-	#if VERBOSE == 1
-		printf("THROUGHPUT %f \n", w->throughput);
-	#endif
-
-}
-
-
-/* The function computes the reference throughput for committed events 
-@param: w The window
-@param: comm_evts_ref The committed events counted from last window reset
-@param: time_interval The time observation period since the last window reset
-*/
-static inline void compute_throughput_ref(window *w, unsigned int comm_evts_ref, simtime_t time_interval) {
-
-	w->throughput_ref = comm_evts_ref/time_interval;
-	#if VERBOSE == 1
-		printf("THROUGHPUT REF %f\n", w->throughput_ref);
-	#endif
 }
 
 
@@ -115,14 +70,13 @@ static inline bool reset_window(window *w, double thr_ratio, double avg_granular
 
 
 	printf("thr_ratio < THROUGHPUT_UPPER_BOUND %d\n", thr_ratio < THROUGHPUT_UPPER_BOUND);
-	printf("(avg_granularity_ratio > GRANULARITY_LOWER_BOUND) %d\n", (avg_granularity_ratio > GRANULARITY_LOWER_BOUND));
 	printf("(avg_granularity_ratio < GRANULARITY_UPPER_BOUND) %d\n", (avg_granularity_ratio < GRANULARITY_UPPER_BOUND));
 #endif
 
 	//check reset condition
-	if ( (thr_ratio < THROUGHPUT_UPPER_BOUND) || ( (avg_granularity_ratio > GRANULARITY_LOWER_BOUND) && (avg_granularity_ratio < GRANULARITY_UPPER_BOUND) ) ) {
+	if ( (thr_ratio < THROUGHPUT_UPPER_BOUND) ||  !(avg_granularity_ratio < GRANULARITY_UPPER_BOUND) )  {
 		w->size = 0.0; //reset
-		w->step = INIT_WINDOW_STEP;
+		w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot;
 		return true;
 	}
 
@@ -155,6 +109,7 @@ static inline int window_resizing(window *w, double throughput) {
 	int res = -1;
 
 
+
 	#if VERBOSE == 1
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
 	#endif
@@ -165,30 +120,52 @@ static inline int window_resizing(window *w, double throughput) {
 		printf("window size before resizing %f\n", w->size);
 	#endif
 
+	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot;
+
 
 	//first step increment if window size is zero
 	if (w->size == 0) {
-		w->size += w->step;
+		w->size = nbcalqueue->hashtable->bucket_width;;
 		res = 0;
 		w->old_throughput = throughput;
 		return res;
 	}
-	
 
-	//enlarge window if throughput increases of a certain percentage
-	if ( (w->old_throughput != 0.0) && (throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
-		increase = w->step + w->step*w->perc_increase;
-		w->size += increase;
-		w->enlarged = true;
-		res = 1;
-	} else if (abs((throughput - w->old_throughput)/w->old_throughput) >= THROUGHPUT_DRIFT) {
-		decrease = w->step - w->step*DECREASE_PERC;
-		w->size -= decrease;
-		if (w->size < 0) w->size = INIT_WINDOW_STEP;
-		w->enlarged = false;
-		res = 2;
+
+
+	//if throughput has increased check the direction
+	if ( (w->old_throughput != 0) && (throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
+		
+		if (w->direction > 0) { //enlarge window if previous enlargement caused an increase in throughput
+			w->step += w->step*0.5;
+			w->size += w->step;
+			w->enlarged = true;
+		} else { //decrease window to move closer to maximum
+			w->step -= w->step*DECREASE_PERC;
+			w->size -= w->step;
+			if (w->size < 0) w->size = nbcalqueue->hashtable->bucket_width;;
+			w->enlarged = false;
+		}
+
+	} else if (throughput - w->old_throughput < 0) {
+		
+		if (w->direction > 0) { //decrease window because previous enlargement caused a decrease in throughput
+			w->step -= w->step*DECREASE_PERC;
+			w->size -= w->step;
+			if (w->size < 0) w->size = nbcalqueue->hashtable->bucket_width;;
+			w->enlarged = false;
+		} else { //decrease window to move closer to maximum
+			w->step -= w->step*DECREASE_PERC;
+			w->size -= w->step;
+			if (w->size < 0) w->size = nbcalqueue->hashtable->bucket_width;;
+			w->enlarged = false;
+		}
+
+		w->direction = w->direction * (-1);
+
 	}
 
+	
 	w->old_throughput = throughput;
 
 

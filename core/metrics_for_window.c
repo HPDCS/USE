@@ -120,13 +120,14 @@ void aggregate_metrics_for_window_management(window *w) {
 			thr_window = compute_throughput_for_committed_events(&prev_comm_evts_window, start_metrics_interval, time_interval_for_metrics_comput);
 			granularity = compute_average_granularity(&prev_first_time_exec_evts, &prev_granularity);
 
+			//fprintf(stderr, "SIZE BEFORE RESIZING %f\n", *window_size);
 			window_resizing(w, thr_window); //do resizing operations -- window might be enlarged, decreased or stay the same
 
 	#if VERBOSE == 1
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
 			printf("window_resizing %f\n", *window_size);
     #endif	
-			
+			//fprintf(stderr, "SIZE AFTER RESIZING %f\n", *window_size);
 			thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset, time_interval_for_window_reset);
 			granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
 
@@ -139,7 +140,8 @@ void aggregate_metrics_for_window_management(window *w) {
 			printf("thr_ratio %f \t granularity_ratio %f\n", thr_ratio, granularity_ratio);
     #endif
 
-			if (reset_window(w, thr_ratio, granularity_ratio)) { 
+			if (reset_window(w, thr_ratio, granularity_ratio)) {
+				printf("RESET WINDOW\n");
 				thr_ref = 0.0;
 				granularity_ref = 0.0;
 				clock_timer_start(start_window_reset);
