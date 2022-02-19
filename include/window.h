@@ -12,6 +12,7 @@
 
 #define INIT_WINDOW_STEP 0.04
 #define DECREASE_PERC 0.2
+#define INCREASE_PERC 0.5
 #define THROUGHPUT_DRIFT 0.05
 
 #define THROUGHPUT_UPPER_BOUND 0.9
@@ -105,7 +106,6 @@ It returns 0 if the window was updated for the first time after a reset,
 */
 static inline int window_resizing(window *w, double throughput) {
 
-	double increase, decrease;
 	int res = -1;
 
 
@@ -114,7 +114,7 @@ static inline int window_resizing(window *w, double throughput) {
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
 	#endif
 
-	compute_percentage(&w->perc_increase, w->enlarged);
+	//compute_percentage(&w->perc_increase, w->enlarged);
 
 	#if VERBOSE == 1
 		printf("window size before resizing %f\n", w->size);
@@ -137,7 +137,7 @@ static inline int window_resizing(window *w, double throughput) {
 	if ( (w->old_throughput != 0) && (throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
 		
 		if (w->direction > 0) { //enlarge window if previous enlargement caused an increase in throughput
-			w->step += w->step*0.5;
+			w->step += w->step*INCREASE_PERC;
 			w->size += w->step;
 			w->enlarged = true;
 		} else { //decrease window to move closer to maximum
