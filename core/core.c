@@ -833,7 +833,7 @@ void thread_loop(unsigned int thread_id) {
 
 		time_interval_for_measurement_phase = clock_timer_value(measurement_phase_timer);
 		elapsed_time = time_interval_for_measurement_phase / CLOCKS_PER_US;
-		if (elapsed_time > 1000) {
+		if (elapsed_time*1000 > MEASUREMENT_PHASE_THRESHOLD_MS) {
 			aggregate_metrics_for_window_management(&w);
 		} 		
 		
