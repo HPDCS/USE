@@ -11,7 +11,13 @@
 #include <hpipe.h>
 #include <metrics_for_window.h>
 
+#ifndef CURRENT_BINDING_SIZE
 #define CURRENT_BINDING_SIZE       1
+#endif
+
+#ifndef EVICTED_BINDING_SIZE
+#define EVICTED_BINDING_SIZE       1
+#endif
 
 #ifndef START_WINDOW
 #define START_WINDOW		   0.4
@@ -37,30 +43,33 @@ typedef struct pipe_entry {
 } pipe_entry_t;
 
 typedef struct pipe{
-  pipe_entry_t entries[CURRENT_BINDING_SIZE];
+  //pipe_entry_t entries[CURRENT_BINDING_SIZE];
   size_t next_to_insert;   //next index of the array where to insert an lp
   size_t size;
+  pipe_entry_t entries[];
 } pipe_t;
 
-extern __thread pipe_t thread_locked_binding;
-extern __thread pipe_t thread_unlocked_binding;
+extern __thread pipe_t *thread_locked_binding;
+extern __thread pipe_t *thread_unlocked_binding;
 extern  __thread int local_schedule_count;
 extern pipe_t *evicted_pipe_pointers[HPIPE_INDEX1_LEN];
 
 
 /* init the structure */
-static void init_struct(pipe_t *pipe){
+static pipe_t* init_struct(size_t size){
     size_t i;
-    pipe->size           =  CURRENT_BINDING_SIZE;
+    pipe_t *pipe = malloc(sizeof(pipe_t)+size*sizeof(pipe_entry_t));
+    pipe->size           =  size;
     pipe->next_to_insert =  0;
 
-    for(i = 0; i < thread_locked_binding.size; i++){
+    for(i = 0; i < pipe->size; i++){
         pipe->entries[i].lp = UNDEFINED_LP;
         pipe->entries[i].hotness = 0;
         pipe->entries[i].distance_curr_evt_from_gvt = 0;
         pipe->entries[i].distance_last_ooo_from_gvt = 0;
         pipe->entries[i].next_ts = INFTY;
     }
+    return pipe;
 
 }
 
@@ -191,7 +200,7 @@ static inline unsigned int detect_best_event_to_schedule(pipe_t *pipe) {
     return min_lp;
 }
 
-#undef CURRENT_BINDING_SIZE
+//#undef CURRENT_BINDING_SIZE
 
 
 
