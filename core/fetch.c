@@ -350,6 +350,10 @@ unsigned int fetch_internal(){
         )
         ) {
             
+	    #if DEBUG == 1
+	      assertf(lp_idx == UNDEFINED_LP, "trying to unlock an undefined LP%s", "\n");
+	      assertf(!haveLock(lp_idx), "trying to unlock without own lock %s", "\n");
+ 	    #endif
             validity = is_valid(event);
             
             if(bound_ptr != lp_ptr->bound){
@@ -426,7 +430,7 @@ unsigned int fetch_internal(){
             else {
                                 
                 ///* MARK NON VALID NODE *///
-                if( (curr_evt_state == NEW_EVT)   )    {EVT_TRANSITION_NEW_ELI(event);do_unlink_removed_inside_lock_and_goto_next(event,node,lp_idx);}
+                if( (curr_evt_state == NEW_EVT)   )    {EVT_TRANSITION_NEW_ELI(event);}//do_unlink_removed_inside_lock_and_goto_next(event,node,lp_idx);}
                 if( (curr_evt_state == EXTRACTED) )    EVT_TRANSITION_EXT_ANT(event);
                 
                 curr_evt_state = event->state;
