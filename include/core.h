@@ -20,7 +20,6 @@
 
 #define UNDEFINED_LP (MAX_LPs + 1)
 #define UNDEFINED_WT (512)
-#define MEASUREMENT_PHASE_THRESHOLD_MS 500
 
 #define MODE_SAF	1
 #define MODE_STM	2

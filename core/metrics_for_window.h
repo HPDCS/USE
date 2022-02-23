@@ -6,18 +6,8 @@
 
 
 extern window w;
-extern simtime_t *window_size;
-extern int *enabled;
-
-extern pthread_mutex_t stat_mutex, window_check_mtx;
-
-extern __thread clock_timer start_window_reset;
-extern __thread clock_timer start_metrics_interval;
-extern __thread stat64_t time_interval_for_metrics_comput, time_interval_for_window_reset;
-
-
-
 extern void init_metrics_for_window();
 extern void aggregate_metrics_for_window_management(window *w);
+extern int check_window();
 
 #endif

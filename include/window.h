@@ -18,6 +18,8 @@
 #define THROUGHPUT_UPPER_BOUND 0.9
 #define GRANULARITY_UPPER_BOUND 1.4
 
+#define MEASUREMENT_PHASE_THRESHOLD_MS 500
+
 
 
 typedef struct window {
@@ -34,10 +36,6 @@ typedef struct window {
 	bool enlarged; //set to true if the window was enlarged, used for modifying perc_increase
 
 } window;
-
-extern window w;
-nb_calqueue* nbcalqueue;
-
 
 
 /* init window parameters*/
