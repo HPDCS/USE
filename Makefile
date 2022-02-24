@@ -318,41 +318,34 @@ ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
-pcs: clean conf _pcs executable
+pcs: clean _pcs executable
 
 pcs-prealloc: TARGET=pcs-prealloc 
 pcs-prealloc: clean _pcs_prealloc executable
 
 traffic: TARGET=traffic 
-traffic: clean conf _traffic executable
+traffic: clean _traffic executable
 
 tcar: TARGET=tcar 
-tcar: clean conf _tcar executable
+tcar: clean _tcar executable
 
 phold: TARGET=phold 
-phold: clean  conf _phold executable
+phold: clean  _phold executable
 
 pholdcount: TARGET=pholdcount 
-pholdcount: clean conf  _pholdcount executable
+pholdcount: clean  _pholdcount executable
 
 pholdhotspot: TARGET=pholdhotspot 
-pholdhotspot: clean  conf _pholdhotspot executable
+pholdhotspot: clean  _pholdhotspot executable
 
 robot_explore: TARGET=robot_explore 
-robot_explore: clean conf _robot_explore executable
+robot_explore: clean _robot_explore executable
 
 hash: TARGET=hash 
-hash: clean conf _hash executable
+hash: clean _hash executable
 
 executable: cache_conf mm core reverse link
 
-conf: include-gen/clock_constant.h
-
-include-gen:
-	mkdir include-gen
-
-include-gen/clock_constant.h: include-gen
-	cd build_scripts; ./gen_clock_header.sh
 
 link:
 ifeq ($(REVERSIBLE),1)
@@ -383,15 +376,26 @@ mm: $(MM_OBJ)
 core: $(CORE_OBJ)
 	@ld -r -g $(CORE_OBJ) -o core/__core.o
 
-cache_conf: include-gen build_scripts/cache.db include-gen/hpipe.h
+cache_conf: include-gen build_scripts/cache.db include-gen/hpipe.h include-gen/clock_constant.h
+
+
+
+include-gen:
+	mkdir include-gen
+	@echo include-gen folder created
+
+include-gen/clock_constant.h:
+	cd build_scripts; ./gen_clock_header.sh; mv clock_constant.h ../include-gen
 
 
 include-gen/hpipe.h:
 	cd build_scripts; python3 build_cache_map.py cache.db > hpipe.h; mv hpipe.h ../include-gen
+	echo hpipe generated
 
 
 build_scripts/cache.db:
 	cd build_scripts; ./get_cache_data.sh	; cd ..;
+	echo cache.db generated
 
 
 
