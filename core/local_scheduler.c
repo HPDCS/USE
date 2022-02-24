@@ -77,6 +77,7 @@ int local_fetch(){
         local_schedule_count = 0;
         return res;
     }
+    MAX_LOCAL_DISTANCE_FROM_GVT = get_current_window();
   retry:
     res = 0;
     min_lp = UNDEFINED_LP;

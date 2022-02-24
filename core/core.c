@@ -113,11 +113,6 @@ pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
 unsigned int sec_stop = 0;
 unsigned long long *sim_ended;
 
-#if ENFORCE_LOCALITY == 1
-__thread clock_timer measurement_phase_timer;
-__thread stat64_t time_interval_for_measurement_phase;
-__thread double elapsed_time;
-#endif
 
 unsigned int num_numa_nodes;
 bool numa_available_bool;
@@ -588,14 +583,7 @@ void thread_loop(unsigned int thread_id) {
 	__event_from = 0;
 #if ENFORCE_LOCALITY == 1
 
-		//start timer for window management
-		clock_timer_start(start_metrics_interval);
-
-		//timer for measurement phase
-		clock_timer_start(measurement_phase_timer);
-
-		if (!(*enabled) && *window_size == 0) clock_timer_start(start_window_reset);
-		if(*window_size > 0 && local_fetch() != 0){ //if window_size > 0 try local_fetch
+		if(check_window() && local_fetch() != 0){ //if window_size > 0 try local_fetch
 
 		} else  
 #endif
@@ -830,12 +818,8 @@ void thread_loop(unsigned int thread_id) {
 #if ENFORCE_LOCALITY == 1
 		
 		//check if elapsed time since fetching an event is large enough to start computing stats
-
-		time_interval_for_measurement_phase = clock_timer_value(measurement_phase_timer);
-		elapsed_time = time_interval_for_measurement_phase / CLOCKS_PER_US;
-		if (elapsed_time*1000 > MEASUREMENT_PHASE_THRESHOLD_MS) {
-			aggregate_metrics_for_window_management(&w);
-		} 		
+		aggregate_metrics_for_window_management(&w);
+		 		
 		
 #endif
 
@@ -887,6 +871,9 @@ end_loop:
 #endif
 
 
+#if ENFORCE_LOCALITY == 1
+	printf("Last window for %d is %f\n", tid, get_current_window());
+#endif
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();
