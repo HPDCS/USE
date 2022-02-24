@@ -5,28 +5,25 @@
 #include <stdbool.h>
 #include <statistics.h>
 #include <window.h>
+#include <clock_constant.h>
 
 window w;
-simtime_t *window_size;
-int *enabled;
 
-double old_thr, thr_ref;
-simtime_t prev_granularity, prev_granularity_ref, granularity_ref;
-unsigned int prev_comm_evts, prev_comm_evts_ref, prev_first_time_exec_evts, prev_comm_evts_window, prev_first_time_exec_evts_ref;
+static double old2_thr, old_thr, thr_ref;
+static simtime_t prev_granularity, prev_granularity_ref, granularity_ref;
+static unsigned int prev_comm_evts, prev_comm_evts_ref, prev_first_time_exec_evts, prev_comm_evts_window, prev_first_time_exec_evts_ref;
 
-__thread clock_timer start_window_reset;
-__thread clock_timer start_metrics_interval;
-__thread stat64_t time_interval_for_metrics_comput;
-__thread stat64_t time_interval_for_window_reset;
 
-pthread_mutex_t stat_mutex, window_check_mtx;
+static pthread_mutex_t stat_mutex, window_check_mtx;
 
+
+static __thread clock_timer start_window_reset;
+static __thread stat64_t time_interval_for_measurement_phase;
+static __thread double elapsed_time;
 
 void init_metrics_for_window() {
 
 	init_window(&w);
-	window_size = &w.size;
-	enabled = &w.enabled;
 	pthread_mutex_init(&stat_mutex, NULL);
 	pthread_mutex_init(&window_check_mtx, NULL);
 
@@ -44,20 +41,31 @@ void init_metrics_for_window() {
 }
 
 
-double compute_throughput_for_committed_events(unsigned int *prev_comm_evts, clock_timer timer ,simtime_t time_interval) {
+int check_window(){
+	
+	if (!w.enabled && w.size == 0) clock_timer_start(start_window_reset);
+
+	return w.size > 0;
+}
+
+simtime_t get_current_window(){
+	return w.size;
+}
+
+double compute_throughput_for_committed_events(unsigned int *prev_comm_evts, clock_timer timer) {
 
 	unsigned int i;
 	unsigned int comm_evts = 0;
+	double th = 0.0;
+	simtime_t time_interval = clock_timer_value(timer)/CLOCKS_PER_US;
 
 	for (i = 0; i < n_cores; i++) {
 		comm_evts += thread_stats[i].events_committed;
 	}
-	comm_evts -= *prev_comm_evts;
+	th += comm_evts - *prev_comm_evts;
 	*prev_comm_evts = comm_evts;
 
-	time_interval = clock_timer_value(timer);
-
-	return (double) comm_evts/time_interval;
+	return (double) th/time_interval;
 
 }
 
@@ -84,51 +92,59 @@ simtime_t compute_average_granularity(unsigned int *prev_first_time_exec_evts, s
 }
 
 
-void enable_window(double *old_thr) {
+void enable_window() {
 
 	double current_thr = 0.0;
-
-	current_thr = compute_throughput_for_committed_events(&prev_comm_evts ,start_metrics_interval, time_interval_for_metrics_comput);
+	double diff1 = 0.0, diff2 = 0.0;
+	current_thr = compute_throughput_for_committed_events(&prev_comm_evts ,w.measurement_phase_timer);
 
 #if VERBOSE == 1
-	printf("current_thr/old_thr %f\n", current_thr/ *old_thr);
+	printf("current_thr/old_thr %f\n", current_thr/old_thr);
 #endif
 
 	//check if window must be enabled
 	//by comparing current thr with the previous one
-	if ( ( *old_thr != 0.0 ) && ( current_thr/ *old_thr <= 1.0) && ( current_thr/ *old_thr >= 0.9 ) ) {
-		*enabled = 1;
-	} 
-	*old_thr = current_thr;
+	if(old2_thr != 0.0){
+		diff1 = old_thr/old2_thr;
+		diff2 = current_thr/old2_thr;
+		if(diff1 <= 1.1 && diff2 <= 1.1 && diff1 >= 0.9 && diff2 >= 0.9)  w.enabled = 1;
+	}
+	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
+	
+	old2_thr = old_thr;
+	old_thr = current_thr;
 
 }
 
 
 
-void aggregate_metrics_for_window_management(window *w) {
+void aggregate_metrics_for_window_management(window *win) {
 
 	double thr_window = 0.0, thr_ratio = 0.0;
 	simtime_t granularity = 0.0, granularity_ratio = 0.0;
+	time_interval_for_measurement_phase = clock_timer_value(w.measurement_phase_timer);
+	elapsed_time = time_interval_for_measurement_phase / CLOCKS_PER_US;
+	if (elapsed_time/1000.0 < MEASUREMENT_PHASE_THRESHOLD_MS) return;
 
 	if (pthread_mutex_trylock(&stat_mutex) == 0) { //just one thread executes the underlying block
 
-		if (!(*enabled)) enable_window(&old_thr);
+		if (!w.enabled) enable_window(&old_thr);
 		
 		//window is enabled -- workload can be considered stable
-		if (*enabled) {
+		if (w.enabled) {
 			
-			thr_window = compute_throughput_for_committed_events(&prev_comm_evts_window, start_metrics_interval, time_interval_for_metrics_comput);
+			thr_window = compute_throughput_for_committed_events(&prev_comm_evts_window, w.measurement_phase_timer);
 			granularity = compute_average_granularity(&prev_first_time_exec_evts, &prev_granularity);
 
 			//fprintf(stderr, "SIZE BEFORE RESIZING %f\n", *window_size);
-			window_resizing(w, thr_window); //do resizing operations -- window might be enlarged, decreased or stay the same
+			window_resizing(win, thr_window); //do resizing operations -- window might be enlarged, decreased or stay the same
 
 	#if VERBOSE == 1
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
 			printf("window_resizing %f\n", *window_size);
     #endif	
 			//fprintf(stderr, "SIZE AFTER RESIZING %f\n", *window_size);
-			thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset, time_interval_for_window_reset);
+			thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset);
 			granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
 
 
@@ -140,7 +156,7 @@ void aggregate_metrics_for_window_management(window *w) {
 			printf("thr_ratio %f \t granularity_ratio %f\n", thr_ratio, granularity_ratio);
     #endif
 
-			if (reset_window(w, thr_ratio, granularity_ratio)) {
+			if (0 && reset_window(win, thr_ratio, granularity_ratio)) {
 				printf("RESET WINDOW\n");
 				thr_ref = 0.0;
 				granularity_ref = 0.0;
@@ -149,6 +165,8 @@ void aggregate_metrics_for_window_management(window *w) {
 
 		} //end if enabled
 
+	//timer for measurement phase1
+	clock_timer_start(w.measurement_phase_timer);
 	pthread_mutex_unlock(&stat_mutex);
 
 	} //end if trylock

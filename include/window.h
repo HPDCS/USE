@@ -25,7 +25,7 @@
 typedef struct window {
 
 	int enabled; //flag to enable window management (initially zero)
-	int direction; //ascent or descent direction for window resizing
+	simtime_t direction; //ascent or descent direction for window resizing
 
 	simtime_t size; //window size
 	simtime_t step; //step of resizing operations
@@ -34,6 +34,7 @@ typedef struct window {
 
 	double perc_increase; //percentage increase for enlarging the window
 	bool enlarged; //set to true if the window was enlarged, used for modifying perc_increase
+	clock_timer measurement_phase_timer;
 
 } window;
 
@@ -52,6 +53,7 @@ static inline void init_window(window *w) {
 	w->old_throughput = 0.0;
 	w->perc_increase = 1.0;
 	w->enlarged = false;
+	clock_timer_start(w->measurement_phase_timer);
 
 }
 
@@ -105,8 +107,9 @@ It returns 0 if the window was updated for the first time after a reset,
 static inline int window_resizing(window *w, double throughput) {
 
 	int res = -1;
-
-
+	double old_throughput = w->old_throughput;
+	double th_ratio = throughput/old_throughput;
+	simtime_t old_wsize = w->size;
 
 	#if VERBOSE == 1
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
@@ -118,58 +121,32 @@ static inline int window_resizing(window *w, double throughput) {
 		printf("window size before resizing %f\n", w->size);
 	#endif
 
-	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot;
+	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot/2;
 
 
 	//first step increment if window size is zero
 	if (w->size == 0) {
-		w->size = nbcalqueue->hashtable->bucket_width;;
+		//w->size = nbcalqueue->hashtable->bucket_width;;
+		w->size = w->step;
 		res = 0;
+		w->direction = 1.0;
 		w->old_throughput = throughput;
 		return res;
 	}
 
-
-
-	//if throughput has increased check the direction
-	if ( (w->old_throughput != 0) && (throughput - w->old_throughput)/w->old_throughput >= THROUGHPUT_DRIFT) { 
-		
-		if (w->direction > 0) { //enlarge window if previous enlargement caused an increase in throughput
-			w->step += w->step*INCREASE_PERC;
-			w->size += w->step;
-			w->enlarged = true;
-		} else { //decrease window to move closer to maximum
-			w->step -= w->step*DECREASE_PERC;
-			w->size -= w->step;
-			if (w->size < 0) w->size = nbcalqueue->hashtable->bucket_width;;
-			w->enlarged = false;
-		}
-
-	} else if (throughput - w->old_throughput < 0) {
-		
-		if (w->direction > 0) { //decrease window because previous enlargement caused a decrease in throughput
-			w->step -= w->step*DECREASE_PERC;
-			w->size -= w->step;
-			if (w->size < 0) w->size = nbcalqueue->hashtable->bucket_width;;
-			w->enlarged = false;
-		} else { //decrease window to move closer to maximum
-			w->step -= w->step*DECREASE_PERC;
-			w->size -= w->step;
-			if (w->size < 0) w->size = nbcalqueue->hashtable->bucket_width;;
-			w->enlarged = false;
-		}
-
-		w->direction = w->direction * (-1);
-
+	if(w->old_throughput != 0 && (fabs(th_ratio-1)) > THROUGHPUT_DRIFT) {
+		if (throughput < old_throughput) w->direction = w->direction * (-1);
+		w->size	+= w->step*w->direction;
 	}
 
-	
+	if(w->size < 0) w->size = 0;
 	w->old_throughput = throughput;
 
 
 	#if VERBOSE == 1
-		printf("window size after resizing %f\n", w->size);
+		printf("window size after resizing %f %f %f\n", w->size, throughput, old_throughput);
 	#endif
+		printf("old %f new %f %.2f%% %f\n", old_wsize , w->size, th_ratio*100.0, w->step);
 	
 
 	return res;
