@@ -51,7 +51,11 @@ int check_window(){
 }
 
 simtime_t get_current_window(){
-	return w.size;
+	#if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1
+  	return w.size;
+	#else
+  	return START_WINDOW;
+  #endif
 }
 
 double compute_throughput_for_committed_events(unsigned int *prev_comm_evts, clock_timer timer) {
