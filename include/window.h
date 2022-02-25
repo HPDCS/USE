@@ -13,12 +13,12 @@
 #define INIT_WINDOW_STEP 0.04
 #define DECREASE_PERC 0.2
 #define INCREASE_PERC 0.5
-#define THROUGHPUT_DRIFT 0.05
+#define THROUGHPUT_DRIFT 0.025
 
-#define THROUGHPUT_UPPER_BOUND 0.9
+#define THROUGHPUT_UPPER_BOUND 0.85
 #define GRANULARITY_UPPER_BOUND 1.4
 
-#define MEASUREMENT_PHASE_THRESHOLD_MS 500
+#define MEASUREMENT_PHASE_THRESHOLD_MS 333
 
 
 
@@ -35,6 +35,7 @@ typedef struct window {
 	double perc_increase; //percentage increase for enlarging the window
 	bool enlarged; //set to true if the window was enlarged, used for modifying perc_increase
 	clock_timer measurement_phase_timer;
+	int phase;
 
 } window;
 
@@ -43,13 +44,9 @@ typedef struct window {
 static inline void init_window(window *w) {
 
 	w->enabled = 0;
-	w->direction = 1;
-
+	w->direction = 1.0;
 	w->size = 0.0;
-
 	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot; //tempo di interarrivo medio (per ora come costante)
-
-
 	w->old_throughput = 0.0;
 	w->perc_increase = 1.0;
 	w->enlarged = false;
@@ -76,8 +73,9 @@ static inline bool reset_window(window *w, double thr_ratio, double avg_granular
 
 	//check reset condition
 	if ( (thr_ratio < THROUGHPUT_UPPER_BOUND) ||  !(avg_granularity_ratio < GRANULARITY_UPPER_BOUND) )  {
-		w->size = 0.0; //reset
-		w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot;
+		w->size  = 0.0; //reset
+		w->step  = nbcalqueue->hashtable->bucket_width * n_prc_tot;
+                w->phase = 0;
 		return true;
 	}
 
@@ -110,7 +108,7 @@ static inline int window_resizing(window *w, double throughput) {
 	double old_throughput = w->old_throughput;
 	double th_ratio = throughput/old_throughput;
 	simtime_t old_wsize = w->size;
-
+        if(w->enabled && w->phase >= 2) return res;
 	#if VERBOSE == 1
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
 	#endif
@@ -126,28 +124,34 @@ static inline int window_resizing(window *w, double throughput) {
 
 	//first step increment if window size is zero
 	if (w->size == 0) {
-		//w->size = nbcalqueue->hashtable->bucket_width;;
-		w->size = w->step;
-		res = 0;
-		w->direction = 1.0;
-		w->old_throughput = throughput;
-		return res;
+	  //w->size = nbcalqueue->hashtable->bucket_width;;
+	  w->size = w->step;
+	  res = 0;
+	  w->direction = 1.0;
+	  w->old_throughput = throughput;
+	  w->phase = 0;
+	  printf("starting windows size search %f %f phase:%d\n", 0.0, w->size, w->phase);
+	  return res;
 	}
 
-	if(w->old_throughput != 0 && (fabs(th_ratio-1)) > THROUGHPUT_DRIFT) {
-		if (throughput < old_throughput) w->direction = w->direction * (-1);
-		w->size	+= w->step*w->direction;
-	}
+	if(w->old_throughput != 0){
+          if(w->phase == 1) w->phase++;
 
+          if( (fabs(th_ratio-1)) < THROUGHPUT_DRIFT) {}
+	  else if (throughput < old_throughput){
+            printf("changing direction %f %f\n", throughput, old_throughput);
+            w->direction = w->direction * (-1);
+            w->phase=2;
+          }
+	  w->size	+= w->step*w->direction;
+        }
 	if(w->size < 0) w->size = 0;
 	w->old_throughput = throughput;
 
-
-	#if VERBOSE == 1
-		printf("window size after resizing %f %f %f\n", w->size, throughput, old_throughput);
-	#endif
-		printf("old %f new %f %.2f%% %f\n", old_wsize , w->size, th_ratio*100.0, w->step);
-	
+      #if VERBOSE == 1
+        printf("window size after resizing %f %f %f\n", w->size, throughput, old_throughput);
+      #endif
+	printf("cur %f th_drift %.2f%% %.2f%% new %f %d\n", old_wsize , (th_ratio-1)*100.0, (fabs(th_ratio-1))*100.0, w->size, w->phase);
 
 	return res;
 

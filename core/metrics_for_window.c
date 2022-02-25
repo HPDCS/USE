@@ -105,9 +105,9 @@ void enable_window() {
 	//check if window must be enabled
 	//by comparing current thr with the previous one
 	if(old2_thr != 0.0){
-		diff1 = old_thr/old2_thr;
-		diff2 = current_thr/old2_thr;
-		if(diff1 <= 1.1 && diff2 <= 1.1 && diff1 >= 0.9 && diff2 >= 0.9)  w.enabled = 1;
+		diff1 = old2_thr/current_thr;
+		diff2 = old_thr/current_thr;
+		if(diff1 < 1.025 && diff2 < 1.025 && diff1 > 0.975 && diff2 > 0.975)  w.enabled = 1;
 	}
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
 	
@@ -142,26 +142,30 @@ void aggregate_metrics_for_window_management(window *win) {
 	#if VERBOSE == 1
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
 			printf("window_resizing %f\n", *window_size);
-    #endif	
+        #endif	
+			if(w.phase == 2){
+                          thr_ref = thr_window;
+                          granularity_ref = granularity;
+                          w.phase++;
+                        }
 			//fprintf(stderr, "SIZE AFTER RESIZING %f\n", *window_size);
-			thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset);
-			granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
-
-
-			thr_ratio = thr_window/thr_ref;
-			granularity_ratio = granularity/granularity_ref;
-
+			//thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset);
+			//granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
+                        else if(w.phase > 2){
+           		  thr_ratio = thr_window/thr_ref;
+                          granularity_ratio = granularity/granularity_ref;
     #if VERBOSE == 1
-			printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
-			printf("thr_ratio %f \t granularity_ratio %f\n", thr_ratio, granularity_ratio);
+			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
+			  printf("thr_ratio %f \t granularity_ratio %f\n", thr_ratio, granularity_ratio);
 
-			if (0 && reset_window(win, thr_ratio, granularity_ratio)) {
-				printf("RESET WINDOW\n");
-				thr_ref = 0.0;
-				granularity_ref = 0.0;
-				clock_timer_start(start_window_reset);
-			}
+			  if (reset_window(win, thr_ratio, granularity_ratio)) {
+			    printf("RESET WINDOW\n");
+			    thr_ref = 0.0;
+			    granularity_ref = 0.0;
+			    clock_timer_start(start_window_reset);
+			  }
+                        }
 
 		} //end if enabled
 
