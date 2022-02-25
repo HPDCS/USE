@@ -42,10 +42,12 @@ void init_metrics_for_window() {
 
 
 int check_window(){
-	
-	if (!w.enabled && w.size == 0) clock_timer_start(start_window_reset);
-
-	return w.size > 0;
+	#if ENABLE_LOCALITY_ENFORCEMENT_WITH_DYNAMIC_SIZING == 1
+	  if (!w.enabled && w.size == 0) clock_timer_start(start_window_reset);
+	  return w.size > 0;
+	#else
+    return 1;
+	#endif
 }
 
 simtime_t get_current_window(){
