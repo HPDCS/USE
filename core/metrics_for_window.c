@@ -42,7 +42,7 @@ void init_metrics_for_window() {
 
 
 int check_window(){
-	#if ENABLE_LOCALITY_ENFORCEMENT_WITH_DYNAMIC_SIZING == 1
+	#if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1
 	  if (!w.enabled && w.size == 0) clock_timer_start(start_window_reset);
 	  return w.size > 0;
 	#else
@@ -121,7 +121,9 @@ void enable_window() {
 
 
 void aggregate_metrics_for_window_management(window *win) {
-
+ #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 0
+   return;
+ #endif
 	double thr_window = 0.0, thr_ratio = 0.0;
 	simtime_t granularity = 0.0, granularity_ratio = 0.0;
 	time_interval_for_measurement_phase = clock_timer_value(w.measurement_phase_timer);
