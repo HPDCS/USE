@@ -278,6 +278,8 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 		    model/robot_explore/neighbours.c
 
 
+NOSQL_SOURCES=model/nosql/application.c
+
 TARGET=phold
 
 CORE_SOURCES =  core/core.c\
@@ -321,6 +323,7 @@ PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
+NOSQL_OBJ=$(NOSQL_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
 
@@ -352,6 +355,10 @@ robot_explore: clean _robot_explore executable
 
 hash: TARGET=hash 
 hash: clean _hash executable
+
+
+nosql: TARGET=nosql 
+nosql: clean _nosql executable
 
 executable: cache_conf mm core reverse link
 
@@ -442,6 +449,10 @@ _traffic: $(TRAFFIC_OBJ)
 
 _robot_explore: $(ROBOT_EXPLORE_OBJ)
 	@ld -r -g $(ROBOT_EXPLORE_OBJ) -o model/__application.o
+
+_nosql: $(NOSQL_OBJ)
+	@ld -r -g $(NOSQL_OBJ) -o model/__application.o
+
 	
 
 
