@@ -108,7 +108,7 @@ static inline int window_resizing(window *w, double throughput) {
 	double old_throughput = w->old_throughput;
 	double th_ratio = throughput/old_throughput;
 	simtime_t old_wsize = w->size;
-        if(w->enabled && w->phase >= 2) return res;
+        if(w->enabled && w->phase >= 1) return res;
 	#if VERBOSE == 1
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
 	#endif
@@ -135,13 +135,12 @@ static inline int window_resizing(window *w, double throughput) {
 	}
 
 	if(w->old_throughput != 0){
-          if(w->phase == 1) w->phase++;
 
           if( (fabs(th_ratio-1)) < THROUGHPUT_DRIFT) {}
 	  else if (throughput < old_throughput){
             printf("changing direction %f %f\n", throughput, old_throughput);
             w->direction = w->direction * (-1);
-            w->phase=2;
+            w->phase=1;
           }
 	  w->size	+= w->step*w->direction;
         }

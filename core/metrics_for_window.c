@@ -143,7 +143,7 @@ void aggregate_metrics_for_window_management(window *win) {
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
 			printf("window_resizing %f\n", *window_size);
         #endif	
-			if(w.phase == 2){
+			if(w.phase == 1){
                           thr_ref = thr_window;
                           granularity_ref = granularity;
                           w.phase++;
@@ -151,7 +151,7 @@ void aggregate_metrics_for_window_management(window *win) {
 			//fprintf(stderr, "SIZE AFTER RESIZING %f\n", *window_size);
 			//thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset);
 			//granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
-                        else if(w.phase > 2){
+                        else if(w.phase >= 2){
            		  thr_ratio = thr_window/thr_ref;
                           granularity_ratio = granularity/granularity_ref;
     #if VERBOSE == 1
