@@ -1,4 +1,4 @@
-#if ENFORCE_LOCALITY == 1
+//#if ENFORCE_LOCALITY == 1
 #include <timer.h>
 #include <core.h>
 #include <pthread.h>
@@ -125,9 +125,9 @@ void enable_window() {
 
 
 void aggregate_metrics_for_window_management(window *win) {
- #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 0
-   return;
- #endif
+// #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 0
+//   return;
+// #endif
 	double thr_window = 0.0, thr_ratio = 0.0;
 	simtime_t granularity = 0.0, granularity_ratio = 0.0;
 	time_interval_for_measurement_phase = clock_timer_value(w.measurement_phase_timer);
@@ -143,10 +143,13 @@ void aggregate_metrics_for_window_management(window *win) {
 			
 			thr_window = compute_throughput_for_committed_events(&prev_comm_evts_window, w.measurement_phase_timer);
 			granularity = compute_average_granularity(&prev_first_time_exec_evts, &prev_granularity);
-
+                    #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1
 			//fprintf(stderr, "SIZE BEFORE RESIZING %f\n", *window_size);
 			window_resizing(win, thr_window); //do resizing operations -- window might be enlarged, decreased or stay the same
-
+                    #else
+                        if(w.phase == 0) w.phase = 1;
+                    #endif
+                        
 	#if VERBOSE == 1
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
 			printf("window_resizing %f\n", *window_size);
@@ -165,9 +168,12 @@ void aggregate_metrics_for_window_management(window *win) {
     #if VERBOSE == 1
 			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
-			  printf("thr_ratio %f \t granularity_ratio %f\n", thr_ratio, granularity_ratio);
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity);
+                        #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1 // use moving average only when dynamic sizing is enabled"
+                          thr_ref = 0.6*thr_ref + 0.4*thr_window;
+                        #endif
 
-			  if (reset_window(win, thr_ratio, granularity_ratio)) {
+			  if (ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF && reset_window(win, thr_ratio, granularity_ratio)) {
 			    printf("RESET WINDOW\n");
 			    thr_ref = 0.0;
 			    granularity_ref = 0.0;
@@ -186,4 +192,4 @@ void aggregate_metrics_for_window_management(window *win) {
 
 }
 
-#endif
+//#endif

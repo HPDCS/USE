@@ -39,6 +39,7 @@
 #include "metrics_for_window.h"
 #include "clock_constant.h"
 #endif
+#include "metrics_for_window.h"
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
@@ -815,13 +816,12 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 
-#if ENFORCE_LOCALITY == 1
-		
+//#if ENFORCE_LOCALITY == 1		
 		//check if elapsed time since fetching an event is large enough to start computing stats
 		aggregate_metrics_for_window_management(&w);
 		 		
 		
-#endif
+//#endif
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
