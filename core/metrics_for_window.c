@@ -7,6 +7,7 @@
 #include <window.h>
 #include <clock_constant.h>
 
+
 window w;
 
 static double old2_thr, old_thr, thr_ref;
@@ -113,7 +114,7 @@ void enable_window() {
 	if(old2_thr != 0.0){
 		diff1 = old2_thr/current_thr;
 		diff2 = old_thr/current_thr;
-		if(diff1 < 1.025 && diff2 < 1.025 && diff1 > 0.975 && diff2 > 0.975)  w.enabled = 1;
+		if(diff1 < (1.0+THROUGHPUT_DRIFT)  && diff2 < (1.0+THROUGHPUT_DRIFT) && diff1 > (1.0-THROUGHPUT_DRIFT) && diff2 > (1.0-THROUGHPUT_DRIFT))  w.enabled = 1;
 	}
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
 	
@@ -170,6 +171,7 @@ void aggregate_metrics_for_window_management(window *win) {
     #endif
 			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity);
                         #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1 // use moving average only when dynamic sizing is enabled"
+                          if(thr_window == thr_window) //check for NaN float // TODO investigate this
                           thr_ref = 0.6*thr_ref + 0.4*thr_window;
                         #endif
 
