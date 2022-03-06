@@ -18,7 +18,9 @@
 #ifndef CHANNELS_PER_CELL
 #define CHANNELS_PER_CELL	4000
 #endif
+#ifndef TA_CHANGE
 #define TA_CHANGE		300.0
+#endif
 //#define TA_CHANGE		75.0//150.0
 
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
