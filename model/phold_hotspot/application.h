@@ -1,7 +1,8 @@
 #include <ROOT-Sim.h>
 #include <math.h>
 #include <stdlib.h>
-
+#include <clock_constant.h>
+#include <timer.h>
 
 // Event types
 #define LOOP			8
@@ -16,8 +17,8 @@
 #define FAN_OUT 1
 #endif
 
-#ifndef LOOP_COUNT
-#define LOOP_COUNT 100
+#ifndef LOOP_COUNT_US
+#define LOOP_COUNT_US 100
 #endif
 
 #ifndef HOTSPOTS
