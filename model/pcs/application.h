@@ -16,7 +16,7 @@
 #define TA_DURATION		120
 //#define TA_DURATION		60
 #ifndef CHANNELS_PER_CELL
-#define CHANNELS_PER_CELL	4000
+#define CHANNELS_PER_CELL	1000
 #endif
 #ifndef TA_CHANGE
 #define TA_CHANGE		300.0

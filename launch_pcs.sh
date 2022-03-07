@@ -1,8 +1,8 @@
 #!/bin/bash
 
 MAX_SKIPPED_LP_list="1000000"
-LP_list="1024 256"						#number of lps
-THREAD_list="40" 		#number of  threads
+LP_list="4096 1024 256"						#number of lps
+THREAD_list="48" 		#number of  threads
 TEST_list="pcs"					#test
 RUN_list="1 2 3"				
 
@@ -10,7 +10,7 @@ ENFORCE_LOCALITY_list="0 1" #DISTRIBUTED_FETCH
 
 TA_CHANGE_list="300"
 TA_DURATION_list="120"
-TA_list="0.16 0.08 0.04"
+TA_list="0.24"
 
 LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"		#lookahead
 WINDOW_list="0.1 0.2 0.4 0.8 1.6"
@@ -25,7 +25,7 @@ TEST_DURATION="30"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-FOLDER="results/pcs_static_win" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/pcs_dyn_win" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir -p ${FOLDER}
 
