@@ -20,6 +20,7 @@
 #define CHANNELS_PER_CELL	1000
 #endif
 
+#ifndef TA_CHANGE
 #define TA_CHANGE		300.0
 #endif
 //#define TA_CHANGE		75.0//150.0
