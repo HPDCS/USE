@@ -15,10 +15,10 @@
 #define INCREASE_PERC 0.5
 #define THROUGHPUT_DRIFT 0.025
 
-#define THROUGHPUT_UPPER_BOUND 0.85
+#define THROUGHPUT_UPPER_BOUND 0.9
 #define GRANULARITY_UPPER_BOUND 1.4
 
-#define MEASUREMENT_PHASE_THRESHOLD_MS 333
+#define MEASUREMENT_PHASE_THRESHOLD_MS 500
 
 
 
@@ -74,7 +74,7 @@ static inline bool reset_window(window *w, double thr_ratio, double avg_granular
 	//check reset condition
 	if ( (thr_ratio < THROUGHPUT_UPPER_BOUND) ||  !(avg_granularity_ratio < GRANULARITY_UPPER_BOUND) )  {
 		w->size  = 0.0; //reset
-		w->step  = nbcalqueue->hashtable->bucket_width * n_prc_tot;
+		w->step  = nbcalqueue->hashtable->bucket_width * n_prc_tot/2;
                 w->phase = 0;
 		return true;
 	}
@@ -108,6 +108,7 @@ static inline int window_resizing(window *w, double throughput) {
 	double old_throughput = w->old_throughput;
 	double th_ratio = throughput/old_throughput;
 	simtime_t old_wsize = w->size;
+	if(throughput==0.0) return res;
         if(w->enabled && w->phase >= 1) return res;
 	#if VERBOSE == 1
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
@@ -136,7 +137,7 @@ static inline int window_resizing(window *w, double throughput) {
 
 	if(w->old_throughput != 0){
 
-          if( (fabs(th_ratio-1)) < THROUGHPUT_DRIFT) {}
+          if( (fabs(th_ratio-1)) < THROUGHPUT_DRIFT) {return res;}
 	  else if (throughput < old_throughput){
             printf("changing direction %f %f\n", throughput, old_throughput);
             w->direction = w->direction * (-1);

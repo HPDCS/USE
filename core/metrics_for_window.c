@@ -69,6 +69,11 @@ double compute_throughput_for_committed_events(unsigned int *prev_comm_evts, clo
 	for (i = 0; i < n_cores; i++) {
 		comm_evts += thread_stats[i].events_committed;
 	}
+	//comm_evts=0;
+        //for(i=0;i<n_prc_tot;i++)
+	{
+        //    comm_evts += lp_stats[i].events_total - lp_stats[i].events_silent;
+	}
 	th += comm_evts - *prev_comm_evts;
 	*prev_comm_evts = comm_evts;
 
@@ -171,8 +176,8 @@ void aggregate_metrics_for_window_management(window *win) {
     #endif
 			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity);
                         #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1 // use moving average only when dynamic sizing is enabled"
-                          if(thr_window == thr_window) //check for NaN float // TODO investigate this
-                          thr_ref = 0.6*thr_ref + 0.4*thr_window;
+                          //if(thr_window == thr_window) //check for NaN float // TODO investigate this
+                          //  thr_ref = 0.6*thr_ref + 0.4*thr_window;
                         #endif
 
 			  if (ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF && reset_window(win, thr_ratio, granularity_ratio)) {
