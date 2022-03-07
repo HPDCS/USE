@@ -158,7 +158,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 				}
 
-				if(new_event_content.call_term_time < handoff_time) {
+				if(new_event_content.call_term_time <= handoff_time+HANDOFF_SHIFT) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
@@ -207,7 +207,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			new_event_content.call_term_time =  event_content->call_term_time;
 			new_event_content.from = me;
 			new_event_content.dummy = &(state->dummy);
-			ScheduleNewEvent(event_content->cell, now+0.000001, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
+			ScheduleNewEvent(event_content->cell, now+HANDOFF_SHIFT, HANDOFF_RECV, &new_event_content, sizeof(new_event_content));
 			break;
 
 		case HANDOFF_RECV:
@@ -244,7 +244,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 						(simtime_t) (5 * Random());
 				}
 
-				if(new_event_content.call_term_time < handoff_time ) {
+				if(new_event_content.call_term_time <= handoff_time+HANDOFF_SHIFT ) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);

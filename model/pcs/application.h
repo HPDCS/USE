@@ -17,14 +17,17 @@
 //#define TA_DURATION		60
 
 #ifndef CHANNELS_PER_CELL
-#define CHANNELS_PER_CELL	400
+#define CHANNELS_PER_CELL	1000
 #endif
 
 #define TA_CHANGE		300.0
+#endif
 //#define TA_CHANGE		75.0//150.0
 
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define DURATION_DISTRIBUTION		EXPONENTIAL
+
+#define HANDOFF_SHIFT 0.000001
 
 
 /* Channel states */
