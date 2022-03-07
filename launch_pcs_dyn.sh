@@ -45,21 +45,6 @@ do
                 for df in $ENFORCE_LOCALITY_list
                 do
                     make $test ENFORCE_LOCALITY=$df TA_CHANGE=$tac TA_DURATION=$tad TA=$tav CHANNELS_PER_CELL=$nch
-                    if [ $df = "0" ]; then
-                        if [ "$w" = "0.1" ]; then
-                                                   echo OK
-                           
-                        else
-                           echo skip null test
-                           continue
-                        fi
-                                                if [ "$ebs" = "1" ]; then echo OK
-                                                else echo skip null test; continue
-                                                fi
-                                                if [ "$cbs" = "1" ]; then echo OK
-                                                else echo skip null test; continue
-                                                fi
-                    fi
                     for run in $RUN_list
                     do
                         for lp in $LP_list
@@ -68,7 +53,7 @@ do
                             do
                                 EX1="./${test} $th $lp ${TEST_DURATION}"
                                 
-                                FILE1="${FOLDER}/${test}_el_${df}-w_${w}-nch_${nch}-ta_${tav}-tad_${tad}-tac_${tac}-th_${th}-lp_${lp}-run_${run}.dat"
+                                FILE1="${FOLDER}/${test}_el_${df}-nch_${nch}-ta_${tav}-tad_${tad}-tac_${tac}-th_${th}-lp_${lp}-run_${run}.dat"
                                 
                                 touch ${FILE1}
                                 #echo $FILE1
