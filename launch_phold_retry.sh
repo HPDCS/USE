@@ -2,33 +2,35 @@
 
 MAX_SKIPPED_LP_list="1000000"
 LP_list="1024"						#number of lps
-THREAD_list="2 4 8 16 24 32" #"4 8 16 24 32"		#number of threads
+THREAD_list="1 5 10 20 30 40" #"4 8 16 24 32"		#number of threads
 TEST_list="phold"					#test list
-RUN_list="1"				#run number list
+RUN_list="1 2 3 4 5"				#run number list
 
 FAN_OUT_list="1" # 50"				#fan out list
-LOOKAHEAD_list="0 0.01" #"0 0.1 0.01"		#lookahead list
-LOOP_COUNT_list="50 150 400 800 1600" 				#loop_count #50 100 150 250 400 600" 400=60micsec
+LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"		#lookahead list
+LOOP_COUNT_list="1 5 10 25 50 100 200 400" 				#loop_count #50 100 150 250 400 600" 400=60micsec
 
-CKP_PER_list="50" #"10 50 100"
+CKP_PER_list="20" #"10 50 100"
 
 PUB_list="0.33"
 EPB_list="3"
 
 MAX_RETRY="10"
 TEST_DURATION="20"
+ENF_LOCALITY_list="0 1"
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
 TEST_DURATION="20"
 
-FOLDER="results/results_phold" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
+FOLDER="results/results_phold"
 mkdir -p results
 mkdir -p results/results_phold
-#mkdir ${FOLDER}
 
+for enfl in $ENF_LOCALITY_list
+do
 for max_lp in $MAX_SKIPPED_LP_list
 do
 for ck in $CKP_PER_list
@@ -45,8 +47,9 @@ for lookahead in $LOOKAHEAD_list
 do
 	for test in $TEST_list 
 	do
-		echo make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
-		make $test NBC=1 MAX_SKIPPED_LP=${max_lp} REVERSIBLE=0 LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 DEBUG=0 SPERIMENTAL=1 CKP_PERIOD=${ck} PRINT_SCREEN=0
+
+		echo ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
+		make ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
 		mv $test ${test}_lf_hi
 		
 		for run in $RUN_list
@@ -56,7 +59,7 @@ do
 					for threads in $THREAD_list
 					do
 						EX="./${test}_lf_hi $threads $lp $TEST_DURATION"
-						FILE="${FOLDER}/${test}-lf-dymelor-hijacker-$threads-$lp-maxlp-$max_lp-look-$lookahead-ck_per-$ck-fan-$fan_out-loop-$loop_count-$run"; touch $FILE
+						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; touch $FILE
 												
 						N=0 
 						while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
@@ -83,3 +86,5 @@ done
 done
 done
 done
+done
+

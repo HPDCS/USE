@@ -1,15 +1,15 @@
 #!/bin/bash
 
 LP_list="1024"					#number of lps
-THREAD_list="1 4 8 16 32"		#number of threads
+THREAD_list="1 5 10 20 30 40"		#number of threads
 TEST_list="phold"				#test list
-RUN_list="1 2"					#list of number of runs
+RUN_list="1 2 3"					#list of number of runs
 
-FAN_OUT_list="1 10 25 50"		#fan out list
-LOOKAHEAD_list="0.1 0.01 0.0001"		#lookahead
-LOOP_COUNT_list="50 100 150"	#loop_count
+FAN_OUT_list="1" # 10 25 50"		#fan out list
+LOOKAHEAD_list="0" #0.1 0.01 0.0001"		#lookahead
+LOOP_COUNT_list="5 25 50 100 200 400"	#loop_count
 
-FOLDER="results/results_phold/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/results_phold/"
 
 mkdir results
 mkdir results/results_phold
