@@ -58,10 +58,17 @@ To generate all the figures, type the following:
 * ./run_and_gen_all.sh
 * ./process_data.sh
 
+The Figures will be available in the `figures` folder.
+
 There is one script for running tests and generating plots: `run_and_gen_all.sh`.
 However, run all the tests should require about 8 hours.
 If you prefer to split the running time, each Figure has associated two scripts for executing the simulations and generating data,  figure*-run.sh and figure*-plot.sh respectively.
 
-As a last note, we uploaded the thread counts for targeting platform A (48 cores) discussed within the paper.
+Notes
+-----
+
+* We uploaded the thread counts for targeting platform A (48 cores) discussed within the paper.
 If you want to define thread counts for your machine, please modify the `thread.conf` file as you prefer.
+
+* Figure 3 shows one subset of a more extensive exploration of the W parameter. The script generates 6 variants for different values of W. The one corresponding to Figure 3 of the paper is: `figure3-lp_4096-ta_0.24-w_1.6.pdf`. 
 
