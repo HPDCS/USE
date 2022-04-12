@@ -1,8 +1,8 @@
 #!/bin/bash
 
+source thread.conf
 MAX_SKIPPED_LP_list="1000000"
 LP_list="256 1024 4096"                      #number of lps
-THREAD_list="1 6 12 24 36 48"        #number of  threads
 TEST_list="pcs"                 #test
 RUN_list="1 2 3 4 5"                
 

@@ -1,8 +1,9 @@
 #!/bin/bash
 
+source thread.conf
+
 MAX_SKIPPED_LP_list="1000000"
 LP_list="4096"						#number of lps
-THREAD_list="48" 		#number of  threads
 TEST_list="pcs"					#test
 RUN_list="1 2 3"				
 
@@ -73,7 +74,7 @@ do
 					do
 						for lp in $LP_list
 						do
-							for th in $THREAD_list
+							for th in $MAX_THREADS
 							do
 								EX1="./${test} $th $lp ${TEST_DURATION}"
 								
