@@ -15,11 +15,7 @@
 #define INCREASE_PERC 0.5
 #define THROUGHPUT_DRIFT 0.025
 
-<<<<<<< Updated upstream
 #define THROUGHPUT_UPPER_BOUND 0.9
-=======
-#define THROUGHPUT_UPPER_BOUND 0.95
->>>>>>> Stashed changes
 #define GRANULARITY_UPPER_BOUND 1.4
 
 #define MEASUREMENT_PHASE_THRESHOLD_MS 500
@@ -50,7 +46,7 @@ static inline void init_window(window *w) {
 	w->enabled = 0;
 	w->direction = 1.0;
 	w->size = 0.0;
-	w->step = 0.0; //nbcalqueue->hashtable->bucket_width * n_prc_tot; //tempo di interarrivo medio (per ora come costante)
+	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot; //tempo di interarrivo medio (per ora come costante)
 	w->old_throughput = 0.0;
 	w->perc_increase = 1.0;
 	w->enlarged = false;
@@ -142,12 +138,7 @@ static inline int window_resizing(window *w, double throughput) {
 	if(w->old_throughput != 0){
 
           if( (fabs(th_ratio-1)) < THROUGHPUT_DRIFT) {return res;}
-<<<<<<< Updated upstream
 	  else if (throughput < old_throughput){
-=======
-	  else 
-	  if (throughput < old_throughput){
->>>>>>> Stashed changes
             printf("changing direction %f %f\n", throughput, old_throughput);
             w->direction = w->direction * (-1);
             w->phase=1;
