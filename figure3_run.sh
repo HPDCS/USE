@@ -1,21 +1,21 @@
 #!/bin/bash
 
 MAX_SKIPPED_LP_list="1000000"
-LP_list="1024"						#number of lps
-THREAD_list="1 10 20 30 40" 		#number of  threads
+LP_list="4096"						#number of lps
+THREAD_list="48" 		#number of  threads
 TEST_list="pcs"					#test
-RUN_list="1 2 3 4 5"				
+RUN_list="1 2 3"				
 
 ENFORCE_LOCALITY_list="0 1" #DISTRIBUTED_FETCH
 
 TA_CHANGE_list="300"
 TA_DURATION_list="120"
-TA_list="1.6 0.8 0.4"
-CHANNEL_list="400"
+TA_list="0.24"
+
 LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"		#lookahead
-WINDOW_list="0.1 0.2 0.4 0.8 1.6"
-CURRENT_BINDING_SIZE="1" # 2 4 8"
-EVICTED_BINDING_SIZE="1" #2 4 8"
+WINDOW_list="0.1 0.2 0.4 0.8 1.6 3.2"
+CURRENT_BINDING_SIZE="1 2 4 8"
+EVICTED_BINDING_SIZE="1 2 4 8"
 
 CKP_PER_list="20" #"10 50 100"
 
@@ -25,7 +25,7 @@ TEST_DURATION="30"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-FOLDER="results/pcs_dyn_win_400v2" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/pcs_static_win" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir -p ${FOLDER}
 
@@ -41,7 +41,7 @@ for cbs in $CURRENT_BINDING_SIZE
 do
 for ebs in $EVICTED_BINDING_SIZE
 do
-for nch in $CHANNEL_list
+for w in $WINDOW_list 
 do
 for tav in $TA_list
 do
@@ -53,7 +53,22 @@ do
 			do
 				for df in $ENFORCE_LOCALITY_list
 				do
-					make $test ENFORCE_LOCALITY=$df CHANNELS_PER_CELL=$nch TA_CHANGE=$tac TA_DURATION=$tad TA=$tav  CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs
+					make $test ENFORCE_LOCALITY=$df ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0 START_WINDOW=$w TA_CHANGE=$tac TA_DURATION=$tad TA=$tav CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs
+					if [ $df = "0" ]; then
+						if [ "$w" = "0.1" ]; then
+                                                   echo OK
+						   
+						else
+						   echo skip null test
+						   continue
+						fi
+                                                if [ "$ebs" = "1" ]; then echo OK
+                                                else echo skip null test; continue
+                                                fi
+                                                if [ "$cbs" = "1" ]; then echo OK
+                                                else echo skip null test; continue
+                                                fi
+					fi
 					for run in $RUN_list
 					do
 						for lp in $LP_list
@@ -62,7 +77,7 @@ do
 							do
 								EX1="./${test} $th $lp ${TEST_DURATION}"
 								
-								FILE1="${FOLDER}/${test}_el_${df}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}-nch_${nch}-th_${th}-lp_${lp}-run_${run}.dat"
+								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}.dat"
 								
 								touch ${FILE1}
 								#echo $FILE1

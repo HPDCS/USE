@@ -14,8 +14,8 @@ TA_list="0.48 0.24 0.12"
 
 LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"        #lookahead
 #WINDOW_list="0.1 0.2 0.4 0.8 1.6"
-#CURRENT_BINDING_SIZE="1 2 4 8"
-#EVICTED_BINDING_SIZE="1 2 4 8"
+CURRENT_BINDING_SIZE="2"
+EVICTED_BINDING_SIZE="2"
 NCHANNELS_list="1000"
 
 
@@ -28,7 +28,7 @@ TEST_DURATION="30"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-FOLDER="results/pcs_dyn_win_v2" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/pcs_dyn_win" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir -p ${FOLDER}
 
@@ -44,7 +44,7 @@ do
             do
                 for df in $ENFORCE_LOCALITY_list
                 do
-                    make $test ENFORCE_LOCALITY=$df TA_CHANGE=$tac TA_DURATION=$tad TA=$tav CHANNELS_PER_CELL=$nch
+                    make $test ENFORCE_LOCALITY=$df TA_CHANGE=$tac TA_DURATION=$tad TA=$tav CHANNELS_PER_CELL=$nch CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE}
                     for run in $RUN_list
                     do
                         for lp in $LP_list
