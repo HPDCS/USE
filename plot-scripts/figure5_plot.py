@@ -37,7 +37,7 @@ for k in header.split(",")[1:]:
     columns[k] = count
     count+=1
 
-print(columns)
+#print(columns)
 
 import matplotlib
 matplotlib.use('Agg')
@@ -87,7 +87,7 @@ threads_list =  [1, 6, 12, 24, 36, 48]
 for line in open("thread.conf"):
     if "THREAD_list" in line:
         line = line.split("=")[-1].split("#")[0].replace('"', '').strip().split(' ')
-        print(line)
+        #print(line)
         threads_list = [int(x) for x in line]
 
 q_list = []
