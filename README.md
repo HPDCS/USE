@@ -29,7 +29,7 @@ implementing the object state-layout.
 ## Startup Instructions
 
 1. Clone the repository to your local machine.
-2. Make your model (see doc/WriteModels.md for further information).
+2. Make your model (see model/ReadMe.md for further information).
 4. Adds rules about your model in Makefile, following the existing models.
 3. Run your model as 'executable number_of_threads number_of_LPs'.
 
@@ -81,7 +81,6 @@ defining this macro the a substet of the NUMA capabilities are enable: each LP i
 
 DISTRIBUTED_FETCH: 
 if set to 1 defining this macro each thread is enabled to manage a partition of the whole LP set.
-
 
 example:
 make phold LOOKAHEAD=0.1 REPORT=1 DEBUG=0 CKP_PERIOD=10 PRINT_SCREEN=0
