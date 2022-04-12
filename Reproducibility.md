@@ -54,7 +54,7 @@ The paper has 4 Figures that can be reproduced:
 * Figure 6 (this figure has two subplots, one for each of the hardware platforms used for the experimental evaluation).
 
 There is one script for running tests and generating plots: `run_and_gen_all.sh`.
-However, it should require about X hours to run all the tests.
+However, run all the tests should require about 8 hours.
 If you prefer to split the running time, each Figure has associated two scripts for executing the simulations and generating data,  figure*-run.sh and figure*-plot.sh respectively.
 
 As a last note, we uploaded the thread counts for targeting platform A discussed within the paper.

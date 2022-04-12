@@ -4,7 +4,7 @@ source thread.conf
 MAX_SKIPPED_LP_list="1000000"
 LP_list="4096"						#number of lps
 TEST_list="pcs"					#test
-RUN_list="1 2 3"				
+RUN_list="1 2 3 4 5"				
 
 ENFORCE_LOCALITY_list="0 1" #DISTRIBUTED_FETCH
 
