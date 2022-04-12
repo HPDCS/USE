@@ -31,9 +31,13 @@ Requirements for generating figures
 Configuration
 -------------
 
-* USE does not need any manual configuration. Just type `make` and everything should go smoothly.
-  Such a phase is required to generate necessary information about cache layout and clocks.
-  In particular, the folder `include-gen` should contain two headers:
+USE does not need any manual configuration. Type the following
+
+* `make config`
+
+and everything should go smoothly.
+Such a phase is required to generate necessary information about cache layout and clocks.
+In particular, the folder `include-gen` should contain two headers:
 
   * `clock_constant.h`
   * `hpipe.h`

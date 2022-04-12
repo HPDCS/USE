@@ -362,6 +362,7 @@ nosql: clean _nosql executable
 
 executable: cache_conf mm core reverse link
 
+config: cache_conf
 
 link:
 ifeq ($(REVERSIBLE),1)
@@ -469,6 +470,10 @@ clean:
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
 
-.PHONY: clean
+clean-config:
+	-rm include-gen -r
+
+
+.PHONY: clean clean-config
 
 
