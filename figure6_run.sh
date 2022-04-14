@@ -51,7 +51,7 @@ do
                         do
                             for th in $THREAD_list
                             do
-                                EX1="./${test} $th $lp ${TEST_DURATION}"
+                                EX1="{timeout $((TEST_DURATION*2)) ./${test}} $th $lp ${TEST_DURATION}"
                                 
                                 FILE1="${FOLDER}/${test}_el_${df}-nch_${nch}-ta_${tav}-tad_${tad}-tac_${tac}-th_${th}-lp_${lp}-run_${run}.dat"
                                 

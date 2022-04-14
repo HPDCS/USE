@@ -59,7 +59,8 @@ do
 				do
 					for threads in $THREAD_list
 					do
-						EX="./${test}_lf_hi $threads $lp $TEST_DURATION"
+						EX="{timeout $((TEST_DURATION*2)) ./${test}_lf_hi} $threads $lp ${TEST_DURATION}"
+								
 						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; touch $FILE
 												
 						N=0 
@@ -69,7 +70,7 @@ do
 							echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 							echo $FILE
 							#1> $FILE 2>&1 time $EX
-							(time $EX) &> $FILE
+							$EX &> $FILE
 							if test $N -ge $MAX_RETRY ; then echo break; break; fi
 							N=$(( N+1 ))
 						done  

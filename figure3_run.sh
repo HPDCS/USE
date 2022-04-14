@@ -75,7 +75,7 @@ do
 						do
 							for th in $MAX_THREADS
 							do
-								EX1="./${test} $th $lp ${TEST_DURATION}"
+								EX1="{timeout $((TEST_DURATION*2)) ./${test}} $th $lp ${TEST_DURATION}"
 								
 								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}.dat"
 								
