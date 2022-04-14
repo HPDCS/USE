@@ -75,7 +75,7 @@ do
 						do
 							for th in $MAX_THREADS
 							do
-								EX1="{timeout $((TEST_DURATION*2)) ./${test}} $th $lp ${TEST_DURATION}"
+								EX1="./${test} $th $lp ${TEST_DURATION}"
 								
 								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}.dat"
 								
@@ -83,16 +83,16 @@ do
 								#echo $FILE1
 								#$EX1 > $FILE1
 								
-								N=0 
+								N=0
 								while [[ $(grep -c "Simulation ended" $FILE1) -eq 0 ]]
 								do
 									echo $BEGIN
 									echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 									echo $FILE1
-									$EX1 > $FILE1
+									{ timeout $((TEST_DURATION*2)) $EX1; } &> $FILE1
 									if test $N -ge $MAX_RETRY ; then echo break; break; fi
 									N=$(( N+1 ))
-								done  
+								done
 							done
 						done
 					done

@@ -51,7 +51,7 @@ do
                         do
                             for th in $THREAD_list
                             do
-                                EX1="{timeout $((TEST_DURATION*2)) ./${test}} $th $lp ${TEST_DURATION}"
+                                EX1="./${test} $th $lp ${TEST_DURATION}"
                                 
                                 FILE1="${FOLDER}/${test}_el_${df}-nch_${nch}-ta_${tav}-tad_${tad}-tac_${tac}-th_${th}-lp_${lp}-run_${run}.dat"
                                 
@@ -65,7 +65,7 @@ do
                                     echo $BEGIN
                                     echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
                                     echo $FILE1
-                                    $EX1 > $FILE1
+                                    { timeout $((${TEST_DURATION}*2)) $EX1; } &> $FILE1
                                     if test $N -ge $MAX_RETRY ; then echo break; break; fi
                                     N=$(( N+1 ))
                                 done  
