@@ -24,7 +24,7 @@ Requirements for running the tests
 Requirements for generating figures
 -----------------------------------
 
-* Python3
+* Python3, matplotlib and seaborn
 * bash
 
 
