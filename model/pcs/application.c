@@ -15,7 +15,7 @@ double ran;
 
 void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
 	unsigned int w;
-
+	(void)size;
 	//printf("%d executing %d at %f\n", me, event_type, now);
 
 	event_content_type new_event_content;
@@ -282,6 +282,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
+	(void)me;
 	if (snapshot->complete_calls < complete_calls)
 		return false;
 	return true;
