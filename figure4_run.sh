@@ -62,12 +62,6 @@ do
 						   echo skip null test
 						   continue
 						fi
-                                                if [ "$ebs" = "1" ]; then echo OK
-                                                else echo skip null test; continue
-                                                fi
-                                                if [ "$cbs" = "1" ]; then echo OK
-                                                else echo skip null test; continue
-                                                fi
 					fi
 					for run in $RUN_list
 					do
