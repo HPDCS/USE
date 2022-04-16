@@ -140,8 +140,8 @@ for metric in metric_list:
             filtereDataset  = {k:v[metric_idx] for k,v in dataset.items()  if checkTest(k, query)}
             
             x_value += [float(query["w"])]
-            i = 1
-            j = 1
+            i = 2
+            j = 2
             k = "pcs_el_1-w_"+query["w"]+"-cbs_"+str(i)+"-ebs_"+str(j)+"-ta_"+query["ta"]+"-tad_120-tac_300_th_"+str(th)+"-lp_"+query["lp"]
             
             if metric == "tot_rol":
