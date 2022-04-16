@@ -177,13 +177,10 @@ void aggregate_metrics_for_window_management(window *win) {
 			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity);
                         #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1 // use moving average only when dynamic sizing is enabled"
                           //if(thr_window == thr_window) //check for NaN float // TODO investigate this
-<<<<<<< Updated upstream
                           //  thr_ref = 0.6*thr_ref + 0.4*thr_window;
-=======
                           // thr_ref = 1.0*thr_ref + 0.0*thr_window;
 			  //else
-			   thr_ref = thr_ref;
->>>>>>> Stashed changes
+			   //thr_ref = thr_ref;
                         #endif
 
 			  if (ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF && reset_window(win, thr_ratio, granularity_ratio)) {
