@@ -69,6 +69,9 @@ Notes
 
 * We uploaded the thread counts for targeting platform A (48 cores) discussed within the paper.
 If you want to define thread counts for your machine, please modify the `thread.conf` file as you prefer.
+In particular:
+  * set MAX_THREADS to the number of cores (e.g., MAX_THREADS="<num_of_cores>")
+  * set THREAD_list to the list of thread counts you want to evaluate. (e.g., on a 40 CPU-core machine set THREAD_list="1 10 20 30 40")
 
 * Figure 3 shows one subset of a more extensive exploration of the W parameter. The script generates 6 variants for different values of W. The one corresponding to Figure 3 of the paper is: `figure3-lp_4096-ta_0.24-w_1.6.pdf`. 
 
