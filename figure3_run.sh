@@ -2,22 +2,22 @@
 
 source thread.conf
 MAX_SKIPPED_LP_list="1000000"
-LP_list="4096"						#number of lps
+LP_list="4096"					#number of lps
 TEST_list="pcs"					#test
 RUN_list="1 2 3 4 5"				
 
-ENFORCE_LOCALITY_list="0 1" #DISTRIBUTED_FETCH
+ENFORCE_LOCALITY_list="0 1" 
 
 TA_CHANGE_list="300"
 TA_DURATION_list="120"
 TA_list="0.24"
 
-LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"		#lookahead
+LOOKAHEAD_list="0" 
 WINDOW_list="0.1 0.2 0.4 0.8 1.6 3.2"
 CURRENT_BINDING_SIZE="1 2 4 8"
 EVICTED_BINDING_SIZE="1 2 4 8"
 
-CKP_PER_list="20" #"10 50 100"
+CKP_PER_list="20"
 
 MAX_RETRY="10"
 TEST_DURATION="30"
@@ -25,7 +25,7 @@ TEST_DURATION="30"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-FOLDER="results/pcs_static_win" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
+FOLDER="results/pcs_static_win"
 
 mkdir -p ${FOLDER}
 

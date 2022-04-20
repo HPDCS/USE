@@ -26,6 +26,9 @@ CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H)
 TEST_DURATION="20"
 
 
+CURRENT_BINDING_SIZE="2" 
+EVICTED_BINDING_SIZE="2" 
+
 FOLDER="results/results_phold"
 mkdir -p results
 mkdir -p results/results_phold
@@ -49,9 +52,8 @@ do
 	for test in $TEST_list 
 	do
 
-		echo ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
-		make ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
-		#mv $test ${test}_lf_hi
+		echo CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE} ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
+		make $test CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE} ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
 		
 		for run in $RUN_list
 		do
