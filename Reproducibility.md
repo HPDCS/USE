@@ -8,12 +8,19 @@ Discrete Event Simulation on Multi-core Machine"
 
 To be published in ACM SIGSIM PADS 2022
 
+Download
+--------
+
+* https://doi.org/10.5281/zenodo.6473683
+
+
+
 Authors & Contacts
 ------------------
 
-Federica Montesano <>
+Federica Montesano <federica.montesano@alumni.uniroma2.eu>
 Romolo Marotta <romolo.marotta@gmail.com>
-Francesco Quaglia <>
+Francesco Quaglia <francesco.quaglia@uniroma2.it>
 
 Requirements for running the tests
 ----------------------------------
