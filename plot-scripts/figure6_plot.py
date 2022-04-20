@@ -94,7 +94,7 @@ for line in open("thread.conf"):
     if "THREAD_list" in line:
         line = line.split("=")[-1].split("#")[0].replace('"', '').strip().split(' ')
         #print(line)
-        threads_list = [int(x) for x in line]
+        th_list = [int(x) for x in line]
 
 lp_list=["256", "1024", "4096"]
 test="pcs"
@@ -118,7 +118,7 @@ for nlp in lp_list:
         cur_ax.set_ylabel(metric_title[metric])
         cur_ax.title.set_text(" ".join(["#cells "+nlp]))
         cur_ax.set_xticks(th_list)
-        cur_ax.set_yticks(np.arange(0.6,1.25,0.05))
+        #cur_ax.set_yticks(np.arange(0.6,1.25,0.05))
         #plt.gcf().get_axes()[count].set_ylim(0,35)
         metric_idx = columns[metric]
         custom_lines = []

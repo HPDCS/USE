@@ -60,11 +60,6 @@ metric_function={
     "tot_rol" : ratio,
     "evt_gra" : inverse_ratio
 }
-metric_crange={
-    "com_evt" : [0.8, 1.35],
-    "tot_rol" : [0,100],
-    "evt_gra" : [1.15, 2.5]    
-}
 ta = "0.24"
 lp = "4096"
 q_list = [{
@@ -155,8 +150,7 @@ for query in q_list:
 
         if metric != "tot_rol":
             sns.heatmap(dataplot, ax=axs[count], square=True, linewidth=0.5, \
-                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".2f", cmap=cmap) #, \
-                   #vmin=metric_crange[metric][0], vmax=metric_crange[metric][1])
+                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".2f", cmap=cmap) 
         else:
             sns.heatmap(dataplot, ax=axs[count], square=True, linewidth=0.5, \
                     xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".0f", cmap=cmap)

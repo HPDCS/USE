@@ -124,8 +124,8 @@ for metric in metric_list:
                 dir = {k:v[metric_idx] for k,v in baseline.items() if checkTest(k, base_query)}
                 baseline_value  = [v[metric_idx] for k,v in baseline.items() if checkTest(k, base_query)][0]
                 x_value += [float(query["threads"])]
-                i = 1
-                j = 1
+                i = 2
+                j = 2
                 k = "phold-enfl_"+enfl+"-threads_"+query["threads"]+"-lp_"+query["lp"]+"-maxlp_1000000-look_0-ck_per_20-fan_1-loop_"+query["loop"]
                 dataplot+=[metric_function[metric](filtereDataset[k],baseline_value)] #baseline_value[k.replace("enfl_1", "enfl_0")])]    
                 cur_ax.plot(x_value, dataplot, color=gran_to_col[g], dashes=enfl_to_dash[enfl])

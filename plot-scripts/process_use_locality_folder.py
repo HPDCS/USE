@@ -63,11 +63,16 @@ avg = {}
 
 for k in data:
   li = data[k]
+  #print(k,data[k])
   nli = [0] * len(li[0])
   samples=len(li)
   for l in li:
-    for i in range(len(l)):
-      nli[i] += l[i]
+    try:
+      for i in range(len(l)):
+        nli[i] += l[i]
+    except:
+      samples-=1
+      continue
   for i in range(len(nli)):
     nli[i] = nli[i]/samples
   avg[k] = nli
