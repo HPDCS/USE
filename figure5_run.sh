@@ -51,7 +51,7 @@ do
 
 		echo ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
 		make ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
-		mv $test ${test}_lf_hi
+		#mv $test ${test}_lf_hi
 		
 		for run in $RUN_list
 		do
@@ -59,7 +59,7 @@ do
 				do
 					for threads in $THREAD_list
 					do
-						EX="./${test}_lf_hi $threads $lp ${TEST_DURATION}"
+						EX="./${test} $threads $lp ${TEST_DURATION}"
 								
 						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; touch $FILE
 												
@@ -79,7 +79,7 @@ do
 					done
 				done
 		done
-		rm ${test}_lf_hi
+		rm ${test}
 	done
 done
 done
