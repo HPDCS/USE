@@ -11,7 +11,7 @@ To be published in ACM SIGSIM PADS 2022
 Download
 --------
 
-* https://doi.org/10.5281/zenodo.6473683
+* https://doi.org/10.5281/zenodo.6477635
 
 
 
@@ -27,6 +27,7 @@ Requirements for running the tests
 
 * x86_64 hardware
 * Unix system with gcc toolchain
+  * bash, gcc toolchain, make, libnuma-dev or numactl-devel
 
 Requirements for generating figures
 -----------------------------------
