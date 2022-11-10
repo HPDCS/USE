@@ -314,6 +314,11 @@ void LPs_metada_init() {
 		LPS[i]->wt_binding = UNDEFINED_WT;
 	  #endif
 
+		/* FIELDS FOR COMPUTING AVG METRICS	*/
+		LPS[i]->ema_ti					= 0.0;
+		LPS[i]->ema_granularity			= 0.0;
+		LPS[i]->migration_score			= 0.0;
+
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
@@ -334,6 +339,18 @@ void numa_init(){
 		numa_available_bool = false;
 		num_numa_nodes = 1;
 	}	
+
+
+
+	numa_state = malloc(num_numa_nodes * sizeof(numa_struct *));
+
+	for (unsigned int i=0; i < num_numa_nodes; i++) {
+		numa_state[i] = malloc(sizeof(numa_struct));
+		alloc_numa_state(numa_state[i]);
+		numa_state[i]->numa_id = i;
+	}
+	
+
 }
 
 
@@ -475,6 +492,27 @@ void init_simulation(unsigned int thread_id){
 				LPS[current_lp]->ckpt_period = 20;
 				//LPS[current_lp]->epoch = 1;
 		}
+
+		unsigned cur_lp = 0;
+			for(unsigned int j=0;j<num_numa_nodes;j++){
+				for(unsigned int i=0;i<n_prc_tot/num_numa_nodes;i++) {
+					set_bit(numa_state[j]->numa_binding_bitmap, cur_lp);
+					LPS[cur_lp]->numa_node 				= j;
+				  #if VERBOSE == 1
+					printf("INI NUMA %d LP %d b:%d\n",  j, cur_lp, get_bit(numa_state[j]->numa_binding_bitmap, cur_lp));
+				  #endif
+					cur_lp++;
+				}
+			}
+			for(;cur_lp<n_prc_tot;cur_lp++){
+				set_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp);
+				LPS[cur_lp]->numa_node 				= num_numa_nodes-1;
+			  #if VERBOSE == 1
+				printf("INI NUMA %d LP %d b:%d\n",  num_numa_nodes-1, cur_lp, get_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp));
+			  #endif
+			}
+
+
               #if ENFORCE_LOCALITY==1
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
 		init_metrics_for_window();
@@ -540,6 +578,15 @@ stat64_t execute_time;
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
 		}
+#endif
+		/// computation of metrics for LP migration
+		aggregate_metrics_for_lp_migration(current_lp, event->timestamp, LPS[current_lp]->bound->timestamp, execute_time);
+		
+
+#if VERBOSE == 1
+		printf("Print LPS[current_lp]->ema_ti %f for current_lp %u\n", LPS[current_lp]->ema_ti, current_lp);
+		printf("Print LPS[current_lp]->ema_granularity %f for current_lp %u\n", LPS[current_lp]->ema_granularity, current_lp);
+		printf("migration_score %f for lp %u\n", LPS[current_lp]->migration_score, current_lp);
 #endif
 
 
@@ -828,15 +875,18 @@ void thread_loop(unsigned int thread_id) {
 		aggregate_metrics_for_window_management(&w);
 //#endif
 		/// do the unbalance check if the locality window is enabled or periodically
-		if ( (w.enabled || periodic_rebalance_check(numa_rebalance_timer) ) && enable_unbalance_check() ) { 
-			if (pthread_mutex_trylock(&numa_balance_check_mtx) == 0) {
-			  #if VERBOSE == 1
-				printf("Evaluating balance\n");
-			  #endif
-				/// rebalancing algorithm and physical migration
-				plan_and_do_lp_migration(numa_state);
-				/// restart timer for next periodic rebalancing
-				pthread_mutex_unlock(&numa_balance_check_mtx); 
+		if ( (w.enabled || periodic_rebalance_check(numa_rebalance_timer) ) ){
+			//printf("Evaluating balance 1\n");
+			if(enable_unbalance_check() ) { 
+				if (pthread_mutex_trylock(&numa_balance_check_mtx) == 0) {
+				  #if VERBOSE == 0
+					printf("Evaluating balance 2\n");
+				  #endif
+					/// rebalancing algorithm and physical migration
+					plan_and_do_lp_migration(numa_state);
+					/// restart timer for next periodic rebalancing
+					pthread_mutex_unlock(&numa_balance_check_mtx); 
+				}
 			}
 		}
 

@@ -63,6 +63,24 @@ void local_binding_push(unsigned int lp){
     }
 }
 
+void flush_locked_pipe(){
+
+    pipe_entry_t entry_to_be_evicted;
+    unsigned int lp_to_evict;
+    simtime_t next_ts;
+
+    for(int i=0;i<thread_locked_binding->size;i++){
+        entry_to_be_evicted = thread_locked_binding->entries[i]; 
+        lp_to_evict = entry_to_be_evicted.lp; 
+        LPS[lp_to_evict]->wt_binding = UNDEFINED_WT;
+        unlock(lp_to_evict);
+        next_ts = entry_to_be_evicted.next_ts;
+        update_pipe_entry(thread_locked_binding, i, UNDEFINED_LP, INFTY);
+        insert_lp_in_pipe(thread_unlocked_binding, lp_to_evict, next_ts, &entry_to_be_evicted);
+    }
+}
+
+
 
 
 int local_fetch(){

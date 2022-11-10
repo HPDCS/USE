@@ -10,6 +10,10 @@
 
 #include <bitmap.h>
 #include <window.h>
+#include <local_scheduler.h>
+
+
+extern void migrate_segment(unsigned int id, int numa_node);
 
 
 #define BALANCE_OVERFLOW 0.30
@@ -326,7 +330,7 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
   #if ENFORCE_LOCALITY == 1
     int flushed_pipe = 0;
   #endif
-    return;
+    
     double current_delta = 0.0;
     /// do the migration of as many lps in lps_to_migrate_array as possible
 	for (unsigned int j = 0; j < elem_count;j++) {
@@ -348,6 +352,7 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
 		//printf("new skew %f\n", skewness/scale + current_delta);
 		reset_bit(max_load_numa_node->numa_binding_bitmap, lps_to_migrate_array[j].lp_idx); /// reset bit from src node
 		set_bit(min_load_numa_node->numa_binding_bitmap, lps_to_migrate_array[j].lp_idx); /// set bit to dest node
+		LPS[j]->numa_node 				=  min_load_numa_node->numa_id;
 		migrate_segment(lps_to_migrate_array[j].lp_idx, min_load_numa_node->numa_id);
 	}
 

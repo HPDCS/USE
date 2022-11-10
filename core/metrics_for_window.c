@@ -21,6 +21,7 @@ static pthread_mutex_t stat_mutex, window_check_mtx;
 static __thread clock_timer start_window_reset;
 static __thread stat64_t time_interval_for_measurement_phase;
 static __thread double elapsed_time;
+extern unsigned int rounds_before_unbalance_check; /// number of window management rounds before checking numa unbalance
 
 void init_metrics_for_window() {
 
@@ -142,6 +143,7 @@ void aggregate_metrics_for_window_management(window *win) {
 
 	if (pthread_mutex_trylock(&stat_mutex) == 0) { //just one thread executes the underlying block
 
+		++rounds_before_unbalance_check;
 		if (!w.enabled) enable_window(&old_thr);
 		
 		//window is enabled -- workload can be considered stable
@@ -187,6 +189,7 @@ void aggregate_metrics_for_window_management(window *win) {
 			    printf("RESET WINDOW\n");
 			    thr_ref = 0.0;
 			    granularity_ref = 0.0;
+			    rounds_before_unbalance_check = 0;
 			    clock_timer_start(start_window_reset);
 			  }
                         }

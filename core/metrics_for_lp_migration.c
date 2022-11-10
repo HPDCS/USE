@@ -3,6 +3,9 @@
 
 
 
+#define ALFA_EMA 0.6 ///constant for interrival time ema
+#define BETA_EMA 0.8 ///constant for granularity ema
+
 
 
 /**

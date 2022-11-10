@@ -125,6 +125,8 @@ typedef struct _LP_state {
 	
 	unsigned int until_clean_ckp;
 
+	unsigned int numa_node;
+
 } LP_state;
 
 
