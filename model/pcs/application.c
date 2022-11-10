@@ -59,7 +59,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			if(IsParameterPresent(event_content, "ta"))
 				state->ref_ta = state->ta = GetParameterDouble(event_content, "ta");
 			else{
-				if(NUM_HOT && me < (n_prc_tot/2))
+				if(NUM_HOT && me < NUM_HOT_CELLS)
 					state->ref_ta = state->ta = TA_HOT;
 				else
 					state->ref_ta = state->ta = TA;
@@ -92,6 +92,20 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			if(me == 0) {
 				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
 					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
+				printf("TARGET_SKEW: %f\n"
+					"PERC_HOT: %f\n"
+					"NUM_HOT_CELLS  : %d\n"
+					"NUM_CLD_CELLS_IN_MAX  : %d\n"
+					"LOAD_FROM_CLD_CELLS : %f\n"
+					"LOAD_FROM_HOT_CELLS : %f\n"
+					"TA_HOT         : %f\n",
+TARGET_SKEW ,
+PERC_HOT    ,
+NUM_HOT_CELLS  ,
+NUM_CLD_CELLS_IN_MAX  ,
+LOAD_FROM_CLD_CELLS ,
+LOAD_FROM_HOT_CELLS ,
+TA_HOT         );
 				fflush(stdout);
 			}
 

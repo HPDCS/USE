@@ -18,16 +18,34 @@
 #define TA			0.4
 #endif
 
-#define TA_HOT		(TA/2)
 
+#define TA_DURATION		120
+//#define TA_DURATION		60
 
 #ifndef NUM_HOT
 #define NUM_HOT 0
 #endif
 
 
-#define TA_DURATION		120
-//#define TA_DURATION		60
+#define PARTITIONS 2
+#define CELLS_PER_PARTITION  (n_prc_tot/PARTITIONS)
+
+#define PERC_HOT 0.1
+#define NUM_HOT_CELLS  ((unsigned int)(PERC_HOT*n_prc_tot))
+
+#define NUM_CLD_CELLS_IN_MAX ((n_prc_tot/PARTITIONS)-NUM_HOT_CELLS)
+#define LOAD_FROM_CLD_CELLS  (NUM_CLD_CELLS_IN_MAX/TA)
+
+#define TARGET_SKEW 0.5
+#define MIN_LOAD_PARTITION	   (CELLS_PER_PARTITION/TA)
+#define MAX_LOAD_PARTITION	   (MIN_LOAD_PARTITION*(1+TARGET_SKEW))
+#define LOAD_FROM_HOT_CELLS    (MAX_LOAD_PARTITION-LOAD_FROM_CLD_CELLS)
+#define TA_HOT                 (NUM_HOT_CELLS/LOAD_FROM_HOT_CELLS)
+
+#if NUM_HOT != 0
+#define CHANNELS_PER_CELL	((unsigned int)(TA_DURATION*1.1/TA_HOT))
+#endif
+
 
 #ifndef CHANNELS_PER_CELL
 #define CHANNELS_PER_CELL	1000
