@@ -111,6 +111,14 @@ typedef struct _LP_state {
 	local_index_t local_index;
 	unsigned int wt_binding;
 #endif
+	
+
+	/// Field for computing the interarrival time ema
+	simtime_t ema_ti;
+	/// Field for computing the granularity per-lp ema
+	simtime_t ema_granularity;
+	/// Migration score for LP classification
+	simtime_t migration_score;
 
 	simtime_t commit_horizon_ts;
 	unsigned long long commit_horizon_tb;

@@ -33,6 +33,10 @@
 #include <prints.h>
 #include <utmpx.h>
 
+
+#include <numa_migration_support.h>
+#include "metrics_for_lp_migration.h"
+
 #if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
 #include "local_scheduler.h"
@@ -114,9 +118,12 @@ pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
 unsigned int sec_stop = 0;
 unsigned long long *sim_ended;
 
-
+numa_struct **numa_state;			/// state of every numa node
+pthread_mutex_t numa_balance_check_mtx; /// mutex for checking numa unbalance
 unsigned int num_numa_nodes;
 bool numa_available_bool;
+unsigned int rounds_before_unbalance_check; /// number of window management rounds before numa unbalance check
+clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
@@ -819,9 +826,19 @@ void thread_loop(unsigned int thread_id) {
 //#if ENFORCE_LOCALITY == 1		
 		//check if elapsed time since fetching an event is large enough to start computing stats
 		aggregate_metrics_for_window_management(&w);
-		 		
-		
 //#endif
+		/// do the unbalance check if the locality window is enabled or periodically
+		if ( (w.enabled || periodic_rebalance_check(numa_rebalance_timer) ) && enable_unbalance_check() ) { 
+			if (pthread_mutex_trylock(&numa_balance_check_mtx) == 0) {
+			  #if VERBOSE == 1
+				printf("Evaluating balance\n");
+			  #endif
+				/// rebalancing algorithm and physical migration
+				plan_and_do_lp_migration(numa_state);
+				/// restart timer for next periodic rebalancing
+				pthread_mutex_unlock(&numa_balance_check_mtx); 
+			}
+		}
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
