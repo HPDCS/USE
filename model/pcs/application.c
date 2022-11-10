@@ -58,13 +58,18 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			if(IsParameterPresent(event_content, "ta"))
 				state->ref_ta = state->ta = GetParameterDouble(event_content, "ta");
-			else
-				state->ref_ta = state->ta = TA;
-
+			else{
+				if(NUM_HOT && me < (n_prc_tot/2))
+					state->ref_ta = state->ta = TA_HOT;
+				else
+					state->ref_ta = state->ta = TA;
+			}
 			if(IsParameterPresent(event_content, "ta_duration"))
 				state->ta_duration = GetParameterDouble(event_content, "ta_duration");
 			else
 				state->ta_duration = TA_DURATION;
+
+
 
 			if(IsParameterPresent(event_content, "ta_change"))
 				state->ta_change = GetParameterDouble(event_content, "ta_change");

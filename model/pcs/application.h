@@ -9,10 +9,23 @@
 
 
 #define CHECK_FADING_TIME	10
+
+#ifndef COMPLETE_CALLS
 #define COMPLETE_CALLS		5000
+#endif
+
 #ifndef TA
 #define TA			0.4
 #endif
+
+#define TA_HOT		(TA/2)
+
+
+#ifndef NUM_HOT
+#define NUM_HOT 0
+#endif
+
+
 #define TA_DURATION		120
 //#define TA_DURATION		60
 
@@ -23,6 +36,10 @@
 #ifndef TA_CHANGE
 #define TA_CHANGE		300.0
 #endif
+
+
+
+
 //#define TA_CHANGE		75.0//150.0
 
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
