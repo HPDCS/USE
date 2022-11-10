@@ -85,12 +85,17 @@ CFLAGS:=$(CFLAGS) -DHAVE_PARALLEL_ALLOCATOR
 endif
 
 ifdef DISTRIBUTED_FETCH
-CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=1
+CFLAGS:=$(CFLAGS) -DDISTRIBUTED_FETCH=$(DISTRIBUTED_FETCH)
 endif
 
 ifdef MBIND
-CFLAGS:=$(CFLAGS) -DMBIND=1
+CFLAGS:=$(CFLAGS) -DMBIND=$(MBIND)
 endif
+
+ifdef NUMA_REBALANCE
+CFLAGS:=$(CFLAGS) -DNUMA_REBALANCE=$(NUMA_REBALANCE)
+endif
+
 
 ifdef LOOKAHEAD
 CFLAGS:= $(CFLAGS) -DLOOKAHEAD=$(LOOKAHEAD)
@@ -222,6 +227,11 @@ ifdef TA
 CFLAGS:= $(CFLAGS) -DTA=$(TA)
 endif
 
+
+ifdef NUM_HOT
+CFLAGS:= $(CFLAGS) -DNUM_HOT=$(NUM_HOT)
+endif
+
 #PCS
 ifdef TA_DURATION
 CFLAGS:= $(CFLAGS) -DTA_DURATION=$(TA_DURATION)
@@ -296,10 +306,12 @@ CORE_SOURCES =  core/core.c\
 		core/local_scheduler.c\
 		core/local_index/local_index.c\
 		core/metrics_for_window.c\
+		core/metrics_for_lp_migration.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
 
-MM_SOURCES=mm/allocator.c\
+MM_SOURCES=mm/buddy.c\
+		mm/segment.c\
 		mm/dymelor.c\
 		mm/recoverable.c\
 		mm/checkpoints.c\
