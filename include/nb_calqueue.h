@@ -89,6 +89,8 @@ struct __bucket_node
 	unsigned int counter; 			// used to resolve the conflict with same timestamp using a FIFO policy
 	//char zpad3[36];					// actually used only to distinguish head nodes
 	unsigned int tag;
+	void* pad1;
+	void* pad2;
 	bool reserved;
 #if DEBUG == 1 // TODO
 	unsigned int copy;

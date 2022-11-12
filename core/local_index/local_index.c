@@ -2,15 +2,27 @@
 #include "local_index.h"
 
 
+#define VERBOSE_SL 0
+
+#if VERBOSE_SL == 1
+#define SL_LOG(x, ...) printf(__VA_ARGS__)
+#else
+#define SL_LOG(x, ...) do{}while(0)
+#endif
+
+static __thread struct drand48_data __sl_seed;
+static __thread int __init_seed = 0;
+
 nb_stack_node_t* nb_popAll(volatile nb_stack_t *s){
     return __sync_lock_test_and_set(&s->top, NULL);
 }
 
 void local_clean_prefix(LP_state *lp_ptr){
     local_index_t *local_idx_ptr = &lp_ptr->local_index;
-    nb_stack_t *actual_idx_ptr   = &local_idx_ptr->actual_index;
-    nb_stack_node_t *prev  = actual_idx_ptr->top;
+    nb_stack_t *actual_idx_ptr   = local_idx_ptr->actual_index;
+    nb_stack_node_t *prev  = actual_idx_ptr[0].top;
     msg_t *pre_evt;
+    msg_t *cur_evt;
 
     do{
         if(prev == NULL) return;
@@ -18,105 +30,175 @@ void local_clean_prefix(LP_state *lp_ptr){
         // this loop starts from head and disconnect each node that is not worth executing it
         while(prev!=NULL){
             pre_evt = prev->payload;
-            if(pre_evt->state != ELIMINATED && pre_evt->monitor!=EVT_SAFE && pre_evt->monitor!=EVT_BANANA) return;
-            actual_idx_ptr->top = prev->lnext[0];
+            if(    pre_evt->state != ELIMINATED 
+                && pre_evt->monitor!=EVT_SAFE 
+                && pre_evt->monitor!=EVT_BANANA) return;
+
+            for(int i=0;i<prev->lvl+1;i++){
+                if(1 || prev->lnext[i]){
+                  if(prev->lvl < i) gdb_abort;
+                    actual_idx_ptr[i].top = prev->lnext[i];
+                }
+            }
+            cur_evt = prev->payload;
+            SL_LOG("clean from LP %p ts %p %f lvl:%d\n", lp_ptr, prev, cur_evt->timestamp, prev->lvl);
+            for(int i=0;i<LOCAL_INDEX_LEVELS;i++){
+                SL_LOG("%p\n", actual_idx_ptr[i].top);
+            }
+            SL_LOG("-----------------------\n");
             node_free((nbc_bucket_node*)prev);
-            prev = actual_idx_ptr->top;             
+            prev = actual_idx_ptr[0].top;             
         }
     }while(prev == NULL);
+    SL_LOG("\n");
 
 }
 
 
 void local_remove_minimum(LP_state *lp_ptr){
     local_index_t *local_idx_ptr = &lp_ptr->local_index;
-    nb_stack_t *actual_idx_ptr   = &local_idx_ptr->actual_index;
+    nb_stack_t *actual_idx_ptr   = local_idx_ptr->actual_index;
     nb_stack_node_t *tmp;
+    msg_t *cur_evt;
 
-    if(actual_idx_ptr->top != NULL){
+    if(actual_idx_ptr[0].top != NULL){
         tmp = actual_idx_ptr->top;
-        actual_idx_ptr->top = tmp->lnext[0];
+        for(int i=0;i<tmp->lvl+1;i++){
+            if(1 || tmp->lnext[i]){
+                if(tmp->lvl < i) gdb_abort;
+                actual_idx_ptr[i].top = tmp->lnext[i];
+            }
+        }
+        cur_evt = tmp->payload;
+        SL_LOG("removed from LP %p ts %p %f\n", lp_ptr, tmp, cur_evt->timestamp);
         node_free((nbc_bucket_node*)tmp);
     }
 }
 
 void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
-    local_index_t *local_idx_ptr = &lp_ptr->local_index;
-    nb_stack_t *actual_idx_ptr   = &local_idx_ptr->actual_index;
-    nb_stack_node_t *cur = actual_idx_ptr->top;
+    long rdn;
+    char lvl = -1;
+    nb_stack_t *actual_idx_ptr   = lp_ptr->local_index.actual_index;
+    nb_stack_node_t *cur;
     msg_t *cur_evt;
 
-    nb_stack_node_t *prev  = cur;
+    nb_stack_node_t *prev;
     msg_t *pre_evt;
+    msg_t *evt;
 
-    msg_t *evt = node->payload;
-    node->lnext[0] = NULL;
+    //local_clean_prefix(lp_ptr);
 
-    do{
-        if(prev == NULL){
-            actual_idx_ptr->top = node;
-            return;
-        }
 
-        cur = NULL;
-        cur_evt = NULL;
-        pre_evt = prev->payload;
+    // get level
+    if(!__init_seed){ srand48_r(899+tid,&__sl_seed); __init_seed++;}    
+    lrand48_r(&__sl_seed, &rdn);
 
-        while(prev!=NULL){
-            pre_evt = prev->payload;
-            if( pre_evt->state   != ELIMINATED && 
-                pre_evt->monitor != EVT_SAFE   && 
-                pre_evt->monitor!=EVT_BANANA)
-              break;
-            actual_idx_ptr->top = prev->lnext[0];
-            node_free((nbc_bucket_node*)prev);
-            prev = actual_idx_ptr->top;             
-        }
-    }while(prev == NULL);
+    // init node pointers
+    for(int i=0;i<LOCAL_INDEX_LEVELS;i++) node->lnext[i] = NULL;
+    for(int i=0;i<LOCAL_INDEX_LEVELS;i++,lvl++) if( !(rdn & (1<<i)) ) i=LOCAL_INDEX_LEVELS;
+    node->lvl = lvl;
+    if(lvl < 0 || lvl >= LOCAL_INDEX_LEVELS) {printf("lvl %d\n",lvl);gdb_abort;}
+    node->lvl = lvl != 0;
 
-    if(BEFORE(evt, pre_evt)){
-        actual_idx_ptr->top = node;
-        node->lnext[0] = prev;
-        return;
+    evt  = node->payload;
+    cur  = actual_idx_ptr[0].top;
+    prev = cur;
+
+    nb_stack_node_t *curs[LOCAL_INDEX_LEVELS];
+    nb_stack_node_t *pres[LOCAL_INDEX_LEVELS];
+    SL_LOG("\nScanning LP %p for inserting %p %f lvl:%d\n", lp_ptr, node, evt->timestamp, node->lvl);
+    SL_LOG("pres curs init\n");
+    for(int i=0;i<LOCAL_INDEX_LEVELS;i++){
+        pres[i] = NULL;
+        curs[i] = actual_idx_ptr[i].top;
+        SL_LOG("%p %p\n", pres[i], curs[i]);
     }
+    SL_LOG("-----------------------\n");
 
-
-    cur = prev->lnext[0];
-    while(cur != NULL){
-        cur_evt = cur->payload;
-        if( cur_evt->state  != ELIMINATED && 
-            cur_evt->monitor!= EVT_SAFE   && 
-            cur_evt->monitor!= EVT_BANANA){
-
-            if(BEFORE(evt, cur_evt)){
-                break;
-            }   
-            
-        }
-        else{
-            prev->lnext[0] = cur->lnext[0];
-            node_free((nbc_bucket_node*)cur);
-            cur = prev->lnext[0];
+    int cur_lvl = LOCAL_INDEX_LEVELS-1;
+    while(cur_lvl+1){
+        SL_LOG("Scanning lvl %d\n", cur_lvl);
+        if(curs[cur_lvl] == NULL){
+            cur_lvl--;
             continue;
         }
-
-        prev = cur;
-        pre_evt = cur_evt;
-        cur  = cur->lnext[0];
+        cur_evt = curs[cur_lvl]->payload;
+        if(AFTER_OR_CONCURRENT(evt, cur_evt)){
+            pres[cur_lvl] = curs[cur_lvl];
+            curs[cur_lvl] = pres[cur_lvl]->lnext[cur_lvl];
+            continue;
+        }
+        if(BEFORE(evt, cur_evt)){
+            cur_lvl--;
+            if(cur_lvl < 0) continue;
+            if(pres[cur_lvl+1]){
+                pres[cur_lvl] = pres[cur_lvl+1];
+                curs[cur_lvl] = pres[cur_lvl]->lnext[cur_lvl];
+            }
+            continue;
+        }
     }
 
-  #if DEBUG == 1
-    if(prev == NULL) gdb_abort;
-    if(BEFORE(evt, pre_evt)) gdb_abort;
-  #endif
+    for(int i=0;i<LOCAL_INDEX_LEVELS;i++){
+        SL_LOG("LVL %d - %p %p\n", i, pres[i], curs[i]);
+    }
+    SL_LOG("\n");
 
-    prev->lnext[0] = node;
-    if(cur == NULL) return;
+    for(int lvl=0;lvl<node->lvl+1;lvl++){
+        SL_LOG("updating level %d\n", lvl);
+        if(pres[lvl]){
+            if(pres[lvl]->lnext[lvl] != curs[lvl]) gdb_abort;
+            pres[lvl]->lnext[lvl] = node;
+        }
+        else
+            actual_idx_ptr[lvl].top = node;
+        node->lnext[lvl] = curs[lvl];
+    }
 
-  #if DEBUG == 1
-    if(BEFORE(cur_evt, evt)) gdb_abort;
-  #endif
-    node->lnext[0] = cur;
+    for(int i=0;i<LOCAL_INDEX_LEVELS;i++){
+        pres[i] = NULL;
+        curs[i] = actual_idx_ptr[i].top;
+    }
+    
+    SL_LOG("checking consistency\n");
+    
+ SL_LOG("pres curs init\n");
+    for(int i=0;i<LOCAL_INDEX_LEVELS;i++){
+        pres[i] = NULL;
+        curs[i] = actual_idx_ptr[i].top;
+        SL_LOG("%p %p\n", pres[i], curs[i]);
+    }
+    SL_LOG("-----------------------\n");
+
+    cur_lvl = LOCAL_INDEX_LEVELS-1;
+    while(cur_lvl+1){
+        SL_LOG("Scanning lvl %d\n", cur_lvl);
+        if(curs[cur_lvl] == NULL){
+            cur_lvl--;
+            continue;
+        }
+        cur_evt = curs[cur_lvl]->payload;
+        if(AFTER_OR_CONCURRENT(evt, cur_evt)){
+            pres[cur_lvl] = curs[cur_lvl];
+            curs[cur_lvl] = pres[cur_lvl]->lnext[cur_lvl];
+            continue;
+        }
+        if(BEFORE(evt, cur_evt)){
+            cur_lvl--;
+            if(cur_lvl < 0) continue;
+            if(pres[cur_lvl+1]){
+                SL_LOG("skipping items\n");
+                pres[cur_lvl] = pres[cur_lvl+1];
+                curs[cur_lvl] = pres[cur_lvl]->lnext[cur_lvl];
+            }
+            continue;
+        }
+    }
+
+    for(int i=0;i<LOCAL_INDEX_LEVELS;i++){
+        SL_LOG("LVL %d - %p %p\n", i, pres[i], curs[i]);
+    }
+    SL_LOG("\n");
 
     return;
 }
