@@ -17,7 +17,7 @@ extern void migrate_segment(unsigned int id, int numa_node);
 
 
 #define BALANCE_OVERFLOW 0.30
-#define UNBALANCE_ROUNDS_CHECK 4
+#define UNBALANCE_ROUNDS_CHECK 10
 #define SKEWNESS_THRESHOLD 0.6
 
 /**

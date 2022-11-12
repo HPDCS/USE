@@ -6,9 +6,16 @@
 #include <statistics.h>
 #include <window.h>
 #include <clock_constant.h>
-
+#include <math.h>
 
 window w;
+
+
+#define NUM_THROUGHPUT_SAMPLES 10
+
+double th_samples[NUM_THROUGHPUT_SAMPLES];
+unsigned long long th_counter = 0;
+unsigned long long start_simul_time = 0;
 
 static double old2_thr, old_thr, thr_ref;
 static simtime_t prev_granularity, prev_granularity_ref, granularity_ref;
@@ -26,12 +33,52 @@ extern unsigned int rounds_before_unbalance_check; /// number of window manageme
 
 __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
 
+
+
+
+int get_mem_usage() {
+    FILE *statFP;
+    int oldNumbers[7];
+    int newNumbers[7];
+    int diffNumbers[7];
+    char cpu[10];  // Not used
+
+    statFP = fopen("/proc/self/statm", "r");
+
+    fscanf(statFP,
+            "%s %d %d %d %d %d %d %d",
+            cpu,
+            &oldNumbers[0], 
+            &oldNumbers[1],
+            &oldNumbers[2],
+            &oldNumbers[3],
+            &oldNumbers[4],
+            &oldNumbers[5],
+            &oldNumbers[6]);
+
+    fclose(statFP);
+
+    return oldNumbers[1];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 void init_metrics_for_window() {
 
 	init_window(&w);
 	pthread_mutex_init(&stat_mutex, NULL);
 	pthread_mutex_init(&window_check_mtx, NULL);
-
+	clock_timer_value(start_simul_time);
 	prev_comm_evts = 0;
 	prev_comm_evts_ref = 0;
 	prev_first_time_exec_evts = 0;
@@ -44,7 +91,6 @@ void init_metrics_for_window() {
 	prev_granularity = 0.0;
 	old_thr = 0.0;
 }
-
 
 int check_window(){
 	#if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1
@@ -166,20 +212,20 @@ void aggregate_metrics_for_window_management(window *win) {
 			printf("window_resizing %f\n", *window_size);
         #endif	
 			if(w.phase == 1){
-                          thr_ref = thr_window;
-                          granularity_ref = granularity;
-                          w.phase++;
-                        }
+        thr_ref = thr_window;
+        granularity_ref = granularity;
+        w.phase++;
+      }
 			//fprintf(stderr, "SIZE AFTER RESIZING %f\n", *window_size);
 			//thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset);
 			//granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
-                        else if(w.phase >= 2){
-           		  thr_ratio = thr_window/thr_ref;
-                          granularity_ratio = granularity/granularity_ref;
+		  else if(w.phase >= 2){
+   		  thr_ratio = thr_window/thr_ref;
+        granularity_ratio = granularity/granularity_ref;
     #if VERBOSE == 1
 			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity);
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
                         #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1 // use moving average only when dynamic sizing is enabled"
                           //if(thr_window == thr_window) //check for NaN float // TODO investigate this
                           //  thr_ref = 0.6*thr_ref + 0.4*thr_window;
@@ -187,18 +233,38 @@ void aggregate_metrics_for_window_management(window *win) {
 			  //else
 			   //thr_ref = thr_ref;
                         #endif
-
-			  if (ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF && reset_window(win, thr_ratio, granularity_ratio)) {
+			  if(thr_window == 0.0) goto end;
+			  if(isnan(thr_window)) goto end;
+			  if(isinf(thr_window)) goto end;
+			  int skip = 0;
+		  	if(th_counter >= NUM_THROUGHPUT_SAMPLES){
+		  		double avg = 0.0;
+		  		double std = 0.0;
+		  		for(int i=0;i<NUM_THROUGHPUT_SAMPLES;i++) avg += th_samples[i];
+		  		avg/=NUM_THROUGHPUT_SAMPLES;
+		  		for(int i=0;i<NUM_THROUGHPUT_SAMPLES;i++) std += (avg-th_samples[i])*(avg-th_samples[i]);
+		  		std/=NUM_THROUGHPUT_SAMPLES-1;
+		  	  std = sqrt(std);
+		  	  skip = skip || ( thr_window < (avg-std*3) );
+		  	  skip = skip || ( thr_window > (avg+std*3) );
+		  	  printf("Checking sample AVG:%f STD:%f TH:%f SKIP:%d\n", avg, std, thr_window, skip);
+		  	}
+			  	
+		  	th_samples[th_counter%NUM_THROUGHPUT_SAMPLES] = thr_window;
+				th_counter++;
+			  	
+		  	if (!skip && ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF && reset_window(win, thr_ratio, granularity_ratio)) {
 			    printf("RESET WINDOW\n");
 			    thr_ref = 0.0;
 			    granularity_ref = 0.0;
 			    rounds_before_unbalance_check = 0;
 			    clock_timer_start(start_window_reset);
 			  }
-                        }
+				
+      }
 
 		} //end if enabled
-
+end:
 	//timer for measurement phase1
 	clock_timer_start(w.measurement_phase_timer);
 	pthread_mutex_unlock(&stat_mutex);
