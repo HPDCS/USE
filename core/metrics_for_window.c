@@ -23,6 +23,9 @@ static __thread stat64_t time_interval_for_measurement_phase;
 static __thread double elapsed_time;
 extern unsigned int rounds_before_unbalance_check; /// number of window management rounds before checking numa unbalance
 
+
+__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
+
 void init_metrics_for_window() {
 
 	init_window(&w);
