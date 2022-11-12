@@ -23,7 +23,7 @@
 #define START_WINDOW		   0.4
 #endif
 
-__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
+extern __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT;
 
 
 // TODO revise implementation of pipe. Specification is: LIFO SET - DONE
