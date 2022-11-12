@@ -2,7 +2,7 @@
 #define __LOCAL_INDEX_TYPES__
 
 
-#define LOCAL_INDEX_LEVELS 4
+#define LOCAL_INDEX_LEVELS 6
 
 typedef struct _stack_node{
 	struct _stack_node * volatile next;

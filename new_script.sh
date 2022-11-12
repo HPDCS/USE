@@ -1,7 +1,7 @@
 #!/bin/bash
 
 COMPILE=0
-TA=0.2
+TA=0.48
 
 if [[ $COMPILE -eq 1 ]]; then
 make pcs ENFORCE_LOCALITY=1 TA_CHANGE=300 TA_DURATION=120 TA=${TA} CHANNELS_PER_CELL=1000 CURRENT_BINDING_SIZE=2 EVICTED_BINDING_SIZE=2 PARALLEL_ALLOCATOR=1 MBIND=1 NUM_HOT=400 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1
@@ -32,6 +32,11 @@ fi
 
 FOLDER="results_new_obj_$TA"
 exe_list="pcs_hs_lo_re_df pcs_hs_lo_re pcs_hs_lo pcs_hs pcs_lo_re_df pcs_lo_re pcs_lo pcs"
+exe_list="pcs_hs_lo_re_df pcs_hs_lo_re pcs_hs_lo pcs_hs pcs_lo_re_df pcs_lo_re pcs_lo pcs"
+
+exe_list="pcs_hs_lo_re_df pcs_hs_lo pcs_hs"
+exe_list="pcs_lo_re_df pcs_lo pcs"
+
 time_list="30 60 120 240"
 lp_list="256 1024 4096"
 run_list="0"
