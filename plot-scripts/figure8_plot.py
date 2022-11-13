@@ -151,7 +151,7 @@ for test in ["pcs", "pcs_hs"]:
 
                     base    += [(base_filterDataset[k_base]-base[-1])/(time-x_value[-1])]
                     dataplot+=[(filterDataset[k]-dataplot[-1])/(time-x_value[-1])]
-                    print(enfl, base[-1], dataplot[-1], dataplot[-1]/base[-1])
+                    #print(enfl, base[-1], dataplot[-1], dataplot[-1]/base[-1])
                     dataplot[-1] = dataplot[-1]/base[-1]
                     x_value += [time]
                 cur_ax.plot(x_value[1:], dataplot[1:], color=gran_to_col[0.4], dashes=enfl_to_dash[enfl])
