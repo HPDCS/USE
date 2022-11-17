@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source thread.conf
+source autoconf.sh
 MAX_SKIPPED_LP_list="1000000"
 LP_list="4096"						#number of lps
 TEST_list="pcs"					#test

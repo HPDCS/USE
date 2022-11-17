@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-source thread.conf
+source autoconf.sh
 MAX_SKIPPED_LP_list="1000000"
 LP_list="1024"						#number of lps
 TEST_list="phold"					#test list
