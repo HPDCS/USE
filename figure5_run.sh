@@ -1,103 +1,119 @@
 #!/bin/bash
 
-
 source autoconf.sh
 MAX_SKIPPED_LP_list="1000000"
-LP_list="1024"						#number of lps
-TEST_list="phold"					#test list
-RUN_list="1 2 3 4 5"				#run number list
+LP_list="4096"					#number of lps
+TEST_list="pcs"					#test
+RUN_list="1 2 3 4 5"				
 
-FAN_OUT_list="1" # 50"				#fan out list
-LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"		#lookahead list
-LOOP_COUNT_list="1 5 10 25 50 100 200 400" 				#loop_count #50 100 150 250 400 600" 400=60micsec
+ENFORCE_LOCALITY_list="0 1" 
 
-CKP_PER_list="20" #"10 50 100"
+TA_CHANGE_list="300"
+TA_DURATION_list="120"
+TA_list="0.24"
 
-PUB_list="0.33"
-EPB_list="3"
+LOOKAHEAD_list="0" 
+WINDOW_list="0.1 0.2 0.4 0.8 1.6 3.2"
+CURRENT_BINDING_SIZE="1 2 4 8"
+EVICTED_BINDING_SIZE="1 2 4 8"
+
+CKP_PER_list="20"
 
 MAX_RETRY="10"
-TEST_DURATION="20"
-ENF_LOCALITY_list="0 1"
+TEST_DURATION="30"
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-TEST_DURATION="20"
+FOLDER="results/pcs_static_win"
 
+mkdir -p ${FOLDER}
 
-CURRENT_BINDING_SIZE="2" 
-EVICTED_BINDING_SIZE="2" 
-
-FOLDER="results/results_phold"
-mkdir -p results
-mkdir -p results/results_phold
-
-for enfl in $ENF_LOCALITY_list
+#for max_lp in $MAX_SKIPPED_LP_list
+#do
+#for ck in $CKP_PER_list
+#do
+#for pub in $PUB_list
+#do
+#for epb in $EPB_list
+#do
+for cbs in $CURRENT_BINDING_SIZE
 do
-for max_lp in $MAX_SKIPPED_LP_list
+for ebs in $EVICTED_BINDING_SIZE
 do
-for ck in $CKP_PER_list
+for w in $WINDOW_list 
 do
-for pub in $PUB_list
+for tav in $TA_list
 do
-for epb in $EPB_list
-do
-for loop_count in $LOOP_COUNT_list
-do
-for fan_out in $FAN_OUT_list
-do
-for lookahead in $LOOKAHEAD_list
-do
-	for test in $TEST_list 
+	for tad in $TA_DURATION_list
 	do
-
-
-		cmd="make test"
-		cmd="$cmd ENFORCE_LOCALITY=${enfl} ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE}"
-		cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1"
-		cmd="$cmd MAX_SKIPPED_LP=${max_lp}   PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}"
-		cmd="$cmd LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}"
-
-		echo $cmd
-		$cmd
-
-		for run in $RUN_list
+		for tac in $TA_CHANGE_list
 		do
-			for lp in $LP_list
+			for test in $TEST_list 
+			do
+				for df in $ENFORCE_LOCALITY_list
 				do
-					for threads in $THREAD_list
+
+					cmd="make $test"
+					cmd="$cmd ENFORCE_LOCALITY=$df ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs START_WINDOW=$w"
+					cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
+					cmd="$cmd TA_CHANGE=$tac TA_DURATION=$tad TA=$tav"
+
+					echo $cmd
+					$cmd
+
+					if [ $df = "0" ]; then
+						if [ "$w" = "0.1" ]; then
+                                                   echo OK
+						   
+						else
+						   echo skip null test
+						   continue
+						fi
+                                                if [ "$ebs" = "1" ]; then echo OK
+                                                else echo skip null test; continue
+                                                fi
+                                                if [ "$cbs" = "1" ]; then echo OK
+                                                else echo skip null test; continue
+                                                fi
+					fi
+					for run in $RUN_list
 					do
-						EX="./${test} $threads $lp ${TEST_DURATION}"
-								
-						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; touch $FILE
-												
-						N=0 
-						while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
+						for lp in $LP_list
 						do
-							echo $BEGIN
-							echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
-							echo $FILE
-							#1> $FILE 2>&1 time $EX
-							{ timeout $((TEST_DURATION*2)) $EX; } &> $FILE
-							if test $N -ge $MAX_RETRY ; then echo break; break; fi
-							N=$(( N+1 ))
-						done  
-						echo "" >> $FILE1
-						echo $cmd >> $FILE1
-						
-						  
+							for th in $MAX_THREADS
+							do
+								EX1="./${test} $th $lp ${TEST_DURATION}"
+								
+								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}.dat"
+								
+								touch ${FILE1}
+								#echo $FILE1
+								#$EX1 > $FILE1
+								
+								N=0 
+								while [[ $(grep -c "Simulation ended" $FILE1) -eq 0 ]]
+								do
+									echo $BEGIN
+									echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
+									echo $FILE1
+									{ timeout $((TEST_DURATION*2)) $EX1; } &> $FILE1
+									if test $N -ge $MAX_RETRY ; then echo break; break; fi
+									N=$(( N+1 ))
+								done  						
+								echo "" >> $FILE1
+								echo $cmd >> $FILE1
+							done
+						done
 					done
 				done
+			done
 		done
-		rm ${test}
 	done
 done
 done
 done
 done
-done
-done
-done
-done
-
+#done
+#done
+#done

@@ -139,7 +139,7 @@ test_list = ['pcs', 'pcs_hs']
 runs =  ['0', '1', '2', '3', '4', '5']
 
 lp_list=['256', '1024', '4096']
-#lp_list=['4096']
+lp_list=['4096']
 
 datafiles = {}
 for test in test_list:
@@ -213,7 +213,7 @@ if __name__ == "__main__":
                         
                     enfl=datafiles[f]
                     dataplot= [x for x in dataset[f]]
-                    #dataplot= dataplot[int(len(dataplot)/2):]
+                    dataplot= dataplot[int(len(dataplot)/2):]
                     key = '-'.join(f.split('-')[:-1])
                     if key not in final:
                         final[key] = []
@@ -223,17 +223,19 @@ if __name__ == "__main__":
     
 
 
-    for test in ["pcs"]:
+    for test in ["pcs_hs"]:
         fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
         tit = f"{test}"
         if test == 'pcs':
             tit = 'PCS'
-        if '0.48' in sys.argv[1]:
-            tit += ' - '+ta2rho['0.48']
-        if '0.24' in sys.argv[1]:
-            tit += ' - '+ta2rho['0.24']
-        if '0.12' in sys.argv[1]:
-            tit += ' - '+ta2rho['0.12']
+        else:
+            tit = 'PCS with 10%/90% hot/ordinary cells'
+        #if '0.48' in sys.argv[1]:
+        #    tit += ' - '+ta2rho['0.48']
+        #if '0.24' in sys.argv[1]:
+        #    tit += ' - '+ta2rho['0.24']
+        #if '0.12' in sys.argv[1]:
+        #    tit += ' - '+ta2rho['0.12']
 
         fig.suptitle(tit)
 
@@ -293,5 +295,5 @@ if __name__ == "__main__":
                 cur_ax.annotate("{:.2f}x".format(y[i]), xy=(x[i],y[i]), ha='center', va='bottom')
 
         
-        plt.savefig(f'figures/{sys.argv[1][:-1]}-{test}.pdf')
+        plt.savefig(f'figures/{sys.argv[1][:-1]}-{test}-a.pdf')
 

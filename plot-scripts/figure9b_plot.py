@@ -136,12 +136,12 @@ f'pcs_hs-48-4096-{seconds}-1':"0",
 
 
 test_list = ['pcs', 'pcs_hs']
-runs =  ['0', '1', '2', '3', '4']
+runs =  ['0', '1', '2', '3', '4', '5']
 
 datafiles = {}
 for test in test_list:
     for conf in ['', 'lo', 'lo_re_df']:
-        for lp in ['256', '1024', '4096']:
+        for lp in ['4096']:
             for r in runs:
                 datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{r}"] = conversion[conf]
 
@@ -153,7 +153,19 @@ colors = {
 }
 
 
-lp_list=['256', '1024', '4096']
+
+
+ta2rho={
+    "0.12":r"$\rho$"+":1.00",
+    "0.16":r"$\rho$"+":0.75",
+    "0.24":r"$\rho$"+":0.50",
+    "0.48":r"$\rho$"+":0.25",
+}
+
+
+
+
+lp_list=['4096']
 
 ti_list=[]
 for i in range(5)[1:]:
@@ -162,23 +174,29 @@ for i in range(5)[1:]:
 
 if __name__ == "__main__":
     dataset = {}
-    print(f"processing {sys.argv[1]}")
+    #print(f"processing {sys.argv[1]}")
     for f in datafiles:
         dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
 
     x_value = []
     for i in range(seconds*2):
         x_value += [0.5*i]
-    tests=['pcs_', 'pcs_hs_']
+    tests=['pcs_hs_']
     for run in runs:
         for test in tests:
             count = -1
             fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
-            tit = f"{test[:-1]} - Platform A"
-            if '0.48' in sys.argv[1]:
-                tit += ' - 0.48'
-            if '0.24' in sys.argv[1]:
-                tit += ' - 0.24'
+            tit = f"{test}"
+            if test == 'pcs':
+                tit = 'PCS'
+            else:
+                tit = 'PCS with 10%/90% hot/ordinary cells'
+            #if '0.48' in sys.argv[1]:
+            #    tit += ' - '+ta2rho['0.48']
+            #if '0.24' in sys.argv[1]:
+            #    tit += ' - '+ta2rho['0.24']
+            #if '0.12' in sys.argv[1]:
+            #    tit += ' - '+ta2rho['0.12']
 
             fig.suptitle(tit)
             for nlp in lp_list:
@@ -188,8 +206,9 @@ if __name__ == "__main__":
                 else: cur_ax = axs[count] 
                 cur_ax.set_xlabel("Seconds")
                 cur_ax.set_ylabel("Throughput")
-                cur_ax.title.set_text(" ".join(["#cells "+nlp]))
+                cur_ax.title.set_text(" ".join(["#simulation objects:"+nlp]))
                 cur_ax.set_xticks(ti_list)
+                #cur_ax.set_ylim([0,0.75])
                 custom_lines = []
                 custom_label = []
                 custom_lines = []
@@ -203,11 +222,10 @@ if __name__ == "__main__":
                         if 'hs' in f: continue
                     else:
                         if 'hs' not in f: continue
-                        
-                    cur_min = min(dataset[f])
-                    if min_th > cur_min:
-                        min_th = cur_min
-                
+                    
+                    if "pcs_hs-" not in f: continue
+                    min_th = numpy.average(dataset[f][100:])
+                    
                 for f in dataset:
                     if f.split('-')[2] != nlp: continue
                     if f[-2:] != "-"+run : continue
@@ -221,7 +239,7 @@ if __name__ == "__main__":
                     if len(x_value) != len(dataplot):
                         print("MISSING DATAPOINTS:",f,len(x_value),len(dataplot))
                         continue
-                    y_filtered = savgol_filter(dataplot, 30, 3)
+                    y_filtered = savgol_filter(dataplot, 4, 3)
                     mins = []
                     maxs = []
                     xavg = []
@@ -236,11 +254,12 @@ if __name__ == "__main__":
                     cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
 
                     custom_lines += [Line2D([0], [0], color=colors[enfl], dashes=enfl_to_dash[enfl])]
-                    custom_label += ["el"+str(enfl)]
-
-                #custom_lines += [Line2D([0], [0], color=gran_to_col[0.4])]
-                #custom_label += ["ta=0.2"]
-                
-                cur_ax.legend(custom_lines, custom_label,  ncol = 3) #, bbox_to_anchor=(1.12, -0.15))
+                    if enfl == '0':
+                        custom_label += ['USE']
+                    elif enfl == '1':
+                        custom_label += ['cache opt.']
+                    elif enfl == '2':    
+                        custom_label += ['cache + NUMA opt.']
+                cur_ax.legend(custom_lines, custom_label,  ncol = 1) #, bbox_to_anchor=(1.12, -0.15))
                     
             plt.savefig(f'figures/{sys.argv[2]}-{test[:-1]}-{seconds}-{run}.pdf')
