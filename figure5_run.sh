@@ -52,9 +52,16 @@ do
 	for test in $TEST_list 
 	do
 
-		echo CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE} ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
-		make $test CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE} ENFORCE_LOCALITY=${enfl} MAX_SKIPPED_LP=${max_lp} LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}  PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}
-		
+
+		cmd="make test"
+		cmd="$cmd ENFORCE_LOCALITY=${enfl} ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE}"
+		cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1"
+		cmd="$cmd MAX_SKIPPED_LP=${max_lp}   PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}"
+		cmd="$cmd LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}"
+
+		echo $cmd
+		$cmd
+
 		for run in $RUN_list
 		do
 			for lp in $LP_list
@@ -76,6 +83,8 @@ do
 							if test $N -ge $MAX_RETRY ; then echo break; break; fi
 							N=$(( N+1 ))
 						done  
+						echo "" >> $FILE1
+						echo $cmd >> $FILE1
 						
 						  
 					done

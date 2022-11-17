@@ -53,7 +53,14 @@ do
 			do
 				for df in $ENFORCE_LOCALITY_list
 				do
-					make $test ENFORCE_LOCALITY=$df ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0 START_WINDOW=$w TA_CHANGE=$tac TA_DURATION=$tad TA=$tav CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs
+					cmd="make $test"
+					cmd="$cmd ENFORCE_LOCALITY=$df ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs START_WINDOW=$w"
+					cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1"
+					cmd="$cmd TA_CHANGE=$tac TA_DURATION=$tad TA=$tav"
+
+					echo $cmd
+					$cmd
+
 					if [ $df = "0" ]; then
 						if [ "$w" = "0.1" ]; then
                                                    echo OK
@@ -87,6 +94,8 @@ do
 									if test $N -ge $MAX_RETRY ; then echo break; break; fi
 									N=$(( N+1 ))
 								done
+								echo "" >> $FILE1
+								echo $cmd >> $FILE1
 							done
 						done
 					done
