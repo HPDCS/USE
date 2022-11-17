@@ -40,6 +40,9 @@
 #include "prints.h"
 #include "timer.h"
 
+#include <metrics_for_window.h>
+
+
 #if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
 #endif
@@ -216,6 +219,9 @@ msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
     return local_next_evt; 
 }
 
+
+__thread simtime_t cur_window;
+
 unsigned int fetch_internal(){
     table *h;
     nbc_bucket_node * node, *node_next, *min_node;
@@ -330,8 +336,14 @@ unsigned int fetch_internal(){
         diff_lp--;
  #endif     
         //read_new_min = false;
+	
 
-        if(
+	cur_window = get_current_window();
+//	printf("timestamp - lvt_ts %f --- timestamp - local_gvt  %f --- cur window %f \n", ts-lvt_ts, ts-local_gvt, cur_window);
+       
+	//if ( w.enabled && ts-local_gvt < cur_window && haveLock(lp_idx) && !is_lp_on_my_numa_node(lp_idx)) flush_locked_pipe();
+
+       	if(
  #if OPTIMISTIC_MODE != FULL_SPECULATIVE
     #if OPTIMISTIC_MODE == ONE_EVT_PER_LP
         !is_in_lp_unsafe_set(lp_idx) &&
@@ -340,7 +352,7 @@ unsigned int fetch_internal(){
     #endif
  #endif
  #if DISTRIBUTED_FETCH == 1
-        is_lp_on_my_numa_node(lp_idx) &&
+       ( !w.enabled || (ts-local_gvt) > cur_window || haveLock(lp_idx) || is_lp_on_my_numa_node(lp_idx)) &&
  #endif
         (
  #if ENFORCE_LOCALITY == 1

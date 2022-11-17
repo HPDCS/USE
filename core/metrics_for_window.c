@@ -209,7 +209,7 @@ void aggregate_metrics_for_window_management(window *win) {
                         
 	#if VERBOSE == 1
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
-			printf("window_resizing %f\n", *window_size);
+			printf("window_resizing %f\n", w.size);
         #endif	
 			if(w.phase == 1){
         thr_ref = thr_window;
