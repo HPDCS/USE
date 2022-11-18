@@ -330,7 +330,7 @@ void LPs_metada_init() {
 		LPS[i]->ema_ti					= 0.0;
 		LPS[i]->ema_granularity			= 0.0;
 		LPS[i]->migration_score			= 0.0;
-
+		LPS[i]->numa_node			= current_numa_node;
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
