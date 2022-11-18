@@ -16,8 +16,8 @@ if __name__ == "__main__":
     for f in datafiles:
         if os.path.isfile(sys.argv[1]+'/'+f):
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
-        else:
-            print(f"file {sys.argv[1]+'/'+f} not found...still trying")
+    #    else:
+    #        print(f"file {sys.argv[1]+'/'+f} not found...still trying")
 
     x_value = []
     for i in range(seconds*2):
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         final[k] = (numpy.average(final[k]),numpy.std(final[k]))
     
 
-    
+
     for test in tests:
         fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
         tit = f"{test}"
@@ -137,5 +137,5 @@ if __name__ == "__main__":
                 cur_ax.annotate("{:.2f}x".format(y[i]), xy=(x[i],y[i]), ha='center', va='bottom')
 
         
-        plt.savefig(f'figures/{sys.argv[1][:-1]}-{test}.pdf')
+        plt.savefig(f'figures/{sys.argv[1][:-1].replace("/", "-")}-{test}.pdf')
 
