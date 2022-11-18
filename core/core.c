@@ -208,8 +208,8 @@ unsigned int get_current_numa_node(){
 	return 1;
 }
 
-unsigned int core_to_assign[N_CPU];
- int order=-1;
+
+unsigned int cores_on_numa[N_CPU];
 
 void set_affinity(unsigned int tid){
 	unsigned int cpu_per_node;
@@ -234,32 +234,14 @@ void set_affinity(unsigned int tid){
 	
 	unsigned int pin_cpu = 0;
 	
-
-	// topology of cores on numa nodes
-	//tid -> assign node
-	//assign code into node
-
-	struct bitmask *numa_mask[num_numa_nodes];
-	for (int i=0; i < num_numa_nodes; i++) {	
-		numa_mask[i] = numa_allocate_cpumask();
-		numa_node_to_cpus(i, numa_mask[i]);
-	}
-
-	//atomic_add_x86(&order, 1);	
-	unsigned pin;
+	//unsigned pin;
 	
-	//wrong must be rewrote
-
-	atomic_add_x86(&order, 1);
 	pin_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
-	pin = numa_node_of_cpu(pin_cpu);
-	printf("tid %u --- pin_cpu %u --- numa_node_of_cpu(pin_cpu) %u \n",tid, pin_cpu, pin);
-	
-	core_to_assign[tid] = pin_cpu;
+	//pin = numa_node_of_cpu(pin_cpu);
 
 
 	CPU_ZERO(&mask);
-	CPU_SET(core_to_assign[tid], &mask);
+	CPU_SET(cores_on_numa[pin_cpu], &mask);
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
@@ -267,7 +249,7 @@ void set_affinity(unsigned int tid){
 	}
 	
 	current_numa_node = get_current_numa_node();
-	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, pin_cpu, current_numa_node);
+	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, cores_on_numa[pin_cpu], current_numa_node);
 	
 }
 
@@ -380,6 +362,26 @@ void numa_init(){
 		numa_state[i]->numa_id = i;
 	}
 	
+	/// bitmask for each numa node
+	struct bitmask *numa_mask[num_numa_nodes];
+        for (int i=0; i < num_numa_nodes; i++) {
+                numa_mask[i] = numa_allocate_cpumask();
+                numa_node_to_cpus(i, numa_mask[i]);
+        }
+
+	/// set a global array in which are set the cpus on the same numa node
+	/// indexed from 0 to cpu_per_node and from cpu_per_node to N_CPU-1
+	int insert_idx = 0;
+	for (int j=0; j < num_numa_nodes; j++) {
+		for (int k=0; k < N_CPU; k++) {
+			if (numa_bitmask_isbitset(numa_mask[j], k)) {
+				cores_on_numa[insert_idx] = k; 
+				insert_idx++;
+			}
+		}
+	}
+
+
 
 }
 
