@@ -208,12 +208,15 @@ unsigned int get_current_numa_node(){
 	return 1;
 }
 
+unsigned int core_to_assign[N_CPU];
+ int order=-1;
+
 void set_affinity(unsigned int tid){
 	unsigned int cpu_per_node;
 	cpu_set_t mask;
 	cpu_per_node = N_CPU/num_numa_nodes;
 	
-	if(N_CPU == 32){
+	/*if(N_CPU == 32){
 		unsigned int thr_to_cpu[] = {	0,4, 8,12,	16,20,24,28,
 										1,5, 9,13,	17,21,25,29,
 										2,6,10,14,	18,22,26,30,
@@ -224,20 +227,47 @@ void set_affinity(unsigned int tid){
 		unsigned int thr_to_cpu[] = {	0, 1, 2, 3, 4, 5, 6, 7, 
 										8, 9,10,11,12,13,14,15};
 		current_cpu = thr_to_cpu[tid]%N_CPU;
-	}
+	}i
 	else{
 		current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
-	}
+	}*/
 	
+	unsigned int pin_cpu = 0;
+	
+
+	// topology of cores on numa nodes
+	//tid -> assign node
+	//assign code into node
+
+	struct bitmask *numa_mask[num_numa_nodes];
+	for (int i=0; i < num_numa_nodes; i++) {	
+		numa_mask[i] = numa_allocate_cpumask();
+		numa_node_to_cpus(i, numa_mask[i]);
+	}
+
+	//atomic_add_x86(&order, 1);	
+	unsigned pin;
+	
+	//wrong must be rewrote
+
+	atomic_add_x86(&order, 1);
+	pin_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+	pin = numa_node_of_cpu(pin_cpu);
+	printf("tid %u --- pin_cpu %u --- numa_node_of_cpu(pin_cpu) %u \n",tid, pin_cpu, pin);
+	
+	core_to_assign[tid] = pin_cpu;
+
+
 	CPU_ZERO(&mask);
-	CPU_SET(current_cpu, &mask);
+	CPU_SET(core_to_assign[tid], &mask);
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
 	}
+	
 	current_numa_node = get_current_numa_node();
-	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, current_cpu, current_numa_node);
+	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, pin_cpu, current_numa_node);
 	
 }
 
