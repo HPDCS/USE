@@ -55,7 +55,9 @@ do
 				do
 					cmd="make $test"
 					cmd="$cmd ENFORCE_LOCALITY=$df ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs START_WINDOW=$w"
-					cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1"
+					if [ $df = "1" ]; then
+						cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
+					fi
 					cmd="$cmd TA_CHANGE=$tac TA_DURATION=$tad TA=$tav"
 
 					echo $cmd
