@@ -1,3 +1,5 @@
+*.tar.gz
+__pycache__/
 thread.conf
 data/
 figures/
