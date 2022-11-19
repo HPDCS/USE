@@ -386,6 +386,30 @@ void numa_init(){
 }
 
 
+void pin_lps_on_numa_nodes_init() {
+
+	unsigned cur_lp = 0;
+	for(unsigned int j=0;j<num_numa_nodes;j++){
+		for(unsigned int i=0;i<n_prc_tot/num_numa_nodes;i++) {
+			set_bit(numa_state[j]->numa_binding_bitmap, cur_lp);
+			LPS[cur_lp]->numa_node 				= j;
+		  #if VERBOSE == 1
+			printf("INI NUMA %d LP %d b:%d\n",  j, cur_lp, get_bit(numa_state[j]->numa_binding_bitmap, cur_lp));
+		  #endif
+			cur_lp++;
+		}
+	}
+	for(;cur_lp<n_prc_tot;cur_lp++){
+		set_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp);
+		LPS[cur_lp]->numa_node 				= num_numa_nodes-1;
+	  #if VERBOSE == 1
+		printf("INI NUMA %d LP %d b:%d\n",  num_numa_nodes-1, cur_lp, get_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp));
+	  #endif
+	}
+
+}
+
+
 //TODO: use a bitmap
 //Note: called at end execution
 bool check_termination(void) {
@@ -494,6 +518,7 @@ void init_simulation(unsigned int thread_id){
 	if(tid == 0){
 		numa_init();
 		LPs_metada_init();
+		pin_lps_on_numa_nodes_init();
 		dymelor_init(n_prc_tot);
 		statistics_init();
 		queue_init();
@@ -524,26 +549,6 @@ void init_simulation(unsigned int thread_id){
 				LPS[current_lp]->ckpt_period = 20;
 				//LPS[current_lp]->epoch = 1;
 		}
-
-		unsigned cur_lp = 0;
-			for(unsigned int j=0;j<num_numa_nodes;j++){
-				for(unsigned int i=0;i<n_prc_tot/num_numa_nodes;i++) {
-					set_bit(numa_state[j]->numa_binding_bitmap, cur_lp);
-					LPS[cur_lp]->numa_node 				= j;
-				  #if VERBOSE == 1
-					printf("INI NUMA %d LP %d b:%d\n",  j, cur_lp, get_bit(numa_state[j]->numa_binding_bitmap, cur_lp));
-				  #endif
-					cur_lp++;
-				}
-			}
-			for(;cur_lp<n_prc_tot;cur_lp++){
-				set_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp);
-				LPS[cur_lp]->numa_node 				= num_numa_nodes-1;
-			  #if VERBOSE == 1
-				printf("INI NUMA %d LP %d b:%d\n",  num_numa_nodes-1, cur_lp, get_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp));
-			  #endif
-			}
-
 
               #if ENFORCE_LOCALITY==1
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
