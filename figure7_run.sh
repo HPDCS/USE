@@ -55,10 +55,10 @@ do
 
 		cmd="make test"
 		cmd="$cmd ENFORCE_LOCALITY=${enfl} ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE}"
-		if [ $df = "1" ]; then
-						cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
+		if [ $enfl = "1" ]; then
+						cmd="$cmd MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
 		fi
-		cmd="$cmd MAX_SKIPPED_LP=${max_lp}   PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}"
+		cmd="$cmd PARALLEL_ALLOCATOR=1 MAX_SKIPPED_LP=${max_lp}   PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}"
 		cmd="$cmd LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}"
 
 		echo $cmd
