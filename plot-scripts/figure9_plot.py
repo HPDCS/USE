@@ -105,4 +105,4 @@ if __name__ == "__main__":
                         custom_label += ['cache + NUMA opt.']
                 cur_ax.legend(custom_lines, custom_label,  ncol = 1) #, bbox_to_anchor=(1.12, -0.15))
                     
-            plt.savefig(f'figures/{sys.argv[1][:-1]}-{test}-{seconds}-{run}.pdf')
+            plt.savefig(f'figures/{sys.argv[1][:-1].replace("/", "-")}-{test}-{seconds}-{run}.pdf')
