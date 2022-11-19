@@ -11,20 +11,20 @@ f3="TA_CHANGE=300 TA_DURATION=120 TA=${TA} CHANNELS_PER_CELL=1000 PARALLEL_ALLOC
 
 echo make pcs $f1
 make pcs $f1
-mv pcs pcs_hs_lo_re_df
+mv pcs pcs_lo_re_df
 
 echo make pcs $f2
 make pcs $f2
-mv pcs pcs_hs_lo
+mv pcs pcs_lo
 
 echo make pcs $f3
 make pcs $f3
-mv pcs pcs_hs
+mv pcs pcs
 fi
 
 
 FOLDER="results/pcs-$TA"
-exe_list="pcs_hs_lo_re_df pcs_hs_lo pcs_hs"
+exe_list="pcs_lo_re_df pcs_lo pcs"
 
 time_list="240"
 lp_list="256 1024 4096"
