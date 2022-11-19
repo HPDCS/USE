@@ -217,14 +217,11 @@ void set_affinity(unsigned int tid){
 	cpu_per_node = N_CPU/num_numa_nodes;
 	
 	
-	unsigned int pin_cpu = 0;
-	
-		
-	pin_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
 	
 
 	CPU_ZERO(&mask);
-	CPU_SET(cores_on_numa[pin_cpu], &mask);
+	CPU_SET(cores_on_numa[current_cpu], &mask);
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
@@ -232,7 +229,7 @@ void set_affinity(unsigned int tid){
 	}
 	
 	current_numa_node = get_current_numa_node();
-	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, cores_on_numa[pin_cpu], current_numa_node);
+	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, cores_on_numa[current_cpu], current_numa_node);
 	
 }
 
@@ -313,7 +310,7 @@ void LPs_metada_init() {
 		LPS[i]->ema_ti					= 0.0;
 		LPS[i]->ema_granularity			= 0.0;
 		LPS[i]->migration_score			= 0.0;
-		LPS[i]->numa_node			= current_numa_node;
+		
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
