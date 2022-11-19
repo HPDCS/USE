@@ -53,7 +53,7 @@ do
 	do
 
 
-		cmd="make test"
+		cmd="make $test"
 		cmd="$cmd ENFORCE_LOCALITY=${enfl} ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE}"
 		if [ $enfl = "1" ]; then
 						cmd="$cmd MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
