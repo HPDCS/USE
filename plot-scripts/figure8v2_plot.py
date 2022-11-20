@@ -34,14 +34,24 @@ if __name__ == "__main__":
                     if 'hs' in f: continue
                 else:
                     if 'hs' not in f: continue
-                    
+                
                 enfl=datafiles[f]
-                dataplot= [x for x in dataset[f]]
+                dataplot = []
+                for i in range(len(dataset[f])):
+                    if i == 0:
+                        dataplot += [dataset[f][i][0]*dataset[f][i][1]]
+                    else:
+                        dataplot += [dataset[f][i][0]*(dataset[f][i][1]-dataset[f][i-1][1])]
+                        
+                avg = sum(dataplot)/seconds/1000
+                if(avg < 0):
+                    print(f,dataplot)
+                    exit()
                 #dataplot= dataplot[int(len(dataplot)/2):]
                 key = '-'.join(f.split('-')[:-1])
                 if key not in final:
                     final[key] = []
-                final[key] += [numpy.average(dataplot)]
+                final[key] += [avg]
 
     for k in final:
         bp_dict[k] = {
@@ -142,7 +152,6 @@ if __name__ == "__main__":
                         d[v] = d[v]/baseline
 
             cur_ax.bxp(cur_bp, showfliers=False, showmeans=True)
-            ran = [0.70,1.30]
             cur_ax.set_ylim(ran)
             cur_ax.yaxis.grid()
             cur_ax.yaxis.set_ticks(np.arange(ran[0], ran[1], 0.05))

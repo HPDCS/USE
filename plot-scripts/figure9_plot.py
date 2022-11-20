@@ -18,10 +18,6 @@ if __name__ == "__main__":
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
     #    else:
     #        print(f"file {sys.argv[1]+'/'+f} not found...still trying")
-
-    x_value = []
-    for i in range(seconds*2):
-        x_value += [0.5*i]
     
     for run in runs:
         for test in tests:
@@ -55,7 +51,7 @@ if __name__ == "__main__":
                 custom_lines = []
                 custom_label = []
 
-                min_th = 10000
+                min_th = 100000
                 for f in dataset:
                     if f.split('-')[2] != nlp: continue
                     if f[-2:] != "-"+run : continue
@@ -66,7 +62,13 @@ if __name__ == "__main__":
                     
                     if "pcs_hs-" not in f and "pcs-" not in f: continue
 
-                    min_th = numpy.average(dataset[f][100:])
+                    last_samples = dataset[f][100:]
+                    last_list = []
+                    for i in range(len(last_samples)):
+                        if i == 0: continue
+                        last_list += [last_samples[i][0]*(last_samples[i][1]-last_samples[i-1][1])]
+
+                    min_th = sum(last_list)/(last_samples[-1][1]-last_samples[0][1])
                     #print(min_th)
                     
                 for f in dataset:
@@ -78,11 +80,9 @@ if __name__ == "__main__":
                         if 'hs' not in f: continue
                         
                     enfl=datafiles[f]
-                    dataplot= [x/min_th for x in dataset[f]]
-                    if len(x_value) != len(dataplot):
-                        print("MISSING DATAPOINTS:",f,len(x_value),len(dataplot))
-                        continue
-                    y_filtered = savgol_filter(dataplot, 4, 3)
+                    x_value = [x[1]/1000 for x in dataset[f]]
+                    dataplot= [x[0]/min_th for x in dataset[f]]
+                    #y_filtered = savgol_filter(dataplot, 1, 3)
                     mins = []
                     maxs = []
                     xavg = []
@@ -93,8 +93,8 @@ if __name__ == "__main__":
                         xavg += [numpy.average(x_value[i*steps:i*steps+steps])]
                     #print(len(dataplot), len(y_filtered), len(maxs), len(mins))
                     #cur_ax.plot(x_value[1:], dataplot[1:], color=colors[enfl], dashes=enfl_to_dash[enfl])
-                    cur_ax.plot(x_value[4:], y_filtered[4:], color=colors[enfl], dashes=enfl_to_dash[enfl])
-                    cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
+                    cur_ax.plot(x_value, dataplot, color=colors[enfl], dashes=enfl_to_dash[enfl])
+                    #cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
 
                     custom_lines += [Line2D([0], [0], color=colors[enfl], dashes=enfl_to_dash[enfl])]
                     if enfl == '0':

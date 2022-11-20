@@ -17,18 +17,23 @@ def get_samples_from_file(filename, seconds):
     expected = int(seconds)*2
 
     samples = []
-
+    max_ts = 0
     for line in f.readlines():
         line = line.strip()
         if 'thref' in line:
+            ts   = int(line.split(' ')[-1])
             line = line.split('thref')[0].split(' ')[-2]
+            if ts == 0:
+                continue
+            if ts > max_ts:
+                max_ts = ts
             if 'nan' in line:
                 continue
             if 'inf' in line:
                 continue
             if float(line) == 0.0:
                 continue
-            samples += [float(line)]
+            samples += [(float(line),ts)]
         else:
             continue
 
@@ -36,29 +41,30 @@ def get_samples_from_file(filename, seconds):
     iterations = 3
     sigma = 3
 
-    eliminated = []
     for i in range(iterations):
         if len(samples) == 0:
             print("PROBLEMATIC run:",filename)
             return [1]*expected
-        avg = numpy.average(samples)
-        std = numpy.std(samples)
-        eliminated += [x for x in samples if x < (avg-sigma*std) ]
-        eliminated += [x for x in samples if x > (avg+sigma*std) ]
+        avg = numpy.average([x[0] for x in samples])
+        std = numpy.std([x[0] for x in samples])
 
-        samples = [x for x in samples if x > (avg-sigma*std) ]
-        samples = [x for x in samples if x < (avg+sigma*std) ]
+        samples = [x for x in samples if x[0] > (avg-sigma*std) ]
+        samples = [x for x in samples if x[0] < (avg+sigma*std) ]
 
-    missing = expected - len(samples)
-    parts = missing+1
-    len_part = int(len(samples)/parts)
+    expected_max = seconds*1000 - 500
+    constant = max_ts - expected_max
+
     final_sample = []
 
     for i in range(len(samples)):
-        if len_part != 0 and i != 0 and i % len_part and missing != 0:
-            final_sample += [ (final_sample[-1]+samples[i])/2]
-            missing -= 1 
-        final_sample += [samples[i]]
+        if len(final_sample) == 0:
+            final_sample += [(samples[i][0], samples[i][1]-constant)]
+        else:
+            final_sample += [(samples[i][0], samples[i][1]-constant)]
+        if final_sample[-1][1] < 0:
+            print(filename, constant, final_sample[-1], samples)
+            exit()
+            
 
     return final_sample
 
@@ -82,7 +88,7 @@ enfl_to_dash={
 
 
 
-seconds = 240
+seconds = 120 #240
 
 conversion = {
     '' : '0',
@@ -125,3 +131,5 @@ ta2rho={
     "0.48":r"$\rho$"+":0.25",
 }
 
+
+ran = [0.70,1.50]

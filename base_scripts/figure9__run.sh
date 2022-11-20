@@ -27,7 +27,7 @@ FOLDER="results/pcs-hs-$TA"
 exe_list="pcs_hs_lo_re_df pcs_hs_lo pcs_hs"
 
 time_list="240"
-lp_list="256 1024 4096"
+lp_list="4096"
 run_list="0 1 2 3 4 5"
 
 MAX_RETRY="2"
