@@ -14,6 +14,8 @@ window w;
 #define NUM_THROUGHPUT_SAMPLES 10
 
 double th_samples[NUM_THROUGHPUT_SAMPLES];
+double stability_samples[NUM_THROUGHPUT_SAMPLES];
+unsigned long long stability_counter = 0;
 unsigned long long th_counter = 0;
 unsigned long long start_simul_time = 0;
 
@@ -158,7 +160,11 @@ void enable_window() {
 
 	double current_thr = 0.0;
 	double diff1 = 0.0, diff2 = 0.0;
+	int skip = 0;
 	current_thr = compute_throughput_for_committed_events(&prev_comm_evts ,w.measurement_phase_timer);
+	if(current_thr == 0.0) return;
+	if(isnan(current_thr)) return;
+	if(isinf(current_thr)) return;
 
 #if VERBOSE == 1
 	printf("current_thr/old_thr %f\n", current_thr/old_thr);
@@ -166,6 +172,23 @@ void enable_window() {
 
 	//check if window must be enabled
 	//by comparing current thr with the previous one
+	stability_samples[stability_counter % NUM_THROUGHPUT_SAMPLES] = current_thr;
+	stability_counter++;
+
+	if(stability_counter < NUM_THROUGHPUT_SAMPLES) return;
+	
+
+	double avg = 0.0;
+	double std = 0.0;
+	for(int i=0;i<NUM_THROUGHPUT_SAMPLES;i++) avg += stability_samples[i];
+	avg/=NUM_THROUGHPUT_SAMPLES;
+	for(int i=0;i<NUM_THROUGHPUT_SAMPLES;i++) std += (avg-stability_samples[i])*(avg-stability_samples[i]);
+	std/=NUM_THROUGHPUT_SAMPLES-1;
+	std = sqrt(std);
+	skip = skip || ( current_thr < (avg-std*3) );
+	skip = skip || ( current_thr > (avg+std*3) );
+	if(skip) return;
+
 	if(old2_thr != 0.0){
 		diff1 = old2_thr/current_thr;
 		diff2 = old_thr/current_thr;
