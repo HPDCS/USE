@@ -78,8 +78,12 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			if(IsParameterPresent(event_content, "channels_per_cell"))
 				state->channels_per_cell = GetParameterInt(event_content, "channels_per_cell");
-			else
-				state->channels_per_cell = CHANNELS_PER_CELL;
+			else{
+				if(NUM_HOT && me < NUM_HOT_CELLS)
+					state->channels_per_cell = CHANNELS_PER_HOT_CELL;
+				else
+					state->channels_per_cell = CHANNELS_PER_CELL;
+			}
 
 			if(IsParameterPresent(event_content, "complete_calls"))
 				complete_calls = GetParameterInt(event_content, "complete_calls");

@@ -30,7 +30,7 @@
 #define PARTITIONS 2
 #define CELLS_PER_PARTITION  (n_prc_tot/PARTITIONS)
 
-#define PERC_HOT 0.1
+#define PERC_HOT 0.05
 #define NUM_HOT_CELLS  ((unsigned int)(PERC_HOT*n_prc_tot))
 
 #define NUM_CLD_CELLS_IN_MAX ((n_prc_tot/PARTITIONS)-NUM_HOT_CELLS)
@@ -43,7 +43,7 @@
 #define TA_HOT                 (NUM_HOT_CELLS/LOAD_FROM_HOT_CELLS)
 
 #if NUM_HOT != 0
-#define CHANNELS_PER_CELL	((unsigned int)(TA_DURATION*1.1/TA_HOT))
+#define CHANNELS_PER_HOT_CELL	((unsigned int)(TA_DURATION*1.1/TA_HOT))
 #endif
 
 
