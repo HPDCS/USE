@@ -222,6 +222,9 @@ void set_affinity(unsigned int tid){
 
 	CPU_ZERO(&mask);
 	CPU_SET(cores_on_numa[current_cpu], &mask);
+
+	current_cpu = cores_on_numa[current_cpu];
+	
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
