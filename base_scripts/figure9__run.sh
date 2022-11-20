@@ -64,9 +64,9 @@ for exe in $exe_list; do
 					if test $N -ge $MAX_RETRY ; then echo break; break; fi
 					N=$(( N+1 ))
 				done  
-				echo $1 >> $filename
-				echo $2 >> $filename
-				echo $3 >> $filename
+				echo $f1 >> $filename
+				echo $f2 >> $filename
+				echo $f3 >> $filename
 			done
 		done
 	done

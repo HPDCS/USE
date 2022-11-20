@@ -92,7 +92,10 @@ conversion = {
 
 
 test_list = ['pcs', 'pcs_hs']
+
 runs =  ['0', '1', '2', '3', '4', '5']
+
+
 
 lp_list=['256', '1024', '4096']
 
@@ -102,6 +105,9 @@ for test in test_list:
         for lp in lp_list:
             for r in runs:
                 datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{r}"] = conversion[conf]
+                if conf == 'lo_re_df':
+                    datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{str(int(r)+6)}"] = conversion[conf]
+                    
 
 
 colors = {

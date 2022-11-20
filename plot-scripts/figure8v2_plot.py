@@ -23,25 +23,25 @@ if __name__ == "__main__":
     for i in range(seconds*2):
         x_value += [0.5*i]
     final = {}
-    for run in runs:
-        for test in tests:
-            for nlp in lp_list:
-                isFirst=True
-                for f in dataset:
-                    if f.split('-')[2] != nlp: continue
-                    if f[-2:] != "-"+run : continue
-                    if 'hs' not in test:
-                        if 'hs' in f: continue
-                    else:
-                        if 'hs' not in f: continue
-                        
-                    enfl=datafiles[f]
-                    dataplot= [x for x in dataset[f]]
-                    #dataplot= dataplot[int(len(dataplot)/2):]
-                    key = '-'.join(f.split('-')[:-1])
-                    if key not in final:
-                        final[key] = []
-                    final[key] += [numpy.average(dataplot)]
+    #for run in runs:
+    for test in tests:
+        for nlp in lp_list:
+            isFirst=True
+            for f in dataset:
+                if f.split('-')[2] != nlp: continue
+                #if f[-2:] != "-"+run : continue
+                if 'hs' not in test:
+                    if 'hs' in f: continue
+                else:
+                    if 'hs' not in f: continue
+                    
+                enfl=datafiles[f]
+                dataplot= [x for x in dataset[f]]
+                #dataplot= dataplot[int(len(dataplot)/2):]
+                key = '-'.join(f.split('-')[:-1])
+                if key not in final:
+                    final[key] = []
+                final[key] += [numpy.average(dataplot)]
 
     for k in final:
         bp_dict[k] = {

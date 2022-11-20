@@ -16,8 +16,8 @@ if __name__ == "__main__":
     for f in datafiles:
         if os.path.isfile(sys.argv[1]+'/'+f):
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
-        else:
-            print(f"file {sys.argv[1]+'/'+f} not found...still trying")
+    #    else:
+    #        print(f"file {sys.argv[1]+'/'+f} not found...still trying")
 
     x_value = []
     for i in range(seconds*2):
