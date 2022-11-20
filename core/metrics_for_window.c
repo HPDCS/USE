@@ -81,6 +81,7 @@ void init_metrics_for_window() {
 	pthread_mutex_init(&stat_mutex, NULL);
 	pthread_mutex_init(&window_check_mtx, NULL);
 	clock_timer_value(start_simul_time);
+	start_simul_time = CLOCK_READ();
 	prev_comm_evts = 0;
 	prev_comm_evts_ref = 0;
 	prev_first_time_exec_evts = 0;
@@ -92,6 +93,7 @@ void init_metrics_for_window() {
 	prev_granularity_ref = 0.0;
 	prev_granularity = 0.0;
 	old_thr = 0.0;
+  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, 0, 0, 0, (start_simul_time)/CLOCKS_PER_US/1000);
 }
 
 int check_window(){
@@ -195,7 +197,9 @@ void enable_window() {
 		if(diff1 < (1.0+THROUGHPUT_DRIFT)  && diff2 < (1.0+THROUGHPUT_DRIFT) && diff1 > (1.0-THROUGHPUT_DRIFT) && diff2 > (1.0-THROUGHPUT_DRIFT))  w.enabled = 1;
 	}
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
-	
+	if(!w.enabled)
+         
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, current_thr, 0, 0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
 	old2_thr = old_thr;
 	old_thr = current_thr;
 
@@ -260,8 +264,9 @@ void aggregate_metrics_for_window_management(window *win) {
 			  if(isnan(thr_window)) goto end;
 			  if(isinf(thr_window)) goto end;
 			  int skip = 0;
+                           double avg = 0.0;
 		  	if(th_counter >= NUM_THROUGHPUT_SAMPLES){
-		  		double avg = 0.0;
+		  		//double avg = 0.0;
 		  		double std = 0.0;
 		  		for(int i=0;i<NUM_THROUGHPUT_SAMPLES;i++) avg += th_samples[i];
 		  		avg/=NUM_THROUGHPUT_SAMPLES;
@@ -283,7 +288,7 @@ void aggregate_metrics_for_window_management(window *win) {
 			    rounds_before_unbalance_check = 0;
 			    clock_timer_start(start_window_reset);
 			  }
-				
+			if(!skip && avg > (thr_ref*1.05) && avg < (thr_ref*2.20)) thr_ref = avg;	
       }
 
 		} //end if enabled

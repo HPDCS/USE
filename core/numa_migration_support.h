@@ -377,6 +377,7 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 		scale += numa_state[i]->unbalance_index;
 	}
 	/// choose the numa nodes with max load and min load
+	if(isnan(scale) || isinf(scale) || scale == 0.0) return;
 	choose_target_nodes(numa_state, &max_load_numa_node, &min_load_numa_node);
 	/// compute the skewness between the nodes
 	simtime_t load_skew = max_load_numa_node->unbalance_index - min_load_numa_node->unbalance_index;
