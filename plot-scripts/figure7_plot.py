@@ -83,7 +83,7 @@ enfl_to_dash={
     "1":[1, 1],
 }
 
-threads_list =  [1, 6, 12, 24, 36, 48]
+threads_list =  [6, 12, 24, 36, 48]
 for line in open("thread.conf"):
     if "THREAD_list" in line:
         line = line.split("=")[-1].split("#")[0].replace('"', '').strip().split(' ')
