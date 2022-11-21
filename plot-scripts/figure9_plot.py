@@ -23,7 +23,7 @@ if __name__ == "__main__":
     #    else:
     #        print(f"file {sys.argv[1]+'/'+f} not found...still trying")
     
-    for run in runs:
+    for run in common.runs:
         for test in tests:
             count = -1
             fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
@@ -89,11 +89,11 @@ if __name__ == "__main__":
                     x_value = [x[1]/1000 for x in dataset[f][0]]
                     dataplot= [x[0]/min_th for x in dataset[f][0]]
 
-                    y_filtered = savgol_filter(dataplot, 10, 4)
+                    y_filtered = savgol_filter(dataplot, 10, 3)
                     mins = []
                     maxs = []
                     xavg = []
-                    steps = 10
+                    steps = 2
                     for i in range(int(len(dataplot)/steps)):
                         mins += [min(dataplot[i*steps:i*steps+steps])]
                         maxs += [max(dataplot[i*steps:i*steps+steps])]
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                     #print(len(dataplot), len(y_filtered), len(maxs), len(mins))
                     #cur_ax.plot(x_value[1:], dataplot[1:], color=colors[enfl], dashes=enfl_to_dash[enfl])
                     cur_ax.plot(x_value, y_filtered, color=colors[enfl], dashes=enfl_to_dash[enfl])
-                    #cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
+                    cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
 
                     custom_lines += [Line2D([0], [0], color=colors[enfl], dashes=enfl_to_dash[enfl])]
                     if enfl == '0':

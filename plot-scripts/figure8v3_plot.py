@@ -62,6 +62,8 @@ if __name__ == "__main__":
                 final[key] += [avg]
 
     for k in final:
+        final[k] = sorted(final[k])
+        final[k] = final[k][1:-1]
         bp_dict[k] = {
         'med': numpy.median(final[k])           ,
         'mean': numpy.average(final[k])           ,        

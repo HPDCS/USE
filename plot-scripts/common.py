@@ -16,18 +16,21 @@ lp_list=['256', '1024', '4096']
 ran = [0.65,1.35]
 quantiles = [10, 90]
 datafiles = {}
+runs =  [str(x) for x in range(12)]
 
 
 def configure_globals(test):
     global seconds
     global lp_list
     global datafiles
+    global runs
 
     if test == 'pcs':
         pass
     else:
         seconds = 240
         lp_list = ['4096']
+        runs =  [str(x) for x in range(6)]
 
     for test in test_list:
         for conf in ['', 'lo', 'lo_re_df']:
@@ -132,7 +135,6 @@ conversion = {
 
 test_list = ['pcs', 'pcs_hs']
 
-runs =  [str(x) for x in range(6)]
 
 
 
