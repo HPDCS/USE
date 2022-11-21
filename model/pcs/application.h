@@ -30,7 +30,7 @@
 #define PARTITIONS 2
 #define CELLS_PER_PARTITION  (n_prc_tot/PARTITIONS)
 
-#define PERC_HOT 0.05
+#define PERC_HOT 0.2
 #define NUM_HOT_CELLS  ((unsigned int)(PERC_HOT*n_prc_tot))
 
 #define NUM_CLD_CELLS_IN_MAX ((n_prc_tot/PARTITIONS)-NUM_HOT_CELLS)
