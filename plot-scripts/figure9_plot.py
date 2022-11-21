@@ -2,18 +2,22 @@
 
 from common import *
 import os
-
-
-tests= [sys.argv[2]]
-ti_list=[]
-for i in range(5)[1:]:
-    ti_list += [i*seconds/4]
+import common
 
 
 if __name__ == "__main__":
+    configure_globals(sys.argv[2])
     dataset = {}
+    seconds = common.seconds
+    lp_list = common.lp_list
+    
+    tests= [sys.argv[2]]
+    ti_list=[]
+    for i in range(5)[1:]:
+        ti_list += [i*seconds/4]
+
     #print(f"processing {sys.argv[1]}")
-    for f in datafiles:
+    for f in common.datafiles:
         if os.path.isfile(sys.argv[1]+'/'+f):
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
     #    else:
@@ -27,7 +31,7 @@ if __name__ == "__main__":
             if test == 'pcs':
                 tit = 'PCS'
             else:
-                tit = 'PCS with 10%/90% hot/ordinary cells'
+                tit = 'PCS with 20%/80% hot/ordinary cells'
             if '0.48' in sys.argv[1]:
                 tit += ' - '+ta2rho['0.48']
             if '0.24' in sys.argv[1]:
@@ -62,7 +66,9 @@ if __name__ == "__main__":
                     
                     if "pcs_hs-" not in f and "pcs-" not in f: continue
 
-                    last_samples = dataset[f][100:]
+                    last_samples = dataset[f][0]
+                    offset = -len(last_samples)/10
+                    last_samples = last_samples[int(offset):]
                     last_list = []
                     for i in range(len(last_samples)):
                         if i == 0: continue
@@ -80,9 +86,10 @@ if __name__ == "__main__":
                         if 'hs' not in f: continue
                         
                     enfl=datafiles[f]
-                    x_value = [x[1]/1000 for x in dataset[f]]
-                    dataplot= [x[0]/min_th for x in dataset[f]]
-                    #y_filtered = savgol_filter(dataplot, 1, 3)
+                    x_value = [x[1]/1000 for x in dataset[f][0]]
+                    dataplot= [x[0]/min_th for x in dataset[f][0]]
+
+                    y_filtered = savgol_filter(dataplot, 10, 4)
                     mins = []
                     maxs = []
                     xavg = []
@@ -93,7 +100,7 @@ if __name__ == "__main__":
                         xavg += [numpy.average(x_value[i*steps:i*steps+steps])]
                     #print(len(dataplot), len(y_filtered), len(maxs), len(mins))
                     #cur_ax.plot(x_value[1:], dataplot[1:], color=colors[enfl], dashes=enfl_to_dash[enfl])
-                    cur_ax.plot(x_value, dataplot, color=colors[enfl], dashes=enfl_to_dash[enfl])
+                    cur_ax.plot(x_value, y_filtered, color=colors[enfl], dashes=enfl_to_dash[enfl])
                     #cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
 
                     custom_lines += [Line2D([0], [0], color=colors[enfl], dashes=enfl_to_dash[enfl])]

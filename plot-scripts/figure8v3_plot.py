@@ -1,19 +1,24 @@
 #!/bin/python3
 
 from common import *
+import common
 import os
-
-bp_dict = {}
-tests= [sys.argv[2]]
-ti_list=[]
-for i in range(5)[1:]:
-    ti_list += [i*seconds/4]
 
 
 if __name__ == "__main__":
+    configure_globals(sys.argv[2])
+
+    seconds = common.seconds
+    lp_list = common.lp_list
+
+    bp_dict = {}
+    tests= [sys.argv[2]]
+    ti_list=[]
+    for i in range(5)[1:]:
+        ti_list += [i*seconds/4]
     dataset = {}
     #print(f"processing {sys.argv[1]}")
-    for f in datafiles:
+    for f in common.datafiles:
         if os.path.isfile(sys.argv[1]+'/'+f):
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
     #    else:
@@ -36,11 +41,12 @@ if __name__ == "__main__":
                     if 'hs' not in f: continue
                 
                 enfl=datafiles[f]
+                res,tot_evt = dataset[f]
+                dataset[f] = res
                 dataplot = []
                 for i in range(len(dataset[f])):
-                    if dataset[f][i][1]<1000*seconds/2:
-                        continue
-                    if i == 0:
+                    if dataset[f][i][1]<1000*seconds/2: continue
+                    if len(dataplot) == 0:
                         dataplot += [dataset[f][i][0]*dataset[f][i][1]]
                     else:
                         dataplot += [dataset[f][i][0]*(dataset[f][i][1]-dataset[f][i-1][1])]
@@ -58,9 +64,9 @@ if __name__ == "__main__":
     for k in final:
         bp_dict[k] = {
         'med': numpy.median(final[k])           ,
-        'mean': numpy.average(final[k])           ,
-        'q1':  numpy.percentile(final[k], 2.5),
-        'q3':  numpy.percentile(final[k], 97.5),
+        'mean': numpy.average(final[k])           ,        
+        'q1':  numpy.percentile(final[k], quantiles[0]),
+        'q3':  numpy.percentile(final[k], quantiles[1]),
         'whislo': min(final[k]),
         'whishi': max(final[k])
         }
@@ -81,7 +87,7 @@ if __name__ == "__main__":
         if test == 'pcs':
             tit = 'PCS'
         else:
-            tit = 'PCS with 10%/ 90% hot/ordinary cells'
+            tit = 'PCS with 20%/ 80% hot/ordinary cells'
 
         if '0.48' in sys.argv[1]:
             tit += ' - '+ta2rho['0.48']

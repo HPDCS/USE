@@ -11,6 +11,33 @@ from matplotlib.lines import Line2D
 from scipy.signal import savgol_filter
 
 
+seconds = 120 #240
+lp_list=['256', '1024', '4096']
+ran = [0.65,1.35]
+quantiles = [10, 90]
+datafiles = {}
+
+
+def configure_globals(test):
+    global seconds
+    global lp_list
+    global datafiles
+
+    if test == 'pcs':
+        pass
+    else:
+        seconds = 240
+        lp_list = ['4096']
+
+    for test in test_list:
+        for conf in ['', 'lo', 'lo_re_df']:
+            for lp in lp_list:
+                for r in runs:
+                    datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{r}"] = conversion[conf]
+                    if conf == 'lo_re_df':
+                        datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{str(int(r)+6)}"] = conversion[conf]
+
+
 
 def get_samples_from_file(filename, seconds):
     f = open(filename)
@@ -18,7 +45,14 @@ def get_samples_from_file(filename, seconds):
 
     samples = []
     max_ts = 0
+
+    tot_evt = 0
+
+
     for line in f.readlines():
+        if 'Committed events..............................' in line:
+            tot_evt =  int(line.split(' ')[-2])
+
         line = line.strip()
         if 'thref' in line:
             ts   = int(line.split(' ')[-1])
@@ -48,8 +82,8 @@ def get_samples_from_file(filename, seconds):
         avg = numpy.average([x[0] for x in samples])
         std = numpy.std([x[0] for x in samples])
 
-        samples = [x for x in samples if x[0] > (avg-sigma*std) ]
-        samples = [x for x in samples if x[0] < (avg+sigma*std) ]
+        samples = [x for x in samples if x[0] > (avg-sigma*std*3) ]
+        samples = [x for x in samples if x[0] < (avg+sigma*std*3) ]
 
     expected_max = seconds*1000 - 500
     constant = max_ts - expected_max
@@ -57,16 +91,16 @@ def get_samples_from_file(filename, seconds):
     final_sample = []
 
     for i in range(len(samples)):
+        #if samples[i][1]-constant < seconds*1000/2: continue
         if len(final_sample) == 0:
             final_sample += [(samples[i][0], samples[i][1]-constant)]
         else:
             final_sample += [(samples[i][0], samples[i][1]-constant)]
         if final_sample[-1][1] < 0:
-            print(filename, constant, final_sample[-1], samples)
+            print("ERROR @",filename, constant, final_sample[-1], samples)
             exit()
             
-
-    return final_sample
+    return final_sample,tot_evt
 
 gran_to_col={
     0.25  :"darkcyan",
@@ -88,7 +122,6 @@ enfl_to_dash={
 
 
 
-seconds = 120 #240
 
 conversion = {
     '' : '0',
@@ -99,20 +132,12 @@ conversion = {
 
 test_list = ['pcs', 'pcs_hs']
 
-runs =  ['0', '1', '2', '3', '4', '5']
+runs =  [str(x) for x in range(6)]
 
 
 
-lp_list=['256', '1024', '4096']
 
-datafiles = {}
-for test in test_list:
-    for conf in ['', 'lo', 'lo_re_df']:
-        for lp in lp_list:
-            for r in runs:
-                datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{r}"] = conversion[conf]
-                if conf == 'lo_re_df':
-                    datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{str(int(r)+6)}"] = conversion[conf]
+
                     
 
 
@@ -132,4 +157,3 @@ ta2rho={
 }
 
 
-ran = [0.70,1.50]

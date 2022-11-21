@@ -2,18 +2,24 @@
 
 from common import *
 import os
-
-
-tests= [sys.argv[2]]
-ti_list=[]
-for i in range(5)[1:]:
-    ti_list += [i*seconds/4]
+import common
 
 
 if __name__ == "__main__":
+
+    configure_globals(sys.argv[2])
+    seconds = common.seconds
+    lp_list = common.lp_list
+    
+    tests= [sys.argv[2]]
+    ti_list=[]
+    for i in range(5)[1:]:
+        ti_list += [i*seconds/4]
+
+
     dataset = {}
     #print(f"processing {sys.argv[1]}")
-    for f in datafiles:
+    for f in common.datafiles:
         if os.path.isfile(sys.argv[1]+'/'+f):
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
     #    else:
@@ -40,15 +46,17 @@ if __name__ == "__main__":
                 
                 enfl=datafiles[f]
                 dataplot = []
+                res,tot_evt = dataset[f]
+                dataset[f] = res
                 for i in range(len(dataset[f])):
-                    if i == 0:
+                    if len(dataplot) == 0:
                         dataplot += [dataset[f][i][0]*dataset[f][i][1]]
                     else:
                         dataplot += [dataset[f][i][0]*(dataset[f][i][1]-dataset[f][i-1][1])]
                         
                 avg = sum(dataplot)/seconds/1000
                 if(avg < 0):
-                    print(f,dataplot)
+                    print(f,dataplot, "ERROR")
                     exit()
                 #dataplot= dataplot[int(len(dataplot)/2):]
                 key = '-'.join(f.split('-')[:-1])
@@ -59,14 +67,14 @@ if __name__ == "__main__":
 
     for k in final:
         final[k] = (numpy.average(final[k]),numpy.std(final[k]))
-
+    
     for test in tests:
         fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
         tit = f"{test}"
         if test == 'pcs':
             tit = 'PCS'
         else:
-            tit = 'PCS with 10%/ 90% hot/ordinary cells'
+            tit = 'PCS with 20%/ 80% hot/ordinary cells'
 
         if '0.48' in sys.argv[1]:
             tit += ' - '+ta2rho['0.48']
