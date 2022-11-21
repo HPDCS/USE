@@ -208,36 +208,31 @@ unsigned int get_current_numa_node(){
 	return 1;
 }
 
+
+unsigned int cores_on_numa[N_CPU];
+
 void set_affinity(unsigned int tid){
 	unsigned int cpu_per_node;
 	cpu_set_t mask;
 	cpu_per_node = N_CPU/num_numa_nodes;
 	
-	if(N_CPU == 32){
-		unsigned int thr_to_cpu[] = {	0,4, 8,12,	16,20,24,28,
-										1,5, 9,13,	17,21,25,29,
-										2,6,10,14,	18,22,26,30,
-										3,7,11,15,	19,23,27,31};
-		current_cpu = thr_to_cpu[tid];
-	}
-	else if (N_CPU <= 16){
-		unsigned int thr_to_cpu[] = {	0, 1, 2, 3, 4, 5, 6, 7, 
-										8, 9,10,11,12,13,14,15};
-		current_cpu = thr_to_cpu[tid]%N_CPU;
-	}
-	else{
-		current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
-	}
 	
+	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+	
+
 	CPU_ZERO(&mask);
-	CPU_SET(current_cpu, &mask);
+	CPU_SET(cores_on_numa[current_cpu], &mask);
+
+	current_cpu = cores_on_numa[current_cpu];
+	
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
 	}
+	
 	current_numa_node = get_current_numa_node();
-	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, current_cpu, current_numa_node);
+	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, cores_on_numa[current_cpu], current_numa_node);
 	
 }
 
@@ -318,7 +313,7 @@ void LPs_metada_init() {
 		LPS[i]->ema_ti					= 0.0;
 		LPS[i]->ema_granularity			= 0.0;
 		LPS[i]->migration_score			= 0.0;
-
+		
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
@@ -349,7 +344,57 @@ void numa_init(){
 		alloc_numa_state(numa_state[i]);
 		numa_state[i]->numa_id = i;
 	}
+
+
 	
+	/// bitmask for each numa node
+	struct bitmask *numa_mask[num_numa_nodes];
+
+	if (num_numa_nodes > 1) {
+
+	    for (int i=0; i < num_numa_nodes; i++) {
+	            numa_mask[i] = numa_allocate_cpumask();
+	            numa_node_to_cpus(i, numa_mask[i]);
+	    }
+	}
+
+	/// set a global array in which are set the cpus on the same numa node
+	/// indexed from 0 to cpu_per_node and from cpu_per_node to N_CPU-1
+	int insert_idx = 0;
+	for (int j=0; j < num_numa_nodes; j++) {
+		for (int k=0; k < N_CPU; k++) {
+			if (num_numa_nodes ==1 || numa_bitmask_isbitset(numa_mask[j], k)) {
+				cores_on_numa[insert_idx] = k; 
+				insert_idx++;
+			}
+		}
+	}
+
+
+
+}
+
+
+void pin_lps_on_numa_nodes_init() {
+
+	unsigned cur_lp = 0;
+	for(unsigned int j=0;j<num_numa_nodes;j++){
+		for(unsigned int i=0;i<n_prc_tot/num_numa_nodes;i++) {
+			set_bit(numa_state[j]->numa_binding_bitmap, cur_lp);
+			LPS[cur_lp]->numa_node 				= j;
+		  #if VERBOSE == 1
+			printf("INI NUMA %d LP %d b:%d\n",  j, cur_lp, get_bit(numa_state[j]->numa_binding_bitmap, cur_lp));
+		  #endif
+			cur_lp++;
+		}
+	}
+	for(;cur_lp<n_prc_tot;cur_lp++){
+		set_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp);
+		LPS[cur_lp]->numa_node 				= num_numa_nodes-1;
+	  #if VERBOSE == 1
+		printf("INI NUMA %d LP %d b:%d\n",  num_numa_nodes-1, cur_lp, get_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp));
+	  #endif
+	}
 
 }
 
@@ -462,6 +507,7 @@ void init_simulation(unsigned int thread_id){
 	if(tid == 0){
 		numa_init();
 		LPs_metada_init();
+		pin_lps_on_numa_nodes_init();
 		dymelor_init(n_prc_tot);
 		statistics_init();
 		queue_init();
@@ -492,26 +538,6 @@ void init_simulation(unsigned int thread_id){
 				LPS[current_lp]->ckpt_period = 20;
 				//LPS[current_lp]->epoch = 1;
 		}
-
-		unsigned cur_lp = 0;
-			for(unsigned int j=0;j<num_numa_nodes;j++){
-				for(unsigned int i=0;i<n_prc_tot/num_numa_nodes;i++) {
-					set_bit(numa_state[j]->numa_binding_bitmap, cur_lp);
-					LPS[cur_lp]->numa_node 				= j;
-				  #if VERBOSE == 1
-					printf("INI NUMA %d LP %d b:%d\n",  j, cur_lp, get_bit(numa_state[j]->numa_binding_bitmap, cur_lp));
-				  #endif
-					cur_lp++;
-				}
-			}
-			for(;cur_lp<n_prc_tot;cur_lp++){
-				set_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp);
-				LPS[cur_lp]->numa_node 				= num_numa_nodes-1;
-			  #if VERBOSE == 1
-				printf("INI NUMA %d LP %d b:%d\n",  num_numa_nodes-1, cur_lp, get_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp));
-			  #endif
-			}
-
 
               #if ENFORCE_LOCALITY==1
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
