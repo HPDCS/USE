@@ -83,7 +83,7 @@ enfl_to_dash={
     "1":[1, 1],
 }
 
-threads_list =  [6, 12, 24, 36, 48]
+threads_list =  [1, 6, 12, 24, 36, 48]
 for line in open("thread.conf"):
     if "THREAD_list" in line:
         line = line.split("=")[-1].split("#")[0].replace('"', '').strip().split(' ')
@@ -92,6 +92,8 @@ for line in open("thread.conf"):
 
 q_list = []
 for t in threads_list:
+    if t == "1":
+    	continue;
     q_list += [{"lp":"1024","threads":str(t)}]
 
 fig, axs = plt.subplots(1,len(metric_list), figsize = (5*len(metric_list),3))
@@ -115,6 +117,9 @@ for metric in metric_list:
             dataplot= []
             x_value= []
             for query in q_list:
+                if query["threads"] == "1":
+                	continue;
+                #print(query)
                 query["enfl"]=enfl
                 query["loop"]=g
                 base_query=query.copy()
