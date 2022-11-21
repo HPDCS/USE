@@ -92,6 +92,8 @@ for line in open("thread.conf"):
 
 q_list = []
 for t in threads_list:
+    if t == "1":
+    	continue;
     q_list += [{"lp":"1024","threads":str(t)}]
 
 fig, axs = plt.subplots(1,len(metric_list), figsize = (5*len(metric_list),3))
@@ -115,6 +117,9 @@ for metric in metric_list:
             dataplot= []
             x_value= []
             for query in q_list:
+                if query["threads"] == "1":
+                	continue;
+                #print(query)
                 query["enfl"]=enfl
                 query["loop"]=g
                 base_query=query.copy()
