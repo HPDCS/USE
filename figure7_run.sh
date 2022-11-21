@@ -70,6 +70,10 @@ do
 				do
 					for threads in $THREAD_list
 					do
+					
+						if [ $threads = "1" ]; then continue;
+						
+						
 						EX="./${test} $threads $lp ${TEST_DURATION}"
 								
 						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; touch $FILE
