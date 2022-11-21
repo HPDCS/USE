@@ -1,17 +1,12 @@
-Reproducibility PADS 2022
-=========================
+Reproducibility TOMACS 2023
+===========================
 
 This documents describes how to reproduce the results discussed in the paper:
 
 "Spatial/Temporal Locality-based Load-sharing in Speculative
 Discrete Event Simulation on Multi-core Machine"
 
-To be published in ACM SIGSIM PADS 2022
-
-Download
---------
-
-* https://doi.org/10.5281/zenodo.6477635
+Submitted to ACM TOMACS 2023 Special Issue on PADS 2022
 
 
 
@@ -56,10 +51,11 @@ Reproducing the results of the paper
 
 The paper has 4 Figures that can be reproduced:
 
-* Figure 3;
-* Figure 4;
 * Figure 5;
-* Figure 6 (this figure has two subplots, one for each of the hardware platforms used for the experimental evaluation).
+* Figure 6;
+* Figure 7;
+* Figure 8 (3 subfigures);
+* Figure 9 (2 subfigures);
 
 To generate all the figures, type the following:
 
@@ -75,11 +71,5 @@ If you prefer to split the running time, each Figure has associated two scripts 
 Notes
 -----
 
-* We uploaded the thread counts for targeting platform A (48 cores) discussed within the paper.
-If you want to define thread counts for your machine, please modify the `thread.conf` file as you prefer.
-In particular:
-  * set MAX_THREADS to the number of cores (e.g., MAX_THREADS="<num_of_cores>")
-  * set THREAD_list to the list of thread counts you want to evaluate. (e.g., on a 40 CPU-core machine set THREAD_list="1 10 20 30 40")
-
-* Figure 3 shows one subset of a more extensive exploration of the W parameter. The script generates 6 variants for different values of W. The one corresponding to Figure 3 of the paper is: `figure3-lp_4096-ta_0.24-w_1.6.pdf`. 
+* Figure 5 shows one subset of a more extensive exploration of the W parameter. The script generates 6 variants for different values of W. The one corresponding to Figure 3 of the paper is: `figure3-lp_4096-ta_0.24-w_3.2.pdf`. 
 
