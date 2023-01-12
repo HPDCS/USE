@@ -1,3 +1,5 @@
+doc-coverage.info
+docs/
 *.tar.gz
 __pycache__/
 thread.conf
@@ -42,7 +44,6 @@ original-*
 .project
 .cproject
 
-test
 pcs-prealloc 
 traffic  	 
 tcar	 

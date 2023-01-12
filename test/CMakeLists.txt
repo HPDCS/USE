@@ -1,0 +1,38 @@
+function(test_program name)
+    add_executable(test_${name} ${ARGN})
+    target_include_directories(test_${name} PRIVATE ../src)
+    add_test(NAME test_${name} COMMAND test_${name})
+    set_tests_properties(test_${name} PROPERTIES TIMEOUT 60)
+endfunction()
+
+
+function(test_model name cores lps)
+    add_library(${name} STATIC ${ARGN})
+    add_dependencies(${name} use-core)
+    target_include_directories(${name} PRIVATE ../src/include ../src/include-gen ${name})
+    
+    add_custom_command(
+        TARGET ${name}  POST_BUILD
+        COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o lib${name}-mm.a --whole-archive lib${name}.a ${CMAKE_BINARY_DIR}/src/libuse-mm.a
+        COMMAND rm lib${name}.a
+        COMMAND mv lib${name}-mm.a lib${name}.a
+    )
+
+    add_executable(test_${name} integration/empty.c)
+    add_test(NAME test_${name}_seq COMMAND test_${name} 1 ${lps})
+    add_test(NAME test_${name}_par COMMAND test_${name} ${cores} ${lps})
+    target_link_libraries(test_${name} ${name} use-core use-datatypes m numa pthread) 
+
+    set_tests_properties(test_${name}_seq PROPERTIES TIMEOUT 60)
+    set_tests_properties(test_${name}_par PROPERTIES TIMEOUT 60)
+endfunction()
+
+
+test_program(bitmap datatypes/bitmap.c)
+
+test_model(phold ${N} 1024 ../models/phold/application.c)
+target_compile_options(phold PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=2500)
+
+
+test_model(phold_count ${N} 32 ../models/phold_count/application.c)
+target_compile_options(phold_count PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=100000)
