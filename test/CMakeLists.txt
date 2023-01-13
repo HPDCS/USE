@@ -3,7 +3,7 @@ function(test_program name)
     target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src)
     add_test(NAME test_${name} COMMAND test_${name})
     target_link_libraries(test_${name} use-datatypes) 
-    set_tests_properties(test_${name} PROPERTIES TIMEOUT 60)
+    set_tests_properties(test_${name} PROPERTIES TIMEOUT 120)
 endfunction()
 
 
@@ -24,17 +24,22 @@ function(test_model name cores lps)
     add_test(NAME test_${name}_par COMMAND test_${name} ${cores} ${lps})
     target_link_libraries(test_${name} ${name} use-core use-datatypes m numa pthread) 
 
-    set_tests_properties(test_${name}_seq PROPERTIES TIMEOUT 60)
-    set_tests_properties(test_${name}_par PROPERTIES TIMEOUT 60)
+    set_tests_properties(test_${name}_seq PROPERTIES TIMEOUT 120)
+    set_tests_properties(test_${name}_par PROPERTIES TIMEOUT 120)
 endfunction()
 
 
 test_program(bitmap datatypes/bitmap.c)
 test_program(list datatypes/list.c)
 
-test_model(phold ${N} 256 ../models/phold/application.c)
+test_model(phold ${N} 1024 ../models/phold/application.c)
 target_compile_options(phold PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=10000)
 
 
 test_model(phold_count ${N} 32 ../models/phold_count/application.c)
 target_compile_options(phold_count PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=100000)
+
+
+
+test_model(pcs ${N} 1024 ../models/pcs/application.c ../models/pcs/functions_app.c)
+target_compile_options(pcs PRIVATE -DCOMPLETE_CALLS=1000 -DTA_CHANGE=300 -DTA_DURATION=120 -DTA=0.48 -DCHANNELS_PER_CELL=1000 )
