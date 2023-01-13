@@ -35,6 +35,11 @@ add_compile_options(
 -DREPORT=1 
 )
 
+#reversibility related options
+#option(REVERSIBLE "REVERSIBLE" OFF)
+#add_compile_options(
+#-DREVERSIBLE=0
+#)
 
 
 
@@ -51,7 +56,7 @@ set(src-core
         core/fetch.c
         core/main.c
         core/numerical.c
-        core/hpdcs_math.c
+        #core/hpdcs_math.c
         core/parseparam.c
         core/local_scheduler.c
         core/local_index/local_index.c
@@ -61,7 +66,7 @@ set(src-core
         mm/garbagecollector.c)
 
 set(src-datatypes
-        core/calqueue.c
+        #core/calqueue.c
         datatypes/list.c
 )
 
@@ -113,7 +118,7 @@ add_custom_command(
 
 add_library(use-core       STATIC ${src-core} ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/hpipe.h)
 add_library(use-mm        STATIC ${src-mm})
-add_library(use-reverse   STATIC ${src-reverse})
+#add_library(use-reverse   STATIC ${src-reverse})
 add_library(use-datatypes   STATIC ${src-datatypes})
 
 

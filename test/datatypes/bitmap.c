@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "datatypes/bitmap.h"
+#include <datatypes/bitmap.h>
 
 #define ITERATIONS 100000
 #define BITMAP_ENTRIES 10000

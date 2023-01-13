@@ -27,7 +27,7 @@ OUTPUT_VARIABLE CACHE_LINE_SIZE
 find_package(Threads REQUIRED)
 
 
-add_compile_options(-Wall -Wextra -pedantic)
+add_compile_options(-Wall -Wextra) # -pedantic)
 
 enable_testing()
 

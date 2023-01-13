@@ -1,7 +1,8 @@
 function(test_program name)
     add_executable(test_${name} ${ARGN})
-    target_include_directories(test_${name} PRIVATE ../src)
+    target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src)
     add_test(NAME test_${name} COMMAND test_${name})
+    target_link_libraries(test_${name} use-datatypes) 
     set_tests_properties(test_${name} PROPERTIES TIMEOUT 60)
 endfunction()
 
@@ -29,9 +30,10 @@ endfunction()
 
 
 test_program(bitmap datatypes/bitmap.c)
+test_program(list datatypes/list.c)
 
-test_model(phold ${N} 1024 ../models/phold/application.c)
-target_compile_options(phold PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=2500)
+test_model(phold ${N} 256 ../models/phold/application.c)
+target_compile_options(phold PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=10000)
 
 
 test_model(phold_count ${N} 32 ../models/phold_count/application.c)
