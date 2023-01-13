@@ -41,6 +41,12 @@ add_compile_options(
 #-DREVERSIBLE=0
 #)
 
+#state-related options
+add_compile_options(
+-DHAVE_PARALLEL_ALLOCATOR=1 
+)
+
+
 
 
 if (CMAKE_BUILD_TYPE STREQUAL  "Debug")
