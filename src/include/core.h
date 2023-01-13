@@ -5,13 +5,11 @@
 #include <stdbool.h>
 #include <math.h>
 #include <float.h>
-#include <reverse.h>
 #include <simtypes.h>
 #include <statistics.h>
 #include <limits.h>
 #include <nb_calqueue.h>
 #include <numa.h>
-
 
 #define MAX_LPs	4096
 

@@ -31,12 +31,8 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
-
-//#include <core.h>
 #include <atomic.h>
-//#include <simtypes.h>
-//#include <events.h>
-
+#include <limits.h>
 
 
 // The basic implementation of the list is such that each node of any list is allocated in
