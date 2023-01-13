@@ -9,7 +9,9 @@
 #define EXTERNAL_LOOP	7
 
 #define VARIANCE 0.2
+#ifndef COMPLETE_EVENTS
 #define COMPLETE_EVENTS 5000
+#endif
 #define COMPLETE_TIME 200000
 #define EVENTS_PER_LP 5
 
@@ -17,8 +19,8 @@
 #define FAN_OUT 1
 #endif
 
-#ifndef LOOP_COUNT_US
-#define LOOP_COUNT_US 5
+#ifndef LOOP_COUNT
+#define LOOP_COUNT 5
 #endif
 
 #define TAU 1
