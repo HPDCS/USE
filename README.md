@@ -33,6 +33,11 @@ implementing the object state-layout.
 4. Adds rules about your model in Makefile, following the existing models.
 3. Run your model as 'executable number_of_threads number_of_LPs'.
 
+
+## Dependecies
+
+* git, cmake, lcov, libnuma-dev
+
 ## Configuration
 
 USE-IT is deployed with a basic configuration.
