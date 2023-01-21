@@ -61,3 +61,5 @@ log_test/*
 /phold_sl_hi
 /phold_sl_nohi
 /log_test/
+Debug/
+Release/
