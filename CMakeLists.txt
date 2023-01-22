@@ -25,7 +25,9 @@ OUTPUT_VARIABLE CACHE_LINE_SIZE
 
 
 find_package(Threads REQUIRED)
+find_package (Python COMPONENTS Interpreter)
 
+CHECK_INCLUDE_FILE(numa.h HAS_NUMA_H)
 
 add_compile_options(-Wall -Wextra) # -pedantic)
 

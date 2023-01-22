@@ -42,9 +42,9 @@
 #define LOAD_FROM_HOT_CELLS    (MAX_LOAD_PARTITION-LOAD_FROM_CLD_CELLS)
 #define TA_HOT                 (NUM_HOT_CELLS/LOAD_FROM_HOT_CELLS)
 
-#if NUM_HOT != 0
+//#if NUM_HOT != 0
 #define CHANNELS_PER_HOT_CELL	((unsigned int)(TA_DURATION*1.1/TA_HOT))
-#endif
+//#endif
 
 
 #ifndef CHANNELS_PER_CELL

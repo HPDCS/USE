@@ -1,8 +1,12 @@
 import sys
 
-d = {}
-rd = {}
+cpus_per_cache = {}
+caches_per_cpu = {}
 count=0
+cpus=[]
+cpu_set=set([])
+n_cpus=0
+
 for line in open(sys.argv[1]).readlines():
   count+=1
   if count == 1: continue
@@ -10,40 +14,58 @@ for line in open(sys.argv[1]).readlines():
   line = line.strip()
   line = line.split(' ')
   cache_id = (line[0],line[2])
-  if cache_id not in d:
-     d[cache_id] = []
-  d[cache_id] += [line[1]]
+  if line[1] not in cpu_set:
+    cpu_set.add(line[1])
+    cpus += [line[1]]
+  if cache_id not in cpus_per_cache:  cpus_per_cache[cache_id] = []
+  cpus_per_cache[cache_id] += [line[1]]
 
-for k in d:
- nk = frozenset(d[k])
- if nk not in rd:
-   rd[nk] = []
- rd[nk] += [k]
- #print(k,d[k])
+#print("CPUS per CACHE",cpus_per_cache)
+#print("CPUS",cpus)
+n_cpus = len(set(cpus))
 
-#print("")
+for k in cpus_per_cache:
+ nk = frozenset(cpus_per_cache[k])
+ if nk not in caches_per_cpu: caches_per_cpu[nk] = []
+ caches_per_cpu[nk] += [k]
 
-for k in rd:
+#print("N_CPU",n_cpus)
+#print("CACHE per CPUs", caches_per_cpu)
+
+for k in caches_per_cpu:
   nv = []
-  for v in rd[k]:
+  for v in caches_per_cpu[k]:
     nv += [(int(v[0]), int(v[1].replace('index', '')))]
-  rd[k] = sorted(nv, key=lambda x:x[1])[-1]
-  #print(k,rd[k])
+  #print(nv)
+  caches_per_cpu[k] = sorted(nv, key=lambda x:x[1])[-1]
 
-#print("")
+#print("LAST_CACHE per CPUs", caches_per_cpu)
 
 res={}
 check={}
+#len2=0
 
-for k in rd:
+for cpu in cpus:
+  a = int(cpu.replace('cpu', ''))
+  if a not in res: 
+    res[a] = []
+    check[a] = set([])
+
+
+for k in caches_per_cpu:
   l = list(k)
+  #print(l)
   for i in range(len(l)-1):
+    a = int(l[i].replace('cpu', ''))
+    #if a not in res: 
+    #  res[a] = []
+    #  check[a] = set([])
     for j in range(len(l))[i+1:]:
-      a = int(l[i].replace('cpu', ''))
+      #a = int(l[i].replace('cpu', ''))
       b = int(l[j].replace('cpu', ''))
-      if a not in res:
-        res[a] = []
-        check[a] = set([])
+      #if a not in res:
+      #  res[a] = []
+      #  check[a] = set([])
       if b not in res:
         res[b] = []
         check[b] = set([])
@@ -54,6 +76,7 @@ for k in rd:
         res[b] += [(a,rd[k][1])]
         #check[b].add(a)
 
+#print("RES",res)
 
 for k in res:
   res[k] = sorted(res[k], key=lambda x:x[1])
@@ -88,6 +111,3 @@ for k in range(len1)[:-1]:
   print("hpipe_index2_cpu"+str(k)+',')
 
 print("hpipe_index2_cpu"+str(len1-1)+"\n};")
-
-
-
