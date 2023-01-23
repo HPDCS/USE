@@ -45,6 +45,10 @@
 #endif
 #include "metrics_for_window.h"
 
+#if STATE_SWAPPING == 1
+#include "state_swapping.h"
+#endif
+
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
 
@@ -124,6 +128,10 @@ unsigned int num_numa_nodes;
 bool numa_available_bool;
 unsigned int rounds_before_unbalance_check; /// number of window management rounds before numa unbalance check
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
+
+#if STATE_SWAPPING == 1
+  state_swapping_struct *state_swap_ptr; /// state swapping struct for output collection
+#endif
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
@@ -454,6 +462,59 @@ void check_OnGVT(unsigned int lp_idx){
 	}
 }
 
+/// worker threads for csr routine
+int worker_threads;
+
+void csr_routine(){
+
+	unsigned int lp_start = (n_prc_tot / n_cores) * tid;
+	unsigned int cur_lp = lp_start;
+	state_swapping_struct *new_state_swap_ptr;
+
+	int potential_locked_object;
+
+	bool to_release = true; //TODO: to be used in new trylock implementation
+
+	/// actual state output collection
+	while (state_swap_ptr->counter_lp < n_prc_tot && cur_lp != lp_start) {
+	  #if VERBOSE == 1
+		printf("csr_routine lp %u\n", cur_lp);
+	  #endif
+		//TODO: change tryLock semantics
+		if (tryLock(cur_lp)) { //without cur_lp != lp_start this is an infinite loop
+			if(LPS[cur_lp]->commit_horizon_ts>0){ //it never enters this
+
+				//swap_state(lp, reference_gvt);
+				check_OnGVT(cur_lp);
+				//restore_state(lp);
+
+				set_bit(state_swap_ptr->lp_bitmap, cur_lp);
+				__sync_fetch_and_add(&state_swap_ptr->counter_lp, 1);
+			}
+			if (to_release) unlock(cur_lp);
+		}
+		cur_lp = (cur_lp + 1) % n_prc_tot;
+	}
+
+	/*if (locks[potential_locked_object]) = MakeWord(1, 1, tid) {
+		if (!get_bit(state_swap_ptr->lp_bitmap, potential_locked_object)) {
+			swap_state(potential_locked_object, reference_gvt);
+			OnGVT(potential_locked_object, state_pointers[potential_locked_object]);
+			restore_state(potential_locked_object);
+			set_bit(state_swap_ptr->lp_bitmap, potential_locked_object);
+		}
+	}*/
+
+	__sync_fetch_and_add(&worker_threads, -1);
+	if (worker_threads == 1) {
+		/// allocation of a new state_swapping ptr and cas must be done one time per-round
+		new_state_swap_ptr = alloc_state_swapping_struct();
+		__sync_bool_compare_and_swap(&state_swap_ptr, state_swap_ptr, new_state_swap_ptr);
+	
+	}
+	
+}
+
 void round_check_OnGVT(){
 	unsigned int start_from = (n_prc_tot / n_cores) * tid;
 	unsigned int curent_ck = start_from;
@@ -543,6 +604,9 @@ void init_simulation(unsigned int thread_id){
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
 		init_metrics_for_window();
               #endif
+		#if STATE_SWAPPING == 1
+		  state_swap_ptr = alloc_state_swapping_struct();
+		#endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -655,7 +719,26 @@ void thread_loop(unsigned int thread_id) {
 				) 
 				&& !sim_error
 		) {
-		
+
+#if STATE_SWAPPING == 1
+
+		//TODO: compute reference_gvt
+
+		/// check the flag for sync output collection
+		if (state_swap_ptr->state_swap_flag) {
+		  #if VERBOSE == 1
+			printf("committed state reconstruction operation\n");
+		  #endif
+			__sync_fetch_and_add(&worker_threads, 1);
+			csr_routine();
+		}
+
+		/// periodically set the flag to 1
+		if (!state_swap_ptr->state_swap_flag) signal_state_swapping();
+	
+
+#endif
+
 		///* FETCH *///
 #if REPORT == 1
 		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
