@@ -463,55 +463,70 @@ void check_OnGVT(unsigned int lp_idx){
 }
 
 /// worker threads for csr routine
-int worker_threads;
+//int worker_threads;
 
 void csr_routine(){
 
-	unsigned int lp_start = (n_prc_tot / n_cores) * tid;
-	unsigned int cur_lp = lp_start;
+	__sync_fetch_and_add(&state_swap_ptr->worker_threads, 1);
+	state_swap_ptr->counter_lp = n_prc_tot-1;
+
+	int cur_lp = state_swap_ptr->counter_lp;
+
 	state_swapping_struct *new_state_swap_ptr;
 
 	int potential_locked_object;
 
 	bool to_release = true; //TODO: to be used in new trylock implementation
 
+	while(cur_lp >= 0) {
+
 	/// actual state output collection
-	while (state_swap_ptr->counter_lp < n_prc_tot && cur_lp != lp_start) {
+	//while (state_swap_ptr->counter_lp < n_prc_tot) {
 	  #if VERBOSE == 1
 		printf("csr_routine lp %u\n", cur_lp);
 	  #endif
 		//TODO: change tryLock semantics
-		if (tryLock(cur_lp)) { //without cur_lp != lp_start this is an infinite loop
-			if(LPS[cur_lp]->commit_horizon_ts>0){ //it never enters this
+		if (tryLock(cur_lp)) {
+			if (!get_bit(state_swap_ptr->lp_bitmap, cur_lp)) {
+				
+				if(LPS[cur_lp]->commit_horizon_ts>0){
 
-				//swap_state(lp, reference_gvt);
-				check_OnGVT(cur_lp);
-				//restore_state(lp);
+					//swap_state(cur_lp, state_swap_ptr->reference_gvt);
+					OnGVT(cur_lp, LPS[cur_lp]->current_base_pointer);
+					//restore_state(cur_lp);
 
-				set_bit(state_swap_ptr->lp_bitmap, cur_lp);
-				__sync_fetch_and_add(&state_swap_ptr->counter_lp, 1);
-			}
+					set_bit(state_swap_ptr->lp_bitmap, cur_lp);
+				}
+
+			} ///end if get_bit
+
 			if (to_release) unlock(cur_lp);
-		}
-		cur_lp = (cur_lp + 1) % n_prc_tot;
-	}
+		} ///end if trylock
+
+		cur_lp = __sync_fetch_and_add(&state_swap_ptr->counter_lp, -1);
+
+	}///end while loop
 
 	/*if (locks[potential_locked_object]) = MakeWord(1, 1, tid) {
 		if (!get_bit(state_swap_ptr->lp_bitmap, potential_locked_object)) {
-			swap_state(potential_locked_object, reference_gvt);
+			swap_state(potential_locked_object, state_swap_ptr->reference_gvt);
 			OnGVT(potential_locked_object, state_pointers[potential_locked_object]);
 			restore_state(potential_locked_object);
 			set_bit(state_swap_ptr->lp_bitmap, potential_locked_object);
 		}
 	}*/
 
-	__sync_fetch_and_add(&worker_threads, -1);
-	if (worker_threads == 1) {
+	__sync_fetch_and_add(&state_swap_ptr->worker_threads, -1);
+	if (state_swap_ptr->worker_threads == 1) {
 		/// allocation of a new state_swapping ptr and cas must be done one time per-round
-		new_state_swap_ptr = alloc_state_swapping_struct();
-		__sync_bool_compare_and_swap(&state_swap_ptr, state_swap_ptr, new_state_swap_ptr);
-	
+		//new_state_swap_ptr = alloc_state_swapping_struct();
+		//__sync_bool_compare_and_swap(&state_swap_ptr, state_swap_ptr, new_state_swap_ptr);
+		//state_swap_ptr->counter_lp = n_prc_tot-1;
+		reset_state_swapping_struct(&state_swap_ptr);
 	}
+
+	/// syscall to restore normal context
+	//restore_context();
 	
 }
 
@@ -729,7 +744,6 @@ void thread_loop(unsigned int thread_id) {
 		  #if VERBOSE == 1
 			printf("committed state reconstruction operation\n");
 		  #endif
-			__sync_fetch_and_add(&worker_threads, 1);
 			csr_routine();
 		}
 
