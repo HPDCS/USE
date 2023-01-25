@@ -99,6 +99,15 @@ static inline char get_bit(bitmap* ptr, unsigned int pos){
     return (ptr->bits[index] & b_val) > 0; 
 }
 
+
+static inline void clear_bitmap(bitmap *ptr) {
+    if(ptr == NULL) abort();
+    unsigned int index;
+    for (index = 0; index < ptr->actual_len; index++) { 
+        if (get_bit(ptr, index)) reset_bit(ptr, index);
+    }
+}
+
 /**
  * @brief assign the given value to the bit at the given pos within a bitmap
  * @param ptr: the reference to a bitmap
