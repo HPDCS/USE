@@ -8,15 +8,16 @@
 #include <signal.h>
 
 
-#define PERIOD_SIGNAL_S 2
+#define PERIOD_SIGNAL_S 2 /// constant for triggering sync committed state reconstruction
 
 
 typedef struct state_swapping_struct {
 
 	bitmap *lp_bitmap; /// bitmap representing all the lps
-	unsigned int counter_lp; /// counter for the lps examined
+	int counter_lp; /// counter for the lps examined
 	simtime_t reference_gvt; /// reference gvt for the output collection
 	unsigned int state_swap_flag; /// flag for determining sync csr
+	int worker_threads;
 
 } state_swapping_struct;
 
@@ -48,6 +49,18 @@ static inline void signal_state_swapping() {
 
 
 /**
+ * This method resets the fields of the state swapping struct
+ * 
+ */
+static inline void reset_state_swapping_struct(state_swapping_struct **ptr) {
+
+	state_swapping_struct *sw_struct = *ptr;
+	clear_bitmap(sw_struct->lp_bitmap);
+	sw_struct->counter_lp = n_prc_tot-1;
+}
+
+
+/**
  * This method allocates a new structure for the state swapping routine
  * and fills the various fields
  * 
@@ -58,9 +71,10 @@ static inline state_swapping_struct *alloc_state_swapping_struct() {
 	state_swapping_struct *sw_struct = (state_swapping_struct *) malloc(sizeof(state_swapping_struct));
 
 	sw_struct->lp_bitmap = allocate_bitmap(n_prc_tot);
-	sw_struct->counter_lp = 0;
+	sw_struct->counter_lp = n_prc_tot-1;
 	sw_struct->reference_gvt = 0.0;
 	sw_struct->state_swap_flag = 0;
+	sw_struct->worker_threads = 0;
 
 	return sw_struct;
 }
