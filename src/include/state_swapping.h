@@ -17,7 +17,7 @@ typedef struct state_swapping_struct {
 	int counter_lp; /// counter for the lps examined
 	simtime_t reference_gvt; /// reference gvt for the output collection
 	unsigned int state_swap_flag; /// flag for determining sync csr
-	int worker_threads;
+	int worker_threads; /// number of threads executing the csr function
 
 } state_swapping_struct;
 
@@ -51,12 +51,15 @@ static inline void signal_state_swapping() {
 /**
  * This method resets the fields of the state swapping struct
  * 
+ * @param A state_swapping_struct pointer
  */
 static inline void reset_state_swapping_struct(state_swapping_struct **ptr) {
 
 	state_swapping_struct *sw_struct = *ptr;
 	clear_bitmap(sw_struct->lp_bitmap);
 	sw_struct->counter_lp = n_prc_tot-1;
+	sw_struct->worker_threads = 0;
+	sw_struct->state_swap_flag = 0;
 }
 
 
@@ -64,7 +67,7 @@ static inline void reset_state_swapping_struct(state_swapping_struct **ptr) {
  * This method allocates a new structure for the state swapping routine
  * and fills the various fields
  * 
- * @return A state_swapping_struct instance
+ * @return A state_swapping_struct pointer
  */
 static inline state_swapping_struct *alloc_state_swapping_struct() {
 
@@ -77,6 +80,17 @@ static inline state_swapping_struct *alloc_state_swapping_struct() {
 	sw_struct->worker_threads = 0;
 
 	return sw_struct;
+}
+
+
+
+/**
+ * This method prints some fields of the state swapping structure, for debugging purposes
+ * 
+ * @param A state_swapping_struct pointer
+ */
+static inline print_state_swapping_struct(state_swapping_struct *ptr) {
+	printf("state_swapping_struct->counter_lp %u --- state_swapping_struct->worker_threads %d --- state_swapping_struct->state_swap_flag %u \n", ptr->counter_lp, ptr->worker_threads, ptr->state_swap_flag);
 }
 
 
