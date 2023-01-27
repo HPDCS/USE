@@ -104,8 +104,12 @@ static inline void clear_bitmap(bitmap *ptr) {
     if(ptr == NULL) abort();
     unsigned int index;
     for (index = 0; index < ptr->actual_len; index++) { 
-        if (get_bit(ptr, index)) reset_bit(ptr, index);
+        if (get_bit(ptr, index) != 0) {
+            reset_bit(ptr, index);
+        }
     }
+
+
 }
 
 /**
