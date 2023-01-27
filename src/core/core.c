@@ -481,7 +481,6 @@ void csr_routine(){
 	while(cur_lp >= 0) {
 
 	/// actual state output collection
-	//while (state_swap_ptr->counter_lp < n_prc_tot) {
 	  #if VERBOSE == 1
 		printf("csr_routine lp %u\n", cur_lp);
 	  #endif
@@ -521,8 +520,10 @@ void csr_routine(){
 		/// allocation of a new state_swapping ptr and cas must be done one time per-round
 		//new_state_swap_ptr = alloc_state_swapping_struct();
 		//__sync_bool_compare_and_swap(&state_swap_ptr, state_swap_ptr, new_state_swap_ptr);
-		//state_swap_ptr->counter_lp = n_prc_tot-1;
 		reset_state_swapping_struct(&state_swap_ptr);
+	  #if VERBOSE == 1
+		print_state_swapping_struct(state_swap_ptr);
+	  #endif
 	}
 
 	/// syscall to restore normal context
