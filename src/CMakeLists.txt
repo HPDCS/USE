@@ -71,6 +71,7 @@ set(src-core
         core/local_index/local_index.c
         core/metrics_for_window.c
         core/metrics_for_lp_migration.c
+        core/state_swapping.c
         statistics/statistics.c
         mm/garbagecollector.c)
 
