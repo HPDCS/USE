@@ -131,6 +131,8 @@ clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalanci
 
 #if STATE_SWAPPING == 1
   state_swapping_struct *state_swap_ptr; /// state swapping struct for output collection
+  __thread unsigned int potential_locked_object; /// index of the lp locked in normal context
+  __thread unsigned int csr_mode; /// modality of csr_function execution
 #endif
 
 size_t node_size_msg_t;
@@ -441,7 +443,7 @@ void check_OnGVT(unsigned int lp_idx){
 		//Restore state on the commit_horizon
 		old_state = LPS[lp_idx]->state;
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
-		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
+		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, LPS[current_lp]->commit_horizon_ts);
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		
@@ -462,74 +464,7 @@ void check_OnGVT(unsigned int lp_idx){
 	}
 }
 
-/// worker threads for csr routine
-//int worker_threads;
 
-void csr_routine(){
-
-	__sync_fetch_and_add(&state_swap_ptr->worker_threads, 1);
-	state_swap_ptr->counter_lp = n_prc_tot-1;
-
-	int cur_lp = state_swap_ptr->counter_lp;
-
-	state_swapping_struct *new_state_swap_ptr;
-
-	int potential_locked_object;
-
-	bool to_release = true; //TODO: to be used in new trylock implementation
-
-	while(cur_lp >= 0) {
-
-	/// actual state output collection
-	  #if VERBOSE == 1
-		printf("csr_routine lp %u\n", cur_lp);
-	  #endif
-		//TODO: change tryLock semantics
-		if (tryLock(cur_lp)) {
-			if (!get_bit(state_swap_ptr->lp_bitmap, cur_lp)) {
-				
-				if(LPS[cur_lp]->commit_horizon_ts>0){
-
-					//swap_state(cur_lp, state_swap_ptr->reference_gvt);
-					OnGVT(cur_lp, LPS[cur_lp]->current_base_pointer);
-					//restore_state(cur_lp);
-
-					set_bit(state_swap_ptr->lp_bitmap, cur_lp);
-				}
-
-			} ///end if get_bit
-
-			if (to_release) unlock(cur_lp);
-		} ///end if trylock
-
-		cur_lp = __sync_fetch_and_add(&state_swap_ptr->counter_lp, -1);
-
-	}///end while loop
-
-	/*if (locks[potential_locked_object]) = MakeWord(1, 1, tid) {
-		if (!get_bit(state_swap_ptr->lp_bitmap, potential_locked_object)) {
-			swap_state(potential_locked_object, state_swap_ptr->reference_gvt);
-			OnGVT(potential_locked_object, state_pointers[potential_locked_object]);
-			restore_state(potential_locked_object);
-			set_bit(state_swap_ptr->lp_bitmap, potential_locked_object);
-		}
-	}*/
-
-	__sync_fetch_and_add(&state_swap_ptr->worker_threads, -1);
-	if (state_swap_ptr->worker_threads == 1) {
-		/// allocation of a new state_swapping ptr and cas must be done one time per-round
-		//new_state_swap_ptr = alloc_state_swapping_struct();
-		//__sync_bool_compare_and_swap(&state_swap_ptr, state_swap_ptr, new_state_swap_ptr);
-		reset_state_swapping_struct(&state_swap_ptr);
-	  #if VERBOSE == 1
-		print_state_swapping_struct(state_swap_ptr);
-	  #endif
-	}
-
-	/// syscall to restore normal context
-	//restore_context();
-	
-}
 
 void round_check_OnGVT(){
 	unsigned int start_from = (n_prc_tot / n_cores) * tid;
@@ -738,13 +673,12 @@ void thread_loop(unsigned int thread_id) {
 
 #if STATE_SWAPPING == 1
 
-		//TODO: compute reference_gvt
-
 		/// check the flag for sync output collection
 		if (state_swap_ptr->state_swap_flag) {
 		  #if VERBOSE == 1
 			printf("committed state reconstruction operation\n");
 		  #endif
+			csr_mode = 0;
 			csr_routine();
 		}
 
