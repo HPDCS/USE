@@ -86,19 +86,22 @@ void print_state_swapping_struct(state_swapping_struct *ptr) {
 
 void swap_state(int lp, simtime_t reference_gvt) {
 
-	//if (reference_gvt == 0) return;
-
 	commit_horizon_to_save = LPS[lp]->commit_horizon_ts; ///save current commit horizon
 	LPS[lp]->commit_horizon_ts = reference_gvt; /// commit horizon to be used in check_OnGVT
 
+ #if VERBOSE == 1
 	printf("REF GVT %f -- commit_horizon_ts %f -- commit_horizon_to_save %f\n", reference_gvt, LPS[lp]->commit_horizon_ts, commit_horizon_to_save);
+ #endif
 }
 
 
 void restore_state(int lp) {
 
 	LPS[lp]->commit_horizon_ts = commit_horizon_to_save; /// restore old commit horizon
+
+ #if VERBOSE == 1
 	printf("RESTORE COMMIT HORIZON %f\n", LPS[lp]->commit_horizon_ts);
+ #endif
 
 }
 
@@ -121,23 +124,32 @@ void csr_routine(){
 		state_swap_ptr->counter_lp = n_prc_tot-1;
 		cur_lp = state_swap_ptr->counter_lp;
 
+		/**
+		 * state output collection in the scenario of
+		 * lp already locked in normal context when csr was triggered
+		**/
+		if (csr_mode && haveLock(lp_lock[potential_locked_object])) { //TODO: change lock semantics??
+			
+			to_release = false; /// the lock for this lp must not be released
 
-		/*if (csr_mode && lp_lock[potential_locked_object]) = MakeWord(1, 1, tid) {
 			if (!get_bit(state_swap_ptr->lp_bitmap, potential_locked_object)) {
-				set_bit(state_swap_ptr->lp_bitmap, potential_locked_object);
 
-				swap_state(potential_locked_object, state_swap_ptr->reference_gvt);
-				check_OnGVT(potential_locked_object, LPS[potential_locked_object]->current_base_pointer);
-				restore_state(potential_locked_object);
+				if(LPS[cur_lp]->commit_horizon_ts>0){
 
+					set_bit(state_swap_ptr->lp_bitmap, potential_locked_object);
+
+					swap_state(potential_locked_object, state_swap_ptr->reference_gvt);
+					check_OnGVT(potential_locked_object);
+					restore_state(potential_locked_object);
+				}
 			}
-		}*/
+		}
 
 		while(cur_lp >= 0) {
 
 		/**
 		 * state output collection in sync scenario and in case of
-		 * lps not locked in normal context when change of context is triggered
+		 * lps not locked in normal context when csr was triggered
 		**/
 		  #if VERBOSE == 1
 			printf("csr_routine lp %u\n", cur_lp);
@@ -153,6 +165,7 @@ void csr_routine(){
 			if (!get_bit(state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
 				if (!get_bit(state_swap_ptr->lp_bitmap, cur_lp)) {
 					
+					to_release = true; /// the lock for this lp must be released
 					if(LPS[cur_lp]->commit_horizon_ts>0){
 
 						set_bit(state_swap_ptr->lp_bitmap, cur_lp);
