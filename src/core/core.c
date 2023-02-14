@@ -685,6 +685,7 @@ void thread_loop(unsigned int thread_id) {
 		/// periodically set the flag to 1
 		if (!state_swap_ptr->state_swap_flag) signal_state_swapping();
 	
+		csr_mode = 1; /// async mode
 
 #endif
 
@@ -728,6 +729,11 @@ void thread_loop(unsigned int thread_id) {
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
 
+#if STATE_SWAPPING == 1
+		potential_locked_object = current_lp;
+#endif
+
+		
 #if DEBUG == 1
 		assertf(current_evt_state == ELIMINATED, "got eliminatated message %p\n", current_msg);
 		assertf(current_evt_state == NEW_EVT,    "got new_evt message %p\n", current_msg);
