@@ -108,7 +108,8 @@ void restore_state(int lp) {
 void csr_routine(){
 
 	int cur_lp;
-	bool to_release = true; //TODO: to be used in new trylock implementation
+	bool to_release = true;
+
 
 	while (1) {
 
@@ -128,10 +129,8 @@ void csr_routine(){
 		 * state output collection in the scenario of
 		 * lp already locked in normal context when csr was triggered
 		**/
-		if (csr_mode && haveLock(lp_lock[potential_locked_object])) { //TODO: change lock semantics??
+		if (csr_mode && haveLock(lp_lock[potential_locked_object])) { 
 			
-			to_release = false; /// the lock for this lp must not be released
-
 			if (!get_bit(state_swap_ptr->lp_bitmap, potential_locked_object)) {
 
 				if(LPS[cur_lp]->commit_horizon_ts>0){
@@ -165,7 +164,7 @@ void csr_routine(){
 			if (!get_bit(state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
 				if (!get_bit(state_swap_ptr->lp_bitmap, cur_lp)) {
 					
-					to_release = true; /// the lock for this lp must be released
+					to_release = true; /// the lock for cur_lp must be released
 					if(LPS[cur_lp]->commit_horizon_ts>0){
 
 						set_bit(state_swap_ptr->lp_bitmap, cur_lp);
@@ -178,6 +177,7 @@ void csr_routine(){
 				} ///end if get_bit
 
 				if (to_release) unlock(cur_lp);
+
 			} ///end if trylock
 
 			cur_lp = __sync_fetch_and_add(&state_swap_ptr->counter_lp, -1);
