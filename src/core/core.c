@@ -130,8 +130,8 @@ unsigned int rounds_before_unbalance_check; /// number of window management roun
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
 
 #if STATE_SWAPPING == 1
-  state_swapping_struct *state_swap_ptr; /// state swapping struct for output collection
   __thread unsigned int potential_locked_object; /// index of the lp locked in normal context
+  pthread_t ipi_tid;
 #endif
 
 size_t node_size_msg_t;
@@ -556,9 +556,7 @@ void init_simulation(unsigned int thread_id){
               #endif
 		#if STATE_SWAPPING == 1
 		  state_swap_ptr = alloc_state_swapping_struct();
-		 #if CSR_CONTEXT == 0
-		  signal_state_swapping(); /// arm the signal handler
-		 #endif
+		  pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
 		#endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
@@ -1026,8 +1024,10 @@ end_loop:
 		//sleep(5);
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
+		  #if STATE_SWAPPING == 1
+			pthread_join(ipi_tid, NULL);
+		  #endif
 			pthread_join(sleeper, NULL);
-
 		}
 	}
 }
