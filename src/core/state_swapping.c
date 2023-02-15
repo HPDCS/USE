@@ -16,16 +16,20 @@ state_swapping_struct *state_swap_ptr;
 __thread simtime_t commit_horizon_to_save;
 
 
-
-#if CSR_CONTEXT == 0
-
 /**
  * This method handles the alarm that has been sent
  * it sets the state_swap_flag to 1 with a compare and swap
  * 
  */
 void handle_signal(int sig) {
+
+  #if CSR_CONTEXT == 0
 	__sync_bool_compare_and_swap(&state_swap_ptr->state_swap_flag, 0, 1);
+  #else 
+	//send_IPI_to_all();
+	printf("send_ipi_to_all\n");
+  #endif
+
     alarm(PERIOD_SIGNAL_S);    
 }
 
@@ -36,13 +40,20 @@ void handle_signal(int sig) {
  */
 void signal_state_swapping() {
 
+
 	signal(SIGALRM, handle_signal);
 	alarm(PERIOD_SIGNAL_S);
+	while(  
+				(
+					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+				) 
+				&& !sim_error
+		) {
+		usleep(PERIOD_SIGNAL_S*500);
+	}
 
-	//while(!state_swap_ptr->state_swap_flag);
 }
 
-#endif
 
 
 /**
@@ -162,9 +173,9 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
 
 	if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp)) {
 
-	  //#if VERBOSE == 1
+	  #if VERBOSE == 1
 		printf("examining lp %d\n", cur_lp);
-	  //#endif 
+	  #endif 
 
 		if(LPS[cur_lp]->commit_horizon_ts>0){
 
@@ -209,12 +220,12 @@ void csr_routine(){
 
 		__sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_in, 1);
 
-		//todo: assert if !csr and debug
+		
 		/// check if a lp was already locked in normal context
 		if (haveLock(lp_lock[potential_locked_object])) { 
-
-			output_collection(cur_state_swap_ptr, potential_locked_object, false);
-		}
+			set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
+			//output_collection(cur_state_swap_ptr, potential_locked_object, false);
+		} //TODO commented just for now
 
 
 		cur_lp = __sync_fetch_and_add(&cur_state_swap_ptr->counter_lp, -1);
