@@ -48,7 +48,8 @@ add_compile_options(
 
 #state swapping options
 add_compile_options(
--DSTATE_SWAPPING=1 
+-DSTATE_SWAPPING=1
+-DCSR_CONTEXT=0
 )
 
 
