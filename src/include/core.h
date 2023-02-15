@@ -124,6 +124,8 @@ extern unsigned int sec_stop;
 /* Number of numa nodes on the current machine */
 extern unsigned int num_numa_nodes;
 extern bool numa_available_bool;
+extern volatile bool stop_timer;
+extern bool sim_error;
 
 
 //Esegue il loop del singolo thread
