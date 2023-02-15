@@ -232,9 +232,9 @@ void csr_routine(){
 
 		while(cur_lp >= 0) { 
 
-		  //#if VERBOSE == 1
+		  #if VERBOSE == 1
 			printf("csr_routine lp %u\n", cur_lp);
-		  //#endif
+		  #endif
 
 			if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
 
@@ -252,9 +252,9 @@ void csr_routine(){
 		for (lp = 0; lp < cur_state_swap_ptr->lp_bitmap->actual_len; lp++) {
 			if (!get_bit(cur_state_swap_ptr->lp_bitmap, lp)) {
 
-			  //#if VERBOSE == 1
+			  #if VERBOSE == 1
 				printf("missing some lp %d\n", lp);
-			  //#endif
+			  #endif
 
 				output_collection(cur_state_swap_ptr, lp, true);
 
