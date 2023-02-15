@@ -20,9 +20,7 @@ extern __thread unsigned int potential_locked_object; /// it contains the index 
 
 extern __thread simtime_t commit_horizon_to_save; 
 
-#if CSR_CONTEXT == 0
-  extern void signal_state_swapping();
-#endif
+extern void signal_state_swapping();
 
 extern state_swapping_struct *alloc_state_swapping_struct();
 
