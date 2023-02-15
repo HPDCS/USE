@@ -132,7 +132,6 @@ clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalanci
 #if STATE_SWAPPING == 1
   state_swapping_struct *state_swap_ptr; /// state swapping struct for output collection
   __thread unsigned int potential_locked_object; /// index of the lp locked in normal context
-  __thread unsigned int csr_mode; /// modality of csr_function execution
 #endif
 
 size_t node_size_msg_t;
@@ -557,6 +556,9 @@ void init_simulation(unsigned int thread_id){
               #endif
 		#if STATE_SWAPPING == 1
 		  state_swap_ptr = alloc_state_swapping_struct();
+		 #if CSR_CONTEXT == 0
+		  signal_state_swapping(); /// arm the signal handler
+		 #endif
 		#endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
@@ -673,19 +675,28 @@ void thread_loop(unsigned int thread_id) {
 
 #if STATE_SWAPPING == 1
 
+		/// set global gvt variable
+		simtime_t cur_gvt = gvt;
+		if (local_gvt > gvt) {
+			__sync_bool_compare_and_swap(
+							UNION_CAST(&(gvt), unsigned long long *),
+							UNION_CAST(cur_gvt,unsigned long long),
+							UNION_CAST(local_gvt, unsigned long long)
+				);
+		}
+
+
+  #if CSR_CONTEXT == 0
 		/// check the flag for sync output collection
 		if (state_swap_ptr->state_swap_flag) {
 		  #if VERBOSE == 1
 			printf("committed state reconstruction operation\n");
 		  #endif
-			csr_mode = 0;
 			csr_routine();
 		}
+  #endif
 
-		/// periodically set the flag to 1
-		if (!state_swap_ptr->state_swap_flag) signal_state_swapping();
-	
-		csr_mode = 1; /// async mode
+
 
 #endif
 
