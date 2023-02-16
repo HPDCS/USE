@@ -93,6 +93,31 @@ inline bool iCAS_x86(volatile unsigned int *ptr, unsigned int oldVal, unsigned i
 	return (bool)res;
 }
 
+/**
+* This function implements the atomic_test_and_set on an integer value, for x86-64 archs
+*
+* @author Alessandro Pellegrini
+*
+* @param b the counter there to perform the operation
+*
+* @ret true if the int value has been set, false otherwise
+*/
+inline int atomic_bit_test_and_set_x86(char *b, int pos) {
+    int result = 0;
+
+	__asm__  __volatile__ (
+		LOCK "bts %2, %1;\n\t"
+		"adc %0, %0"
+		: "=r" (result)
+		: "m" (*b), "r" (pos), "0" (result)
+		: "memory"
+	);
+
+	return !result;
+}
+
+
+
 
 /**
 * This function implements the atomic_test_and_set on an integer value, for x86-64 archs
