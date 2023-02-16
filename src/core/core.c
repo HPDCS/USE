@@ -130,7 +130,7 @@ unsigned int rounds_before_unbalance_check; /// number of window management roun
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
 
 #if STATE_SWAPPING == 1
-  __thread unsigned int potential_locked_object; /// index of the lp locked in normal context
+  __thread volatile unsigned int potential_locked_object; /// index of the lp locked in normal context
   pthread_t ipi_tid;
 #endif
 
@@ -550,14 +550,14 @@ void init_simulation(unsigned int thread_id){
 				//LPS[current_lp]->epoch = 1;
 		}
 
-              #if ENFORCE_LOCALITY==1
+  #if ENFORCE_LOCALITY==1
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
 		init_metrics_for_window();
-              #endif
-		#if STATE_SWAPPING == 1
-		  state_swap_ptr = alloc_state_swapping_struct();
-		  pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
-		#endif
+  #endif
+	#if STATE_SWAPPING == 1
+	  state_swap_ptr = alloc_state_swapping_struct();
+	  pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
+	#endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -573,15 +573,19 @@ void init_simulation(unsigned int thread_id){
 	    }
 	}
 	
+	// Set the CPU affinity
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
-	// Set the CPU affinity
-	set_affinity(tid);
-  #if ENFORCE_LOCALITY == 1
+#if ENFORCE_LOCALITY == 1
 	local_binding_init();
-  #endif
-	
+#endif
+  set_affinity(tid);
+
+#if CSR_CONTEXT == 1
+	usleep(10);
+	init_thread_csr_state();
+#endif	
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
@@ -738,11 +742,6 @@ void thread_loop(unsigned int thread_id) {
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
 
-#if STATE_SWAPPING == 1
-		potential_locked_object = current_lp;
-#endif
-
-		
 #if DEBUG == 1
 		assertf(current_evt_state == ELIMINATED, "got eliminatated message %p\n", current_msg);
 		assertf(current_evt_state == NEW_EVT,    "got new_evt message %p\n", current_msg);
@@ -927,9 +926,7 @@ void thread_loop(unsigned int thread_id) {
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
-		if(!unlock(current_lp)) {
-			printlp("ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp]);
-		}
+		assertf(unlock(current_lp) == 0, "ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp*CACHE_LINE_SIZE/4]);
 	#endif
 
 #if REPORT == 1
@@ -1017,7 +1014,7 @@ end_loop:
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();
-	
+	destroy_thread_csr_state();
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} else if (stop || stop_timer){

@@ -46,12 +46,24 @@ add_compile_options(
 -DHAVE_PARALLEL_ALLOCATOR=1 
 )
 
-#state swapping options
+option(STATE_SWAPPING "STATE_SWAPPING" ON)
+option(CSR_CONTEXT "CSR_CONTEXT" ON)
+
+
+
+if(STATE_SWAPPING AND CSR_CONTEXT)
 add_compile_options(
 -DSTATE_SWAPPING=1
--DCSR_CONTEXT=0
+-DCSR_CONTEXT=1
 )
 
+add_compile_options(
+-Iidt_patcher/include/
+-Isyscall_table_patcher/include/
+-Itrap-based-user-context/include/ 
+)
+
+endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL  "Debug")
     add_compile_options(-DDEBUG=1)
@@ -108,6 +120,8 @@ include_directories(datatypes)
 include_directories(core)
 include_directories(asm)
 
+
+
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/
@@ -126,28 +140,82 @@ add_custom_command(
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build_scripts/cache.db
 )
 
+add_custom_command(
+        OUTPUT kallsyms_lookup_name_exporter
+        COMMAND git clone git@github.com:HPDCS/kallsyms_lookup_name_exporter.git || echo already downloaded
+        COMMAND cd kallsyms_lookup_name_exporter && make clean && make && cd ..
+)
 
-add_library(use-core       STATIC ${src-core} ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/hpipe.h)
+add_custom_command(
+        OUTPUT idt_patcher
+        COMMAND git clone git@github.com:HPDCS/idt_patcher.git || echo already downloaded
+        COMMAND cd idt_patcher && make clean && make && cd ..
+)
+
+add_custom_command(
+        OUTPUT syscall_table_patcher
+        COMMAND git clone git@github.com:HPDCS/syscall_table_patcher.git || echo already downloaded
+        COMMAND cd syscall_table_patcher && make clean && make && cd ..
+)
+
+add_custom_command(
+        OUTPUT trap-based-user-context
+        COMMAND git clone git@github.com:HPDCS/trap-based-user-context.git || echo already downloaded
+        COMMAND cd trap-based-user-context && make clean && ./compile.sh && cd ..
+        DEPENDS kallsyms_lookup_name_exporter idt_patcher syscall_table_patcher
+)
+
+
+add_library(use-core      STATIC 
+${src-core} 
+${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h 
+${CMAKE_CURRENT_SOURCE_DIR}/include-gen/hpipe.h
+trap-based-user-context
+)
+
+
+
 add_library(use-mm        STATIC ${src-mm})
 #add_library(use-reverse   STATIC ${src-reverse})
 add_library(use-datatypes   STATIC ${src-datatypes})
 
 
-add_custom_command(
-        TARGET use-core  POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/ROOT-Sim.h
-                ${CMAKE_CURRENT_BINARY_DIR})
 
-add_custom_command(
-        TARGET use-core  POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h
-                ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_target(
+        remove_modules
+        COMMAND sudo rmmod trap-based-usercontext
+        COMMAND sudo rmmod syscall_table_patcher           
+        COMMAND sudo rmmod kln_exporter           
+        COMMAND sudo rmmod idt_patcher           
+)
 
-add_custom_command(
-        TARGET use-core  POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/timer.h
-                ${CMAKE_CURRENT_BINARY_DIR})
+
+add_custom_target(
+        mount_modules
+        COMMAND pwd
+        COMMAND ls
+        COMMAND cd idt_patcher                    && ./mount.sh && cd ..
+        COMMAND cd syscall_table_patcher          && ./mount.sh && cd ..
+        COMMAND cd kallsyms_lookup_name_exporter  && ( sudo rmmod kln_exporter            || sudo insmod kln_exporter.ko           ) && cd ..
+        COMMAND cd trap-based-user-context        && ( sudo rmmod trap-based-user-context || sudo insmod trap-based-usercontext.ko ) && cd ..
+)
+
+
+#add_custom_command(
+#        TARGET use-core  POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy
+#                ${CMAKE_CURRENT_SOURCE_DIR}/include/ROOT-Sim.h
+#                ${CMAKE_CURRENT_BINARY_DIR})
+#
+#add_custom_command(
+#        TARGET use-core  POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy
+#                ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h
+#                ${CMAKE_CURRENT_BINARY_DIR})
+#
+#add_custom_command(
+#        TARGET use-core  POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy
+#                ${CMAKE_CURRENT_SOURCE_DIR}/include/timer.h
+#                ${CMAKE_CURRENT_BINARY_DIR})
 

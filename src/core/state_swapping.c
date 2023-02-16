@@ -7,14 +7,61 @@
 #include "queue.h"
 #include "state_swapping.h"
 
-
+#if CSR_CONTEXT == 1
+#include <trap_based_usercontext.h>
+#endif
 
 #define PERIOD_SIGNAL_S 2 /// constant for triggering sync committed state reconstruction
+#define PAGE_SIZE (4096)
+#define STACK_SIZE (PAGE_SIZE<<2)
+
+void csr_routine(void);
 
 state_swapping_struct *state_swap_ptr;
-
 __thread simtime_t commit_horizon_to_save;
 
+/**
+ * Init subsystem for threads
+ */
+
+void init_thread_csr_state(void){
+#if CSR_CONTEXT == 1
+	void *alternate_stack;
+	int res;
+  alternate_stack = malloc(STACK_SIZE);
+    if (alternate_stack == NULL) {
+	  printf("Cannot allcate memory for csr context\n");
+	  exit(1);
+  }
+  memset(alternate_stack,0,STACK_SIZE);
+  alternate_stack += STACK_SIZE-8; // stack increases with descreasing addresses
+	
+	res = sys_new_thread_context(csr_routine, alternate_stack);
+	if(res == -2){
+		printf("It seems that the syscall 'sys_new_thread_context' has not been installed\n");
+		exit(1);
+	}
+	if(res == -1){
+		printf("It seems that the syscall 'sys_new_thread_context' failed\n");
+		exit(1);
+	}
+#endif
+}
+
+void destroy_thread_csr_state(void){
+	int res;
+	printf("destroy kernel side user-context...");
+	res = sys_destroy_thread_context();
+	if(res == -2){
+		printf("It seems that the syscall 'sys_destroy_thread_context' has not been installed\n");
+		exit(1);
+	}
+	if(res == -1){
+		printf("It seems that the syscall 'sys_destroy_thread_context' failed\n");
+		exit(1);
+	}
+	printf("OK\n");
+}
 
 /**
  * This method handles the alarm that has been sent
@@ -26,8 +73,8 @@ void handle_signal(int sig) {
   #if CSR_CONTEXT == 0
 	__sync_bool_compare_and_swap(&state_swap_ptr->state_swap_flag, 0, 1);
   #else 
-	//send_IPI_to_all();
-	printf("send_ipi_to_all\n");
+		sys_send_ipi(0);
+		printf("send_ipi_to_all\n");
   #endif
 
     alarm(PERIOD_SIGNAL_S);    
@@ -92,11 +139,6 @@ void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
 
 }
 
-void restore_context() {
-
-
-}
-
 
 /**
  * This method prints some fields of the state swapping structure, for debugging purposes
@@ -105,40 +147,6 @@ void restore_context() {
  */
 void print_state_swapping_struct(state_swapping_struct *ptr) {
 	printf("state_swapping_struct->counter_lp %u --- state_swapping_struct->worker_threads_in %d --- ptr->worker_threads_out %d --- state_swapping_struct->state_swap_flag %u ---- state_swapping_struct->reference_gvt %f \n", ptr->counter_lp, ptr->worker_threads_in, ptr->worker_threads_out, ptr->state_swap_flag, ptr->reference_gvt);
-}
-
-
-/**
- * This method swaps the commit horizon for a given lp
- * in order to do the state swapping operation
- * 
- * @param lp An lp index
- * @param reference_gvt The reference gvt for the current state swapping round
- */
-void swap_state(int lp, simtime_t reference_gvt) {
-
-	commit_horizon_to_save = LPS[lp]->commit_horizon_ts; ///save current commit horizon
-	LPS[lp]->commit_horizon_ts = reference_gvt; /// commit horizon to be used in check_OnGVT
-
- #if VERBOSE == 1
-	printf("REF GVT %f -- commit_horizon_ts %f -- commit_horizon_to_save %f\n", reference_gvt, LPS[lp]->commit_horizon_ts, commit_horizon_to_save);
- #endif
-}
-
-
-/**
- * This method restores the previously swapped commit horizon for a given lp
- * 
- * @param lp An lp index
- */
-void restore_state(int lp) {
-
-	LPS[lp]->commit_horizon_ts = commit_horizon_to_save; /// restore old commit horizon
-
- #if VERBOSE == 1
-	printf("RESTORE COMMIT HORIZON %f\n", LPS[lp]->commit_horizon_ts);
- #endif
-
 }
 
 
@@ -169,21 +177,26 @@ void compute_reference_gvt(state_swapping_struct *cur_state_swap_ptr) {
  * @param to_release True if the lock must be released afterwards, false otherwise
  */
 void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bool to_release) {
-		
+	unsigned int old_current_lp = current_lp;
 
 	if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp)) {
+  	atomic_set_bit(cur_state_swap_ptr->lp_bitmap, cur_lp);
 
 	  #if VERBOSE == 1
 		printf("examining lp %d\n", cur_lp);
 	  #endif 
 
 		if(LPS[cur_lp]->commit_horizon_ts>0){
+	
+			simtime_t	commit_horizon_to_save = LPS[cur_lp]->commit_horizon_ts; ///save current commit horizon
+			LPS[cur_lp]->commit_horizon_ts = cur_state_swap_ptr->reference_gvt; /// commit horizon to be used in check_OnGVT
 
-			set_bit(cur_state_swap_ptr->lp_bitmap, cur_lp);
-
-			swap_state(cur_lp, cur_state_swap_ptr->reference_gvt);
+			current_lp = cur_lp;
 			check_OnGVT(cur_lp);
-			restore_state(cur_lp);	
+			
+
+			LPS[cur_lp]->commit_horizon_ts = commit_horizon_to_save; /// restore old commit horizon
+			current_lp = old_current_lp;	
 		}
 
 	}
@@ -201,14 +214,13 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
  * The routine stops when every LP has been correctly processed
  * and every WT restores its previous context
 */
-void csr_routine(){
+void csr_routine(void){
 
 	int cur_lp;
 
 	state_swapping_struct *cur_state_swap_ptr;
 
 	while (1) {
-
 		cur_state_swap_ptr = state_swap_ptr; 
 
 		/// compute the reference gvt
@@ -223,19 +235,24 @@ void csr_routine(){
 		
 		/// check if a lp was already locked in normal context
 		if (haveLock(lp_lock[potential_locked_object])) { 
-			set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
+			printf("I have lock on %d\n", potential_locked_object);
+			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
 			//output_collection(cur_state_swap_ptr, potential_locked_object, false);
 		} //TODO commented just for now
 
 
 		cur_lp = __sync_fetch_and_add(&cur_state_swap_ptr->counter_lp, -1);
 
-		while(cur_lp >= 0) { 
+		while(cur_lp >= 0 && 
+			(
+					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+				) 
+				&& !sim_error
+			) { 
 
 		  #if VERBOSE == 1
 			printf("csr_routine lp %u\n", cur_lp);
 		  #endif
-
 			if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
 
 				output_collection(cur_state_swap_ptr, cur_lp, true);
@@ -250,6 +267,11 @@ void csr_routine(){
 		unsigned int lp;
 
 		for (lp = 0; lp < cur_state_swap_ptr->lp_bitmap->actual_len; lp++) {
+			
+			if((
+					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+				) 
+				&& !sim_error) break;
 			if (!get_bit(cur_state_swap_ptr->lp_bitmap, lp)) {
 
 			  #if VERBOSE == 1
@@ -270,9 +292,8 @@ void csr_routine(){
 	  #endif
 
 		if (!CSR_CONTEXT) break;
-
-		/// syscall to restore normal context
-		restore_context();
+end:
+		change_context();
 
 	} //end while(1)
 

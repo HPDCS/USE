@@ -48,11 +48,21 @@ extern __thread list(msg_t) to_remove_local_evts;
 extern __thread list(msg_t) to_remove_local_evts_old;
 extern __thread list(msg_t) freed_local_evts;
 
-
 #define haveLock(lp)				((lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1))
 #define checkLock(lp)				(lp_lock[lp*CACHE_LINE_SIZE/4])
 
-#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
+
+#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
+extern __thread volatile unsigned int potential_locked_object;
+
+#define tryLock(lp)                 ( \
+(__sync_lock_test_and_set(&potential_locked_object, lp) >= 0 && lp_lock[lp*CACHE_LINE_SIZE/4]==0) && \
+(__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
+
+#else
+#define tryLock(lp)                 ( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
+#endif
+
 
 #if ENFORCE_LOCALITY == 0
 #define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //can be replaced by an atomic write

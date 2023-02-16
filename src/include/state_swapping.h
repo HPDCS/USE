@@ -16,7 +16,7 @@ typedef struct state_swapping_struct {
 
 extern state_swapping_struct *state_swap_ptr;
 
-extern __thread unsigned int potential_locked_object; /// it contains the index of the lp locked in normal context
+extern __thread volatile unsigned int potential_locked_object; /// it contains the index of the lp locked in normal context
 
 extern __thread simtime_t commit_horizon_to_save; 
 
@@ -24,7 +24,9 @@ extern void signal_state_swapping();
 
 extern state_swapping_struct *alloc_state_swapping_struct();
 
+extern void init_thread_csr_state(void);
 
+extern void destroy_thread_csr_state(void);
 
 
 #endif
