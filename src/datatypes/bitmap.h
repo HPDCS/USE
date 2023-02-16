@@ -73,6 +73,19 @@ static inline void set_bit(bitmap* ptr, unsigned int pos){
     ptr->bits[index] |= b_val; 
 }
 
+static inline void atomic_set_bit(bitmap* ptr, unsigned int pos){
+    if(ptr == NULL || ptr->actual_len <= pos ) abort();
+    unsigned int index, b_pos;
+    char b_val, b_old;
+//begin:
+    index = pos/CHAR_BIT;
+    b_pos = pos%CHAR_BIT;
+    b_old = ptr->bits[index];
+    b_val = b_old | (1 << b_pos);
+    atomic_bit_test_and_set_x86(ptr->bits+index, b_pos);
+//    if(!__sync_bool_compare_and_swap(ptr->bits+index, b_old, b_val)) goto begin;
+}
+
 /**
  * @brief sets to 0 the bit at the given pos within a bitmap
  * @param ptr: the reference to a bitmap
