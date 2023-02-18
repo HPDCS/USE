@@ -696,6 +696,8 @@ void thread_loop(unsigned int thread_id) {
 		  #endif
 			csr_routine();
 		}
+  #else
+		print_state_swapping_struct_metrics();
   #endif
 
 
@@ -939,11 +941,12 @@ void thread_loop(unsigned int thread_id) {
 			commit_event(current_msg, current_node, current_lp);
 		}
 
-
+//#if CSR_CONTEXT == 0
 //#if ENFORCE_LOCALITY == 1		
 		//check if elapsed time since fetching an event is large enough to start computing stats
 		aggregate_metrics_for_window_management(&w);
 //#endif
+
 		/// do the unbalance check if the locality window is enabled or periodically
 		if ( (w.enabled || periodic_rebalance_check(numa_rebalance_timer) ) ){
 			//printf("Evaluating balance 1\n");
@@ -959,6 +962,7 @@ void thread_loop(unsigned int thread_id) {
 				}
 			}
 		}
+//#endif
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
