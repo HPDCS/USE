@@ -23,7 +23,6 @@ void csr_routine(void);
 state_swapping_struct *state_swap_ptr;
 __thread simtime_t commit_horizon_to_save;
 __thread state_swapping_struct *private_swapping_struct;
-__thread unsigned int published_private_swapping_struct;
 
 
 /**
@@ -37,6 +36,7 @@ void init_thread_csr_state(void){
 	alloc_memory_for_freezed_state();
 	private_swapping_struct = alloc_state_swapping_struct();
 	private_swapping_struct->printed = 1;
+	private_swapping_struct->worker_threads_out = n_cores;
 	alternate_stack = malloc(STACK_SIZE);
 	printf("TID:%d %d %p\n", tid, gettid(), private_swapping_struct);
     if (alternate_stack == NULL) {
@@ -107,15 +107,26 @@ void handle_signal(int sig) {
 void signal_state_swapping() {
 
 
-	signal(SIGALRM, handle_signal);
-	alarm(PERIOD_SIGNAL_S);
+	//signal(SIGALRM, handle_signal);
+	//alarm(PERIOD_SIGNAL_S);
 	while(  
 				(
 					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
 				) 
 				&& !sim_error
 		) {
-		usleep(PERIOD_SIGNAL_S*500);
+		usleep(PERIOD_SIGNAL_S*1000*1000);
+	 	if(!state_swap_ptr->csr_trigger_ts){
+	    clock_timer_start(state_swap_ptr->csr_trigger_ts);
+			printf("%p send_ipi_to_all SEND\n", state_swap_ptr);
+			printf("TID:IPI cur:%p remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
+
+			sys_send_ipi(0);
+		}
+		else{
+			printf("%p send_ipi_to_all MISSED\n", state_swap_ptr);
+			printf("TID:IPI cur:%p remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
+		}
 	}
 
 }
@@ -182,18 +193,18 @@ state_swapping_struct *alloc_state_swapping_struct() {
  */
 void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
 
-	if(published_private_swapping_struct && old_state_swap_ptr->worker_threads_out != n_cores){
-		published_private_swapping_struct = 0; 
-	}
-	
-	if(!published_private_swapping_struct){
+	if(private_swapping_struct->worker_threads_out == n_cores){
+  	init_state_swapping_struct(private_swapping_struct);
 		if (__sync_bool_compare_and_swap(&state_swap_ptr, old_state_swap_ptr, private_swapping_struct)){
 			printf("I WON THE CHALLENGE -- TID:%d old: %p new: %p remaining %d entered %d\n", tid, old_state_swap_ptr, private_swapping_struct, old_state_swap_ptr->worker_threads_out, old_state_swap_ptr->worker_threads_in);
 		  private_swapping_struct = old_state_swap_ptr;
-		  published_private_swapping_struct = 1;
+		}
+		else{
+			printf("I LOST EXCHANGE cur %p mine %p \n", old_state_swap_ptr, private_swapping_struct );
 		}
 	}
-
+	else
+		printf("I CANNOT EXCHANGE cur %p mine %p \n", old_state_swap_ptr, private_swapping_struct );
 }
 
 
@@ -345,8 +356,8 @@ void csr_routine(void){
 	  #endif
 
 		int exit_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_out, 1);
-		if(exit_count == 0        ) clock_timer_start(state_swap_ptr->first_exit_ts);
-		if(exit_count == n_cores-1) clock_timer_start(state_swap_ptr->last_exit_ts);
+		if(exit_count == 0        ) clock_timer_start(cur_state_swap_ptr->first_exit_ts);
+		if(exit_count == n_cores-1) clock_timer_start(cur_state_swap_ptr->last_exit_ts);
 
 		reset_state_swapping_struct(cur_state_swap_ptr);
 	  #if VERBOSE == 1
