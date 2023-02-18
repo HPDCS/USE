@@ -191,9 +191,15 @@ add_custom_target(
 
 
 add_custom_target(
+        update_modules
+        COMMAND cd idt_patcher                    && git pull  && make clean && make && cd ..
+        COMMAND cd syscall_table_patcher          && git pull  && make clean && make && cd ..
+        COMMAND cd kallsyms_lookup_name_exporter  && git pull  && make clean && make && cd ..
+        COMMAND cd trap-based-user-context        && git pull  && make clean && ./compile.sh && cd ..
+)
+
+add_custom_target(
         mount_modules
-        COMMAND pwd
-        COMMAND ls
         COMMAND cd idt_patcher                    && ./mount.sh && cd ..
         COMMAND cd syscall_table_patcher          && ./mount.sh && cd ..
         COMMAND cd kallsyms_lookup_name_exporter  && ( sudo rmmod kln_exporter            || sudo insmod kln_exporter.ko           ) && cd ..
