@@ -194,12 +194,13 @@ state_swapping_struct *alloc_state_swapping_struct() {
 void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
 
 	if(private_swapping_struct->worker_threads_out == n_cores){
-  	init_state_swapping_struct(private_swapping_struct);
+        init_state_swapping_struct(private_swapping_struct);
 		if (__sync_bool_compare_and_swap(&state_swap_ptr, old_state_swap_ptr, private_swapping_struct)){
 			printf("I WON THE CHALLENGE -- TID:%d old: %p new: %p remaining %d entered %d\n", tid, old_state_swap_ptr, private_swapping_struct, old_state_swap_ptr->worker_threads_out, old_state_swap_ptr->worker_threads_in);
 		  private_swapping_struct = old_state_swap_ptr;
 		}
 		else{
+            private_swapping_struct->worker_threads_out == n_cores;
 			printf("I LOST EXCHANGE cur %p mine %p \n", old_state_swap_ptr, private_swapping_struct );
 		}
 	}
