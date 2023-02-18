@@ -41,7 +41,8 @@ void dymelor_init(unsigned int objs) {
 	//unrecoverable_init();
 }
 
-
+extern struct _buddy **buddies;
+extern void **mem_areas;
 
 
 /**
@@ -339,7 +340,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 				mem_pool->total_log_size += (m_area->num_chunks - (m_area->alloc_chunks - 1)) * size;
 			} else
 				mem_pool->total_log_size += size;
-		}
+		} 
 
 		//~ int chk_size = m_area->chunk_size;
 		//~ RESET_BIT_AT(chk_size, 0);
@@ -456,3 +457,34 @@ void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
 }
 
 
+
+__thread freezed_state_ptr[4];
+ 
+void alloc_memory_for_freezed_state(void){
+    int i=0;
+    freezed_state_ptr[i++]   = rsalloc(                   PER_LP_PREALLOCATED_MEMORY);
+    freezed_state_ptr[i++]   = rsalloc(                   sizeof(malloc_state));
+    freezed_state_ptr[i++]   = rsalloc(                   MAX_NUM_AREAS*sizeof(malloc_area));
+    freezed_state_ptr[i++]   = rsalloc(                   sizeof(struct _buddy));
+}
+
+void** log_freezed_state(unsigned int lp){
+    printf("freezing state\n");
+    int i=0;
+    memcpy(freezed_state_ptr[i++], get_base_pointer(lp),         PER_LP_PREALLOCATED_MEMORY);
+    memcpy(freezed_state_ptr[i++], recoverable_state+lp,         sizeof(malloc_state));
+    memcpy(freezed_state_ptr[i++], recoverable_state[lp]->areas, sizeof(malloc_area));
+    memcpy(freezed_state_ptr[i++], buddies + lp,                 sizeof(malloc_area));
+
+    return freezed_state_ptr;
+}
+
+
+void restore_freezed_state(unsigned int lp){
+    printf("restoring state\n");
+    int i=0;
+    memcpy(get_base_pointer(lp),         freezed_state_ptr[i++], PER_LP_PREALLOCATED_MEMORY);
+    memcpy(recoverable_state + lp,       freezed_state_ptr[i++], sizeof(malloc_state));
+    memcpy(recoverable_state[lp]->areas, freezed_state_ptr[i++], sizeof(malloc_area));
+    memcpy(buddies + lp,                 freezed_state_ptr[i++], sizeof(malloc_area));
+}

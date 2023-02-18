@@ -51,7 +51,7 @@
 #define kid 1
 #define GidToKernel(gid) gid 
 
-static struct _buddy **buddies;
+struct _buddy **buddies;
 // This vector is accessed by the numa.c module to migrate pages
 #ifndef HAVE_NUMA
 static
