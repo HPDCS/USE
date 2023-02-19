@@ -26,6 +26,7 @@ __thread state_swapping_struct *private_swapping_struct;
 __thread volatile unsigned int potential_locked_object; /// index of the lp locked in normal context
 pthread_t ipi_tid; 
 
+#define DEBUG_CSR 0
 
 /**
  * Init subsystem for threads
@@ -89,15 +90,15 @@ void handle_signal(int sig) {
   #else 
   	if(!state_swap_ptr->csr_trigger_ts){
 	    clock_timer_start(state_swap_ptr->csr_trigger_ts);
-			printf("%p send_ipi_to_all SEND\n", state_swap_ptr);
-			printf("TID:IPI cur:%p remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
-
+		printf("%p send_ipi_to_all SEND\n", state_swap_ptr);
+ 	  #if DEBUG_CSR == 1
+		printf("TID:IPI cur:%p remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
+      #endif
 			sys_send_ipi(0);
 		}
 		else{
-			printf("%p send_ipi_to_all MISSED\n", state_swap_ptr);
-			printf("TID:IPI cur:%p remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
-		}
+			printf("%p send_ipi_to_all MISSED remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
+	    }
   #endif
 
     alarm(PERIOD_SIGNAL_S);    
@@ -121,9 +122,8 @@ void signal_state_swapping() {
 		) {
 		usleep(PERIOD_SIGNAL_S*1000*1000);
 	 	if(!state_swap_ptr->csr_trigger_ts){
-	    clock_timer_start(state_swap_ptr->csr_trigger_ts);
+            clock_timer_start(state_swap_ptr->csr_trigger_ts);
 			printf("%p send_ipi_to_all SEND\n", state_swap_ptr);
-			printf("TID:IPI cur:%p remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
           #if CSR_CONTEXT == 1
 			sys_send_ipi(0);
           #else
@@ -131,9 +131,8 @@ void signal_state_swapping() {
 		  #endif
         }
 		else{
-			printf("%p send_ipi_to_all MISSED\n", state_swap_ptr);
-			printf("TID:IPI cur:%p remaining %d entered %d\n", state_swap_ptr, state_swap_ptr->worker_threads_out, state_swap_ptr->worker_threads_in);
-		}
+			printf("%p send_ipi_to_all MISSED entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
+	  }
 	}
 
 }
@@ -171,7 +170,8 @@ void print_state_swapping_struct_metrics(void){
 	(private_swapping_struct->first_enter_ts - private_swapping_struct->csr_trigger_ts)/CLOCKS_PER_US,
 	(private_swapping_struct->last_enter_ts  - private_swapping_struct->csr_trigger_ts)/CLOCKS_PER_US,
 	(private_swapping_struct->first_exit_ts  - private_swapping_struct->csr_trigger_ts)/CLOCKS_PER_US,
-	(private_swapping_struct->last_exit_ts   - private_swapping_struct->csr_trigger_ts)/CLOCKS_PER_US	);
+	(private_swapping_struct->last_exit_ts   - private_swapping_struct->csr_trigger_ts)/CLOCKS_PER_US,
+    (private_swapping_struct->avg_ts)/CLOCKS_PER_US );
 	}
 }
 
@@ -200,20 +200,28 @@ state_swapping_struct *alloc_state_swapping_struct() {
  */
 void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
 
-    if(old_state_swap_ptr->worker_threads_in != n_cores) return;
+    if(old_state_swap_ptr->worker_threads_out != n_cores) return;
+    if(old_state_swap_ptr->worker_threads_in  != n_cores) return;
 	if(private_swapping_struct->worker_threads_out == n_cores){
         init_state_swapping_struct(private_swapping_struct);
 		if (__sync_bool_compare_and_swap(&state_swap_ptr, old_state_swap_ptr, private_swapping_struct)){
+          #if DEBUG_CSR == 0
 			printf("I WON THE CHALLENGE -- TID:%d old: %p new: %p remaining %d entered %d\n", tid, old_state_swap_ptr, private_swapping_struct, old_state_swap_ptr->worker_threads_out, old_state_swap_ptr->worker_threads_in);
+          #endif
 		  private_swapping_struct = old_state_swap_ptr;
+          print_state_swapping_struct_metrics();
 		}
 		else{
             private_swapping_struct->worker_threads_out == n_cores;
+		  #if DEBUG_CSR == 1
 			printf("TID:%d I LOST EXCHANGE cur %p mine %p \n", tid, old_state_swap_ptr, private_swapping_struct );
+		  #endif
 		}
 	}
+  #if DEBUG_CSR == 1
 	else
 		printf("TID:%d I CANNOT EXCHANGE cur %p mine %p \n", tid, old_state_swap_ptr, private_swapping_struct );
+  #endif
 }
 
 

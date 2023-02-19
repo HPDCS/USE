@@ -198,8 +198,8 @@ void enable_window() {
 	}
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
 	
-    //if(!w.enabled)         
-	//		  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, current_thr, 0, 0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
+    if(!w.enabled && current_thr > 0.0)         
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, current_thr, 0, 0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
 	old2_thr = old_thr;
 	old_thr = current_thr;
 
@@ -275,7 +275,9 @@ void aggregate_metrics_for_window_management(window *win) {
 		  	  std = sqrt(std);
 		  	  skip = skip || ( thr_window < (avg-std*3) );
 		  	  skip = skip || ( thr_window > (avg+std*3) );
+    #if VERBOSE == 1
 		  	  printf("Checking sample AVG:%f STD:%f TH:%f SKIP:%d\n", avg, std, thr_window, skip);
+    #endif
 		  	}
 			  	
 		  	th_samples[th_counter%NUM_THROUGHPUT_SAMPLES] = thr_window;
