@@ -69,11 +69,13 @@ typedef struct timeval timer;
 				} while(0)
 
 
+typedef unsigned long long clock_timer;
 
+extern __thread volatile clock_timer __virtual_offset;
 
 
 /// This overflows if the machine is not restarted in about 50-100 years (on 64 bits archs)
-#define CLOCK_READ() ({ \
+#define RAW_CLOCK_READ() ({ \
 			unsigned int lo; \
 			unsigned int hi; \
 			__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi)); \
@@ -81,13 +83,32 @@ typedef struct timeval timer;
 			})
 
 
-typedef unsigned long long clock_timer;
+#define CLOCK_READ() ({\
+            unsigned long long cur_offset = __sync_fetch_and_add(&__virtual_offset, 0);\
+            cur_offset = RAW_CLOCK_READ()-cur_offset;\
+            cur_offset;\
+})
+
+
+
+#define raw_clock_timer_start(timer) (timer = RAW_CLOCK_READ())
+
+#define raw_clock_timer_value(timer) ({ \
+		unsigned long long value = RAW_CLOCK_READ(); \
+		value -= (unsigned long long)(timer); \
+		value; \
+		})
+
+
+#define raw_update_offset(timer) (__virtual_offset  = 0ULL)
+#define raw_reset_offset(timer)  (__virtual_offset  = 0ULL)
 
 
 #define clock_timer_start(timer) (timer = CLOCK_READ())
 
 #define clock_timer_value(timer) ({ \
 		unsigned long long value = CLOCK_READ(); \
+        if(value < timer) printf("ARGH timer < 0\n"); \
 		value -= (unsigned long long)(timer); \
 		value; \
 		})
