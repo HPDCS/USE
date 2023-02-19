@@ -950,11 +950,12 @@ void thread_loop(unsigned int thread_id) {
 			//printf("Evaluating balance 1\n");
 			if(enable_unbalance_check() ) { 
 				if (pthread_mutex_trylock(&numa_balance_check_mtx) == 0) {
-				  #if VERBOSE == 0
+				  #if VERBOSE == 1
 					printf("Evaluating balance 2\n");
 				  #endif
 					/// rebalancing algorithm and physical migration
-					plan_and_do_lp_migration(numa_state);
+                    if(num_numa_nodes > 1)
+                        plan_and_do_lp_migration(numa_state);
 					/// restart timer for next periodic rebalancing
 					pthread_mutex_unlock(&numa_balance_check_mtx); 
 				}
