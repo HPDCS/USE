@@ -41,4 +41,7 @@ extern void init_thread_csr_state(void);
 extern void destroy_thread_csr_state(void);
 
 extern void print_state_swapping_struct_metrics(void);
+
+extern void csr_routine(void);
+
 #endif

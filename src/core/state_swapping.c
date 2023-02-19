@@ -16,7 +16,13 @@
 
 #if CSR_CONTEXT == 1
 #include <trap_based_usercontext.h>
+#else 
+#define change_context() do{}while(0)
 #endif
+
+
+
+
 
 #define PERIOD_SIGNAL_S 2 /// constant for triggering sync committed state reconstruction
 #define PAGE_SIZE (4096)
@@ -308,7 +314,9 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
 void csr_routine(void){
 
 	int cur_lp;
+  #if CSR_CONTEXT == 1
     clock_timer timer_val = 0;
+  #endif
 	state_swapping_struct *cur_state_swap_ptr;
     unsigned int enter_count, exit_count;
 
@@ -335,7 +343,7 @@ void csr_routine(void){
 			printf("I have lock on %d\n", potential_locked_object);
 			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
 			log_freezed_state(potential_locked_object);
-			output_collection(cur_state_swap_ptr, cur_lp, false);
+			output_collection(cur_state_swap_ptr, potential_locked_object, false);
 			restore_freezed_state(potential_locked_object);
 		} //TODO commented just for now
 
