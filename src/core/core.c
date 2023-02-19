@@ -719,7 +719,7 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
 #endif
 
-#if ONGVT_PERIOD != -1
+#if ONGVT_PERIOD != -1 && SWAPPING_STATE != 1
 			if(++empty_fetch > 500){
 				round_check_OnGVT();
 			}
@@ -901,6 +901,7 @@ void thread_loop(unsigned int thread_id) {
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
 		
+    #if SWAPPING_STATE == 1
 		///* ON_GVT *///
 		if(safe) {
 			if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
@@ -909,6 +910,7 @@ void thread_loop(unsigned int thread_id) {
 			}
 			LPS[current_lp]->until_ongvt = 0;
 		}
+    #endif
 #if ONGVT_PERIOD != -1
 		else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
 			check_OnGVT(current_lp);	

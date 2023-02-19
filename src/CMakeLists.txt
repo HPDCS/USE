@@ -1,3 +1,9 @@
+option(STATE_SWAPPING "STATE_SWAPPING" ON)
+option(CSR_CONTEXT "CSR_CONTEXT" OFF)
+
+
+
+
 #hardware-related macros
 add_compile_options(
 -DCACHE_LINE_SIZE=${CACHE_LINE_SIZE} 
@@ -9,7 +15,7 @@ add_compile_options(
 add_compile_options( 
 -DEPB=3 
 -DPUB=0.333 
--DPRUNE_PERIOD=50
+-DPRUNE_PERIOD=500
 )
 
 #scheduling-related options
@@ -26,9 +32,15 @@ add_compile_options(
 )
 
 #ongvt-related options
+if(STATE_SWAPPING)
+add_compile_options(
+-DONGVT_PERIOD=-1
+)
+else()
 add_compile_options(
 -DONGVT_PERIOD=50
 )
+endif()
 
 #log-related options
 add_compile_options(
@@ -45,9 +57,6 @@ add_compile_options(
 add_compile_options(
 -DHAVE_PARALLEL_ALLOCATOR=1 
 )
-
-option(STATE_SWAPPING "STATE_SWAPPING" ON)
-option(CSR_CONTEXT "CSR_CONTEXT" OFF)
 
 if(STATE_SWAPPING)
 add_compile_options(
