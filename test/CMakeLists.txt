@@ -19,11 +19,12 @@ function(test_model name cores lps)
 
     add_custom_command(
         TARGET ${name} POST_BUILD
-        DEPENDS use-mm ${name}
+        DEPENDS use-mm ${name} use-core use-datatypes 
         COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o lib${name}-mm.a --whole-archive lib${name}.a ${CMAKE_BINARY_DIR}/src/libuse-mm.a
     )
 
     add_dependencies(test_${name} ${name})
+    add_dependencies(${name} use-mm)
 
     target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a use-core use-datatypes m numa pthread) 
 
@@ -43,6 +44,5 @@ test_model(phold_count ${N} 32 ../models/phold_count/application.c)
 target_compile_options(phold_count PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=100000)
 
 
-
 test_model(pcs ${N} 1024 ../models/pcs/application.c ../models/pcs/functions_app.c)
-target_compile_options(pcs PRIVATE -DCOMPLETE_CALLS=1000 -DTA_CHANGE=3600 -DTA_DURATION=360 -DTA=0.01 -DCHANNELS_PER_CELL=8000 -DFADING_RECHECK_FREQUENCY=30)
+target_compile_options(pcs PRIVATE -DCOMPLETE_CALLS=1000 -DTA_CHANGE=300 -DTA_DURATION=120 -DTA=0.12 -DCHANNELS_PER_CELL=8000 -DFADING_RECHECK_FREQUENCY=30)
