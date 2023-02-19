@@ -458,7 +458,7 @@ void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
 
 
 
-__thread freezed_state_ptr[4];
+__thread void* freezed_state_ptr[4];
  
 void alloc_memory_for_freezed_state(void){
     int i=0;
