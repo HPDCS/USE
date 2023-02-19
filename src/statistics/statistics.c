@@ -360,8 +360,9 @@ void gather_statistics() {
 
 static void _print_statistics(struct stats_t *stats) {
 
+  #if PRINT_SCREEN == 1
 	printf(COLOR_CYAN);
-
+  #endif
 	printf("Total events....................................: %12llu\n", (unsigned long long)stats->events_total);
 	printf("Committed events................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_committed, percentage(stats->events_committed, stats->events_total));

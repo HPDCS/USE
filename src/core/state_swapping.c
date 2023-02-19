@@ -1,3 +1,7 @@
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <sys/types.h>
+       
 #include "core.h"
 #include <clock_constant.h>
 #include <bitmap.h>
@@ -82,7 +86,7 @@ void destroy_thread_csr_state(void){
  * This method handles the alarm that has been sent
  * it sets the state_swap_flag to 1 with a compare and swap
  * 
- */
+ 
 void handle_signal(int sig) {
 
   #if CSR_CONTEXT == 0
@@ -103,15 +107,15 @@ void handle_signal(int sig) {
 
     alarm(PERIOD_SIGNAL_S);    
 }
-
+*/
 
 /**
  * This method arms a signal and calls and alarm until the state_swap_flag has been set
  * 
  */
-void signal_state_swapping() {
+void* signal_state_swapping(void *args) {
 
-
+    (void)args;
 	//signal(SIGALRM, handle_signal);
 	//alarm(PERIOD_SIGNAL_S);
 	while(  
@@ -134,12 +138,13 @@ void signal_state_swapping() {
 			printf("%p send_ipi_to_all MISSED entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
 	  }
 	}
-
+    return NULL;
 }
 
 void init_state_swapping_struct(state_swapping_struct *sw_struct){
+    unsigned int i;
 	sw_struct->reference_gvt = 0.0;
-	for(int i=0; i<n_prc_tot;i++) reset_bit(sw_struct->lp_bitmap, i);
+	for(i=0; i<n_prc_tot;i++) reset_bit(sw_struct->lp_bitmap, i);
 
 	sw_struct->counter_lp = n_prc_tot-1;
 	sw_struct->state_swap_flag = 0;
@@ -153,17 +158,19 @@ void init_state_swapping_struct(state_swapping_struct *sw_struct){
 	sw_struct->last_enter_ts  = 0;
 	sw_struct->first_exit_ts  = 0;
 	sw_struct->last_exit_ts   = 0;
+    
+    sw_struct->avg_ts         = 0;
 
 	sw_struct->csr_trigger_ts = 0;
 }
 
 
 void print_state_swapping_struct_metrics(void){
-	if(!private_swapping_struct->printed && private_swapping_struct->worker_threads_out == n_cores)
+	if(!private_swapping_struct->printed &&  private_swapping_struct->worker_threads_out == n_cores && private_swapping_struct->worker_threads_in == n_cores)
 	// && __sync_bool_compare_and_swap(&private_swapping_struct->printed, 0, 1))
 	{
 		private_swapping_struct->printed = 1;
-		printf("%p CSR: trigger:%llu first_enter %llu last_enter:%llu first_exit:%llu last_exit_ts:%llu\n",
+		printf("%p CSR: trigger:%llu first_enter %llu last_enter:%llu first_exit:%llu last_exit_ts:%llu avg:%llu\n",
 	
 	private_swapping_struct,
 	 private_swapping_struct->csr_trigger_ts ,
@@ -199,20 +206,21 @@ state_swapping_struct *alloc_state_swapping_struct() {
  * @param A state_swapping_struct pointer
  */
 void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
-
+    
     if(old_state_swap_ptr->worker_threads_out != n_cores) return;
     if(old_state_swap_ptr->worker_threads_in  != n_cores) return;
+    
 	if(private_swapping_struct->worker_threads_out == n_cores){
         init_state_swapping_struct(private_swapping_struct);
 		if (__sync_bool_compare_and_swap(&state_swap_ptr, old_state_swap_ptr, private_swapping_struct)){
-          #if DEBUG_CSR == 0
+          #if DEBUG_CSR == 1
 			printf("I WON THE CHALLENGE -- TID:%d old: %p new: %p remaining %d entered %d\n", tid, old_state_swap_ptr, private_swapping_struct, old_state_swap_ptr->worker_threads_out, old_state_swap_ptr->worker_threads_in);
           #endif
 		  private_swapping_struct = old_state_swap_ptr;
           print_state_swapping_struct_metrics();
 		}
 		else{
-            private_swapping_struct->worker_threads_out == n_cores;
+            private_swapping_struct->worker_threads_out = n_cores;
 		  #if DEBUG_CSR == 1
 			printf("TID:%d I LOST EXCHANGE cur %p mine %p \n", tid, old_state_swap_ptr, private_swapping_struct );
 		  #endif
@@ -302,6 +310,7 @@ void csr_routine(void){
 	int cur_lp;
     clock_timer timer_val = 0;
 	state_swapping_struct *cur_state_swap_ptr;
+    unsigned int enter_count, exit_count;
 
 	while (1) {
       #if CSR_CONTEXT == 1
@@ -317,7 +326,7 @@ void csr_routine(void){
 	  #endif
         
         if(cur_state_swap_ptr->worker_threads_in == n_cores) goto exit;
-		int enter_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_in, 1);
+		enter_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_in, 1);
 		if(enter_count == 0        ) raw_clock_timer_start(state_swap_ptr->first_enter_ts);
 		if(enter_count == n_cores-1) raw_clock_timer_start(state_swap_ptr->last_enter_ts);
 
@@ -377,7 +386,7 @@ void csr_routine(void){
 	  #endif
 exit:
         if(cur_state_swap_ptr->worker_threads_out == n_cores) goto swap;
-		int exit_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_out, 1);
+		exit_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_out, 1);
 		if(exit_count == 0        ) raw_clock_timer_start(cur_state_swap_ptr->first_exit_ts);
 		if(exit_count == n_cores-1) raw_clock_timer_start(cur_state_swap_ptr->last_exit_ts);
 
@@ -394,7 +403,7 @@ swap:
 		
         
 		if (!CSR_CONTEXT) break;
-end:
+
 		change_context();
 
 	} //end while(1)

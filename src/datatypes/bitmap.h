@@ -12,6 +12,7 @@
 #include <limits.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <atomic.h>
 
 
 /**
@@ -76,12 +77,12 @@ static inline void set_bit(bitmap* ptr, unsigned int pos){
 static inline void atomic_set_bit(bitmap* ptr, unsigned int pos){
     if(ptr == NULL || ptr->actual_len <= pos ) abort();
     unsigned int index, b_pos;
-    char b_val, b_old;
+ //   unsigned char b_val, b_old;
 //begin:
     index = pos/CHAR_BIT;
     b_pos = pos%CHAR_BIT;
-    b_old = ptr->bits[index];
-    b_val = b_old | (1 << b_pos);
+//    b_old = ptr->bits[index];
+//    b_val = b_old | (1 << b_pos);
     atomic_bit_test_and_set_x86(ptr->bits+index, b_pos);
 //    if(!__sync_bool_compare_and_swap(ptr->bits+index, b_old, b_val)) goto begin;
 }

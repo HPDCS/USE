@@ -9,15 +9,16 @@ typedef struct state_swapping_struct {
 	unsigned int state_swap_flag; /// flag for determining sync csr
 	int pad;
 	int printed;
-	int worker_threads_in; /// number of threads executing the csr function
-	int worker_threads_out; /// number of threads executing the csr function
+	volatile unsigned int worker_threads_in; /// number of threads executing the csr function
+	volatile unsigned int worker_threads_out; /// number of threads executing the csr function
 
 	clock_timer first_enter_ts;
 	clock_timer last_enter_ts;
 	clock_timer first_exit_ts;
 	clock_timer last_exit_ts;
-	clock_timer csr_trigger_ts;
-
+	clock_timer avg_ts;
+	
+    clock_timer csr_trigger_ts;
 	simtime_t reference_gvt; /// reference gvt for the output collection
 	bitmap *lp_bitmap; /// bitmap representing all the lps
 
@@ -31,7 +32,7 @@ extern __thread volatile unsigned int potential_locked_object; /// it contains t
 
 extern __thread simtime_t commit_horizon_to_save; 
 
-extern void signal_state_swapping();
+extern void* signal_state_swapping(void *args);
 
 extern state_swapping_struct *alloc_state_swapping_struct();
 

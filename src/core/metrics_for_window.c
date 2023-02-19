@@ -41,8 +41,8 @@ __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
 int get_mem_usage() {
     FILE *statFP;
     int oldNumbers[7];
-    int newNumbers[7];
-    int diffNumbers[7];
+//    int newNumbers[7];
+//    int diffNumbers[7];
     char cpu[10];  // Not used
 
     statFP = fopen("/proc/self/statm", "r");
@@ -93,7 +93,7 @@ void init_metrics_for_window() {
 	prev_granularity_ref = 0.0;
 	prev_granularity = 0.0;
 	old_thr = 0.0;
-  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, 0, 0, 0, (start_simul_time)/CLOCKS_PER_US/1000);
+  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0.0, 0.0, 0.0, 0.0, 0.0, (start_simul_time)/CLOCKS_PER_US/1000);
 }
 
 int check_window(){
@@ -199,7 +199,7 @@ void enable_window() {
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
 	
     if(!w.enabled && current_thr > 0.0)         
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, current_thr, 0, 0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0.0, 0.0, current_thr, 0.0, 0.0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
 	old2_thr = old_thr;
 	old_thr = current_thr;
 

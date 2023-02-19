@@ -56,7 +56,7 @@ extern __thread list(msg_t) freed_local_evts;
 extern __thread volatile unsigned int potential_locked_object;
 
 #define tryLock(lp)                 ( \
-(__sync_lock_test_and_set(&potential_locked_object, lp) >= 0 && lp_lock[lp*CACHE_LINE_SIZE/4]==0) && \
+(__sync_lock_test_and_set(&potential_locked_object, lp) != UNDEFINED_LP && lp_lock[lp*CACHE_LINE_SIZE/4]==0) && \
 (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
 
 #else
