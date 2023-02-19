@@ -129,10 +129,6 @@ bool numa_available_bool;
 unsigned int rounds_before_unbalance_check; /// number of window management rounds before numa unbalance check
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
 
-#if STATE_SWAPPING == 1
-  __thread volatile unsigned int potential_locked_object; /// index of the lp locked in normal context
-  pthread_t ipi_tid;
-#endif
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
@@ -582,7 +578,7 @@ void init_simulation(unsigned int thread_id){
 #endif
   set_affinity(tid);
 
-#if CSR_CONTEXT == 1
+#if STATE_SWAPPING == 1
 	usleep(10);
 	init_thread_csr_state();
 #endif	
@@ -696,10 +692,10 @@ void thread_loop(unsigned int thread_id) {
 		  #endif
 			csr_routine();
 		}
-  #else
+  #endif
+  #if STATE_SWAPPING == 1
 		print_state_swapping_struct_metrics();
   #endif
-
 
 
 #endif
