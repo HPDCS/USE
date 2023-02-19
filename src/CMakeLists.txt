@@ -47,9 +47,27 @@ add_compile_options(
 )
 
 option(STATE_SWAPPING "STATE_SWAPPING" ON)
-option(CSR_CONTEXT "CSR_CONTEXT" ON)
+option(CSR_CONTEXT "CSR_CONTEXT" OFF)
 
+if(STATE_SWAPPING)
+add_compile_options(
+-DSTATE_SWAPPING=1
+)
+else() 
+add_compile_options(
+-DSTATE_SWAPPING=0
+)
+endif()
 
+if(CSR_CONTEXT)
+add_compile_options(
+-DCSR_CONTEXT=1
+)
+else()
+add_compile_options(
+-DCSR_CONTEXT=0
+)
+endif()
 
 if(STATE_SWAPPING AND CSR_CONTEXT)
 add_compile_options(
@@ -66,7 +84,10 @@ add_compile_options(
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL  "Debug")
-    add_compile_options(-DDEBUG=1)
+    add_compile_options(
+    -DDEBUG=1
+    -g
+    )
 endif()
 
 set(src-core
