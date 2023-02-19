@@ -262,14 +262,17 @@ unsigned int fetch_internal(){
         
     while(node != NULL){
         
- #if DEBUG == 1 || REPORT ==1
-        c++;
- #endif
  #if VERBOSE > 0
         diff_lp++;
  #endif
     
-        if(c==MAX_SKIPPED_LP*n_cores){  return 0; } //DEBUG
+        if(c==MAX_SKIPPED_LP*n_cores || c == n_prc_tot || 
+        (
+				!(
+					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+				) 
+				&& !sim_error)
+        ){  return 0; } //DEBUG
 
 
         from_get_next_and_valid = false;
@@ -463,9 +466,14 @@ unsigned int fetch_internal(){
         }
         else {
             read_new_min = false;
+        #if OPTIMISTIC_MODE == ONE_EVT_PER_LP
+            c += !is_in_lp_unsafe_set(lp_idx);
+        #endif
             add_lp_unsafe_set(lp_idx);
-
+            
+            
         #if OPTIMISTIC_MODE == ST_BINDING_LP
+            c += !is_in_lp_locked_set(lp_idx);
             add_lp_locked_set(lp_idx);
         #endif
         }
