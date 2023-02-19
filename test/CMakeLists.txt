@@ -9,7 +9,7 @@ endfunction()
 
 function(test_model name cores lps)
     add_library(${name} STATIC ${ARGN})
-    add_dependencies(${name} ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h)
+    #add_dependencies(${name} ${PROJECT_SOURCE_DIR}/src/include-gen/clock_constant.h)
     target_include_directories(${name} PRIVATE ../src/include ../src/include-gen ${name})
     
     add_test(NAME test_${name}_seq COMMAND test_${name} 1 ${lps})

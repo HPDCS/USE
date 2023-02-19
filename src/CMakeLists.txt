@@ -145,7 +145,7 @@ include_directories(asm)
 
 
 add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h
+        OUTPUT ${PROJECT_SOURCE_DIR}/include-gen/clock_constant.h
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/
         COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/build_scripts && ./gen_clock_header.sh && mv clock_constant.h ../include-gen
 )
