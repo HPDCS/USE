@@ -255,14 +255,29 @@ void print_state_swapping_struct(state_swapping_struct *ptr) {
  * @param The current state_swapping_struct pointer
  */
 void compute_reference_gvt(state_swapping_struct *cur_state_swap_ptr) {
-
+/*
 	if (cur_state_swap_ptr->reference_gvt == 0) 
 		__sync_bool_compare_and_swap(
 							UNION_CAST(&(cur_state_swap_ptr->reference_gvt), unsigned long long *),
 							UNION_CAST(0,unsigned long long),
 							UNION_CAST(gvt, unsigned long long)
 				);
-
+*/
+    unsigned int i;
+    simtime_t ts = INFTY;
+    unsigned int tb = UINT32_MAX;
+    if (cur_state_swap_ptr->reference_gvt == 0) {
+        for(i=0;i<n_prc_tot;i++){
+            if(LPS[i]->commit_horizon_ts < ts || (LPS[i]->commit_horizon_ts == ts && LPS[i]->commit_horizon_tb < tb) ){
+                ts = LPS[i]->commit_horizon_ts;
+                tb = LPS[i]->commit_horizon_tb;
+            }
+        }
+		__sync_bool_compare_and_swap(
+							UNION_CAST(&(cur_state_swap_ptr->reference_gvt), unsigned long long *),
+							UNION_CAST(0,unsigned long long),
+							UNION_CAST(ts, unsigned long long));
+    }
 }
 
 
