@@ -434,7 +434,8 @@ void check_OnGVT(unsigned int lp_idx){
 	current_lp = lp_idx;
 	LPS[lp_idx]->until_ongvt = 0;
 	
-	if(!is_end_sim(lp_idx)){
+	//if(!is_end_sim(lp_idx))
+    {
 		//Restore state on the commit_horizon
 		old_state = LPS[lp_idx]->state;
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
