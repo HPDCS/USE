@@ -231,9 +231,9 @@ unsigned int fetch_internal(){
     LP_state *lp_ptr;
     msg_t *event, *local_next_evt, * bound_ptr;
     bool validity, in_past, read_new_min = true, from_get_next_and_valid;
- #if DEBUG == 1 || REPORT ==1
+
     unsigned int c = 0;
- #endif
+
     
     // Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL) return 0;
