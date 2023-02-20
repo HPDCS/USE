@@ -232,8 +232,9 @@ unsigned int fetch_internal(){
     msg_t *event, *local_next_evt, * bound_ptr;
     bool validity, in_past, read_new_min = true, from_get_next_and_valid;
 
-    unsigned int c = 0;
-
+    unsigned int skipped_lps = 0;
+    
+    unsigned int skipped_events = 0;
     
     // Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL) return 0;
@@ -259,6 +260,14 @@ unsigned int fetch_internal(){
     if(local_gvt < min){
         local_gvt = min;
     }
+    simtime_t cur_gvt = gvt;
+	if (local_gvt > gvt) {
+		__sync_bool_compare_and_swap(
+			UNION_CAST(&(gvt), unsigned long long *),
+			UNION_CAST(cur_gvt,unsigned long long),
+			UNION_CAST(local_gvt, unsigned long long)
+			);
+	}
         
     while(node != NULL){
         
@@ -266,7 +275,10 @@ unsigned int fetch_internal(){
         diff_lp++;
  #endif
     
-        if(c==MAX_SKIPPED_LP*n_cores || c == n_prc_tot || 
+        if( 
+            skipped_lps==n_prc_tot/n_cores || 
+            skipped_lps == n_prc_tot || 
+            skipped_events > (n_cores*100) ||  
         (
 				!(
 					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
@@ -467,13 +479,13 @@ unsigned int fetch_internal(){
         else {
             read_new_min = false;
         #if OPTIMISTIC_MODE == ONE_EVT_PER_LP
-            c += !is_in_lp_unsafe_set(lp_idx);
+            skipped_lps += !is_in_lp_unsafe_set(lp_idx);
         #endif
             add_lp_unsafe_set(lp_idx);
-            
+            skipped_events++;
             
         #if OPTIMISTIC_MODE == ST_BINDING_LP
-            c += !is_in_lp_locked_set(lp_idx);
+            skipped_lps += !is_in_lp_locked_set(lp_idx);
             add_lp_locked_set(lp_idx);
         #endif
         }
@@ -536,7 +548,7 @@ unsigned int fetch_internal(){
     current_msg =  event;//(msg_t *) node->payload;
     current_node = node;
  #if REPORT == 1
-    statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)c);
+    statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)skipped_events);
  #endif
 
     return 1;
