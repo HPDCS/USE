@@ -36,7 +36,6 @@
 #define STAT_EVENT_STRAGGLER        102        /// Number of straggler events received
 #define STAT_EVENT_STASH            103        /// ???
 #define STAT_EVENT_SILENT           104        /// Average time to execute the silent execution phase
-#define STAT_EVENT_SILENT_FOR_GVT   113        /// Average time to execute the silent execution phase
 #define STAT_EVENT_COMMIT           105        /// Number of commits
 #define STAT_EVENT_FETCHED          106        /// Number of call to fetched
 #define STAT_EVENT_ENQUEUE          107        /// Number of events flushed
@@ -45,6 +44,7 @@
 #define STAT_EVENT_FETCHED_SUCC     110        /// Number of events fetched
 #define STAT_EVENT_FETCHED_UNSUCC   111        /// Number of fetch failed
 #define STAT_GET_NEXT_FETCH			112		   /// Number of nodes seen during fetch
+#define STAT_EVENT_SILENT_FOR_GVT   113        /// Average time to execute the silent execution phase
 #define STAT_EVT_FROM_GLOBAL_FETCH  114        /// Number of events got from global index
 #define STAT_EVT_FROM_LOCAL_FETCH   115        /// Number of events got from local index
 
@@ -65,6 +65,7 @@
 #define STAT_CLOCK_BTW_EVT          214        /// Average time between two events
 #define STAT_CLOCK_FETCH_SUCC       215        /// Average time spent to fetch a new event
 #define STAT_CLOCK_FETCH_UNSUCC     216        /// Average time spent to fetch a new event
+#define STAT_INIT_CLOCKS            217        /// Number of clocks for init
 
 #define STAT_CKPT                   300        /// Number of checkpoints taken  
 #define STAT_CKPT_TIME              301        /// Average time to take one checkpoint
@@ -79,7 +80,6 @@
 
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 #define STAT_SAFETY_CHECK           401        /// Number of safety check operations
-
 
 typedef double stat64_t;
 
@@ -128,6 +128,7 @@ struct stats_t {
     stat64_t clock_recovery;
     stat64_t clock_checkpoint;
     stat64_t clock_rollback;
+    stat64_t clock_init;
 
     stat64_t mem_checkpoint;
     stat64_t checkpoint_period;
