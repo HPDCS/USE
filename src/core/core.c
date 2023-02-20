@@ -451,6 +451,7 @@ void check_OnGVT(unsigned int lp_idx){
 		// Restore state on the bound
 		LPS[lp_idx]->state = LP_STATE_ROLLBACK;
 		//printf("%d- BUILD STATE AFTER GVT START LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
+        //statistics_post_lp_data(lp_idx, STAT_ROLLBACK, 1);
 		rollback(lp_idx, INFTY, UINT_MAX);
 		//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
 		LPS[lp_idx]->state = old_state;
@@ -487,6 +488,8 @@ void round_check_OnGVT(){
 }
 
 void init_simulation(unsigned int thread_id){
+    clock_timer init_timer;
+    clock_timer_start(init_timer);
 	tid = thread_id;
 	int i = 0;
 	
@@ -582,6 +585,8 @@ void init_simulation(unsigned int thread_id){
 	usleep(10);
 	init_thread_csr_state();
 #endif	
+
+    statistics_post_th_data(tid, STAT_INIT_CLOCKS, clock_timer_value(init_timer));
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
@@ -818,7 +823,7 @@ void thread_loop(unsigned int thread_id) {
 			
 			LPS[current_lp]->state = old_state;
 
-			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
+			//statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
 			if(current_evt_state != ANTI_MSG) {
 				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 			}
@@ -873,7 +878,8 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 		// Take a simulation state snapshot, in some way
-		LogState(current_lp);
+		if(n_cores > 1)
+            LogState(current_lp);
 		
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){
