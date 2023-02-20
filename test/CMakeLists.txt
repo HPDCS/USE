@@ -12,22 +12,19 @@ function(test_model name cores lps)
     #add_dependencies(${name} ${PROJECT_SOURCE_DIR}/src/include-gen/clock_constant.h)
     target_include_directories(${name} PRIVATE ../src/include ../src/include-gen ${name})
     
-    add_test(NAME test_${name}_seq COMMAND test_${name} 1 ${lps})
-    add_test(NAME test_${name}_par COMMAND test_${name} ${cores} ${lps})
-
     add_executable(test_${name} integration/empty.c)
-
-    add_custom_command(
-        TARGET ${name} POST_BUILD
-        DEPENDS use-mm ${name} use-core use-datatypes 
+        
+    add_custom_target(lib${name}-mm.a
+        DEPENDS ${name} use-mm
         COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o lib${name}-mm.a --whole-archive lib${name}.a ${CMAKE_BINARY_DIR}/src/libuse-mm.a
     )
 
-    add_dependencies(test_${name} ${name})
-    add_dependencies(${name} use-mm)
-
+    add_dependencies(test_${name} ${name} use-mm use-core use-datatypes lib${name}-mm.a)
+    
     target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a use-core use-datatypes m numa pthread) 
 
+    add_test(NAME test_${name}_seq COMMAND test_${name} 1 ${lps})
+    add_test(NAME test_${name}_par COMMAND test_${name} ${cores} ${lps})
     set_tests_properties(test_${name}_seq PROPERTIES TIMEOUT 120)
     set_tests_properties(test_${name}_par PROPERTIES TIMEOUT 120)
 endfunction()
