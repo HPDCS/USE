@@ -2,6 +2,7 @@
 #define __STATE_SWAPPING_H
 
 #include <timer.h>
+#include <bitmap.h>
 
 typedef struct state_swapping_struct {
 
