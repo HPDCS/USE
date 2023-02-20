@@ -440,6 +440,7 @@ void check_OnGVT(unsigned int lp_idx){
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
 		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, LPS[current_lp]->commit_horizon_ts);
 		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
+        //statistics_post_lp_data(lp_idx, STAT_ROLLBACK, 1);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		
 		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
@@ -969,10 +970,6 @@ void thread_loop(unsigned int thread_id) {
 		}
 //#endif
 
-#if REPORT == 1
-		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
-		//statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
-#endif
 		
 end_loop:
 		//CHECK END SIMULATION
