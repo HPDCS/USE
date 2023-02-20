@@ -1139,7 +1139,8 @@ void nbc_prune(void)
 	
 	nbc_bucket_node  *tmp, *tmp_next;
 	unsigned int counter;
-	
+	clock_timer prune_timer;
+    clock_timer_start(prune_timer);
 	
 	if(!mm_safe(prune_array, threads, TID))
 		return;
@@ -1194,6 +1195,10 @@ void nbc_prune(void)
 		
 	}	
 	mm_new_era(&malloc_status, prune_array, threads, TID);
+    
+    
+    statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(prune_timer));
+	statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
 }
 
 
