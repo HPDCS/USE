@@ -42,7 +42,7 @@
 #include "queue.h"
 #include "prints.h"
 #include "timer.h"
-
+#include <state_swapping.h>
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
@@ -1172,9 +1172,14 @@ void nbc_prune(void)
 	to_free_tables_new = NULL;
 	
 
-	
+  #if STATE_SWAPPING == 1
+    simtime_t tmp_gvt = state_swap_ptr->reference_gvt;
+    if(tmp_gvt < local_gvt)
+        prune_local_queue_with_ts(tmp_gvt);
+    else
+  #endif
 	//prune events nodes 
-	prune_local_queue_with_ts(local_gvt);
+	  prune_local_queue_with_ts(local_gvt);
 	
 	if(((rootsim_list*)to_remove_local_evts)->head != NULL){
 		struct rootsim_list_node* old_tail = ((struct rootsim_list*)to_remove_local_evts_old)->tail;
