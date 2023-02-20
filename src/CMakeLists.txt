@@ -28,7 +28,7 @@ add_compile_options(
 
 #checkpoint related options
 add_compile_options(
--DCHECKPOINT_PERIOD=20 
+-DCHECKPOINT_PERIOD=5
 )
 
 #ongvt-related options
@@ -38,7 +38,7 @@ add_compile_options(
 )
 else()
 add_compile_options(
--DONGVT_PERIOD=50
+-DONGVT_PERIOD=500
 )
 endif()
 
