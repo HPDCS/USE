@@ -286,14 +286,18 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
 	  #endif 
 
 		if(LPS[cur_lp]->commit_horizon_ts>0){
-	
-			simtime_t	commit_horizon_to_save = LPS[cur_lp]->commit_horizon_ts; ///save current commit horizon
-			LPS[cur_lp]->commit_horizon_ts = cur_state_swap_ptr->reference_gvt; /// commit horizon to be used in check_OnGVT
+            
+            if(n_cores > 1) {
+                simtime_t	commit_horizon_to_save = LPS[cur_lp]->commit_horizon_ts; ///save current commit horizon
+                LPS[cur_lp]->commit_horizon_ts = cur_state_swap_ptr->reference_gvt; /// commit horizon to be used in check_OnGVT
 
-			check_OnGVT(cur_lp);
-			
-			LPS[cur_lp]->commit_horizon_ts = commit_horizon_to_save; /// restore old commit horizon
-			current_lp = old_current_lp;	
+                check_OnGVT(cur_lp);
+                
+                LPS[cur_lp]->commit_horizon_ts = commit_horizon_to_save; /// restore old commit horizon
+                current_lp = old_current_lp;
+            }
+            else
+                OnGVT(cur_lp, LPS[cur_lp]->current_base_pointer);
 		}
 
 	}
