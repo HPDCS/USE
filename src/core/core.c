@@ -429,7 +429,7 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 //#define print_event(event)	printf("   [LP:%u->%u]: TS:%f TB:%u EP:%u IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p\n",event->sender_id, event->receiver_id, event->timestamp, event->tie_breaker, event->epoch, is_valid(event),event, event->node);
 
 
-void check_OnGVT(unsigned int lp_idx){
+void check_OnGVT(unsigned int lp_idx, simtime_t ts, unsigned int tb){
 	unsigned int old_state;
 	current_lp = lp_idx;
 	LPS[lp_idx]->until_ongvt = 0;
@@ -440,7 +440,7 @@ void check_OnGVT(unsigned int lp_idx){
 		old_state = LPS[lp_idx]->state;
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
 		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, LPS[current_lp]->commit_horizon_ts);
-		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
+		rollback(lp_idx, ts, tb);
         //statistics_post_lp_data(lp_idx, STAT_ROLLBACK, 1);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		
@@ -479,7 +479,7 @@ void round_check_OnGVT(){
 				if(LPS[curent_ck]->commit_horizon_ts>0){
 //					printf("[%u]ROUND ONGVT LP:%u TS:%f TB:%llu\n", tid, curent_ck,LPS[curent_ck]->commit_horizon_ts, LPS[curent_ck]->commit_horizon_tb);
 	
-					check_OnGVT(curent_ck);
+					check_OnGVT(curent_ck, LPS[curent_ck]->commit_horizon_ts, LPS[curent_ck]->commit_horizon_tb);
 				}
 				unlock(curent_ck);
 				break;
@@ -919,7 +919,7 @@ void thread_loop(unsigned int thread_id) {
 			LPS[current_lp]->until_ongvt = 0;
 		}
 		else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
-			check_OnGVT(current_lp);	
+			check_OnGVT(current_lp, LPS[current_lp]->commit_horizon_ts, LPS[current_lp]->commit_horizon_tb);	
 		}
 #endif	
 		
@@ -976,7 +976,7 @@ end_loop:
 		if(start_periodic_check_ongvt && n_cores > 1){
 			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
 				if(tryLock(last_checked_lp)){
-					check_OnGVT(last_checked_lp);
+					check_OnGVT(last_checked_lp, LPS[last_checked_lp]->commit_horizon_ts, LPS[last_checked_lp]->commit_horizon_tb);
 					unlock(last_checked_lp);
 					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
 				}
