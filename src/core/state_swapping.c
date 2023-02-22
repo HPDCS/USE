@@ -13,6 +13,7 @@
 #include <dymelor.h>
 #include <timer.h>
 #include <clock_constant.h>
+#include <gvt.h>
 
 #if CSR_CONTEXT == 1
 #include <trap_based_usercontext.h>
@@ -122,6 +123,8 @@ void handle_signal(int sig) {
 void* signal_state_swapping(void *args) {
 
     (void)args;
+    unsigned long interval = PERIOD_SIGNAL_S * 1000 * 1000;
+    unsigned long steps = 2;
 	//signal(SIGALRM, handle_signal);
 	//alarm(PERIOD_SIGNAL_S);
 	while(  
@@ -130,7 +133,10 @@ void* signal_state_swapping(void *args) {
 				) 
 				&& !sim_error
 		) {
-		usleep(PERIOD_SIGNAL_S*1000*1000);
+        for(unsigned int i =0;i<steps;i++){
+            update_fossil_gvt();
+            usleep(interval/steps);
+        }
 	 	if(!state_swap_ptr->csr_trigger_ts){
             clock_timer_start(state_swap_ptr->csr_trigger_ts);
 			printf("%p send_ipi_to_all SEND\n", state_swap_ptr);
@@ -276,7 +282,7 @@ void compute_reference_gvt(state_swapping_struct *cur_state_swap_ptr) {
 		__sync_bool_compare_and_swap(
 							UNION_CAST(&(cur_state_swap_ptr->reference_gvt), unsigned long long *),
 							UNION_CAST(0,unsigned long long),
-							UNION_CAST(ts, unsigned long long));
+							UNION_CAST(fossil_gvt, unsigned long long));
     }
 }
 

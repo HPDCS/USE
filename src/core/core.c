@@ -36,6 +36,7 @@
 
 #include <numa_migration_support.h>
 #include "metrics_for_lp_migration.h"
+#include <gvt.h>
 
 #if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
@@ -55,7 +56,6 @@
 #define MAX_PATHLEN			512
 
 
-__thread simtime_t local_gvt = 0;
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -105,8 +105,6 @@ unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot;
 
-/* Commit horizon TODO */
- simtime_t gvt = 0;
 /* Average time between consecutive events */
 simtime_t t_btw_evts = 0.1;
 
@@ -683,14 +681,7 @@ void thread_loop(unsigned int thread_id) {
 #if STATE_SWAPPING == 1
 
 		/// set global gvt variable
-		simtime_t cur_gvt = gvt;
-		if (local_gvt > gvt) {
-			__sync_bool_compare_and_swap(
-							UNION_CAST(&(gvt), unsigned long long *),
-							UNION_CAST(cur_gvt,unsigned long long),
-							UNION_CAST(local_gvt, unsigned long long)
-				);
-		}
+		update_global_gvt(local_gvt);
 
 
   #if CSR_CONTEXT == 0
@@ -924,13 +915,22 @@ void thread_loop(unsigned int thread_id) {
 			check_OnGVT(current_lp, LPS[current_lp]->commit_horizon_ts, LPS[current_lp]->commit_horizon_tb);	
 		}
 #endif	
-		
+    
 		if((++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0)/* && safe*/){
-			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
-			//ATTENTION: We should take care of the tie_breaker?
-			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
-		}
-		
+            simtime_t gc_ts = LPS[current_lp]->commit_horizon_ts;
+    
+    #if STATE_SWAPPING == 1
+            if(fossil_gvt > 0.0){
+            gc_ts = fossil_gvt;
+    #endif
+			clean_checkpoint(current_lp, gc_ts);
+			clean_buffers_on_gvt(current_lp, gc_ts);
+    #if STATE_SWAPPING == 1
+            }
+    #endif
+
+        }
+    
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				

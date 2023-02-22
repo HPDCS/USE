@@ -27,7 +27,7 @@ typedef struct state_swapping_struct {
 
 extern pthread_t ipi_tid;
 
-extern state_swapping_struct *state_swap_ptr;
+extern state_swapping_struct *volatile state_swap_ptr;
 
 extern __thread volatile unsigned int potential_locked_object; /// it contains the index of the lp locked in normal context
 

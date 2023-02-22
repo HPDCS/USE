@@ -117,6 +117,7 @@ set(src-core
         core/state_swapping.c
         core/virtual_timer.c
         core/lp_lock.c
+        core/gvt.c
         statistics/statistics.c
         mm/garbagecollector.c)
 
