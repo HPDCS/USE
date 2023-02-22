@@ -22,16 +22,14 @@
 #endif
 
 
-
-
-
 #define PERIOD_SIGNAL_S 2 /// constant for triggering sync committed state reconstruction
 #define PAGE_SIZE (4096)
 #define STACK_SIZE (PAGE_SIZE<<2)
 
 void csr_routine(void);
 
-state_swapping_struct *state_swap_ptr;
+state_swapping_struct * volatile state_swap_ptr;
+
 __thread simtime_t commit_horizon_to_save;
 __thread state_swapping_struct *private_swapping_struct;
 __thread volatile unsigned int potential_locked_object; /// index of the lp locked in normal context
@@ -92,7 +90,7 @@ void destroy_thread_csr_state(void){
 /**
  * This method handles the alarm that has been sent
  * it sets the state_swap_flag to 1 with a compare and swap
- * 
+ */
  
 void handle_signal(int sig) {
 
@@ -114,7 +112,7 @@ void handle_signal(int sig) {
 
     alarm(PERIOD_SIGNAL_S);    
 }
-*/
+
 
 /**
  * This method arms a signal and calls and alarm until the state_swap_flag has been set
@@ -125,7 +123,7 @@ void* signal_state_swapping(void *args) {
     (void)args;
     unsigned long interval = PERIOD_SIGNAL_S * 1000 * 1000;
     unsigned long steps = 2;
-	//signal(SIGALRM, handle_signal);
+	signal(SIGALRM, handle_signal);
 	//alarm(PERIOD_SIGNAL_S);
 	while(  
 				(
@@ -139,7 +137,7 @@ void* signal_state_swapping(void *args) {
         }
 	 	if(!state_swap_ptr->csr_trigger_ts){
             clock_timer_start(state_swap_ptr->csr_trigger_ts);
-			printf("%p send_ipi_to_all SEND\n", state_swap_ptr);
+			printf("%p send_ipi_to_all SEND entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
           #if CSR_CONTEXT == 1
 			sys_send_ipi(0);
           #else
@@ -148,7 +146,7 @@ void* signal_state_swapping(void *args) {
         }
 		else{
 			printf("%p send_ipi_to_all MISSED entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
-	  }
+        }
 	}
     return NULL;
 }
@@ -219,10 +217,10 @@ state_swapping_struct *alloc_state_swapping_struct() {
  */
 void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
     
-    if(old_state_swap_ptr->worker_threads_out != n_cores) return;
-    if(old_state_swap_ptr->worker_threads_in  != n_cores) return;
+    if(old_state_swap_ptr->worker_threads_out < n_cores) return;
+    if(old_state_swap_ptr->worker_threads_in  < n_cores) return;
     
-	if(private_swapping_struct->worker_threads_out == n_cores){
+	if(private_swapping_struct->worker_threads_out >= n_cores){
         init_state_swapping_struct(private_swapping_struct);
 		if (__sync_bool_compare_and_swap(&state_swap_ptr, old_state_swap_ptr, private_swapping_struct)){
           #if DEBUG_CSR == 1
@@ -340,8 +338,8 @@ void csr_routine(void){
 	state_swapping_struct *cur_state_swap_ptr;
     unsigned int enter_count, exit_count;
 
-	while (1) {
       #if CSR_CONTEXT == 1
+begin:
         raw_clock_timer_start(timer_val);
       #endif
 		cur_state_swap_ptr = state_swap_ptr; 
@@ -353,7 +351,7 @@ void csr_routine(void){
 		printf("gvt %f -- state_swap_ptr->reference_gvt %f\n", gvt, state_swap_ptr->reference_gvt);
 	  #endif
         
-        if(cur_state_swap_ptr->worker_threads_in == n_cores) goto exit;
+        if(cur_state_swap_ptr->worker_threads_in >= n_cores) goto exit;
 		enter_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_in, 1);
 		if(enter_count == 0        ) raw_clock_timer_start(state_swap_ptr->first_enter_ts);
 		if(enter_count == n_cores-1) raw_clock_timer_start(state_swap_ptr->last_enter_ts);
@@ -383,9 +381,12 @@ void csr_routine(void){
 			printf("csr_routine lp %u\n", cur_lp);
 		  #endif
 			if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
-
-				output_collection(cur_state_swap_ptr, cur_lp, true);
-			}
+                assert(haveLock(cur_lp));
+			    if(LPS[cur_lp]->commit_horizon_ts>0){
+                    output_collection(cur_state_swap_ptr, cur_lp, true);
+                }else
+                printf("Commit horizon is still 0 %d\n", cur_lp);
+            }
 
 			cur_lp = __sync_fetch_and_add(&cur_state_swap_ptr->counter_lp, -1);
 
@@ -396,12 +397,8 @@ void csr_routine(void){
 		unsigned int lp;
 
 		for (lp = 0; lp < cur_state_swap_ptr->lp_bitmap->actual_len; lp++) {
-			
-			/*if((
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
-				) 
-				&& !sim_error) break;*/
-			if (!get_bit(cur_state_swap_ptr->lp_bitmap, lp)) {
+			if (!get_bit(cur_state_swap_ptr->lp_bitmap, lp) && tryLock(lp)) {
+                assert(haveLock(lp));
 
 			  #if VERBOSE == 1
 				printf("missing some lp %d\n", lp);
@@ -413,7 +410,7 @@ void csr_routine(void){
 		}
 	  #endif
 exit:
-        if(cur_state_swap_ptr->worker_threads_out == n_cores) goto swap;
+        if(cur_state_swap_ptr->worker_threads_out >= n_cores) goto swap;
 		exit_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_out, 1);
 		if(exit_count == 0        ) raw_clock_timer_start(cur_state_swap_ptr->first_exit_ts);
 		if(exit_count == n_cores-1) raw_clock_timer_start(cur_state_swap_ptr->last_exit_ts);
@@ -427,15 +424,8 @@ swap:
       #if CSR_CONTEXT == 1
         raw_clock_timer_value(timer_val);
         raw_update_offset(timer_val);
-      #endif
-		
-        
-		if (!CSR_CONTEXT) break;
-
 		change_context();
+        goto begin;
+      #endif
 
-	} //end while(1)
-
-	
-	
 }
