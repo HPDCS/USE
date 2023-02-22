@@ -28,7 +28,8 @@ add_compile_options(
 
 #checkpoint related options
 add_compile_options(
--DCHECKPOINT_PERIOD=5
+-DCHECKPOINT_PERIOD=20
+-DCLEAN_CKP_INTERVAL=100
 )
 
 #ongvt-related options
