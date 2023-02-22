@@ -278,7 +278,7 @@ unsigned int fetch_internal(){
         if( 
             skipped_lps==n_prc_tot/n_cores || 
             skipped_lps == n_prc_tot || 
-            skipped_events > (n_cores*100) ||  
+            skipped_events > (n_cores*10) ||  
         (
 				!(
 					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
