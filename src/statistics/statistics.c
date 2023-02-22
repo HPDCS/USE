@@ -448,8 +448,10 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long long)stats->clock_loop_tot);
 	printf("Init  Clocks..............................: %14llu clocks (%4.2f%%)\n", 
 		(unsigned long long)stats->clock_init, percentage(stats->clock_init,stats->clock_loop_tot));
-	printf("Event Clocks..............................: %14llu clocks (%4.2f%%)\n", 
-		(unsigned long long)stats->clock_event_tot, percentage(stats->clock_event_tot,stats->clock_loop_tot));
+	printf("Safe   Event Clocks.......................: %14llu clocks (%4.2f%%)\n", 
+		(unsigned long long)stats->clock_safe_tot, percentage(stats->clock_safe_tot,stats->clock_loop_tot));
+	printf("Silent Event Clocks.......................: %14llu clocks (%4.2f%%)\n", 
+		(unsigned long long)(stats->clock_event_tot-stats->clock_safe_tot), percentage((stats->clock_event_tot-stats->clock_safe_tot),stats->clock_loop_tot));
 //	printf("Frame Clocks..............................: %14llu clocks (%4.2f%%)\n", 
 //		(unsigned long long)stats->clock_frame_tot, percentage(stats->clock_frame_tot,stats->clock_loop_tot));
 	printf("Prune Clocks..............................: %14llu clocks (%4.2f%%)\n", 
