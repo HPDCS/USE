@@ -1170,14 +1170,7 @@ void nbc_prune(void)
 
 	to_free_tables_old = to_free_tables_new;
 	to_free_tables_new = NULL;
-	
 
-  #if STATE_SWAPPING == 1
-    simtime_t tmp_gvt = state_swap_ptr->reference_gvt;
-    if(tmp_gvt < local_gvt)
-        prune_local_queue_with_ts(tmp_gvt);
-    else
-  #endif
 	//prune events nodes 
 	  prune_local_queue_with_ts(local_gvt);
 	

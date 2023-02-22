@@ -493,9 +493,7 @@ void force_LP_checkpoint(unsigned int lid) {
 void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 	state_t *to_state, *tmp_state=NULL;
 	msg_t *from_msg, *to_msg=NULL, *tmp_msg=NULL;
-  #if SWAPPING_STATE == 1
-    if(state_swap_ptr->reference_gvt < commit_horizon) commit_horizon = state_swap_ptr->reference_gvt;
-  #endif
+
 	(void) tmp_msg;
 	
 	from_msg = list_head(LPS[lid]->queue_in);

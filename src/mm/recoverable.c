@@ -244,9 +244,6 @@ void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
 	malloc_state *state;
 	malloc_area *m_area;
 
-  #if SWAPPING_STATE == 1
-    if(state_swap_ptr->reference_gvt < time_barrier) time_barrier = state_swap_ptr->reference_gvt;
-  #endif
 	state = recoverable_state[lid];
 
 	// The first NUM_AREAS malloc_areas are placed according to their chunks' sizes. The exceeding malloc_areas can be compacted
