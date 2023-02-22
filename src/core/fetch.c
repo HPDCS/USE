@@ -378,8 +378,8 @@ unsigned int fetch_internal(){
         ) {
             
 	    #if DEBUG == 1
-	      assertf(lp_idx == UNDEFINED_LP, "trying to unlock an undefined LP%s", "\n");
-	      assertf(!haveLock(lp_idx), "trying to unlock without own lock %s", "\n");
+	      assertf(lp_idx == UNDEFINED_LP, "locking an undefined LP%s", "\n");
+	      assertf(!haveLock(lp_idx), "locked lp without own its lock %s", "\n");
  	    #endif
             validity = is_valid(event);
             
