@@ -32,7 +32,6 @@ state_swapping_struct * volatile state_swap_ptr;
 
 __thread simtime_t commit_horizon_to_save;
 __thread state_swapping_struct *private_swapping_struct;
-__thread volatile unsigned int potential_locked_object; /// index of the lp locked in normal context
 pthread_t ipi_tid; 
 
 #define DEBUG_CSR 0
@@ -355,14 +354,16 @@ begin:
 		enter_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_in, 1);
 		if(enter_count == 0        ) raw_clock_timer_start(state_swap_ptr->first_enter_ts);
 		if(enter_count == n_cores-1) raw_clock_timer_start(state_swap_ptr->last_enter_ts);
-
+        
+        unsigned int lp_to_be_checked = potential_locked_object; 
+        
 		/// check if a lp was already locked in normal context
-		if (haveLock(lp_lock[potential_locked_object])) { 
-			printf("I have lock on %d\n", potential_locked_object);
-			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
-			log_freezed_state(potential_locked_object);
-			output_collection(cur_state_swap_ptr, potential_locked_object, false);
-			restore_freezed_state(potential_locked_object);
+		if (lp_to_be_checked < n_prc_tot && haveLock(lp_to_be_checked)) { 
+			printf("I have lock on %d\n", lp_to_be_checked);
+			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, lp_to_be_checked);
+			//log_freezed_state(lp_to_be_checked);
+			//output_collection(cur_state_swap_ptr, lp_to_be_checked, false);
+			//restore_freezed_state(lp_to_be_checked);
 		} //TODO commented just for now
 
 

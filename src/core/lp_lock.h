@@ -4,8 +4,8 @@
 extern volatile unsigned int *lp_lock;
 
 
-static inline unsigned int haveLock( unsigned int lp){ return (lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1); }
-static inline unsigned int checkLock(unsigned int lp){ return (lp_lock[lp*CACHE_LINE_SIZE/4]); }
+static inline unsigned int haveLock( unsigned int lp){ assert(lp<n_prc_tot); return (lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1); }
+static inline unsigned int checkLock(unsigned int lp){ assert(lp<n_prc_tot); return (lp_lock[lp*CACHE_LINE_SIZE/4]); }
 
 
 #if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
