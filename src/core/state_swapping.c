@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <simtypes.h>
 #include <signal.h>
+#include <pthread.h>
 #include "queue.h"
 #include "state_swapping.h"
 #include <dymelor.h>
@@ -122,7 +123,7 @@ void* signal_state_swapping(void *args) {
     (void)args;
     unsigned long interval = PERIOD_SIGNAL_S * 1000 * 1000;
     unsigned long steps = 2;
-	signal(SIGALRM, handle_signal);
+	//signal(SIGALRM, handle_signal);
 	//alarm(PERIOD_SIGNAL_S);
 	while(  
 				(
@@ -143,7 +144,11 @@ void* signal_state_swapping(void *args) {
             __sync_bool_compare_and_swap(&state_swap_ptr->state_swap_flag, 0, 1);
 		  #endif
         }
-		else{
+		else{ 
+            //state_swapping_struct *tmp = alloc_state_swapping_struct();
+            //__sync_lock_test_and_set(&state_swap_ptr, tmp);
+            //clock_timer_start(state_swap_ptr->csr_trigger_ts);
+			//sys_send_ipi(0);
 			printf("%p send_ipi_to_all MISSED entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
         }
 	}
@@ -343,6 +348,13 @@ begin:
       #endif
 		cur_state_swap_ptr = state_swap_ptr; 
 
+      #if CSR_CONTEXT == 1
+        if(!cur_state_swap_ptr->csr_trigger_ts){
+            change_context();
+            goto begin;
+        }
+      #endif
+
 		/// compute the reference gvt
 		compute_reference_gvt(cur_state_swap_ptr);
 
@@ -419,11 +431,14 @@ swap:
 	  #if VERBOSE == 1
 		print_state_swapping_struct(state_swap_ptr);
 	  #endif
-        
+
       #if CSR_CONTEXT == 1
         raw_clock_timer_value(timer_val);
         raw_update_offset(timer_val);
 		change_context();
+
+        //sys_change_context();
+        //zpthread_yield();
         goto begin;
       #endif
 
