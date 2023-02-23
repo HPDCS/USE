@@ -3,14 +3,6 @@ option(CSR_CONTEXT "CSR_CONTEXT" OFF)
 
 
 
-
-#hardware-related macros
-add_compile_options(
--DCACHE_LINE_SIZE=${CACHE_LINE_SIZE} 
--DN_CPU=${N} 
--DARCH_X86_64
-)
-
 #nbcalcqueue-related macros
 add_compile_options( 
 -DEPB=3 

@@ -40,6 +40,15 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
 ENDIF()
 
 
+#hardware-related macros
+add_compile_options(
+-DCACHE_LINE_SIZE=${CACHE_LINE_SIZE} 
+-DN_CPU=${N} 
+-DARCH_X86_64
+)
+
+
+
 add_subdirectory(src)
 add_subdirectory(test)
 #add_subdirectory(docs)
