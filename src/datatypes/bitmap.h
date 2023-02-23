@@ -45,7 +45,7 @@ static inline bitmap* allocate_bitmap(unsigned int len){
 
     tmp = (bitmap*) aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int));
     
-    bzero(tmp, bytes);
+    bzero(tmp, bytes+2*sizeof(unsigned int));
     
     tmp->virtual_len = len;
     tmp->actual_len  = actual_len;

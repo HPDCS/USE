@@ -24,7 +24,7 @@
 
 #define PERIOD_SIGNAL_S 2 /// constant for triggering sync committed state reconstruction
 #define PAGE_SIZE (4096)
-#define STACK_SIZE (PAGE_SIZE<<2)
+#define STACK_SIZE (PAGE_SIZE<<3)
 
 void csr_routine(void);
 
@@ -330,12 +330,12 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
 */
 void csr_routine(void){
 
-	int cur_lp;
+	int cur_lp = 0;
   #if CSR_CONTEXT == 1
     clock_timer timer_val = 0;
   #endif
-	state_swapping_struct *cur_state_swap_ptr;
-    unsigned int enter_count, exit_count;
+	state_swapping_struct *cur_state_swap_ptr = NULL;
+    unsigned int enter_count = 0, exit_count = 0;
 
       #if CSR_CONTEXT == 1
 begin:
@@ -355,12 +355,10 @@ begin:
 		if(enter_count == 0        ) raw_clock_timer_start(state_swap_ptr->first_enter_ts);
 		if(enter_count == n_cores-1) raw_clock_timer_start(state_swap_ptr->last_enter_ts);
         
-        unsigned int lp_to_be_checked = potential_locked_object; 
-        
 		/// check if a lp was already locked in normal context
-		if (lp_to_be_checked < n_prc_tot && haveLock(lp_to_be_checked)) { 
-			printf("I have lock on %d\n", lp_to_be_checked);
-			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, lp_to_be_checked);
+		if (potential_locked_object < n_prc_tot && haveLock(potential_locked_object)) { 
+			//printf("I have lock on %d\n", lp_to_be_checked);
+			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
 			//log_freezed_state(lp_to_be_checked);
 			//output_collection(cur_state_swap_ptr, lp_to_be_checked, false);
 			//restore_freezed_state(lp_to_be_checked);
