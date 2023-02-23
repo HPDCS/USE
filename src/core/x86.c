@@ -102,7 +102,7 @@ inline bool iCAS_x86(volatile unsigned int *ptr, unsigned int oldVal, unsigned i
 *
 * @ret true if the int value has been set, false otherwise
 */
-inline int atomic_bit_test_and_set_x86(unsigned char *b, int pos) {
+inline int atomic_bit_test_and_set_x86(unsigned short *b, int pos) {
     int result = 0;
 
 	__asm__  __volatile__ (

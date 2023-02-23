@@ -43,7 +43,7 @@ static inline bitmap* allocate_bitmap(unsigned int len){
     bytes       += actual_len<len;
     actual_len   = bytes * CHAR_BIT;
 
-    tmp = (bitmap*) malloc(bytes+2*sizeof(unsigned int));
+    tmp = (bitmap*) aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int));
     
     bzero(tmp, bytes);
     
@@ -77,13 +77,15 @@ static inline void set_bit(bitmap* ptr, unsigned int pos){
 static inline void atomic_set_bit(bitmap* ptr, unsigned int pos){
     if(ptr == NULL || ptr->actual_len <= pos ) abort();
     unsigned int index, b_pos;
+    unsigned short *bits = (unsigned short*)(ptr->bits);
  //   unsigned char b_val, b_old;
 //begin:
-    index = pos/CHAR_BIT;
-    b_pos = pos%CHAR_BIT;
+    index = pos/(CHAR_BIT*2);
+    b_pos = pos%(CHAR_BIT*2);
+    assert(((unsigned long long)(bits+index))%2 == 0);
 //    b_old = ptr->bits[index];
 //    b_val = b_old | (1 << b_pos);
-    atomic_bit_test_and_set_x86(ptr->bits+index, b_pos);
+    atomic_bit_test_and_set_x86(bits+index, b_pos);
 //    if(!__sync_bool_compare_and_swap(ptr->bits+index, b_old, b_val)) goto begin;
 }
 

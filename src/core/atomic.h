@@ -51,7 +51,7 @@ typedef struct { volatile unsigned int lock; } spinlock_t;
 extern bool CAS_x86(volatile unsigned long long *ptr, unsigned long long oldVal, unsigned long long newVal);
 extern bool iCAS_x86(volatile unsigned int *ptr, unsigned int oldVal, unsigned int newVal);
 extern int atomic_test_and_set_x86(int *);
-extern int atomic_bit_test_and_set_x86(unsigned char *, int pos);
+extern int atomic_bit_test_and_set_x86(unsigned short *, int pos);
 extern int atomic_test_and_reset_x86(int *);
 extern void atomic_add_x86(atomic_t *, int);
 extern void atomic_sub_x86(atomic_t *, int);
