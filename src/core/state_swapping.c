@@ -16,8 +16,13 @@
 #include <clock_constant.h>
 #include <gvt.h>
 
+#define USE_SYSCALL 0
+
 #if CSR_CONTEXT == 1
 #include <trap_based_usercontext.h>
+#if USE_SYSCALL == 1
+#define change_context() sys_change_context()
+#endif
 #else 
 #define change_context() do{}while(0)
 #endif
@@ -33,7 +38,7 @@ state_swapping_struct * volatile state_swap_ptr;
 
 __thread simtime_t commit_horizon_to_save;
 __thread state_swapping_struct *private_swapping_struct;
-pthread_t ipi_tid; 
+volatile pthread_t ipi_tid; 
 
 #define DEBUG_CSR 0
 
@@ -54,7 +59,7 @@ void init_thread_csr_state(void){
   }
   memset(alternate_stack,0,STACK_SIZE);
   alternate_stack += STACK_SIZE-8; // stack increases with descreasing addresses
-	
+	init_sys_entry(SYS_CHANGE_CONTEXT_POS);
 	res = sys_new_thread_context(csr_routine, alternate_stack);
 	if(res == -2){
 		printf("It seems that the syscall 'sys_new_thread_context' has not been installed\n");
@@ -135,6 +140,12 @@ void* signal_state_swapping(void *args) {
             update_fossil_gvt();
             usleep(interval/steps);
         }
+        if(
+				!((
+					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+				) 
+				&& !sim_error)
+        ) break;
 	 	if(!state_swap_ptr->csr_trigger_ts){
             clock_timer_start(state_swap_ptr->csr_trigger_ts);
 			printf("%p send_ipi_to_all SEND entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
@@ -348,13 +359,14 @@ begin:
       #endif
 		cur_state_swap_ptr = state_swap_ptr; 
 
+/*
       #if CSR_CONTEXT == 1
         if(!cur_state_swap_ptr->csr_trigger_ts){
             change_context();
             goto begin;
         }
       #endif
-
+*/
 		/// compute the reference gvt
 		compute_reference_gvt(cur_state_swap_ptr);
 
@@ -394,7 +406,7 @@ begin:
 			if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
                 assert(haveLock(cur_lp));
 			    if(LPS[cur_lp]->commit_horizon_ts>0){
-                    output_collection(cur_state_swap_ptr, cur_lp, true);
+                  output_collection(cur_state_swap_ptr, cur_lp, true);
                 }else
                 printf("Commit horizon is still 0 %d\n", cur_lp);
             }
