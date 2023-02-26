@@ -26,6 +26,7 @@ typedef struct state_swapping_struct {
 } state_swapping_struct;
 
 extern volatile pthread_t ipi_tid;
+extern volatile unsigned int end_ipi;
 
 extern state_swapping_struct *volatile state_swap_ptr;
 

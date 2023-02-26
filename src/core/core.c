@@ -1021,10 +1021,12 @@ end_loop:
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();
+    
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} else if (stop || stop_timer){
-		//sleep(5);
+        while(!end_ipi);
+
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
 		  #if STATE_SWAPPING == 1
@@ -1033,7 +1035,6 @@ end_loop:
             ipi_tid = 0;
 			pthread_join(sleeper, NULL);
 		}
-        while(ipi_tid!=0);
         destroy_thread_csr_state();
 	}
 }

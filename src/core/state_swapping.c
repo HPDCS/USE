@@ -39,6 +39,9 @@ state_swapping_struct * volatile state_swap_ptr;
 __thread simtime_t commit_horizon_to_save;
 __thread state_swapping_struct *private_swapping_struct;
 volatile pthread_t ipi_tid; 
+volatile unsigned int end_ipi = 0;
+
+
 
 #define DEBUG_CSR 0
 
@@ -118,7 +121,6 @@ void handle_signal(int sig) {
     alarm(PERIOD_SIGNAL_S);    
 }
 
-
 /**
  * This method arms a signal and calls and alarm until the state_swap_flag has been set
  * 
@@ -163,6 +165,7 @@ void* signal_state_swapping(void *args) {
 			printf("%p send_ipi_to_all MISSED entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
         }
 	}
+    __sync_bool_compare_and_swap(&end_ipi, 0, 1);
     return NULL;
 }
 
