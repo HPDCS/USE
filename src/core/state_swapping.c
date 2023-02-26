@@ -20,11 +20,11 @@
 
 #if CSR_CONTEXT == 1
 #include <trap_based_usercontext.h>
-#if USE_SYSCALL == 1
-#define change_context() sys_change_context()
-#endif
+    #if USE_SYSCALL == 1
+        #define change_context() sys_change_context()
+    #endif
 #else 
-#define change_context() do{}while(0)
+        #define change_context() do{}while(0)
 #endif
 
 
@@ -38,6 +38,7 @@ state_swapping_struct * volatile state_swap_ptr;
 
 __thread simtime_t commit_horizon_to_save;
 __thread state_swapping_struct *private_swapping_struct;
+__thread volatile unsigned int from_signal = 0;
 volatile pthread_t ipi_tid; 
 volatile unsigned int end_ipi = 0;
 
@@ -48,6 +49,14 @@ volatile unsigned int end_ipi = 0;
 /**
  * Init subsystem for threads
  */
+
+
+void handle_csr_context(int sig){
+    from_signal = 1;
+    csr_routine();
+    from_signal = 0;
+}
+
 
 void init_thread_csr_state(void){
 #if CSR_CONTEXT == 1
@@ -76,6 +85,7 @@ void init_thread_csr_state(void){
 	private_swapping_struct = alloc_state_swapping_struct();
 	private_swapping_struct->printed = 1;
 	private_swapping_struct->worker_threads_out = n_cores;
+    signal(SIGUSR1, handle_csr_context);
 }
 
 void destroy_thread_csr_state(void){
@@ -150,6 +160,7 @@ void* signal_state_swapping(void *args) {
         ) break;
 	 	if(!state_swap_ptr->csr_trigger_ts){
             clock_timer_start(state_swap_ptr->csr_trigger_ts);
+            __sync_synchronize();
 			printf("%p send_ipi_to_all SEND entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
           #if CSR_CONTEXT == 1
 			sys_send_ipi(0);
@@ -450,6 +461,7 @@ swap:
       #if CSR_CONTEXT == 1
         raw_clock_timer_value(timer_val);
         raw_update_offset(timer_val);
+        if(from_signal) return;
 		change_context();
 
         //sys_change_context();
