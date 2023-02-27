@@ -20,7 +20,7 @@ add_compile_options(
 
 #checkpoint related options
 add_compile_options(
--DCHECKPOINT_PERIOD=20
+-DCHECKPOINT_PERIOD=10
 -DCLEAN_CKP_INTERVAL=100
 )
 
