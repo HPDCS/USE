@@ -403,7 +403,6 @@ begin:
 		/// check if a lp was already locked in normal context
 		if (potential_locked_object < n_prc_tot && haveLock(potential_locked_object)) { 
 			//printf("I have lock on %d\n", lp_to_be_checked);
-			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
 			//log_freezed_state(lp_to_be_checked);
 			output_collection(cur_state_swap_ptr, potential_locked_object, false);
 			//restore_freezed_state(lp_to_be_checked);
@@ -412,13 +411,7 @@ begin:
 
 		cur_lp = __sync_fetch_and_add(&cur_state_swap_ptr->counter_lp, -1);
 
-		while(cur_lp >= 0 
-			/*&& 
-			(
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
-				) 
-				&& !sim_error */
-			) 
+		while(cur_lp >= 0) 
 		{ 
 
 		  #if VERBOSE == 1
@@ -438,17 +431,15 @@ begin:
 
 	  #if CSR_CONTEXT == 0
 		/// scan of the lp bitmap to check if some lp has missed the output collection
-		unsigned int lp;
-
-		for (lp = 0; lp < cur_state_swap_ptr->lp_bitmap->actual_len; lp++) {
-			if (!get_bit(cur_state_swap_ptr->lp_bitmap, lp) && tryLock(lp)) {
-                assert(haveLock(lp));
+		for (cur_lp = 0; cur_lp < cur_state_swap_ptr->lp_bitmap->actual_len; cur_lp++) {
+			if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
+                assert(haveLock(cur_lp));
 
 			  #if VERBOSE == 1
-				printf("missing some lp %d\n", lp);
+				printf("missing some lp %d\n", cur_lp);
 			  #endif
 
-				output_collection(cur_state_swap_ptr, lp, true);
+				output_collection(cur_state_swap_ptr, cur_lp, true);
 
 			}
 		}
