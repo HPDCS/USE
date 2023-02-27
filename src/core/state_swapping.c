@@ -145,8 +145,15 @@ void* signal_state_swapping(void *args) {
     (void)args;
     unsigned long interval = PERIOD_SIGNAL_S * 1000 * 1000;
     unsigned long steps = 8;
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	CPU_SET(20, &mask);
+	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
+    
 	//signal(SIGALRM, handle_signal);
 	//alarm(PERIOD_SIGNAL_S);
+    
+    sleep(5);
 	while(  
 				(
 					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
@@ -333,14 +340,15 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
 
 	if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp)) {
   	atomic_set_bit(cur_state_swap_ptr->lp_bitmap, cur_lp);
-
-    #if DISABLE_EFFECTIVE_CSR == 0
+#if DISABLE_EFFECTIVE_CSR < 2
 	  #if VERBOSE == 1
 		printf("examining lp %d\n", cur_lp);
 	  #endif 
-
-		if(LPS[cur_lp]->commit_horizon_ts>0){
-            
+    #if DISABLE_EFFECTIVE_CSR < 1
+    if(to_release)
+    #endif
+		//if(LPS[cur_lp]->commit_horizon_ts>0)
+        {	        
             if(n_cores > 1) {
                 check_OnGVT(cur_lp, cur_state_swap_ptr->reference_gvt, 0);
                 current_lp = old_current_lp;
@@ -349,7 +357,7 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
                 OnGVT(cur_lp, LPS[cur_lp]->current_base_pointer);
 		}
 
-    #endif
+#endif
 	}
 
 	if (to_release) unlock(cur_lp);
@@ -417,7 +425,7 @@ begin:
 		  #if VERBOSE == 1
 			printf("csr_routine lp %u\n", cur_lp);
 		  #endif
-			if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
+			if (tryLock(cur_lp)) {
                 assert(haveLock(cur_lp));
 			    if(LPS[cur_lp]->commit_horizon_ts>0){
                   output_collection(cur_state_swap_ptr, cur_lp, true);
@@ -448,8 +456,9 @@ exit:
         if(cur_state_swap_ptr->worker_threads_out >= n_cores) goto swap;
 		exit_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_out, 1);
 		if(exit_count == 0        ) raw_clock_timer_start(cur_state_swap_ptr->first_exit_ts);
-		if(exit_count == n_cores-1) raw_clock_timer_start(cur_state_swap_ptr->last_exit_ts);
-
+		if(exit_count == n_cores-1) {raw_clock_timer_start(cur_state_swap_ptr->last_exit_ts);
+//            printf("I was in signal %d\n", signal_received);
+        }   
 swap:
 		reset_state_swapping_struct(cur_state_swap_ptr);
 	  #if VERBOSE == 1
