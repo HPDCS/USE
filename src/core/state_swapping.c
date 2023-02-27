@@ -17,6 +17,7 @@
 #include <gvt.h>
 
 #define USE_SYSCALL 0
+#define DISABLE_EFFECTIVE_CSR 1
 
 #if CSR_CONTEXT == 1
 #include <trap_based_usercontext.h>
@@ -51,11 +52,15 @@ volatile unsigned int end_ipi = 0;
  */
 
 
+__thread unsigned int signal_received = 0;
 void handle_csr_context(int sig){
+    signal_received+=1;
     from_signal = 1;
     csr_routine();
     from_signal = 0;
+    printf("signal received %d\n", signal_received);
 }
+
 
 
 void init_thread_csr_state(void){
@@ -139,7 +144,7 @@ void* signal_state_swapping(void *args) {
 
     (void)args;
     unsigned long interval = PERIOD_SIGNAL_S * 1000 * 1000;
-    unsigned long steps = 2;
+    unsigned long steps = 8;
 	//signal(SIGALRM, handle_signal);
 	//alarm(PERIOD_SIGNAL_S);
 	while(  
@@ -158,7 +163,7 @@ void* signal_state_swapping(void *args) {
 				) 
 				&& !sim_error)
         ) break;
-	 	if(!state_swap_ptr->csr_trigger_ts){
+	 	if(!state_swap_ptr->csr_trigger_ts && !state_swap_ptr->state_swap_flag){
             clock_timer_start(state_swap_ptr->csr_trigger_ts);
             __sync_synchronize();
 			printf("%p send_ipi_to_all SEND entered %d remaining %d\n", state_swap_ptr, state_swap_ptr->worker_threads_in, state_swap_ptr->worker_threads_in - state_swap_ptr->worker_threads_out);
@@ -205,7 +210,7 @@ void init_state_swapping_struct(state_swapping_struct *sw_struct){
 
 
 void print_state_swapping_struct_metrics(void){
-	if(!private_swapping_struct->printed &&  private_swapping_struct->worker_threads_out == n_cores && private_swapping_struct->worker_threads_in == n_cores)
+	if(!private_swapping_struct->printed &&  private_swapping_struct->worker_threads_out >= n_cores && private_swapping_struct->worker_threads_in >= n_cores)
 	// && __sync_bool_compare_and_swap(&private_swapping_struct->printed, 0, 1))
 	{
 		private_swapping_struct->printed = 1;
@@ -329,6 +334,7 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
 	if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp)) {
   	atomic_set_bit(cur_state_swap_ptr->lp_bitmap, cur_lp);
 
+    #if DISABLE_EFFECTIVE_CSR == 0
 	  #if VERBOSE == 1
 		printf("examining lp %d\n", cur_lp);
 	  #endif 
@@ -343,6 +349,7 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
                 OnGVT(cur_lp, LPS[cur_lp]->current_base_pointer);
 		}
 
+    #endif
 	}
 
 	if (to_release) unlock(cur_lp);
@@ -398,7 +405,7 @@ begin:
 			//printf("I have lock on %d\n", lp_to_be_checked);
 			atomic_set_bit(cur_state_swap_ptr->lp_bitmap, potential_locked_object);
 			//log_freezed_state(lp_to_be_checked);
-			//output_collection(cur_state_swap_ptr, lp_to_be_checked, false);
+			output_collection(cur_state_swap_ptr, potential_locked_object, false);
 			//restore_freezed_state(lp_to_be_checked);
 		} //TODO commented just for now
 

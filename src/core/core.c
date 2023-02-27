@@ -1025,14 +1025,15 @@ end_loop:
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} else if (stop || stop_timer){
+      #if SWAPPING_STATE == 1
         while(!end_ipi);
+      #endif
 
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
 		  #if STATE_SWAPPING == 1
 			pthread_join(ipi_tid, NULL);
 		  #endif
-            ipi_tid = 0;
 			pthread_join(sleeper, NULL);
 		}
         destroy_thread_csr_state();
