@@ -43,9 +43,7 @@
 #include <metrics_for_window.h>
 
 
-#if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
-#endif
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
@@ -370,9 +368,7 @@ unsigned int fetch_internal(){
        ( !w.enabled || (ts-local_gvt) > cur_window || haveLock(lp_idx) || is_lp_on_my_numa_node(lp_idx)) &&
  #endif
         (
- #if ENFORCE_LOCALITY == 1
-            haveLock(lp_idx) ||
- #endif 
+            (pdes_config.enforce_locality && haveLock(lp_idx)) ||
             tryLock(lp_idx)
         )
         ) {
@@ -392,9 +388,9 @@ unsigned int fetch_internal(){
         
             curr_evt_state = event->state;
         
-         #if ENFORCE_LOCALITY == 1
-            process_input_channel(lp_ptr);
-         #endif
+            if(pdes_config.enforce_locality)
+                process_input_channel(lp_ptr);
+    
             if(validity) {
                 //from this point the bound variable is freezed and of course is in the past
                 /// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///

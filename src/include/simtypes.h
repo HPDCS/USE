@@ -107,11 +107,8 @@ typedef struct _LP_state {
 	msg_t* 	last_rollback_event;
 #endif
 
-#if ENFORCE_LOCALITY == 1
 	local_index_t local_index;
 	unsigned int wt_binding;
-#endif
-	
 
 	/// Field for computing the interarrival time ema
 	simtime_t ema_ti;

@@ -327,21 +327,18 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
     	printf("\n");
     }
 #endif
-  #if ENFORCE_LOCALITY == 1
     int flushed_pipe = 0;
-  #endif
-    
     double current_delta = 0.0;
     /// do the migration of as many lps in lps_to_migrate_array as possible
 	for (unsigned int j = 0; j < elem_count;j++) {
 		/// check stop condition for rebinding and migration
 		if(skewness/scale + current_delta < BALANCE_OVERFLOW) break;
-      #if ENFORCE_LOCALITY == 1
+      if(pdes_config.enforce_locality){
 		if(!flushed_pipe){
 		 flush_locked_pipe();
 		 flushed_pipe = 1;
 		}
-      #endif
+      }
 		//printf("old skew %f\n", skewness/scale + current_delta);
 		old_skew = skewness/scale + current_delta;
 		current_delta -= 2*lps_to_migrate_array[j].migration_score;

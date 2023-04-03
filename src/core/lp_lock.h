@@ -23,16 +23,15 @@ static inline unsigned int tryLock( unsigned int lp){
 
 
 static inline unsigned int unlock(unsigned int lp){ 
-#if ENFORCE_LOCALITY == 1
-  #if DEBUG == 1
-    assertf(lp == UNDEFINED_LP, "trying to unlock an undefined LP%s", "\n");
-    assertf(!haveLock(lp), "trying to unlock without own lock %s", "\n");
-  #endif
-  return LPS[lp]->wt_binding == tid ||          
-#else    
-  return 
-#endif
-        __sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0); 
+    unsigned int res = 0;
+    if(pdes_config.enforce_locality){
+      #if DEBUG == 1
+        assertf(lp == UNDEFINED_LP, "trying to unlock an undefined LP%s", "\n");
+        assertf(!haveLock(lp), "trying to unlock without own lock %s", "\n");
+      #endif
+      res = LPS[lp]->wt_binding == tid;
+    }
+    return res || __sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0); 
 }
 
 #endif

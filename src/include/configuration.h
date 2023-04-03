@@ -42,6 +42,6 @@ typedef struct _simulation_configuration {
 } simulation_configuration;
 
 extern simulation_configuration pdes_config;
-
+extern void parse_options(int argn, char **argv);
 
 #endif

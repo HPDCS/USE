@@ -1,4 +1,3 @@
-#if ENFORCE_LOCALITY == 1
 #include "local_index.h"
 
 
@@ -245,4 +244,3 @@ inline int process_input_channel(LP_state *ptr){
     local_clean_prefix(ptr);
     return res;
 }
-#endif

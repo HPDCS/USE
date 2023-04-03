@@ -39,13 +39,10 @@
 #include "metrics_for_lp_migration.h"
 #include <gvt.h>
 
-#if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
 #include "local_scheduler.h"
 #include "metrics_for_window.h"
 #include "clock_constant.h"
-#endif
-#include "metrics_for_window.h"
 
 #if STATE_SWAPPING == 1
 #include "state_swapping.h"
@@ -288,10 +285,8 @@ void LPs_metada_init() {
 		LPS[i]->epoch 					= 1;
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
-	  #if ENFORCE_LOCALITY == 1
 		bzero(&LPS[i]->local_index, sizeof(LPS[i]->local_index));
 		LPS[i]->wt_binding = UNDEFINED_WT;
-	  #endif
 
 		/* FIELDS FOR COMPUTING AVG METRICS	*/
 		LPS[i]->ema_ti					= 0.0;
@@ -530,10 +525,11 @@ void init_simulation(unsigned int thread_id){
 				//LPS[current_lp]->epoch = 1;
 		}
 
-  #if ENFORCE_LOCALITY==1
-		pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
-		init_metrics_for_window();
-  #endif
+  		if(pdes_config.enforce_locality){
+			pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
+			init_metrics_for_window();
+  		}
+
 	#if STATE_SWAPPING == 1
 	  state_swap_ptr = alloc_state_swapping_struct();
 	  pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
@@ -557,9 +553,10 @@ void init_simulation(unsigned int thread_id){
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=pdes_config.ncores);
-#if ENFORCE_LOCALITY == 1
-	local_binding_init();
-#endif
+
+	if(pdes_config.enforce_locality)
+		local_binding_init();
+
   set_affinity(tid);
 
 #if STATE_SWAPPING == 1
@@ -685,14 +682,8 @@ void thread_loop(unsigned int thread_id) {
 		clock_timer_start(fetch_timer);
 #endif
 	__event_from = 0;
-#if ENFORCE_LOCALITY == 1
-
-		if(check_window() && local_fetch() != 0){ //if window_size > 0 try local_fetch
-
-		} else  
-#endif
-		
-		if(fetch_internal() == 0) {
+	if(pdes_config.enforce_locality && check_window() && local_fetch() != 0){ //if window_size > 0 try local_fetch
+	} else if(fetch_internal() == 0) {
 #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
 			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
@@ -726,10 +717,9 @@ void thread_loop(unsigned int thread_id) {
 
 		if(__event_from == 2) statistics_post_th_data(tid, STAT_EVT_FROM_LOCAL_FETCH, 1);
 		if(__event_from == 1) statistics_post_th_data(tid, STAT_EVT_FROM_GLOBAL_FETCH, 1);
-  #if ENFORCE_LOCALITY == 1
-		local_binding_push(current_lp);
-  #endif
-		
+		if(pdes_config.enforce_locality)  
+	  		local_binding_push(current_lp);
+ 		
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
 		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH_SUCC, (double)clock_timer_value(fetch_timer));
@@ -927,10 +917,8 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 //#if CSR_CONTEXT == 0
-//#if ENFORCE_LOCALITY == 1		
 		//check if elapsed time since fetching an event is large enough to start computing stats
 		aggregate_metrics_for_window_management(&w);
-//#endif
 
 		/// do the unbalance check if the locality window is enabled or periodically
 		if ( (w.enabled || periodic_rebalance_check(numa_rebalance_timer) ) ){
@@ -994,9 +982,9 @@ end_loop:
 #endif
 
 
-#if ENFORCE_LOCALITY == 1
-	printf("Last window for %d is %f\n", tid, get_current_window());
-#endif
+	if(pdes_config.enforce_locality)
+		printf("Last window for %d is %f\n", tid, get_current_window());
+	
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();

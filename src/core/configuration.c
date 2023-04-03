@@ -6,9 +6,17 @@
 #include <argp.h>         // Provides GNU argp() argument parser
 
 
-simulation_configuration rootsim_config;
 simulation_configuration pdes_config;
 
+
+#define N_CORES_KEY 'c'
+#define N_PROCESSES_KEY 'p'
+#define WALLCLOCK_TIMEOUT_KEY 'w' 
+#define ENFORCE_LOCALITY_KEY 256
+#define EL_DYN_WINDOW_KEY 257
+#define EL_WINDOW_SIZE_KEY 258
+#define EL_LOCKED_PIPE_SIZE_KEY 259
+#define EL_EVICTED_PIPE_SIZE_KEY 260
 
 const char *argp_program_version = "USE 1.0";
 const char *argp_program_bug_address = "<romolo.marotta@gmail.com>";
@@ -18,9 +26,14 @@ static char args_doc[] = "-c CORES -p LPS";
 
 // Order of fields: {NAME, KEY, ARG, FLAGS, DOC, GROUP}.
 static struct argp_option options[] = {
-  {"ncores",       'c', "CORES"   ,  0,  "Number of threads to be used"               , 0 },
-  {"nprocesses",   'p', "LPS"     ,  0,  "Number of simulation objects"               , 0 },
-  {"wall-timeout", 'w', "SECONDS" ,  0,  "End the simulation after SECONDS elapsed"   , 0 },
+  {"ncores",           N_CORES_KEY          , "CORES"   ,  0,  "Number of threads to be used"               , 0 },
+  {"nprocesses",       N_PROCESSES_KEY      , "LPS"     ,  0,  "Number of simulation objects"               , 0 },
+  {"wall-timeout",     WALLCLOCK_TIMEOUT_KEY, "SECONDS" ,  0,  "End the simulation after SECONDS elapsed"   , 0 },
+  {"enforce-locality", ENFORCE_LOCALITY_KEY , 0    ,  OPTION_ARG_OPTIONAL,  "Use pipes to improve cache exploitation"    , 0 },
+  {"el-dyn-window",    EL_DYN_WINDOW_KEY    , 0    ,  OPTION_ARG_OPTIONAL,  "Use pipes with dynamic window"    , 0 },
+  {"el-window-size",    EL_WINDOW_SIZE_KEY  , "VTIME"    ,  0,  "Sets the window size to be used with pipes"    , 0 },
+  {"el-locked-size",    EL_LOCKED_PIPE_SIZE_KEY  , "COUNT"    ,  0,  "Sets the locked pipe size"    , 0 },
+  {"el-evicted-size",    EL_EVICTED_PIPE_SIZE_KEY  , "COUNT"    ,  0,  "Sets the evicted pipe size"    , 0 },
   {"verbose",      'v', 0         ,  0,  "Provide verbose output"                     , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
@@ -35,16 +48,51 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
   // how to store it  
   switch (key)
     {
-    case 'c':
+    case N_CORES_KEY:
       pdes_config.ncores = atoi(arg);
+      pdes_config.serial = pdes_config.ncores == 1;
       break;
-    case 'p':
+    case N_PROCESSES_KEY:
       pdes_config.nprocesses = atoi(arg);
       break;
-    case 'w':
+    case WALLCLOCK_TIMEOUT_KEY:
       pdes_config.timeout = atoi(arg);
       break;
+    case ENFORCE_LOCALITY_KEY:
+      pdes_config.enforce_locality = 1;
+      pdes_config.el_locked_pipe_size = 1;
+      pdes_config.el_evicted_pipe_size = 1;
+      pdes_config.el_window_size = 0;
+      break;
+    case EL_DYN_WINDOW_KEY:
+      pdes_config.el_dynamic_window = 1;
+      break;
+    case EL_WINDOW_SIZE_KEY:
+      pdes_config.el_window_size = strtod(arg, NULL);
+      break;
+    case EL_LOCKED_PIPE_SIZE_KEY:
+      pdes_config.el_locked_pipe_size = atoi(arg);
+      break;
+    case EL_EVICTED_PIPE_SIZE_KEY:
+      pdes_config.el_evicted_pipe_size = atoi(arg);
+      break;
     case ARGP_KEY_END:
+      if(pdes_config.el_dynamic_window && !pdes_config.enforce_locality){
+        printf("Please enable enforce-locality to use dynamic window\n");
+        argp_usage (state);
+      }
+      if(pdes_config.el_locked_pipe_size && !pdes_config.enforce_locality){
+        printf("Please enable enforce-locality to set locked pipe size\n");
+        argp_usage (state);
+      }
+      if(pdes_config.el_evicted_pipe_size && !pdes_config.enforce_locality){
+        printf("Please enable enforce-locality to set evicted pipe size\n");
+        argp_usage (state);
+      }
+      if(pdes_config.el_window_size != 0.0 && !pdes_config.enforce_locality){
+        printf("Please enable enforce-locality to set starting window size\n");
+        argp_usage (state);
+      }
       if(pdes_config.ncores < 1)
       {
         printf("Please provide a valid number of cores to be used for simulation\n");
@@ -53,6 +101,11 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
       if(pdes_config.nprocesses < 1)
       {
         printf("Please provide a valid number of logical processes to be used for simulation\n");
+        argp_usage (state);
+      }
+      if(pdes_config.timeout < 1)
+      {
+        printf("Please provide a valid number of seconds which the simulation should last\n");
         argp_usage (state);
       }
       break;
@@ -64,8 +117,16 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 }
 
 
+void configuration_init(void){
+  pdes_config.checkpointing = PERIODIC_STATE_SAVING;
+  pdes_config.ckpt_period = 20;
+  pdes_config.serial = false;
+}
+
 static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };
 
 void parse_options(int argn, char **argv){
-    argp_parse(&argp, argn, argv, 0, 0, NULL);
+  configuration_init();
+  
+  argp_parse(&argp, argn, argv, 0, 0, NULL);
 }

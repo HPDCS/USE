@@ -9,9 +9,7 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
-#if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
-#endif
 
 //event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;
@@ -156,9 +154,9 @@ void queue_deliver_msgs(void) {
 #endif
 
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
-#if ENFORCE_LOCALITY == 1
-        nb_push(LPS[new_hole->receiver_id], new_hole);
-#endif
+
+        if(pdes_config.enforce_locality)
+            nb_push(LPS[new_hole->receiver_id], new_hole);
         
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));

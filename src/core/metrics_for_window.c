@@ -1,4 +1,3 @@
-//#if ENFORCE_LOCALITY == 1
 #include <timer.h>
 #include <core.h>
 #include <pthread.h>
@@ -33,8 +32,7 @@ static __thread double elapsed_time;
 extern unsigned int rounds_before_unbalance_check; /// number of window management rounds before checking numa unbalance
 
 
-__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
-
+__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT;
 
 
 
@@ -97,20 +95,17 @@ void init_metrics_for_window() {
 }
 
 int check_window(){
-	#if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1
+	if(pdes_config.el_dynamic_window){
 	  if (!w.enabled && w.size == 0) clock_timer_start(start_window_reset);
 	  return w.size > 0;
-	#else
-    return 1;
-	#endif
+	}
+	else
+	    return 1;
 }
 
 simtime_t get_current_window(){
-	#if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1
-  	return w.size;
-	#else
-  	return START_WINDOW;
-  #endif
+	if(pdes_config.el_dynamic_window) 	return w.size;
+	else return pdes_config.el_window_size;
 }
 
 double compute_throughput_for_committed_events(unsigned int *prev_comm_evts, clock_timer timer) {
@@ -208,9 +203,6 @@ void enable_window() {
 
 
 void aggregate_metrics_for_window_management(window *win) {
-// #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 0
-//   return;
-// #endif
 	double thr_window = 0.0, thr_ratio = 0.0;
 	simtime_t granularity = 0.0, granularity_ratio = 0.0;
 	time_interval_for_measurement_phase = clock_timer_value(w.measurement_phase_timer);
@@ -227,12 +219,10 @@ void aggregate_metrics_for_window_management(window *win) {
 			
 			thr_window = compute_throughput_for_committed_events(&prev_comm_evts_window, w.measurement_phase_timer);
 			granularity = compute_average_granularity(&prev_first_time_exec_evts, &prev_granularity);
-                    #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1
-			//fprintf(stderr, "SIZE BEFORE RESIZING %f\n", *window_size);
-			window_resizing(win, thr_window); //do resizing operations -- window might be enlarged, decreased or stay the same
-                    #else
+                    if(pdes_config.el_dynamic_window)
+						window_resizing(win, thr_window); //do resizing operations -- window might be enlarged, decreased or stay the same
+                    else
                         if(w.phase == 0) w.phase = 1;
-                    #endif  
                         
 	#if VERBOSE == 1
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
@@ -243,9 +233,6 @@ void aggregate_metrics_for_window_management(window *win) {
                 granularity_ref = granularity;
                 w.phase++;
             }
-			//fprintf(stderr, "SIZE AFTER RESIZING %f\n", *window_size);
-			//thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset);
-			//granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
             else if(w.phase >= 2){
                 thr_ratio = thr_window/thr_ref;
                 granularity_ratio = granularity/granularity_ref;
@@ -253,13 +240,6 @@ void aggregate_metrics_for_window_management(window *win) {
 			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
 			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
-                        #if ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF == 1 // use moving average only when dynamic sizing is enabled"
-                          //if(thr_window == thr_window) //check for NaN float // TODO investigate this
-                          //  thr_ref = 0.6*thr_ref + 0.4*thr_window;
-                          // thr_ref = 1.0*thr_ref + 0.0*thr_window;
-			  //else
-			   //thr_ref = thr_ref;
-                        #endif
 			  if(thr_window == 0.0) goto end;
 			  if(isnan(thr_window)) goto end;
 			  if(isinf(thr_window)) goto end;
@@ -283,7 +263,7 @@ void aggregate_metrics_for_window_management(window *win) {
 		  	th_samples[th_counter%NUM_THROUGHPUT_SAMPLES] = thr_window;
 				th_counter++;
 			  	
-		  	if (!skip && ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF && reset_window(win, thr_ratio, granularity_ratio)) {
+		  	if (!skip && pdes_config.el_dynamic_window && reset_window(win, thr_ratio, granularity_ratio)) {
 			    printf("RESET WINDOW\n");
 			    thr_ref = 0.0;
 			    granularity_ref = 0.0;
