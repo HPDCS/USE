@@ -89,7 +89,7 @@ void init_thread_csr_state(void){
 #endif
 	private_swapping_struct = alloc_state_swapping_struct();
 	private_swapping_struct->printed = 1;
-	private_swapping_struct->worker_threads_out = n_cores;
+	private_swapping_struct->worker_threads_out = pdes_config.ncores;
     signal(SIGUSR1, handle_csr_context);
 }
 
@@ -156,7 +156,7 @@ void* signal_state_swapping(void *args) {
     sleep(5);
 	while(  
 				(
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+					 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
 				) 
 				&& !sim_error
 		) {
@@ -166,7 +166,7 @@ void* signal_state_swapping(void *args) {
         }
         if(
 				!((
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+					 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
 				) 
 				&& !sim_error)
         ) break;
@@ -195,9 +195,9 @@ void* signal_state_swapping(void *args) {
 void init_state_swapping_struct(state_swapping_struct *sw_struct){
     unsigned int i;
 	sw_struct->reference_gvt = 0.0;
-	for(i=0; i<n_prc_tot;i++) reset_bit(sw_struct->lp_bitmap, i);
+	for(i=0; i<pdes_config.nprocesses;i++) reset_bit(sw_struct->lp_bitmap, i);
 
-	sw_struct->counter_lp = n_prc_tot-1;
+	sw_struct->counter_lp = pdes_config.nprocesses-1;
 	sw_struct->state_swap_flag = 0;
 
 	sw_struct->printed = 0;
@@ -217,7 +217,7 @@ void init_state_swapping_struct(state_swapping_struct *sw_struct){
 
 
 void print_state_swapping_struct_metrics(void){
-	if(!private_swapping_struct->printed &&  private_swapping_struct->worker_threads_out >= n_cores && private_swapping_struct->worker_threads_in >= n_cores)
+	if(!private_swapping_struct->printed &&  private_swapping_struct->worker_threads_out >= pdes_config.ncores && private_swapping_struct->worker_threads_in >= pdes_config.ncores)
 	// && __sync_bool_compare_and_swap(&private_swapping_struct->printed, 0, 1))
 	{
 		private_swapping_struct->printed = 1;
@@ -243,9 +243,9 @@ state_swapping_struct *alloc_state_swapping_struct() {
 
 	state_swapping_struct *sw_struct = (state_swapping_struct *) malloc(sizeof(state_swapping_struct));
 
-	sw_struct->lp_bitmap = allocate_bitmap(n_prc_tot);
+	sw_struct->lp_bitmap = allocate_bitmap(pdes_config.nprocesses);
 	init_state_swapping_struct(sw_struct);
-	sw_struct->counter_lp = n_prc_tot-1;
+	sw_struct->counter_lp = pdes_config.nprocesses-1;
 
 	return sw_struct;
 }
@@ -258,10 +258,10 @@ state_swapping_struct *alloc_state_swapping_struct() {
  */
 void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
     
-    if(old_state_swap_ptr->worker_threads_out < n_cores) return;
-    if(old_state_swap_ptr->worker_threads_in  < n_cores) return;
+    if(old_state_swap_ptr->worker_threads_out < pdes_config.ncores) return;
+    if(old_state_swap_ptr->worker_threads_in  < pdes_config.ncores) return;
     
-	if(private_swapping_struct->worker_threads_out >= n_cores){
+	if(private_swapping_struct->worker_threads_out >= pdes_config.ncores){
         init_state_swapping_struct(private_swapping_struct);
 		if (__sync_bool_compare_and_swap(&state_swap_ptr, old_state_swap_ptr, private_swapping_struct)){
           #if DEBUG_CSR == 1
@@ -271,7 +271,7 @@ void reset_state_swapping_struct(state_swapping_struct *old_state_swap_ptr) {
           print_state_swapping_struct_metrics();
 		}
 		else{
-            private_swapping_struct->worker_threads_out = n_cores;
+            private_swapping_struct->worker_threads_out = pdes_config.ncores;
 		  #if DEBUG_CSR == 1
 			printf("TID:%d I LOST EXCHANGE cur %p mine %p \n", tid, old_state_swap_ptr, private_swapping_struct );
 		  #endif
@@ -312,7 +312,7 @@ void compute_reference_gvt(state_swapping_struct *cur_state_swap_ptr) {
     simtime_t ts = INFTY;
     unsigned int tb = UINT32_MAX;
     if (cur_state_swap_ptr->reference_gvt == 0) {
-        for(i=0;i<n_prc_tot;i++){
+        for(i=0;i<pdes_config.nprocesses;i++){
             if(LPS[i]->commit_horizon_ts < ts || (LPS[i]->commit_horizon_ts == ts && LPS[i]->commit_horizon_tb < tb) ){
                 ts = LPS[i]->commit_horizon_ts;
                 tb = LPS[i]->commit_horizon_tb;
@@ -349,7 +349,7 @@ void output_collection(state_swapping_struct *cur_state_swap_ptr, int cur_lp, bo
     #endif
 		//if(LPS[cur_lp]->commit_horizon_ts>0)
         {	        
-            if(n_cores > 1) {
+            if(pdes_config.ncores > 1) {
                 check_OnGVT(cur_lp, cur_state_swap_ptr->reference_gvt, 0);
                 current_lp = old_current_lp;
             }
@@ -403,13 +403,13 @@ begin:
 		printf("gvt %f -- state_swap_ptr->reference_gvt %f\n", gvt, state_swap_ptr->reference_gvt);
 	  #endif
         
-        if(cur_state_swap_ptr->worker_threads_in >= n_cores) goto exit;
+        if(cur_state_swap_ptr->worker_threads_in >= pdes_config.ncores) goto exit;
 		enter_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_in, 1);
 		if(enter_count == 0        ) raw_clock_timer_start(state_swap_ptr->first_enter_ts);
-		if(enter_count == n_cores-1) raw_clock_timer_start(state_swap_ptr->last_enter_ts);
+		if(enter_count == pdes_config.ncores-1) raw_clock_timer_start(state_swap_ptr->last_enter_ts);
         
 		/// check if a lp was already locked in normal context
-		if (potential_locked_object < n_prc_tot && haveLock(potential_locked_object)) { 
+		if (potential_locked_object < pdes_config.nprocesses && haveLock(potential_locked_object)) { 
 			//printf("I have lock on %d\n", lp_to_be_checked);
 			//log_freezed_state(lp_to_be_checked);
 			output_collection(cur_state_swap_ptr, potential_locked_object, false);
@@ -453,10 +453,10 @@ begin:
 		}
 	  #endif
 exit:
-        if(cur_state_swap_ptr->worker_threads_out >= n_cores) goto swap;
+        if(cur_state_swap_ptr->worker_threads_out >= pdes_config.ncores) goto swap;
 		exit_count = __sync_fetch_and_add(&cur_state_swap_ptr->worker_threads_out, 1);
 		if(exit_count == 0        ) raw_clock_timer_start(cur_state_swap_ptr->first_exit_ts);
-		if(exit_count == n_cores-1) {raw_clock_timer_start(cur_state_swap_ptr->last_exit_ts);
+		if(exit_count == pdes_config.ncores-1) {raw_clock_timer_start(cur_state_swap_ptr->last_exit_ts);
 //            printf("I was in signal %d\n", signal_received);
         }   
 swap:

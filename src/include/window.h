@@ -46,7 +46,7 @@ static inline void init_window(window *w) {
 	w->enabled = 0;
 	w->direction = 1.0;
 	w->size = 0.0;
-	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot; //tempo di interarrivo medio (per ora come costante)
+	w->step = nbcalqueue->hashtable->bucket_width * pdes_config.nprocesses; //tempo di interarrivo medio (per ora come costante)
 	w->old_throughput = 0.0;
 	w->perc_increase = 1.0;
 	w->enlarged = false;
@@ -74,7 +74,7 @@ static inline bool reset_window(window *w, double thr_ratio, double avg_granular
 	//check reset condition
 	if ( (thr_ratio < THROUGHPUT_UPPER_BOUND) ||  !(avg_granularity_ratio < GRANULARITY_UPPER_BOUND) )  {
 		w->size  = 0.0; //reset
-		w->step  = nbcalqueue->hashtable->bucket_width * n_prc_tot/2;
+		w->step  = nbcalqueue->hashtable->bucket_width * pdes_config.nprocesses/2;
                 w->phase = 0;
 		return true;
 	}
@@ -120,7 +120,7 @@ static inline int window_resizing(window *w, double throughput) {
 		printf("window size before resizing %f\n", w->size);
 	#endif
 
-	w->step = nbcalqueue->hashtable->bucket_width * n_prc_tot/2;
+	w->step = nbcalqueue->hashtable->bucket_width * pdes_config.nprocesses/2;
 
 
 	//first step increment if window size is zero

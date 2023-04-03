@@ -33,6 +33,7 @@
 #include "mm.h"
 #include <hpdcs_utils.h>
 #include <ROOT-Sim.h>
+#include <configuration.h>
 
 
 /// Macro to find the maximum among two values
@@ -46,7 +47,7 @@
 #define GID_t unsigned int
 #define lid_to_int(x) (x)
 #define GidToLid(c) (c)
-#define n_prc n_cores
+#define n_prc pdes_config.ncores
 #define set_gid(a,b) do{a=b;}while(0)
 #define kid 1
 #define GidToKernel(gid) gid 
@@ -261,14 +262,14 @@ bool allocator_init(unsigned int objs) {
 	(void)objs;
 
 	// These are a vector of pointers which are later initialized
-	buddies = rsalloc(sizeof(struct _buddy *) * n_prc_tot);
-	mem_areas = rsalloc(sizeof(void *) * n_prc_tot);
-    pages = rsalloc(sizeof(void *) * n_prc_tot);
+	buddies = rsalloc(sizeof(struct _buddy *) * pdes_config.nprocesses);
+	mem_areas = rsalloc(sizeof(void *) * pdes_config.nprocesses);
+    pages = rsalloc(sizeof(void *) * pdes_config.nprocesses);
 
 	// we loop over all gid's to let the underlying kernel module
 	// mmap memory for all distributed LPs
 	// TODO: reimplement with foreach
-	for (i = 0; i < n_prc_tot; i++) {
+	for (i = 0; i < pdes_config.nprocesses; i++) {
 		GID_t gid;
 		set_gid(gid, i);
 		if(1 /*GidToKernel(gid) == kid */) {

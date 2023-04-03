@@ -45,7 +45,7 @@ extern  void *rscalloc(size_t, size_t);
 #define lid_to_int(x) (x)
 #define gid_to_int(x) (x)
 #define GidToLid(c) (c)
-#define n_prc n_cores
+#define n_prc pdes_configuration.ncores
 #define set_gid(a,b) do{a=b;}while(0)
 #define kid 1
 #define GidToKernel(gid) gid 

@@ -276,12 +276,12 @@ unsigned int fetch_internal(){
  #endif
     
         if( 
-            //skipped_lps==n_prc_tot/n_cores || 
-            skipped_lps >= n_prc_tot || 
-            skipped_events > (n_cores*100) ||  
+            //skipped_lps==pdes_config.nprocesses/pdes_config.ncores || 
+            skipped_lps >= pdes_config.nprocesses || 
+            skipped_events > (pdes_config.ncores*100) ||  
         (
 				!(
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+					 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
 				) 
 				&& !sim_error)
         ){  return 0; } //DEBUG

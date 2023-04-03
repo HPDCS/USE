@@ -5,7 +5,7 @@
 #include <sched.h>
 #include <string.h>
 #include <errno.h>
-
+#include <argp.h> 
 
 #include <core.h>
 #include <timer.h>
@@ -35,12 +35,12 @@ void *start_thread(){
 
 void start_simulation() {
 
-    pthread_t p_tid[n_cores-1];//pthread_t p_tid[number_of_threads];//
+    pthread_t p_tid[pdes_config.ncores-1];
     int ret;
     unsigned int i;
 
 
-    printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
+    printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", pdes_config.ncores, pdes_config.nprocesses);
 //#if SPERIMENTAL == 1
 //    printf("\t- SPERIMENTAL features enabled.\n");
 //#endif
@@ -75,7 +75,7 @@ void start_simulation() {
     printf("\n" COLOR_RESET);
 
     //Child thread
-    for(i = 0; i < n_cores - 1; i++) {
+    for(i = 0; i < pdes_config.ncores - 1; i++) {
         if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
             fprintf(stderr, "%s\n", strerror(errno));
             abort();
@@ -85,28 +85,19 @@ void start_simulation() {
     //Main thread
     thread_loop(0);
 
-    for(i = 0; i < n_cores-1; i++){
+    for(i = 0; i < pdes_config.ncores-1; i++){
         pthread_join(p_tid[i], NULL);
     }
 }
 
+
+
+
+
 int main(int argn, char *argv[]) {
     timer exec_time;
-
-    if(argn < 3) {
-        fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
-        exit(EXIT_FAILURE);
-
-    } else {
-        n_cores = atoi(argv[1]);
-        n_prc_tot = atoi(argv[2]);
-        if(argn == 4)
-            sec_stop = atoi(argv[3]);
-    }
-
     
-    if(argn == 4)
-        sec_stop = atoi(argv[3]);
+    parse_options(argn, argv);
   
     printf("***START SIMULATION***\n\n");
 
@@ -124,7 +115,7 @@ int main(int argn, char *argv[]) {
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
     printf("Last gvt: %f\n", current_lvt);
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
-    printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
+    printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/pdes_config.ncores);
     //statistics_fini();
 
     return 0;

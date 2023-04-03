@@ -38,7 +38,7 @@ __thread list(msg_t) freed_local_evts = NULL;
 
 
 void queue_init(void) {
-    nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
+    nbcalqueue = nb_calqueue_init(pdes_config.ncores,PUB,EPB);
 }
 
 void unsafe_set_init(){
@@ -47,11 +47,11 @@ void unsafe_set_init(){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
-    if( ( lp_unsafe_set_debug=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+    if( ( lp_unsafe_set_debug=malloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
         printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
         abort();    
     }
-    if( ( lp_locked_set=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+    if( ( lp_locked_set=malloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
         printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
         abort();    
     }

@@ -120,11 +120,11 @@ double compute_throughput_for_committed_events(unsigned int *prev_comm_evts, clo
 	double th = 0.0;
 	simtime_t time_interval = clock_timer_value(timer)/CLOCKS_PER_US;
 
-	for (i = 0; i < n_cores; i++) {
+	for (i = 0; i < pdes_config.ncores; i++) {
 		comm_evts += thread_stats[i].events_committed;
 	}
 	//comm_evts=0;
-        //for(i=0;i<n_prc_tot;i++)
+        //for(i=0;i<pdes_config.nprocesses;i++)
 	{
         //    comm_evts += lp_stats[i].events_total - lp_stats[i].events_silent;
 	}
@@ -141,7 +141,7 @@ simtime_t compute_average_granularity(unsigned int *prev_first_time_exec_evts, s
 	unsigned int first_time_exec_evts = 0;
 	simtime_t granularity = 0.0;
 
-	for (i = 0; i < n_prc_tot; i++)	{
+	for (i = 0; i < pdes_config.nprocesses; i++)	{
 		first_time_exec_evts += (lp_stats[i].events_total - lp_stats[i].events_silent);
 		granularity += lp_stats[i].clock_event;
 	}

@@ -33,6 +33,7 @@
 #include <prints.h>
 #include <utmpx.h>
 
+#include <configuration.h>
 
 #include <numa_migration_support.h>
 #include "metrics_for_lp_migration.h"
@@ -98,13 +99,6 @@ __thread clock_timer main_loop_time,		//total execution time on single core
 
 volatile unsigned int ready_wt = 0;
 
-simulation_configuration rootsim_config;
-
-/* Total number of cores required for simulation */
-unsigned int n_cores;
-/* Total number of logical processes running in the simulation */
-unsigned int n_prc_tot;
-
 /* Average time between consecutive events */
 simtime_t t_btw_evts = 0.1;
 
@@ -117,7 +111,7 @@ LP_state **LPS = NULL;
 volatile bool stop = false;
 volatile bool stop_timer = false;
 pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
-unsigned int sec_stop = 0;
+
 unsigned long long *sim_ended;
 
 numa_struct **numa_state;			/// state of every numa node
@@ -128,14 +122,17 @@ unsigned int rounds_before_unbalance_check; /// number of window management roun
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
 
 
+
+
+
 size_t node_size_msg_t;
 size_t node_size_state_t;
 
 void * do_sleep(){
-	if(sec_stop != 0)
-		printf("The simulation will last %d seconds\n", sec_stop);
-	sleep(sec_stop);
-	if(sec_stop != 0)
+	if(pdes_config.timeout != 0)
+		printf("The simulation will last %d seconds\n", pdes_config.timeout);
+	sleep(pdes_config.timeout);
+	if(pdes_config.timeout != 0)
 		stop_timer = true;
 	pthread_exit(NULL);
 }
@@ -282,16 +279,16 @@ void LPs_metada_init() {
 	rootsim_config.serial = false;
 	rootsim_config.core_binding = true;
 	
-	LPS = malloc(sizeof(void*) * n_prc_tot);
+	LPS = malloc(sizeof(void*) * pdes_config.nprocesses);
 	sim_ended = malloc(LP_ULL_MASK_SIZE);
-	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, n_prc_tot * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
+	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, pdes_config.nprocesses * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
 	if(LPS == NULL || sim_ended == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();
 	}
 	
-	for (i = 0; i < n_prc_tot; i++) {
+	for (i = 0; i < pdes_config.nprocesses; i++) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
 		sim_ended[i/64] = 0;
 		LPS[i] = malloc(sizeof(LP_state));
@@ -384,7 +381,7 @@ void pin_lps_on_numa_nodes_init() {
 
 	unsigned cur_lp = 0;
 	for(unsigned int j=0;j<num_numa_nodes;j++){
-		for(unsigned int i=0;i<n_prc_tot/num_numa_nodes;i++) {
+		for(unsigned int i=0;i<pdes_config.nprocesses/num_numa_nodes;i++) {
 			set_bit(numa_state[j]->numa_binding_bitmap, cur_lp);
 			LPS[cur_lp]->numa_node 				= j;
 		  #if VERBOSE == 1
@@ -393,7 +390,7 @@ void pin_lps_on_numa_nodes_init() {
 			cur_lp++;
 		}
 	}
-	for(;cur_lp<n_prc_tot;cur_lp++){
+	for(;cur_lp<pdes_config.nprocesses;cur_lp++){
 		set_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp);
 		LPS[cur_lp]->numa_node 				= num_numa_nodes-1;
 	  #if VERBOSE == 1
@@ -465,7 +462,7 @@ void check_OnGVT(unsigned int lp_idx, simtime_t ts, unsigned int tb){
 
 
 void round_check_OnGVT(){
-	unsigned int start_from = (n_prc_tot / n_cores) * tid;
+	unsigned int start_from = (pdes_config.nprocesses / pdes_config.ncores) * tid;
 	unsigned int curent_ck = start_from;
 	
 	
@@ -485,7 +482,7 @@ void round_check_OnGVT(){
 				break;
 			}
 		}
-		curent_ck = (curent_ck + 1) % n_prc_tot;
+		curent_ck = (curent_ck + 1) % pdes_config.nprocesses;
 	}while(curent_ck != start_from);
 }
 
@@ -520,13 +517,13 @@ void init_simulation(unsigned int thread_id){
 		numa_init();
 		LPs_metada_init();
 		pin_lps_on_numa_nodes_init();
-		dymelor_init(n_prc_tot);
+		dymelor_init(pdes_config.nprocesses);
 		statistics_init();
 		queue_init();
 		numerical_init();
 		nodes_init();
 		//process_init_event
-		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
+		for (current_lp = 0; current_lp < pdes_config.nprocesses; current_lp++) {	
      		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
      		current_msg->sender_id 		= -1;//
      		current_msg->receiver_id 	= current_lp;//
@@ -552,7 +549,7 @@ void init_simulation(unsigned int thread_id){
 		}
 
   #if ENFORCE_LOCALITY==1
-		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
+		pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
 		init_metrics_for_window();
   #endif
 	#if STATE_SWAPPING == 1
@@ -577,7 +574,7 @@ void init_simulation(unsigned int thread_id){
 	// Set the CPU affinity
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
-	while(ready_wt!=n_cores);
+	while(ready_wt!=pdes_config.ncores);
 #if ENFORCE_LOCALITY == 1
 	local_binding_init();
 #endif
@@ -673,7 +670,7 @@ void thread_loop(unsigned int thread_id) {
 	///* START SIMULATION *///
 	while (  
 				(
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+					 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
 				) 
 				&& !sim_error
 		) {
@@ -873,7 +870,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 		// Take a simulation state snapshot, in some way
-		if(n_cores > 1)
+		if(pdes_config.ncores > 1)
             LogState(current_lp);
 		
 #if DEBUG == 1
@@ -975,12 +972,12 @@ void thread_loop(unsigned int thread_id) {
 end_loop:
 		//CHECK END SIMULATION
 #if ONGVT_PERIOD != -1 && SWAPPING_STATE == 0
-		if(start_periodic_check_ongvt && n_cores > 1){
+		if(start_periodic_check_ongvt && pdes_config.ncores > 1){
 			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
 				if(tryLock(last_checked_lp)){
 					check_OnGVT(last_checked_lp, LPS[last_checked_lp]->commit_horizon_ts, LPS[last_checked_lp]->commit_horizon_tb);
 					unlock(last_checked_lp);
-					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+					last_checked_lp = (last_checked_lp+1)%pdes_config.nprocesses;
 				}
 			}
 		}

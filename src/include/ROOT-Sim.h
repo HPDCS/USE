@@ -38,8 +38,9 @@
 #include <string.h>
 #include <float.h>
 #include <stdbool.h>
-//#include <core.h>
+#include <configuration.h>
 
+#define n_prc_tot (pdes_config.nprocesses)
 
 #ifdef INIT
  #undef INIT
@@ -101,11 +102,6 @@ typedef double simtime_t;
 
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
-
-/// This is the definition of the number of LPs running in the current simulation
-extern unsigned int n_prc_tot;
-
-
 
 // Topology library
 #define TOPOLOGY_HEXAGON	1000

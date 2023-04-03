@@ -60,7 +60,7 @@ static __thread double elapsed_time;
  */
 static inline void alloc_numa_state(numa_struct *numa_state) {
 
-	numa_state->numa_binding_bitmap = allocate_bitmap(n_prc_tot);
+	numa_state->numa_binding_bitmap = allocate_bitmap(pdes_config.nprocesses);
 	numa_state->unbalance_index = 0.0;
 }
 
@@ -151,7 +151,7 @@ static inline void set_unbalance_index(numa_struct **numa_state) {
 	unsigned int i,j;
 	int lp;
 	for (i=0; i < num_numa_nodes; i++) { /// iterate numa nodes
-		for (j=0; j < n_prc_tot; j++) { /// iterate n_proc_tot
+		for (j=0; j < pdes_config.nprocesses; j++) { /// iterate n_proc_tot
 			lp = get_bit(numa_state[i]->numa_binding_bitmap, j);
 			if (lp) { /// if the corresponding bit is set in the lp bitmap compute the unbalance index
 				assert(LPS[j]->ema_granularity > 0);
@@ -290,7 +290,7 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
 
 	unsigned int lp_max_loaded_node, elem_count = 0;
 	double old_skew, new_skew;
-	for (unsigned int i = 0; i < n_prc_tot; i++) {
+	for (unsigned int i = 0; i < pdes_config.nprocesses; i++) {
 		lp_max_loaded_node = (unsigned int) get_bit(max_load_numa_node->numa_binding_bitmap, i);
 		if (lp_max_loaded_node)// && eligible_for_migration(i, skewness/2.0)) {
 			set_lp_to_migrate(&(lps_to_migrate_array[elem_count++]), LPS[i]->lid, LPS[i]->migration_score/scale , max_load_numa_node->unbalance_index/scale, min_load_numa_node->unbalance_index/scale);
@@ -368,7 +368,7 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
  */
 static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	numa_struct *max_load_numa_node, *min_load_numa_node;
-	lps_to_migrate *lps_to_migrate_array = malloc(sizeof(lps_to_migrate) * n_prc_tot); //TODO: size of allocation
+	lps_to_migrate *lps_to_migrate_array = malloc(sizeof(lps_to_migrate) * pdes_config.nprocesses); //TODO: size of allocation
 	double scale = 0.0;
 
 	/// set the unbalance index of every numa node

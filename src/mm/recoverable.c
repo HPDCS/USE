@@ -52,9 +52,9 @@ void recoverable_init(void) {
 	
 	register unsigned int i;
 	
-	recoverable_state = rsalloc(sizeof(malloc_state *) * n_prc_tot);
+	recoverable_state = rsalloc(sizeof(malloc_state *) * pdes_config.nprocesses);
 
-	for(i = 0; i < n_prc_tot; i++){
+	for(i = 0; i < pdes_config.nprocesses; i++){
 
 		recoverable_state[i] = rsalloc(sizeof(malloc_state));
 		if(recoverable_state[i] == NULL)
@@ -69,7 +69,7 @@ void recoverable_init(void) {
 //	unsigned int i, j;
 //	malloc_area *current_area;
 //
-//	for(i = 0; i < n_prc_tot; i++) {
+//	for(i = 0; i < pdes_config.nprocesses; i++) {
 //		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
 //			current_area = &(recoverable_state[i]->areas[j]);
 //			if (current_area != NULL) {

@@ -28,18 +28,18 @@ unsigned int FindReceiver(int topology) {
 			#define NE	5
 
 			// Convert linear coords to hexagonal coords
-			edge = sqrt(n_prc_tot);
+			edge = sqrt(pdes_config.nprocesses);
 			x = current_lp % edge;
 			y = current_lp / edge;
 
 			// Sanity check!
-			if(edge * edge != n_prc_tot) {
+			if(edge * edge != pdes_config.nprocesses) {
 				rootsim_error(true, "Hexagonal map wrongly specified!\n");
 				return 0;
 			}
 
 			// Very simple case!
-			if(n_prc_tot == 1) {
+			if(pdes_config.nprocesses == 1) {
 				receiver = current_lp;
 				break;
 			}
@@ -109,19 +109,19 @@ unsigned int FindReceiver(int topology) {
 			#define E	3
 
 			// Convert linear coords to square coords
-			edge = sqrt(n_prc_tot);
+			edge = sqrt(pdes_config.nprocesses);
 			x = current_lp % edge;
 			y = current_lp / edge;
 
 			// Sanity check!
-			if(edge * edge != n_prc_tot) {
+			if(edge * edge != pdes_config.nprocesses) {
 				rootsim_error(true, "Square map wrongly specified!\n");
 				return 0;
 			}
 
 
 			// Very simple case!
-			if(n_prc_tot == 1) {
+			if(pdes_config.nprocesses == 1) {
 				receiver = current_lp;
 				break;
 			}
@@ -172,7 +172,7 @@ unsigned int FindReceiver(int topology) {
 
 		case TOPOLOGY_MESH:
 
-			receiver = (int)(n_prc_tot * Random());
+			receiver = (int)(pdes_config.nprocesses * Random());
 			break;
 
 
@@ -188,11 +188,11 @@ unsigned int FindReceiver(int topology) {
 			}
 
    			if (receiver == -1) {
-				receiver = n_prc_tot - 1;
+				receiver = pdes_config.nprocesses - 1;
 			}
 
 			// Can't be negative from now on
-			if ((unsigned int)receiver == n_prc_tot) {
+			if ((unsigned int)receiver == pdes_config.nprocesses) {
 				receiver = 0;
 			}
 
@@ -204,7 +204,7 @@ unsigned int FindReceiver(int topology) {
 
 			receiver= current_lp + 1;
 
-			if ((unsigned int)receiver == n_prc_tot) {
+			if ((unsigned int)receiver == pdes_config.nprocesses) {
 				receiver = 0;
 			}
 
@@ -214,7 +214,7 @@ unsigned int FindReceiver(int topology) {
 		case TOPOLOGY_STAR:
 
 			if (current_lp == 0) {
-				receiver = (int)(n_prc_tot * Random());
+				receiver = (int)(pdes_config.nprocesses * Random());
 			} else {
 				receiver = 0;
 			}
