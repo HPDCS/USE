@@ -260,24 +260,6 @@ void nodes_init(){
 void LPs_metada_init() {
 	unsigned int i;
 	int lp_lock_ret;
-
-	//rootsim_config.output_dir = DEFAULT_OUTPUT_DIR;
-	//rootsim_config.gvt_time_period = 1000;
-	//rootsim_config.scheduler = SMALLEST_TIMESTAMP_FIRST;
-	rootsim_config.checkpointing = PERIODIC_STATE_SAVING;
-	rootsim_config.ckpt_period = 100;
-	rootsim_config.gvt_snapshot_cycles = 2;
-	rootsim_config.simulation_time = 0;
-	//rootsim_config.lps_distribution = LP_DISTRIBUTION_BLOCK;
-	//rootsim_config.check_termination_mode = NORM_CKTRM;
-	rootsim_config.blocking_gvt = false;
-	rootsim_config.snapshot = 2001;
-	rootsim_config.deterministic_seed = false;
-	rootsim_config.set_seed = 0;
-	//rootsim_config.verbose = VERBOSE_INFO;
-	//rootsim_config.stats = STATS_ALL;
-	rootsim_config.serial = false;
-	rootsim_config.core_binding = true;
 	
 	LPS = malloc(sizeof(void*) * pdes_config.nprocesses);
 	sim_ended = malloc(LP_ULL_MASK_SIZE);

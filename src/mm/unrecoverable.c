@@ -86,11 +86,11 @@ void unrecoverable_fini(void) {
 
 
 void *umalloc(LID_t lid, size_t s) {
-	if(rootsim_config.serial)
+	if(pdes_config.serial)
 		return rsalloc(s);
 
 	#ifdef HAVE_PARALLEL_ALLOCATOR
-	if(rootsim_config.disable_allocator)
+	if(pdes_config.disable_allocator)
 		return rsalloc(s);
 
 	return do_malloc(lid, unrecoverable_state[lid_to_int(lid)], s);
@@ -105,13 +105,13 @@ void ufree(LID_t lid, void *ptr) {
 	
 //	printf("id of process requesting ufree: GID: %d LID: %d\n",LidToGid(lid),lid);
 	
-	if(rootsim_config.serial) {
+	if(pdes_config.serial) {
 		rsfree(ptr);
 		return;
 	}
 
 	#ifdef HAVE_PARALLEL_ALLOCATOR
-	if(rootsim_config.disable_allocator) {
+	if(pdes_config.disable_allocator) {
 		rsfree(ptr);
 		return;
 	}

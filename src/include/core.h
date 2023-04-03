@@ -63,7 +63,7 @@
 
 struct __bucket_node;
 
-extern simulation_configuration rootsim_config;
+extern simulation_configuration pdes_config;
 extern __thread simtime_t current_lvt;
 extern __thread simtime_t local_gvt;
 extern __thread unsigned int current_lp;

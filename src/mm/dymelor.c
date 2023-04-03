@@ -376,7 +376,7 @@ void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
 	int idx, bitmap_blocks;
 	size_t chunk_size;
 
-	if(rootsim_config.serial) {
+	if(pdes_config.serial) {
 		rsfree(ptr);
 		return;
 	}

@@ -23,7 +23,7 @@ static char messages[5][256] = {
 	"BITMAP_ENTRIES != virtual_len"
 };
 
-simulation_configuration rootsim_config;
+simulation_configuration pdes_config;
 size_t node_size_msg_t;
 
 

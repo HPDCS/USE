@@ -137,7 +137,7 @@ bool LogState(unsigned int lid) {
 	}
 
 	// Switch on the checkpointing mode.
-	switch(rootsim_config.checkpointing) {
+	switch(pdes_config.checkpointing) {
 
 		case COPY_STATE_SAVING:
 			take_snapshot = true;
@@ -456,7 +456,7 @@ void ParallelSetState(void *new_state) {
 * @param ckpt_mode The new checkpoint mode
 */
 void set_checkpoint_mode(int ckpt_mode) {
-	rootsim_config.checkpointing = ckpt_mode;
+	pdes_config.checkpointing = ckpt_mode;
 }
 
 

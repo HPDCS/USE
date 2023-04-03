@@ -65,7 +65,7 @@ double Random(void) {
 	//seed1 = (uint32_t *)&thread_seed;
 	//seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
 
-	if(rootsim_config.serial) {
+	if(pdes_config.serial) {
 		seed1 = (uint32_t *)&master_seed;
 		seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
 	} else {
