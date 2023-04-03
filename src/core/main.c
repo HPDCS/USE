@@ -39,46 +39,7 @@ void start_simulation() {
     int ret;
     unsigned int i;
 
-
-    printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", pdes_config.ncores, pdes_config.nprocesses);
-//#if SPERIMENTAL == 1
-//    printf("\t- SPERIMENTAL features enabled.\n");
-//#endif
-//#if PREEMPTIVE == 1
-//    printf("\t- PREEMPTIVE event realease enabled.\n");
-//#endif
-#if DEBUG == 1
-    printf("\t- DEBUG mode enabled.\n");
-#endif
-    printf("\t- DYMELOR enabled.\n");
-    printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
-    printf("\t- CHECKPOINT PERIOD %u\n", CHECKPOINT_PERIOD);
-    printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", CLEAN_CKP_INTERVAL);
-    printf("\t- ON_GVT PERIOD %u\n", ONGVT_PERIOD);
-    printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
-    if(pdes_config.enforce_locality){
-    printf("\t\t|- Starting window %f\n", pdes_config.el_window_size);
-    printf("\t\t|- Dynamic  window %u\n", pdes_config.el_dynamic_window);
-    }
-
-#ifdef DISTRIBUTED_FETCH
-    printf("\t- DISTRIBUTED_FETCH %u\n", DISTRIBUTED_FETCH);
-#endif
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 0
-    printf("\t- CSR ASYNCH disabled.\n");
-#endif
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
-    printf("\t- CSR ASYNCH enabled.\n");
-#endif
-#if REPORT == 1
-    printf("\t- REPORT prints enabled.\n");
-#endif
-//#if REVERSIBLE == 1
-//    printf("\t- SPECULATIVE SIMULATION\n");
-//#else
-//    printf("\t- CONSERVATIVE SIMULATION\n");
-//#endif
-    printf("\n" COLOR_RESET);
+    print_config();
 
     //Child thread
     for(i = 0; i < pdes_config.ncores - 1; i++) {

@@ -15,12 +15,6 @@ add_compile_options(
 -DMAX_SKIPPED_LP=100000 
 )
 
-#checkpoint related options
-add_compile_options(
--DCHECKPOINT_PERIOD=10
--DCLEAN_CKP_INTERVAL=100
-)
-
 #ongvt-related options
 if(STATE_SWAPPING)
 add_compile_options(

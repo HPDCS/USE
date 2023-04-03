@@ -58,29 +58,16 @@
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
 __thread unsigned int tid = 0;
-
 __thread unsigned long long evt_count = 0;
 __thread unsigned long long current_evt_state = 0;
 __thread void* current_evt_monitor = 0x0;
-
-
 __thread struct __bucket_node *current_node = 0x0;
-
 __thread unsigned int last_checked_lp = 0;
 unsigned int start_periodic_check_ongvt = 0;
 __thread unsigned int check_ongvt_period = 0;
-
 __thread unsigned int current_numa_node;
 __thread unsigned int current_cpu;
-
-
 __thread int __event_from = 0;
-
-//__thread simtime_t 		commit_horizon_ts = 0;
-//__thread unsigned int 	commit_horizon_tb = 0;
-
-
-//timer
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//total execution time on single core
 				fetch_timer,				//time used to correctly fetch an event 		
@@ -93,6 +80,8 @@ __thread clock_timer main_loop_time,		//total execution time on single core
 #endif
 				;
 #endif
+
+
 
 volatile unsigned int ready_wt = 0;
 
@@ -117,11 +106,6 @@ unsigned int num_numa_nodes;
 bool numa_available_bool;
 unsigned int rounds_before_unbalance_check; /// number of window management rounds before numa unbalance check
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
-
-
-
-
-
 size_t node_size_msg_t;
 size_t node_size_state_t;
 
@@ -274,7 +258,7 @@ void LPs_metada_init() {
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i+1; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
-		LPS[i]->ckpt_period 			= CHECKPOINT_PERIOD;
+		LPS[i]->ckpt_period 			= pdes_config.ckpt_period;
 		LPS[i]->from_last_ckpt 			= 0;
 		LPS[i]->state_log_forced  		= false;
 		LPS[i]->current_base_pointer 	= NULL;
@@ -885,7 +869,7 @@ void thread_loop(unsigned int thread_id) {
 		}
 #endif	
     
-		if((++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0)/* && safe*/){
+		if((++(LPS[current_lp]->until_clean_ckp)%pdes_config.ckpt_collection_period  == 0)/* && safe*/){
             simtime_t gc_ts = LPS[current_lp]->commit_horizon_ts;
     
     #if STATE_SWAPPING == 1

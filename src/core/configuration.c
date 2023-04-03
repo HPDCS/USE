@@ -2,7 +2,7 @@
 #include <stdlib.h>       // Provides for exit, ...
 #include <string.h>       // Provides for memset, ...
 #include <configuration.h>
-
+#include <hpdcs_utils.h>
 #include <argp.h>         // Provides GNU argp() argument parser
 
 
@@ -12,11 +12,17 @@ simulation_configuration pdes_config;
 #define N_CORES_KEY 'c'
 #define N_PROCESSES_KEY 'p'
 #define WALLCLOCK_TIMEOUT_KEY 'w' 
+
+
 #define ENFORCE_LOCALITY_KEY 256
 #define EL_DYN_WINDOW_KEY 257
 #define EL_WINDOW_SIZE_KEY 258
 #define EL_LOCKED_PIPE_SIZE_KEY 259
 #define EL_EVICTED_PIPE_SIZE_KEY 260
+
+#define CKPT_PERIOD_KEY 261
+#define CKPT_FOSSIL_PERIOD_KEY 262
+
 
 const char *argp_program_version = "USE 1.0";
 const char *argp_program_bug_address = "<romolo.marotta@gmail.com>";
@@ -29,11 +35,16 @@ static struct argp_option options[] = {
   {"ncores",           N_CORES_KEY          , "CORES"   ,  0,  "Number of threads to be used"               , 0 },
   {"nprocesses",       N_PROCESSES_KEY      , "LPS"     ,  0,  "Number of simulation objects"               , 0 },
   {"wall-timeout",     WALLCLOCK_TIMEOUT_KEY, "SECONDS" ,  0,  "End the simulation after SECONDS elapsed"   , 0 },
+
+  {"ckpt-period",      CKPT_PERIOD_KEY, "#EVENTS"       ,  0,  "Number of events to be forward-executed before taking a full-snapshot"   , 0 },
+  {"ckpt-fossil-period",      CKPT_FOSSIL_PERIOD_KEY, "#EVENTS"       ,  0,  "Number of events to be executed before collection committed snapshot"   , 0 },
+  
   {"enforce-locality", ENFORCE_LOCALITY_KEY , 0    ,  OPTION_ARG_OPTIONAL,  "Use pipes to improve cache exploitation"    , 0 },
   {"el-dyn-window",    EL_DYN_WINDOW_KEY    , 0    ,  OPTION_ARG_OPTIONAL,  "Use pipes with dynamic window"    , 0 },
   {"el-window-size",    EL_WINDOW_SIZE_KEY  , "VTIME"    ,  0,  "Sets the window size to be used with pipes"    , 0 },
   {"el-locked-size",    EL_LOCKED_PIPE_SIZE_KEY  , "COUNT"    ,  0,  "Sets the locked pipe size"    , 0 },
   {"el-evicted-size",    EL_EVICTED_PIPE_SIZE_KEY  , "COUNT"    ,  0,  "Sets the evicted pipe size"    , 0 },
+  
   {"verbose",      'v', 0         ,  0,  "Provide verbose output"                     , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
@@ -58,6 +69,14 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
     case WALLCLOCK_TIMEOUT_KEY:
       pdes_config.timeout = atoi(arg);
       break;
+  
+    case CKPT_PERIOD_KEY:
+      pdes_config.ckpt_period = atoi(arg);
+      break;
+    case CKPT_FOSSIL_PERIOD_KEY:
+      pdes_config.ckpt_collection_period = atoi(arg);
+      break;
+  
     case ENFORCE_LOCALITY_KEY:
       pdes_config.enforce_locality = 1;
       pdes_config.el_locked_pipe_size = 1;
@@ -76,7 +95,12 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
     case EL_EVICTED_PIPE_SIZE_KEY:
       pdes_config.el_evicted_pipe_size = atoi(arg);
       break;
+  
     case ARGP_KEY_END:
+      if(pdes_config.ckpt_period < 1 || pdes_config.ckpt_collection_period < 1){
+        printf("Please set a non-zero checkpoint period\n");
+        argp_usage (state);  
+      }
       if(pdes_config.el_dynamic_window && !pdes_config.enforce_locality){
         printf("Please enable enforce-locality to use dynamic window\n");
         argp_usage (state);
@@ -120,7 +144,52 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 void configuration_init(void){
   pdes_config.checkpointing = PERIODIC_STATE_SAVING;
   pdes_config.ckpt_period = 20;
+  pdes_config.ckpt_collection_period = 100;
   pdes_config.serial = false;
+}
+
+void print_config(void){
+      printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", pdes_config.ncores, pdes_config.nprocesses);
+//#if SPERIMENTAL == 1
+//    printf("\t- SPERIMENTAL features enabled.\n");
+//#endif
+//#if PREEMPTIVE == 1
+//    printf("\t- PREEMPTIVE event realease enabled.\n");
+//#endif
+#if DEBUG == 1
+    printf("\t- DEBUG mode enabled.\n");
+#endif
+    printf("\t- DYMELOR enabled.\n");
+    printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
+    printf("\t- CHECKPOINT PERIOD %u\n", pdes_config.ckpt_period);
+    printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", pdes_config.ckpt_collection_period);
+    printf("\t- ON_GVT PERIOD %u\n", ONGVT_PERIOD);
+    printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
+    if(pdes_config.enforce_locality){
+    printf("\t\t|- Starting window %f\n", pdes_config.el_window_size);
+    printf("\t\t|- Dynamic  window %u\n", pdes_config.el_dynamic_window);
+    }
+
+#ifdef DISTRIBUTED_FETCH
+    printf("\t- DISTRIBUTED_FETCH %u\n", DISTRIBUTED_FETCH);
+#endif
+#if STATE_SWAPPING == 1 && CSR_CONTEXT == 0
+    printf("\t- CSR ASYNCH disabled.\n");
+#endif
+#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
+    printf("\t- CSR ASYNCH enabled.\n");
+#endif
+#if REPORT == 1
+    printf("\t- REPORT prints enabled.\n");
+#endif
+//#if REVERSIBLE == 1
+//    printf("\t- SPECULATIVE SIMULATION\n");
+//#else
+//    printf("\t- CONSERVATIVE SIMULATION\n");
+//#endif
+    printf("\n" COLOR_RESET);
+
+
 }
 
 static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };

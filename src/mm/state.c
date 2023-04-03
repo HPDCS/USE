@@ -370,7 +370,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		rollback_lenght -= LPS[lid]->num_executed_frames;
 		LPS[lid]->epoch++;
-		LPS[lid]->from_last_ckpt = reprocessed_events%CHECKPOINT_PERIOD; // TODO
+		LPS[lid]->from_last_ckpt = reprocessed_events%pdes_config.ckpt_period; // TODO
 		// TODO
 		//LPS[lid]->from_last_ckpt = ??;
 

@@ -25,12 +25,14 @@ typedef struct _simulation_configuration {
 
 	enum log_modes checkpointing; 
 	unsigned int ckpt_period;
+	unsigned int ckpt_collection_period;
 	unsigned char enforce_locality;  /// enables pipes usage for increasing cache exploitation
 	unsigned char el_dynamic_window;  /// enables pipes usage for increasing cache exploitation
 	unsigned char el_locked_pipe_size;
 	unsigned char el_evicted_pipe_size;
 	double el_window_size;  /// sets the static window size when using pipes
 	
+
 #ifdef HAVE_PREEMPTION
 	bool disable_preemption;	/// If compiled for preemptive Time Warp, it can be disabled at runtime
 #endif
@@ -43,5 +45,6 @@ typedef struct _simulation_configuration {
 
 extern simulation_configuration pdes_config;
 extern void parse_options(int argn, char **argv);
+extern void print_config(void);
 
 #endif
