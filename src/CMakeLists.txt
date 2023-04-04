@@ -37,11 +37,6 @@ add_compile_options(
 #-DREVERSIBLE=0
 #)
 
-#state-related options
-add_compile_options(
--DHAVE_PARALLEL_ALLOCATOR=1 
-)
-
 if(STATE_SWAPPING)
 add_compile_options(
 -DSTATE_SWAPPING=1

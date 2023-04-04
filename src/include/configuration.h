@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <numerical.h>
+#include <argp.h>         // Provides GNU argp() argument parser
 
 
 enum stat_levels {STATS_GLOBAL, STATS_PERF, STATS_LP, STATS_ALL};
@@ -26,6 +27,11 @@ typedef struct _simulation_configuration {
 	enum log_modes checkpointing; 
 	unsigned int ckpt_period;
 	unsigned int ckpt_collection_period;
+
+	unsigned char numa_rebalance;
+	unsigned char enable_mbind;
+	unsigned char enable_custom_alloc;
+
 	unsigned char enforce_locality;  /// enables pipes usage for increasing cache exploitation
 	unsigned char el_dynamic_window;  /// enables pipes usage for increasing cache exploitation
 	unsigned char el_locked_pipe_size;
@@ -35,10 +41,6 @@ typedef struct _simulation_configuration {
 
 #ifdef HAVE_PREEMPTION
 	bool disable_preemption;	/// If compiled for preemptive Time Warp, it can be disabled at runtime
-#endif
-
-#ifdef HAVE_PARALLEL_ALLOCATOR
-	bool disable_allocator;
 #endif
 	char *output_dir;		/// Destination Directory of output files
 } simulation_configuration;

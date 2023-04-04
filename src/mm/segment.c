@@ -62,11 +62,7 @@ void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
 	int i,j,h=0;
 	void *the_address;
 	void *mmapped[NUM_MMAP];
-  #if MBIND == 0
-	(void)numa_node;
-	(void)pages;
-  #endif
-
+  
 	/// Addresses are determined in the same way across all kernel instances
 	the_address = init_address + PER_LP_PREALLOCATED_MEMORY * gid_to_int(gid);
 	*pages = rsalloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(void*));
@@ -86,14 +82,14 @@ void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
 		}
 
 
-	  #if MBIND == 1
+	  if(pdes_config.enable_mbind){
 		unsigned long numa_mask = 0x1 << (numa_node); 
 		if(mbind(mmapped[i], MAX_MMAP, MPOL_BIND, &numa_mask, num_numa_nodes+1, MPOL_MF_MOVE) == -1){
 			printf("Failing NUMA binding LP %u to node %u, with mask %p. Please retry disabling the NUMA partitioning: %s.\n",
 			gid, numa_node, (void *)numa_mask, strerror(errno));
 			abort();
 		}
-	  #endif
+	  }
 		// Access the memory in write mode to force the kernel to create the page table entries
 		*((char *)mmapped[i]) = 'x';
 		

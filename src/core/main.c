@@ -39,9 +39,7 @@ void start_simulation() {
     int ret;
     unsigned int i;
 
-    print_config();
-
-    //Child thread
+    //Child threads
     for(i = 0; i < pdes_config.ncores - 1; i++) {
         if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
             fprintf(stderr, "%s\n", strerror(errno));
@@ -65,7 +63,8 @@ int main(int argn, char *argv[]) {
     timer exec_time;
     
     parse_options(argn, argv);
-  
+    print_config();
+
     printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);

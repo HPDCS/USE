@@ -391,9 +391,9 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	//load_skew = 0.8; //just for testing on uma machine
 	printf("MAX %d MIN %d SKEW %f\n", max_load_numa_node->numa_id, min_load_numa_node->numa_id, load_skew/scale);
 	/// do a logical rebinding of lps to numa nodes
-  #if MBIND == 1 && NUMA_REBALANCE == 1
-	rebind_lp_to_numa_nodes(lps_to_migrate_array, max_load_numa_node, min_load_numa_node, load_skew, scale);
-  #endif
+	if(pdes_config.enable_mbind && pdes_config.numa_rebalance)
+		rebind_lp_to_numa_nodes(lps_to_migrate_array, max_load_numa_node, min_load_numa_node, load_skew, scale);
+
 out:
 	for(unsigned int i=0;i<num_numa_nodes;i++)
 		numa_state[i]->unbalance_index = 0;
