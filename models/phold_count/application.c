@@ -15,14 +15,28 @@
 
 #define SAME_TS 1
 
+typedef struct model_parameters{
+	unsigned int num_events;
+}
+model_parameters;
 
 struct argp_option model_options[] = {
-  {"ta",                  1000, 0, 0, "Number of threads to be used"               , 0 },
+  {"num-events",        1002, "VALUE", 0, "Number of event per process to end the simulation"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
-error_t model_parse_opt(int key, char *arg, struct argp_state *state){
+model_parameters args = {
+	.num_events = 5000,
+};
 
+error_t model_parse_opt(int key, char *arg, struct argp_state *state){
+	(void)state;
+	switch(key){
+		case 1002:
+			args.num_events = atoi(arg);
+			break;
+	}
+	return 0;
 }
 
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
@@ -48,13 +62,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	switch (event_type) {
 
 		case INIT:
-			// Initialize LP's state
-			//state_ptr = (lp_state_type *)malloc(sizeof(lp_state_type));
-
-			//if(states[me] == NULL)
-			//	state_ptr = states[me];
-
-			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
 			state_ptr = malloc(sizeof(lp_state_type));
 			if(state_ptr == NULL) {
 				printf("malloc failed\n");
@@ -70,6 +77,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
             SetState(state_ptr);
 			
 			state_ptr->events = 0;
+			state_ptr->num_events = args.num_events;
 
 			if(me == 0) {
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %d, %d total events per LP, lookahead %f\n", LOOP_COUNT, COMPLETE_EVENTS, LOOKAHEAD);
@@ -85,59 +93,31 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 			for(i = 0; i < EVENTS_PER_LP; i++) {
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 			}
-			//ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
 		#endif
 
 			break;
 
 		case EXTERNAL_LOOP:
 		case LOOP:
-			//timer_start(tm_ex);
-
 			loops = LOOP_COUNT * 29 * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
 
 			for(i = 0; i < loops ; i++) {
 					j = i*i;
 			}
-			//printf("timer: %d\n", timer_value_micro(tm_ex));
-
 
 			delta = LOOKAHEAD + Expent(TAU);
 			timestamp = now + delta;
 
-			if(event_type == LOOP && state_ptr->events < COMPLETE_EVENTS){
+			if(event_type == LOOP && state_ptr->events < state_ptr->num_events){
 				state_ptr->events++;
 				if(now < state_ptr->lvt){
 					printf("\x1b[31m""%d- APP: ERROR: event %f received out of order respect %f; last_loop_count: %u\n""\x1b[0m", me, now, state_ptr->lvt, j);
 				}
-				//if(state_ptr->lvt == now){
-				//	printf("[%d] RECEIVED AN EVENT WITH TS=MY_LVT: event %f INCORRECT STATE %d\n", me, now, state_ptr->events);
-				//	state_ptr =NULL;state_ptr->lvt *10;
-				//}
-				
-				if(state_ptr->events > now){
-					//printf("%d- APP: ERROR: event %f INCORRECT STATE %d\n""\x1b[0m", me, now, state_ptr->events);
-					//gdb_abort;//state_ptr =NULL;state_ptr->lvt *10;
-				}
 				state_ptr->lvt = now;
-				if(state_ptr->events < COMPLETE_EVENTS){
+				if(state_ptr->events < state_ptr->num_events){
 					ScheduleNewEvent((me+1)%n_prc_tot, now+1.0, LOOP, NULL, 0);
-				//	ScheduleNewEvent((me+1)%n_prc_tot, timestamp, LOOP, NULL, 0);
 				}
-				else{
-					//printf(GREEN("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n"), me, state_ptr->lvt, state_ptr->events);
-				}
-			
-				//for(j=0;j<FAN_OUT;j++){
-				//		delta = LOOKAHEAD + Expent(TAU);
-				//		timestamp = now + delta;
-				//		ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
-				//}
 			}
-
-			//if(event_type == LOOP && Random() < 0.2) {
-			//	ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
-			//}
 
 			break;
 
@@ -151,11 +131,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 	
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
-	
-	//printf("TOTALE: %u\n", snapshot->events);//to_remove
-
-	if(snapshot->events < COMPLETE_EVENTS) {
-//	if(snapshot->lvt < COMPLETE_TIME) {
+	if(snapshot->events < snapshot->num_events) {
         return false;
     }
     printf(GREEN("[%d] LP to the end execution: LVT:%f NUM_EX:%d\n"), me, snapshot->lvt, snapshot->events);
