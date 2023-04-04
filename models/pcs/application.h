@@ -8,20 +8,6 @@
 #define DISTRIBUTION	1
 
 
-#define CHECK_FADING_TIME	10
-
-#ifndef COMPLETE_CALLS
-#define COMPLETE_CALLS		5000
-#endif
-
-#ifndef TA
-#define TA			0.4
-#endif
-
-
-#define TA_DURATION		120
-//#define TA_DURATION		60
-
 #ifndef NUM_HOT
 #define NUM_HOT 0
 #endif
@@ -34,31 +20,16 @@
 #define NUM_HOT_CELLS  ((unsigned int)(PERC_HOT*n_prc_tot))
 
 #define NUM_CLD_CELLS_IN_MAX ((n_prc_tot/PARTITIONS)-NUM_HOT_CELLS)
-#define LOAD_FROM_CLD_CELLS  (NUM_CLD_CELLS_IN_MAX/TA)
+#define LOAD_FROM_CLD_CELLS  (NUM_CLD_CELLS_IN_MAX/state->ta)
 
 #define TARGET_SKEW 0.5
-#define MIN_LOAD_PARTITION	   (CELLS_PER_PARTITION/TA)
+#define MIN_LOAD_PARTITION	   (CELLS_PER_PARTITION/state->ta)
 #define MAX_LOAD_PARTITION	   (MIN_LOAD_PARTITION*(1+TARGET_SKEW))
 #define LOAD_FROM_HOT_CELLS    (MAX_LOAD_PARTITION-LOAD_FROM_CLD_CELLS)
 #define TA_HOT                 (NUM_HOT_CELLS/LOAD_FROM_HOT_CELLS)
 
-//#if NUM_HOT != 0
 #define CHANNELS_PER_HOT_CELL	((unsigned int)(TA_DURATION*1.1/TA_HOT))
-//#endif
 
-
-#ifndef CHANNELS_PER_CELL
-#define CHANNELS_PER_CELL	1000
-#endif
-
-#ifndef TA_CHANGE
-#define TA_CHANGE		300.0
-#endif
-
-
-
-
-//#define TA_CHANGE		75.0//150.0
 
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define DURATION_DISTRIBUTION		EXPONENTIAL
@@ -76,10 +47,6 @@
 #define HANDOFF_LEAVE	30
 #define HANDOFF_RECV	31
 #define FADING_RECHECK	40
-
-#ifndef FADING_RECHECK_FREQUENCY
-#define FADING_RECHECK_FREQUENCY	300	// Every 5 Minutes
-#endif
 
 #define MSK 0x1
 #define SET_CHANNEL_BIT(B,K) ( B |= (MSK << K) )
@@ -148,6 +115,7 @@ typedef struct _lp_state_type{
 	double ref_ta; // Initial call interarrival frequency (same for all cells)
 	double ta_duration; // Average duration of a call
 	double ta_change; // Average time after which a call is diverted to another cell
+	double fading_recheck_time;
 
 	int channels_per_cell; // Total channels in this cell
 	int total_calls;

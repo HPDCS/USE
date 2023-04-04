@@ -221,10 +221,19 @@ void print_config(void){
 
 }
 
-static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };
+extern struct argp_option model_options[];
+extern char *model_name;
+extern error_t model_parse_opt(int key, char *arg, struct argp_state *state);
+
+static struct argp model_argp = { model_options, model_parse_opt, NULL, NULL, 0, 0, 0 };
+static struct argp_child param_child[] = {
+{&model_argp, 0, "Model specific", 0},
+{NULL, 0, NULL, 0}
+};
+
+static struct argp argp       = { options,       parse_opt, args_doc, doc, &param_child[0], 0, 0 };
 
 void parse_options(int argn, char **argv){
   configuration_init();
-  
-  argp_parse(&argp, argn, argv, 0, 0, NULL);
+  argp_parse(&argp, argn, argv, 0, NULL, NULL);
 }

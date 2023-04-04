@@ -16,6 +16,15 @@
 #define SAME_TS 1
 
 
+struct argp_option model_options[] = {
+  {"ta",                  1000, 0, 0, "Number of threads to be used"               , 0 },
+  { 0, 0, 0, 0, 0, 0} 
+};
+
+error_t model_parse_opt(int key, char *arg, struct argp_state *state){
+
+}
+
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
