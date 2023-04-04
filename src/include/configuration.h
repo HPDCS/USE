@@ -28,6 +28,7 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_period;
 	unsigned int ckpt_collection_period;
 
+	unsigned char distributed_fetch;
 	unsigned char numa_rebalance;
 	unsigned char enable_mbind;
 	unsigned char enable_custom_alloc;

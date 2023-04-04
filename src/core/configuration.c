@@ -23,6 +23,7 @@ simulation_configuration pdes_config;
 #define CKPT_PERIOD_KEY             261
 #define CKPT_FOSSIL_PERIOD_KEY      262
 
+#define DISTRIBUTED_FETCH_KEY       263
 #define NUMA_REBALANCE_KEY          264
 #define ENABLE_MBIND_KEY            265
 #define ENABLE_CUSTOM_ALLOC_KEY     266
@@ -83,6 +84,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       pdes_config.ckpt_collection_period = atoi(arg);
       break;
 
+    case DISTRIBUTED_FETCH_KEY:
+      pdes_config.distributed_fetch = 1;
+      break;
     case NUMA_REBALANCE_KEY:
       pdes_config.numa_rebalance = 1;
       break;
@@ -166,6 +170,7 @@ void configuration_init(void){
 
   pdes_config.enforce_locality = 0;
 
+  pdes_config.distributed_fetch = 0;
   pdes_config.numa_rebalance = 0;
   pdes_config.enable_mbind = 0;
   pdes_config.enable_custom_alloc = 0;
@@ -197,9 +202,6 @@ void print_config(void){
     printf("\t- NUMA REBALANCE %u\n",    pdes_config.numa_rebalance);
     printf("\t- MBIND %u\n",    pdes_config.enable_mbind);
 
-#ifdef DISTRIBUTED_FETCH
-    printf("\t- DISTRIBUTED_FETCH %u\n", DISTRIBUTED_FETCH);
-#endif
 #if STATE_SWAPPING == 1 && CSR_CONTEXT == 0
     printf("\t- CSR ASYNCH disabled.\n");
 #endif
