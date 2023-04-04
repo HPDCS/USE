@@ -147,7 +147,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         printf("Please provide a valid number of logical processes to be used for simulation\n");
         argp_usage (state);
       }
-      if(pdes_config.timeout < 1)
+      if(pdes_config.timeout < 0)
       {
         printf("Please provide a valid number of seconds which the simulation should last\n");
         argp_usage (state);
@@ -167,7 +167,9 @@ void configuration_init(void){
   pdes_config.ckpt_period = 20;
   pdes_config.ckpt_collection_period = 100;
   pdes_config.serial = false;
-
+  
+  pdes_config.timeout = 0;
+  
   pdes_config.enforce_locality = 0;
 
   pdes_config.distributed_fetch = 0;

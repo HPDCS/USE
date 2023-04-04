@@ -855,10 +855,10 @@ void thread_loop(unsigned int thread_id) {
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
 		
-#if ONGVT_PERIOD != -1 && SWAPPING_STATE == 0
+#if SWAPPING_STATE == 0
 		///* ON_GVT *///
 		if(safe) {
-			if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+			if(ONGVT_PERIOD == -1 && OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
 				start_periodic_check_ongvt = 1;
 				end_sim(current_lp);
 			}
