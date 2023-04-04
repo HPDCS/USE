@@ -6,81 +6,78 @@
 
 #include "application.h"
 
-//#include <timer.h>
-
-//lp_state_type LPS[1024] __attribute__((aligned (64)));
 
 #define LA (50)
 
 
+typedef struct model_parameters{
+	unsigned int event_us;
+	unsigned int fan_out;
+	unsigned int num_events;
+}
+model_parameters;
+
 struct argp_option model_options[] = {
-  {"ta",                  1000, 0, 0, "Number of threads to be used"               , 0 },
+  {"event-us",          1000, "TIME",  0, "Event granularity"               , 0 },
+  {"fan-out",           1001, "VALUE", 0, "Event fan out"               , 0 },
+  {"num-events",        1002, "VALUE", 0, "Number of event per process to end the simulation"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
+model_parameters args = {
+	.event_us = 5,
+	.fan_out  = 1,  
+	.num_events = 5000,
+};
+
 error_t model_parse_opt(int key, char *arg, struct argp_state *state){
-
+	(void)state;
+	switch(key){
+		case 1000:
+			args.event_us = atoi(arg);
+			break;
+		case 1001:
+			args.fan_out = atoi(arg);
+			break;
+		case 1002:
+			args.num_events = atoi(arg);
+			break;
+	}
+	return 0;
 }
-
 
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
-	//event_content_type new_event;
 	unsigned long long loops, tmp; 
-	//lp_state_type *state_ptr = &(LPS[me]); //(lp_state_type*)state;
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
 	(void) me;
 	(void) event_content;
 	(void) size;
 	
-	//timer tm_ex;
-	
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
 		
-	//printf("EVENT INIT: %d\n", INIT);	
-	//printf("EVENT TYPE: %d\n", event_type);
-
 
 	switch (event_type) {
 
 		case INIT:
-			// Initialize LP's state
-			//state_ptr = (lp_state_type *)malloc(sizeof(lp_state_type));
-
-			//if(states[me] == NULL)
-			//	state_ptr = states[me];
-
-			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
-		//	err = posix_memalign((void **)(&state_ptr), 64, 64);
-		//	if(err < 0) {
-		//		printf("memalign failed: (%s)\n", strerror(errno));
-		//		exit(-1);
-		//	}
-		//
-        //    if(state_ptr == NULL){
-		//		printf("LP state allocation failed: (%s)\n", strerror(errno));
-		//		exit(-1);
-        //    }
-            
-            state_ptr = malloc(sizeof(lp_state_type));
-			if(state_ptr == NULL) {
-				printf("malloc failed\n");
-				exit(-1);
-			}
-
-
-			// Explicitly tell ROOT-Sim this is our LP's state
-            SetState(state_ptr);
-			
-			state_ptr->events = 0;
-
+	      state_ptr = malloc(sizeof(lp_state_type));
+				if(state_ptr == NULL) {
+					printf("malloc failed\n");
+					exit(-1);
+				}
+				// Explicitly tell ROOT-Sim this is our LP's state
+        SetState(state_ptr);
+				state_ptr->events = 0;
+				state_ptr->event_us = args.event_us;
+				state_ptr->fan_out = args.fan_out;
+				state_ptr->num_events = args.num_events;
 			if(me == 0) {
-				printf("Running a traditional loop-based PHOLD benchmark with counter set to %lld, %d total events per LP, lookahead %f\n", LOOP_COUNT*CLOCKS_PER_US, COMPLETE_EVENTS, LOOKAHEAD);
+				printf("Running a traditional loop-based PHOLD benchmark with counter set to %lld, %d total events per LP, lookahead %f\n", state_ptr->event_us*CLOCKS_PER_US, state_ptr->num_events, LOOKAHEAD);
 			}
 			
 			for(i = 0; i < EVENTS_PER_LP; i++) {
@@ -92,20 +89,12 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		case EXTERNAL_LOOP:
 		case LOOP:
-			//timer_start(tm_ex);
-
-			//loops = LOOP_COUNT * 29;// * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
 			tmp = CLOCK_READ();
                         loops = tmp;
-                        while( (tmp-loops) < (LOOP_COUNT*CLOCKS_PER_US) ){
+                        while( (tmp-loops) < (state_ptr->event_us*CLOCKS_PER_US) ){
                             tmp = CLOCK_READ();
                         }
-			if((tmp - loops) < (LOOP_COUNT*CLOCKS_PER_US)) printf("error looping less than required\n");
-			//else printf("che passed %llu %llu %llu %llu\n", tmp, loops, tmp-loops, LOOP_COUNT*CLOCKS_PER_US);
-			//for(i = 0; i < loops ; i++) {
-			//		j = i*i;
-			//}
-			//printf("timer: %d\n", timer_value_micro(tm_ex));
+			if((tmp - loops) < (state_ptr->event_us*CLOCKS_PER_US)) printf("error looping less than required\n");
 
 			state_ptr->events++;
 
@@ -122,7 +111,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 			if(event_type == LOOP )
 			{
-				for(j=0;j<FAN_OUT;j++){
+				for(j=0;j<state_ptr->fan_out;j++){
 						delta = LOOKAHEAD + Expent(TAU);
 						timestamp = now + delta;
 #if DEBUG == 1
@@ -151,10 +140,7 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	(void) me;
-	//printf("TOTALE: %u\n", snapshot->events);//to_removeS
-
-	if(snapshot->events < COMPLETE_EVENTS) {
-//	if(snapshot->lvt < COMPLETE_TIME) {
+	if(snapshot->events < snapshot->num_events) {
         return false;
     }
 	return true;
