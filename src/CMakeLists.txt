@@ -78,7 +78,7 @@ set(src-core
         core/main.c
         core/numerical.c
         #core/hpdcs_math.c
-        core/parseparam.c
+        #core/parseparam.c
         core/local_scheduler.c
         core/local_index/local_index.c
         core/metrics_for_window.c
