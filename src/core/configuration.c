@@ -28,6 +28,8 @@ simulation_configuration pdes_config;
 #define ENABLE_MBIND_KEY            265
 #define ENABLE_CUSTOM_ALLOC_KEY     266
 
+#define ONGVT_PERIOD_KEY            267
+
 const char *argp_program_version = "USE 1.0";
 const char *argp_program_bug_address = "<romolo.marotta@gmail.com>";
 static char doc[] = "USE -- The Ultimate Share-Everything PDES";
@@ -47,6 +49,8 @@ static struct argp_option options[] = {
   {"numa-rebalance"   ,   NUMA_REBALANCE_KEY       , 0         ,  OPTION_ARG_OPTIONAL,  "Enable numa load-balancing"   , 0 },
   {"enable-mbind"       , ENABLE_MBIND_KEY         , 0         ,  OPTION_ARG_OPTIONAL,  "Enable mbind"   , 0 },
   {"enable-custom-alloc", ENABLE_CUSTOM_ALLOC_KEY  , 0         ,  OPTION_ARG_OPTIONAL,  "Enable custom alloc"   , 0 },
+
+  {"ongvt-evt-period",  ONGVT_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before onGVT must be invoked"   , 0 },
 
 
   {"enforce-locality",    ENFORCE_LOCALITY_KEY     , 0         ,  OPTION_ARG_OPTIONAL,  "Use pipes to improve cache exploitation"    , 0 },
@@ -82,6 +86,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
     case CKPT_FOSSIL_PERIOD_KEY:
       pdes_config.ckpt_collection_period = atoi(arg);
+      break;
+    case ONGVT_PERIOD_KEY:
+      pdes_config.ongvt_evt_period = atoi(arg);
       break;
 
     case DISTRIBUTED_FETCH_KEY:
@@ -170,6 +177,8 @@ void configuration_init(void){
   
   pdes_config.timeout = 0;
   
+  pdes_config.ongvt_evt_period = 0;
+
   pdes_config.enforce_locality = 0;
 
   pdes_config.distributed_fetch = 0;
@@ -193,7 +202,7 @@ void print_config(void){
     printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
     printf("\t- CHECKPOINT PERIOD %u\n", pdes_config.ckpt_period);
     printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", pdes_config.ckpt_collection_period);
-    printf("\t- ON_GVT PERIOD %u\n", ONGVT_PERIOD);
+    printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_evt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
     if(pdes_config.enforce_locality){
       printf("\t\t|- Starting window %f\n", pdes_config.el_window_size);

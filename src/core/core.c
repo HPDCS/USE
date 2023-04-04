@@ -619,10 +619,7 @@ stat64_t execute_time;
 
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state;
-	
-#if ONGVT_PERIOD != -1
 	unsigned int empty_fetch = 0;
-#endif
 	
 	init_simulation(thread_id);
 	
@@ -673,17 +670,18 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
 #endif
 
-#if ONGVT_PERIOD != -1 && SWAPPING_STATE != 1
-			if(++empty_fetch > 500){
-				round_check_OnGVT();
+#if SWAPPING_STATE != 1
+			if(pdes_config.ongvt_evt_period != 0){
+				if(++empty_fetch > 500){
+					round_check_OnGVT();
+				}
 			}
 #endif
 			goto end_loop;
 		}
 
-#if ONGVT_PERIOD != -1
-		empty_fetch = 0;
-#endif
+		if(pdes_config.ongvt_evt_period != 0)
+			empty_fetch = 0;
 
 		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
@@ -858,13 +856,13 @@ void thread_loop(unsigned int thread_id) {
 #if SWAPPING_STATE == 0
 		///* ON_GVT *///
 		if(safe) {
-			if(ONGVT_PERIOD == -1 && OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+			if(pdes_config.ongvt_evt_period == 0 && OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
 				start_periodic_check_ongvt = 1;
 				end_sim(current_lp);
 			}
 			LPS[current_lp]->until_ongvt = 0;
 		}
-		else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
+		else if(pdes_config.ongvt_evt_period != 0 && ((++(LPS[current_lp]->until_ongvt) % pdes_config.ongvt_evt_period) == 0) ){
 			check_OnGVT(current_lp, LPS[current_lp]->commit_horizon_ts, LPS[current_lp]->commit_horizon_tb);	
 		}
 #endif	
@@ -925,17 +923,17 @@ void thread_loop(unsigned int thread_id) {
 		
 end_loop:
 		//CHECK END SIMULATION
-#if ONGVT_PERIOD != -1 && SWAPPING_STATE == 0
-		if(start_periodic_check_ongvt && pdes_config.ncores > 1){
-			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
-				if(tryLock(last_checked_lp)){
-					check_OnGVT(last_checked_lp, LPS[last_checked_lp]->commit_horizon_ts, LPS[last_checked_lp]->commit_horizon_tb);
-					unlock(last_checked_lp);
-					last_checked_lp = (last_checked_lp+1)%pdes_config.nprocesses;
+		if(pdes_config.ongvt_evt_period != 0){
+			if(start_periodic_check_ongvt && pdes_config.ncores > 1){
+				if(check_ongvt_period++ % pdes_config.ongvt_evt_period == 0){
+					if(tryLock(last_checked_lp)){
+						check_OnGVT(last_checked_lp, LPS[last_checked_lp]->commit_horizon_ts, LPS[last_checked_lp]->commit_horizon_tb);
+						unlock(last_checked_lp);
+						last_checked_lp = (last_checked_lp+1)%pdes_config.nprocesses;
+					}
 				}
 			}
 		}
-#endif
 
 		if(is_end_sim(current_lp)){
 			if(check_termination()){

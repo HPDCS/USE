@@ -15,17 +15,6 @@ add_compile_options(
 -DMAX_SKIPPED_LP=100000 
 )
 
-#ongvt-related options
-if(STATE_SWAPPING)
-add_compile_options(
--DONGVT_PERIOD=-1
-)
-else()
-add_compile_options(
--DONGVT_PERIOD=500
-)
-endif()
-
 #log-related options
 add_compile_options(
 -DREPORT=1 
