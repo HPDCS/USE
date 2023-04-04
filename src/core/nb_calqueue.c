@@ -584,7 +584,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		new_h->size 		 = new_size;
 		new_h->new_table 	 = NULL;
 		new_h->counter.count = 0;
-		new_h->current 		 = ((unsigned long long)-1) << 32;
+		new_h->current 		 = (((unsigned long long)-1)-1) << 32;
 
 		//array =  calloc(new_size, sizeof(nbc_bucket_node));
 		array =  alloc_array_nodes(&malloc_status, new_size);
