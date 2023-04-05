@@ -48,11 +48,6 @@
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
 
-#define BOOL_CAS_ALE(addr, old, new)  CAS_x86(\
-                                        UNION_CAST(addr, volatile unsigned long long *),\
-                                        UNION_CAST(old,  unsigned long long),\
-                                        UNION_CAST(new,  unsigned long long)\
-                                      )
                                         
 #define BOOL_CAS_GCC(addr, old, new)  __sync_bool_compare_and_swap(\
                                         (addr),\
