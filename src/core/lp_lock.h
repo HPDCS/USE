@@ -8,13 +8,14 @@ static inline unsigned int haveLock( unsigned int lp){ assert(lp<pdes_config.npr
 static inline unsigned int checkLock(unsigned int lp){ assert(lp<pdes_config.nprocesses); return (lp_lock[lp*CACHE_LINE_SIZE/4]); }
 
 
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
+#if CSR_CONTEXT == 1
 extern __thread volatile unsigned int potential_locked_object;
 #endif
 
 static inline unsigned int tryLock( unsigned int lp){
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
-    __sync_lock_test_and_set(&potential_locked_object, lp);
+#if CSR_CONTEXT == 1
+    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
+        __sync_lock_test_and_set(&potential_locked_object, lp);
 #endif
     return 
         (lp_lock[lp*CACHE_LINE_SIZE/4]==0) &&  

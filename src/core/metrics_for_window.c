@@ -26,13 +26,13 @@ static unsigned int prev_comm_evts, prev_comm_evts_ref, prev_first_time_exec_evt
 static pthread_mutex_t stat_mutex, window_check_mtx;
 
 
+__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT;
 static __thread clock_timer start_window_reset;
 static __thread stat64_t time_interval_for_measurement_phase;
 static __thread double elapsed_time;
 extern unsigned int rounds_before_unbalance_check; /// number of window management rounds before checking numa unbalance
 
 
-__thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT;
 
 
 

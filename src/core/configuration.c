@@ -29,6 +29,7 @@ simulation_configuration pdes_config;
 #define ENABLE_CUSTOM_ALLOC_KEY     266
 
 #define ONGVT_PERIOD_KEY            267
+#define ONGVT_MODE_KEY              268
 
 const char *argp_program_version = "USE 1.0";
 const char *argp_program_bug_address = "<romolo.marotta@gmail.com>";
@@ -50,7 +51,8 @@ static struct argp_option options[] = {
   {"enable-mbind"       , ENABLE_MBIND_KEY         , 0         ,  OPTION_ARG_OPTIONAL,  "Enable mbind"   , 0 },
   {"enable-custom-alloc", ENABLE_CUSTOM_ALLOC_KEY  , 0         ,  OPTION_ARG_OPTIONAL,  "Enable custom alloc"   , 0 },
 
-  {"ongvt-evt-period",  ONGVT_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before onGVT must be invoked"   , 0 },
+  {"ongvt-mode",        ONGVT_MODE_KEY   , "MODE-ID" ,  0                  ,  "0=Opportunistic (default) 1=Event-based period 2=millisecond-based period "   , 0 },
+  {"ongvt-period",      ONGVT_PERIOD_KEY   , "PERIOD LEN" ,  0               ,  "Number of events/milliseconds to be executed before onGVT must be invoked"   , 0 },
 
 
   {"enforce-locality",    ENFORCE_LOCALITY_KEY     , 0         ,  OPTION_ARG_OPTIONAL,  "Use pipes to improve cache exploitation"    , 0 },
@@ -87,8 +89,12 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case CKPT_FOSSIL_PERIOD_KEY:
       pdes_config.ckpt_collection_period = atoi(arg);
       break;
+
     case ONGVT_PERIOD_KEY:
-      pdes_config.ongvt_evt_period = atoi(arg);
+      pdes_config.ongvt_period = atoi(arg);
+      break;
+    case ONGVT_MODE_KEY:
+      pdes_config.ongvt_mode = atoi(arg);
       break;
 
     case DISTRIBUTED_FETCH_KEY:
@@ -159,6 +165,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         printf("Please provide a valid number of seconds which the simulation should last\n");
         argp_usage (state);
       }
+      if(pdes_config.serial && pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
+        pdes_config.ongvt_mode = 0; 
       break;
     
     default:
@@ -177,7 +185,8 @@ void configuration_init(void){
   
   pdes_config.timeout = 0;
   
-  pdes_config.ongvt_evt_period = 0;
+  pdes_config.ongvt_period = 0;
+  pdes_config.ongvt_mode = 0;
 
   pdes_config.enforce_locality = 0;
 
@@ -202,7 +211,8 @@ void print_config(void){
     printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
     printf("\t- CHECKPOINT PERIOD %u\n", pdes_config.ckpt_period);
     printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", pdes_config.ckpt_collection_period);
-    printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_evt_period);
+    printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
+    printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
     if(pdes_config.enforce_locality){
       printf("\t\t|- Starting window %f\n", pdes_config.el_window_size);
@@ -213,12 +223,13 @@ void print_config(void){
     printf("\t- NUMA REBALANCE %u\n",    pdes_config.numa_rebalance);
     printf("\t- MBIND %u\n",    pdes_config.enable_mbind);
 
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 0
-    printf("\t- CSR ASYNCH disabled.\n");
-#endif
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
-    printf("\t- CSR ASYNCH enabled.\n");
-#endif
+    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
+    #if CSR_CONTEXT == 0
+        printf("\t- CSR ASYNCH disabled.\n");
+    #endif
+    #if CSR_CONTEXT == 1
+        printf("\t- CSR ASYNCH enabled.\n");
+    #endif
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif

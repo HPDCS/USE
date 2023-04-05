@@ -9,6 +9,10 @@
 enum stat_levels {STATS_GLOBAL, STATS_PERF, STATS_LP, STATS_ALL};
 
 
+enum ongvt_mode {OPPORTUNISTIC_ONGVT=0, EVT_PERIODIC_ONGVT=1, MS_PERIODIC_ONGVT=2};
+
+
+
 enum log_modes {
 INVALID_STATE_SAVING, /// Checkpointing interval not yet set
 COPY_STATE_SAVING,    /// Copy State Saving checkpointing interval
@@ -28,7 +32,8 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_period;
 	unsigned int ckpt_collection_period;
 
-	unsigned int ongvt_evt_period;
+	unsigned int ongvt_period;
+	enum ongvt_mode ongvt_mode;
 
 	unsigned char distributed_fetch;
 	unsigned char numa_rebalance;

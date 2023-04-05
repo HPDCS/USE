@@ -104,6 +104,8 @@
 #define OPTIMISTIC_MODE ONE_EVT_PER_LP
 #endif
 
+__thread unsigned int diff_lp = 0;
+__thread simtime_t cur_window;
 
 
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
@@ -194,7 +196,6 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                                                     
 
 
-__thread unsigned int diff_lp = 0;
 
 
 msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
@@ -212,8 +213,6 @@ msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
     return local_next_evt; 
 }
 
-
-__thread simtime_t cur_window;
 
 unsigned int fetch_internal(){
     table *h;
@@ -253,14 +252,8 @@ unsigned int fetch_internal(){
     if(local_gvt < min){
         local_gvt = min;
     }
-    simtime_t cur_gvt = gvt;
-	if (local_gvt > gvt) {
-		__sync_bool_compare_and_swap(
-			UNION_CAST(&(gvt), unsigned long long *),
-			UNION_CAST(cur_gvt,unsigned long long),
-			UNION_CAST(local_gvt, unsigned long long)
-			);
-	}
+
+    update_global_gvt(local_gvt);
         
     while(node != NULL){
         

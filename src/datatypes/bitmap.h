@@ -13,6 +13,7 @@
 #include <strings.h>
 #include <stdlib.h>
 #include <atomic.h>
+#include <assert.h>
 
 
 /**
