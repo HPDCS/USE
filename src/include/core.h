@@ -12,12 +12,10 @@
 #include <numa.h>
 #include <configuration.h>
 
-#define MAX_LPs	4096
 
 #define THR_POOL_SIZE		1024//128
 
 
-#define UNDEFINED_LP (MAX_LPs + 1)
 #define UNDEFINED_WT (512)
 
 #define MODE_SAF	1

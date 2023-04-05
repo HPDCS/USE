@@ -42,6 +42,8 @@
 
 #define n_prc_tot (pdes_config.nprocesses)
 
+extern __thread unsigned int current_lp;
+
 #ifdef INIT
  #undef INIT
 #endif
@@ -103,6 +105,9 @@ typedef double simtime_t;
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
 
+#define MAX_LPs	4096
+#define UNDEFINED_LP (MAX_LPs + 1)
+
 // Topology library
 #define TOPOLOGY_HEXAGON	1000
 #define TOPOLOGY_SQUARE		1001
@@ -111,8 +116,8 @@ typedef double simtime_t;
 #define TOPOLOGY_RING		1004
 #define TOPOLOGY_BIDRING	1005
 unsigned int FindReceiver(int topology);
-
-
+unsigned int GetNeighbourFromDirection(int topology, int direction);
+unsigned int GetDirectionCount(int topology);
 
 // Expose to the application level the command line parameter parsers
 int GetParameterInt(void *args, char *name);
