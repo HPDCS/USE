@@ -7,7 +7,7 @@ option(CSR_CONTEXT "CSR_CONTEXT" OFF)
 add_compile_options( 
 -DEPB=3 
 -DPUB=0.333 
--DPRUNE_PERIOD=500
+-DPRUNE_PERIOD=5000
 )
 
 #scheduling-related options
@@ -26,15 +26,6 @@ add_compile_options(
 #-DREVERSIBLE=0
 #)
 
-if(STATE_SWAPPING)
-add_compile_options(
--DSTATE_SWAPPING=1
-)
-else() 
-add_compile_options(
--DSTATE_SWAPPING=0
-)
-endif()
 
 if(CSR_CONTEXT)
 add_compile_options(
@@ -46,19 +37,11 @@ add_compile_options(
 )
 endif()
 
-if(STATE_SWAPPING AND CSR_CONTEXT)
-add_compile_options(
--DSTATE_SWAPPING=1
--DCSR_CONTEXT=1
-)
-
 add_compile_options(
 -Iidt_patcher/include/
 -Isyscall_table_patcher/include/
 -Itrap-based-user-context/include/ 
 )
-
-endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL  "Debug")
     add_compile_options(
@@ -77,8 +60,6 @@ set(src-core
         core/fetch.c
         core/main.c
         core/numerical.c
-        #core/hpdcs_math.c
-        #core/parseparam.c
         core/local_scheduler.c
         core/local_index/local_index.c
         core/metrics_for_window.c
@@ -91,7 +72,6 @@ set(src-core
         mm/garbagecollector.c)
 
 set(src-datatypes
-        #core/calqueue.c
         datatypes/list.c
 )
 

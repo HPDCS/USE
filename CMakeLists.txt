@@ -33,11 +33,11 @@ add_compile_options(-Wall -Wextra) # -pedantic)
 
 enable_testing()
 
-#IF(CMAKE_BUILD_TYPE MATCHES Debug)
-#  set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/ci/coverage)
-#  include(CodeCoverage)
-#  APPEND_COVERAGE_COMPILER_FLAGS()
-#ENDIF()
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+  set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/ci/coverage)
+  include(CodeCoverage)
+  APPEND_COVERAGE_COMPILER_FLAGS()
+ENDIF()
 
 
 #hardware-related macros
@@ -54,9 +54,9 @@ add_subdirectory(test)
 #add_subdirectory(docs)
 
 
-#IF(CMAKE_BUILD_TYPE MATCHES Debug)
-#SETUP_TARGET_FOR_COVERAGE_LCOV(
-#        NAME coverage                 # New target name
-#        EXECUTABLE ctest -C ${ROOT_DIR}/CTestTestfile.cmake # Executable in PROJECT_BINARY_DIR
-#)
-#ENDIF()
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+SETUP_TARGET_FOR_COVERAGE_LCOV(
+        NAME coverage                 # New target name
+        EXECUTABLE ctest -C ${ROOT_DIR}/CTestTestfile.cmake # Executable in PROJECT_BINARY_DIR
+)
+ENDIF()
