@@ -23,6 +23,9 @@ typedef struct model_parameters{
 	bool check_fading; 
 	bool fading_recheck;
 	bool variable_ta; 
+	unsigned char arrival_d; 
+	unsigned char duration_d; 
+	unsigned char handoff_d; 
 }
 model_parameters;
 
@@ -34,9 +37,12 @@ struct argp_option model_options[] = {
   {"ch",                  1004, "VALUE", 0, "Number of channels per cell"               , 0 },
   {"hot-ch",              1005, "VALUE", 0, "Number of channels per hot cell"               , 0 },
   {"enable-fading",       1006, 0, 0, "Enable fading recheck"               , 0 },
-  {"fading_time",         1009, 0, 0, "Fading time"               , 0 },
   {"enable-variable-ta",  1007, 0, 0, "Enable variable interarrival time"               , 0 },
   {"num-calls",           1008, "VALUE", 0, "Number of calls per cell to end the simulation"               , 0 },
+  {"fading_time",         1009, 0, 0, "Fading time"               , 0 },
+  {"arrival-d",        1010, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"duration-d",        1011, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"handoff-d",        1012, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
@@ -50,6 +56,10 @@ model_parameters args = {
 	.fading_recheck = 0,
 	.fading_recheck_time = 300,
 	.total_calls = 0,
+	.arrival_d = 1, 
+	.duration_d = 1, 
+	.handoff_d = 1, 
+
 };
 
 error_t model_parse_opt(int key, char *arg, struct argp_state *state){
@@ -74,16 +84,25 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 			args.channels_hot = atoi(arg);
 			break;
 		case 1006:
-			args.variable_ta = 1;
+			args.fading_recheck = 1;
 			break;
 		case 1007:
-			args.fading_recheck = 1;
+			args.variable_ta = 1;
 			break;
 		case 1008:
 			args.total_calls = atoi(arg);
 			break;
 		case 1009:
 			args.fading_recheck_time = atoi(arg);
+			break;
+		case 1010:
+			args.arrival_d = atoi(arg);
+			break;
+		case 1011:
+			args.duration_d = atoi(arg);
+			break;
+		case 1012:
+			args.handoff_d = atoi(arg);
 			break;
 
 	}
@@ -182,10 +201,10 @@ TA_HOT         );
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
 
 			// If needed, start the first fading recheck
-			//if (state->fading_recheck) {
+			if (state->fading_recheck) {
 				timestamp = (simtime_t) (state->fading_recheck_time * Random());
 				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
-		//	}
+			}
 
 			break;
 
@@ -207,7 +226,7 @@ TA_HOT         );
 //				printf("(%d) allocation %d at %f\n", me, new_event_content.channel, now);
 
 				// Determine call duration
-				switch (DURATION_DISTRIBUTION) {
+				switch (args.duration_d) {
 
 					case UNIFORM:
 						new_event_content.call_term_time = now + (simtime_t)(state->ta_duration * Random());
@@ -222,7 +241,7 @@ TA_HOT         );
 				}
 
 				// Determine whether the call will be handed-off or not
-				switch (CELL_CHANGE_DISTRIBUTION) {
+				switch (args.handoff_d) {
 
 					case UNIFORM:
 
@@ -251,7 +270,7 @@ TA_HOT         );
 				state->ta = recompute_ta(state->ref_ta, now);
 
 			// Determine the time at which a new call will be issued
-			switch (DISTRIBUTION) {
+			switch (args.arrival_d) {
 
 				case UNIFORM:
 					timestamp= now + (simtime_t)(state->ta * Random());
@@ -310,21 +329,19 @@ TA_HOT         );
 				new_event_content.call_term_time = event_content->call_term_time;
 
 
-				switch (CELL_CHANGE_DISTRIBUTION) {
+				switch (args.handoff_d) {
 					case UNIFORM:
 						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
-
 						break;
 					case EXPONENTIAL:
 						handoff_time = now + (simtime_t)(Expent( state->ta_change ));
-
 						break;
 					default:
 						handoff_time = now+
 						(simtime_t) (5 * Random());
 				}
 
-				if(new_event_content.call_term_time <= handoff_time+state->ta_change*HANDOFF_SHIFT ) {
+				if(new_event_content.call_term_time <= handoff_time+HANDOFF_SHIFT ) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
@@ -337,11 +354,9 @@ TA_HOT         );
 
 
 				case FADING_RECHECK:
-					if(state->check_fading){
 						fading_recheck(state);
 						timestamp = now + state->fading_recheck_time;
 						ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
-					}
 			break;
 
 
