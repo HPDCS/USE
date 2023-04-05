@@ -22,6 +22,7 @@ static char messages[5][256] = {
 };
 
 
+// LCOV_EXCL_START
 
 static int bitmap_test(void)
 {
@@ -76,3 +77,4 @@ int main(void)
 
 	exit(res);
 }
+// LCOV_EXCL_STOP
