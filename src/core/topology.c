@@ -34,7 +34,6 @@ unsigned int GetNeighbourFromDirection(int topology, int direction) {
 	int receiver;
  	double u;
 
-
  	// These must be unsigned. They are not checked for negative (wrong) values,
  	// but they would overflow, and are caught by a different check.
  	unsigned int edge;
@@ -138,6 +137,7 @@ unsigned int GetNeighbourFromDirection(int topology, int direction) {
 			x = current_lp % edge;
 			y = current_lp / edge;
 
+
 			// Sanity check!
 			if(edge * edge != pdes_config.nprocesses) {
 				rootsim_error(true, "Square map wrongly specified!\n");
@@ -151,13 +151,19 @@ unsigned int GetNeighbourFromDirection(int topology, int direction) {
 				break;
 			}
 
+			receiver = direction%4;
+			if (receiver == 4) {
+				receiver = 3;
+			}
+			invalid =false;
+
 			// Find a random neighbour
 			do {
 
-				receiver = direction%4;
-				if(receiver == 4) {
-					receiver = 3;
+				if(invalid) {
+					receiver = (receiver + 1) % 4;
 				}
+				
 
 				switch(receiver) {
 					case N:
@@ -180,6 +186,9 @@ unsigned int GetNeighbourFromDirection(int topology, int direction) {
 						rootsim_error(true, "Met an impossible condition at %s:%d. Aborting...\n", __FILE__, __LINE__);
 				}
 
+				invalid = true;
+				
+				
 			// We don't check is nx < 0 || ny < 0, as they are unsigned and therefore overflow
 			} while(nx >= edge || ny >= edge);
 
