@@ -199,7 +199,7 @@ static inline bool is_marked_for_search(void *pointer, unsigned int research_fla
  *  @return the pointer to the allocated node
  *
  */
-static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned int tie_breaker)
+nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned int tie_breaker)
 {
 	nbc_bucket_node* res;
 	
@@ -228,7 +228,7 @@ static nbc_bucket_node* node_malloc(void *payload, double timestamp, unsigned in
 	return res;
 }
 
-static void node_free(nbc_bucket_node *pointer)
+void node_free(nbc_bucket_node *pointer)
 {
 	mm_node_free(&malloc_status, pointer);
 }
@@ -1193,13 +1193,7 @@ void nbc_prune(void)
 		((struct rootsim_list*)to_remove_local_evts)->size = 0;
 		
 	}	
-
-
 	mm_new_era(&malloc_status, prune_array, threads, TID);
-	
-	
-	
-	
 }
 
 

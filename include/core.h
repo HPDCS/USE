@@ -12,10 +12,14 @@
 #include <nb_calqueue.h>
 #include <numa.h>
 
-#define MAX_LPs	2048
+
+#define MAX_LPs	4096
 
 #define THR_POOL_SIZE		1024//128
 
+
+#define UNDEFINED_LP (MAX_LPs + 1)
+#define UNDEFINED_WT (512)
 
 #define MODE_SAF	1
 #define MODE_STM	2
@@ -101,6 +105,8 @@ extern __thread unsigned int commit_horizon_tb;
 extern __thread struct __bucket_node *current_node;
 extern __thread unsigned int current_numa_node;
 extern __thread unsigned int current_cpu;
+extern __thread int __event_from;
+
 
 extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
@@ -119,6 +125,7 @@ extern unsigned int sec_stop;
 /* Number of numa nodes on the current machine */
 extern unsigned int num_numa_nodes;
 extern bool numa_available_bool;
+
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);

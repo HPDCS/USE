@@ -1,5 +1,11 @@
+data/
+figures/
 results*
-
+include-gen
+cache-db
+debug-*
+original-*
+*.db
 # Object files
 *.o
 *.ko

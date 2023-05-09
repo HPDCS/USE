@@ -3,7 +3,7 @@
 CC=gcc
 #FLAGS=-g -Wall -pthread -lm
 
-CFLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O3
+CFLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm 
 
 #-DCACHE_LINE_SIZE="getconf LEVEL1_DCACHE_LINESIZE"
 
@@ -11,14 +11,37 @@ CFLAGS= -DARCH_X86_64 -g3 -Wall -Wextra -mrtm -O3
 CFLAGS:=$(CFLAGS) -DCACHE_LINE_SIZE=$(shell getconf LEVEL1_DCACHE_LINESIZE) -DN_CPU=$(shell grep -c ^processor /proc/cpuinfo)
 #-DNUM_NUMA_NODES=$(shell lscpu | grep 'NUMA node(s)' | head -1 | awk '{print $3}')
 
-INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes
+INCLUDE=-Iinclude/ -Imm/ -Icore/ -Istatistics/ -Ireverse/ -Idatatypes -Iinclude-gen
 LIBS=-pthread -lm -lnuma
 ARCH_X86=1
 ARCH_X86_64=1
 
 
 ifdef ENFORCE_LOCALITY
-CFLAGS:=$(CFLAGS) -DENFORCE_LOCALITY=1
+CFLAGS:=$(CFLAGS) -DENFORCE_LOCALITY=$(ENFORCE_LOCALITY)
+  ifdef ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF
+  CFLAGS:=$(CFLAGS) -DENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=$(ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF)
+  else
+  CFLAGS:=$(CFLAGS) -DENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=1
+  endif
+else
+CFLAGS:=$(CFLAGS) -DENFORCE_LOCALITY=0	
+CFLAGS:=$(CFLAGS) -DENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0
+endif
+
+
+ifdef START_WINDOW
+CFLAGS:=$(CFLAGS) -DSTART_WINDOW=$(START_WINDOW)
+else
+CFLAGS:=$(CFLAGS) -DSTART_WINDOW=0.4
+endif
+
+ifdef CURRENT_BINDING_SIZE
+CFLAGS:=$(CFLAGS) -DCURRENT_BINDING_SIZE=$(CURRENT_BINDING_SIZE)
+endif
+
+ifdef EVICTED_BINDING_SIZE
+CFLAGS:=$(CFLAGS) -DEVICTED_BINDING_SIZE=$(EVICTED_BINDING_SIZE)
 endif
 
 ifdef MAX_SKIPPED_LP
@@ -76,7 +99,7 @@ endif
 ifdef DEBUG
 CFLAGS:= $(CFLAGS) -DDEBUG=$(DEBUG)
 else
-CFLAGS:= $(CFLAGS) -DDEBUG=0 -DNDEBUG
+CFLAGS:= $(CFLAGS) -DDEBUG=0 -DNDEBUG -O3
 endif
 
 ifdef REPORT
@@ -165,6 +188,10 @@ ifdef LOOP_COUNT
 CFLAGS:= $(CFLAGS) -DLOOP_COUNT=$(LOOP_COUNT)
 endif
 
+ifdef LOOP_COUNT_US
+CFLAGS:= $(CFLAGS) -DLOOP_COUNT_US=$(LOOP_COUNT_US)
+endif
+
 #TCAR
 ifdef NUM_CELLE_OCCUPATE
 CFLAGS:= $(CFLAGS) -DNUM_CELLE_OCCUPATE=$(NUM_CELLE_OCCUPATE)
@@ -251,6 +278,8 @@ ROBOT_EXPLORE_SOURCES=model/robot_explore/application.c\
 		    model/robot_explore/neighbours.c
 
 
+NOSQL_SOURCES=model/nosql/application.c
+
 TARGET=phold
 
 CORE_SOURCES =  core/core.c\
@@ -264,6 +293,9 @@ CORE_SOURCES =  core/core.c\
 		core/numerical.c\
 		core/hpdcs_math.c\
 		core/parseparam.c\
+		core/local_scheduler.c\
+		core/local_index/local_index.c\
+		core/metrics_for_window.c\
 		statistics/statistics.c\
 		mm/garbagecollector.c
 
@@ -291,6 +323,7 @@ PHOLD_OBJ=$(PHOLD_SOURCES:.c=.o)
 PHOLDCOUNT_OBJ=$(PHOLDCOUNT_SOURCES:.c=.o)
 PHOLDHOTSPOT_OBJ=$(PHOLDHOTSPOT_SOURCES:.c=.o)
 HASH_OBJ=$(HASH_SOURCES:.c=.o)
+NOSQL_OBJ=$(NOSQL_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
 
@@ -323,8 +356,13 @@ robot_explore: clean _robot_explore executable
 hash: TARGET=hash 
 hash: clean _hash executable
 
-executable: mm core reverse link
 
+nosql: TARGET=nosql 
+nosql: clean _nosql executable
+
+executable: cache_conf mm core reverse link
+
+config: cache_conf
 
 link:
 ifeq ($(REVERSIBLE),1)
@@ -354,6 +392,29 @@ mm: $(MM_OBJ)
 
 core: $(CORE_OBJ)
 	@ld -r -g $(CORE_OBJ) -o core/__core.o
+
+cache_conf: include-gen build_scripts/cache.db include-gen/hpipe.h include-gen/clock_constant.h
+
+
+
+include-gen:
+	mkdir include-gen
+	@echo include-gen folder created
+
+include-gen/clock_constant.h:
+	cd build_scripts; ./gen_clock_header.sh; mv clock_constant.h ../include-gen
+
+
+include-gen/hpipe.h:
+	cd build_scripts; python3 build_cache_map.py cache.db > hpipe.h; mv hpipe.h ../include-gen
+	echo hpipe generated
+
+
+build_scripts/cache.db:
+	cd build_scripts; ./get_cache_data.sh	; cd ..;
+	echo cache.db generated
+
+
 
 reverse: $(REVERSE_OBJ)
 	@ld -r -g $(REVERSE_OBJ) -o reverse/__reverse.o
@@ -389,6 +450,10 @@ _traffic: $(TRAFFIC_OBJ)
 
 _robot_explore: $(ROBOT_EXPLORE_OBJ)
 	@ld -r -g $(ROBOT_EXPLORE_OBJ) -o model/__application.o
+
+_nosql: $(NOSQL_OBJ)
+	@ld -r -g $(NOSQL_OBJ) -o model/__application.o
+
 	
 
 
@@ -404,3 +469,11 @@ clean:
 	@find . -type f -name "pholdhotspot"  -exec rm {} \;
 	@find . -type f -name "robot_explore" -exec rm {} \;
 	@find . -type f -name "hash" 		  -exec rm {} \;
+
+clean-config:
+	-rm include-gen -r
+
+
+.PHONY: clean clean-config
+
+

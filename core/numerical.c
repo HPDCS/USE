@@ -335,6 +335,7 @@ static void load_seed(void) {
 	seed_type new_seed;
 	char conf_file[512];
 	FILE *fp;
+	int read_bytes=0;
 
 	// Get the path to the configuration file
 	sprintf(conf_file, "%s/.rootsim/numerical.conf", getenv("HOME"));
@@ -359,7 +360,10 @@ static void load_seed(void) {
 			rootsim_error(true, "Unable to initialize the numerical library configuration file %s. Aborting...", conf_file);
 
 		}
-		read(fd, &new_seed, sizeof(seed_type));
+		read_bytes = read(fd, &new_seed, sizeof(seed_type));
+		if(read_bytes != sizeof(seed_type))
+			rootsim_error(true, "Unable to read from urandom");
+
 		close(fd);
 		fprintf(fp, "%llu\n", (unsigned long long)new_seed); // We cast, so that we get an integer representing just a bit sequence
 		fclose(fp);

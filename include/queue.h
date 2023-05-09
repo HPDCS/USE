@@ -3,27 +3,7 @@
 
 #include <stdbool.h>
 #include "nb_calqueue.h"
-
-#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
-#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //can be replaced by an atomic write
-#define haveLock(lp)				((lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1))
-#define checkLock(lp)				(lp_lock[lp*CACHE_LINE_SIZE/4])
-
-
-//#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1ULL << (lp%64)) )
-#define add_lp_unsafe_set(lp) 		(lp_unsafe_set_debug[lp]=1ULL)
-//#define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1ULL << (lp%64)) )
-#define is_in_lp_unsafe_set(lp)		( lp_unsafe_set_debug[lp]==1ULL )
-//#define clear_lp_unsafe_set		{unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
-#define clear_lp_unsafe_set         {unsigned int x; for(x = 0; x < (n_prc_tot) ; x++){lp_unsafe_set_debug[x] = 0;}}
-
-
-#define clear_lp_locked_set			{ unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_locked_set[x] = 0;}}
-#define add_lp_locked_set(lp) 		( lp_locked_set[lp/64] |= (1ULL << (lp%64)) )
-#define is_in_lp_locked_set(lp)		( lp_locked_set[lp/64]  & (1ULL << (lp%64)) )
-
-#define queue_pool_size _thr_pool._thr_pool_count;
-
+#include "hpdcs_utils.h"
 
 typedef struct __msg_t msg_t;
 
@@ -67,5 +47,41 @@ extern __thread unsigned int unsafe_events;
 extern __thread list(msg_t) to_remove_local_evts;
 extern __thread list(msg_t) to_remove_local_evts_old;
 extern __thread list(msg_t) freed_local_evts;
+
+
+#define haveLock(lp)				((lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1))
+#define checkLock(lp)				(lp_lock[lp*CACHE_LINE_SIZE/4])
+
+#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
+
+#if ENFORCE_LOCALITY == 0
+#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //can be replaced by an atomic write
+#endif
+
+
+#if ENFORCE_LOCALITY == 1
+static inline bool unlock(unsigned int lp){
+ #if DEBUG == 1
+  assertf(lp == UNDEFINED_LP, "trying to unlock an undefined LP%s", "\n");
+  assertf(!haveLock(lp), "trying to unlock without own lock %s", "\n");
+ #endif
+  return LPS[lp]->wt_binding == tid || __sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0); 
+}					 //can be replaced by an atomic write
+#endif
+
+
+//#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1ULL << (lp%64)) )
+#define add_lp_unsafe_set(lp) 		(lp_unsafe_set_debug[lp]=1ULL)
+//#define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1ULL << (lp%64)) )
+#define is_in_lp_unsafe_set(lp)		( lp_unsafe_set_debug[lp]==1ULL )
+//#define clear_lp_unsafe_set		{unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
+#define clear_lp_unsafe_set         {unsigned int x; for(x = 0; x < (n_prc_tot) ; x++){lp_unsafe_set_debug[x] = 0;}}
+
+
+#define clear_lp_locked_set			{ unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_locked_set[x] = 0;}}
+#define add_lp_locked_set(lp) 		( lp_locked_set[lp/64] |= (1ULL << (lp%64)) )
+#define is_in_lp_locked_set(lp)		( lp_locked_set[lp/64]  & (1ULL << (lp%64)) )
+
+#define queue_pool_size _thr_pool._thr_pool_count;
 
 #endif

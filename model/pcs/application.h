@@ -11,16 +11,24 @@
 #define CHECK_FADING_TIME	10
 #define COMPLETE_CALLS		5000
 #ifndef TA
-#define TA			0.16
+#define TA			0.4
 #endif
 #define TA_DURATION		120
 //#define TA_DURATION		60
+
+#ifndef CHANNELS_PER_CELL
 #define CHANNELS_PER_CELL	1000
+#endif
+
+#ifndef TA_CHANGE
 #define TA_CHANGE		300.0
+#endif
 //#define TA_CHANGE		75.0//150.0
 
 #define	CELL_CHANGE_DISTRIBUTION	EXPONENTIAL
 #define DURATION_DISTRIBUTION		EXPONENTIAL
+
+#define HANDOFF_SHIFT 0.000001
 
 
 /* Channel states */

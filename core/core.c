@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <pthread.h>
-#include <string.h>
+//#include <string.h>
 //#include <immintrin.h> //hardware transactional support
 #include <stdarg.h>
 #include <dirent.h>
@@ -33,6 +33,13 @@
 #include <prints.h>
 #include <utmpx.h>
 
+#if ENFORCE_LOCALITY == 1
+#include "local_index/local_index.h"
+#include "local_scheduler.h"
+#include "metrics_for_window.h"
+#include "clock_constant.h"
+#endif
+#include "metrics_for_window.h"
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
@@ -59,6 +66,9 @@ __thread unsigned int check_ongvt_period = 0;
 
 __thread unsigned int current_numa_node;
 __thread unsigned int current_cpu;
+
+
+__thread int __event_from = 0;
 
 //__thread simtime_t 		commit_horizon_ts = 0;
 //__thread unsigned int 	commit_horizon_tb = 0;
@@ -154,7 +164,7 @@ void _mkdir(const char *path) {
 	char *p;
 	size_t len;
 
-	strncpy(opath, path, sizeof(opath));
+	strncpy(opath, path, MAX_PATHLEN-1);
 	len = strlen(opath);
 	if (opath[len - 1] == '/')
 		opath[len - 1] = '\0';
@@ -214,7 +224,7 @@ void set_affinity(unsigned int tid){
 	
 	CPU_ZERO(&mask);
 	CPU_SET(current_cpu, &mask);
-	int err = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));
 		exit(-1);
@@ -292,6 +302,10 @@ void LPs_metada_init() {
 		LPS[i]->epoch 					= 1;
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
+	  #if ENFORCE_LOCALITY == 1
+		bzero(&LPS[i]->local_index, sizeof(LPS[i]->local_index));
+		LPS[i]->wt_binding = UNDEFINED_WT;
+	  #endif
 
 	}
 	
@@ -431,30 +445,33 @@ void init_simulation(unsigned int thread_id){
 		nodes_init();
 		//process_init_event
 		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
-       		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
-       		current_msg->sender_id 		= -1;//
-       		current_msg->receiver_id 	= current_lp;//
-       		current_msg->timestamp 		= 0.0;//
-       		current_msg->type 			= INIT;//
-       		current_msg->state 			= 0x0;//
-       		current_msg->father 		= NULL;//
-       		current_msg->epoch 		= LPS[current_lp]->epoch;//
-       		current_msg->monitor 		= 0x0;//
-			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
-			ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
-			queue_deliver_msgs();
-			LPS[current_lp]->bound = current_msg;
-			LPS[current_lp]->num_executed_frames++;
-			LPS[current_lp]->state_log_forced = true;
-			LogState(current_lp);
-			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
-			LPS[current_lp]->state_log_forced = false;
-			LPS[current_lp]->until_ongvt = 0;
-			LPS[current_lp]->until_ckpt_recalc = 0;
-			LPS[current_lp]->ckpt_period = 20;
-			//LPS[current_lp]->epoch = 1;
+     		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+     		current_msg->sender_id 		= -1;//
+     		current_msg->receiver_id 	= current_lp;//
+     		current_msg->timestamp 		= 0.0;//
+     		current_msg->type 			= INIT;//
+     		current_msg->state 			= 0x0;//
+     		current_msg->father 		= NULL;//
+     		current_msg->epoch 		= LPS[current_lp]->epoch;//
+     		current_msg->monitor 		= 0x0;//
+				list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
+				ProcessEvent(current_lp, 0, INIT, NULL, 0, LPS[current_lp]->current_base_pointer); //current_lp = i;
+				queue_deliver_msgs();
+				LPS[current_lp]->bound = current_msg;
+				LPS[current_lp]->num_executed_frames++;
+				LPS[current_lp]->state_log_forced = true;
+				LogState(current_lp);
+				((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
+				LPS[current_lp]->state_log_forced = false;
+				LPS[current_lp]->until_ongvt = 0;
+				LPS[current_lp]->until_ckpt_recalc = 0;
+				LPS[current_lp]->ckpt_period = 20;
+				//LPS[current_lp]->epoch = 1;
 		}
-
+              #if ENFORCE_LOCALITY==1
+		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
+		init_metrics_for_window();
+              #endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -473,9 +490,12 @@ void init_simulation(unsigned int thread_id){
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
-	
 	// Set the CPU affinity
 	set_affinity(tid);
+  #if ENFORCE_LOCALITY == 1
+	local_binding_init();
+  #endif
+	
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
@@ -501,6 +521,7 @@ stat64_t execute_time;
 		clock_timer_start(event_processing_timer);
 #endif
 
+
 		ProcessEvent(LP, event_ts, event_type, event_data, event_data_size, lp_state);
 
 #if REPORT == 1
@@ -513,6 +534,7 @@ stat64_t execute_time;
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
 		}
 #endif
+
 
 #if REVERSIBLE == 1
 	}
@@ -559,6 +581,14 @@ void thread_loop(unsigned int thread_id) {
 		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
 		clock_timer_start(fetch_timer);
 #endif
+	__event_from = 0;
+#if ENFORCE_LOCALITY == 1
+
+		if(check_window() && local_fetch() != 0){ //if window_size > 0 try local_fetch
+
+		} else  
+#endif
+		
 		if(fetch_internal() == 0) {
 #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
@@ -572,6 +602,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 			goto end_loop;
 		}
+
 #if ONGVT_PERIOD != -1
 		empty_fetch = 0;
 #endif
@@ -584,6 +615,17 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+#if DEBUG == 1
+		assertf(current_evt_state == ELIMINATED, "got eliminatated message %p\n", current_msg);
+		assertf(current_evt_state == NEW_EVT,    "got new_evt message %p\n", current_msg);
+#endif
+
+		if(__event_from == 2) statistics_post_th_data(tid, STAT_EVT_FROM_LOCAL_FETCH, 1);
+		if(__event_from == 1) statistics_post_th_data(tid, STAT_EVT_FROM_GLOBAL_FETCH, 1);
+  #if ENFORCE_LOCALITY == 1
+		local_binding_push(current_lp);
+  #endif
 		
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
@@ -596,7 +638,7 @@ void thread_loop(unsigned int thread_id) {
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Executing without lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
-		if(current_cpu != sched_getcpu()){
+		if(current_cpu != ((unsigned int)sched_getcpu())){
 			printf("[%u] Current cpu changed form %u to %u\n", tid, current_cpu, sched_getcpu());
 		}
 	#endif
@@ -615,8 +657,10 @@ void thread_loop(unsigned int thread_id) {
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
 		// fire a rollback procedure.
-		if(current_lvt < LPS[current_lp]->current_LP_lvt || 
-			(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
+		if(
+			BEFORE_OR_CONCURRENT(current_msg, LPS[current_lp]->bound)
+			//current_lvt < LPS[current_lp]->current_LP_lvt || 
+			//(current_lvt == LPS[current_lp]->current_LP_lvt && current_msg->tie_breaker <= LPS[current_lp]->bound->tie_breaker)
 			) {
 
 	#if DEBUG == 1
@@ -626,7 +670,7 @@ void thread_loop(unsigned int thread_id) {
 				}
 				printf(RED("Received multiple time the same event that is not an anti one\n!!!!!"));
 				print_event(current_msg);
-				//gdb_abort;
+				gdb_abort;
 			}
 	#endif
 			old_state = LPS[current_lp]->state;
@@ -687,6 +731,7 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 			list_place_after_given_node_by_content(current_lp, LPS[current_lp]->queue_in, current_msg, LPS[current_lp]->bound);
 	#if DEBUG == 1
+			if(BEFORE(current_msg, LPS[current_lp]->bound)){		printf("added event < bound after bound\n");    gdb_abort;}    
 			if(list_next(current_msg) != next_t){					printf("list_next(current_msg) != next_t\n");	gdb_abort;}
 			if(list_prev(current_msg) != bound_t){					printf("list_prev(current_msg) != bound_t\n");	gdb_abort;}
 			if(list_next(bound_t) != current_msg){					printf("list_next(bound_t) != current_msg\n");	gdb_abort;}
@@ -752,7 +797,6 @@ void thread_loop(unsigned int thread_id) {
 			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
 		}
 		
-
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
@@ -770,6 +814,14 @@ void thread_loop(unsigned int thread_id) {
 		if(safe) {
 			commit_event(current_msg, current_node, current_lp);
 		}
+
+
+//#if ENFORCE_LOCALITY == 1		
+		//check if elapsed time since fetching an event is large enough to start computing stats
+		aggregate_metrics_for_window_management(&w);
+		 		
+		
+//#endif
 
 #if REPORT == 1
 		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
@@ -799,7 +851,7 @@ end_loop:
 		
 		//LOCAL LISTS PRUNING
 		nbc_prune();
-		
+
 		//PRINT REPORT
 #if VERBOSE > 0
 		if(tid == MAIN_PROCESS) {
@@ -819,6 +871,9 @@ end_loop:
 #endif
 
 
+#if ENFORCE_LOCALITY == 1
+	printf("Last window for %d is %f\n", tid, get_current_window());
+#endif
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();

@@ -45,6 +45,8 @@
 #define STAT_EVENT_FETCHED_SUCC     110        /// Number of events fetched
 #define STAT_EVENT_FETCHED_UNSUCC   111        /// Number of fetch failed
 #define STAT_GET_NEXT_FETCH			112		   /// Number of nodes seen during fetch
+#define STAT_EVT_FROM_GLOBAL_FETCH  114        /// Number of events got from global index
+#define STAT_EVT_FROM_LOCAL_FETCH   115        /// Number of events got from local index
 
 #define STAT_CLOCK_EVENT            200        /// Average time to execute one event
 #define STAT_CLOCK_ROLLBACK         201        /// Average time to execute one rollback
@@ -96,6 +98,8 @@ struct stats_t {
     stat64_t events_undo;
     stat64_t events_anti;
     stat64_t events_get_next_fetch;
+    stat64_t events_from_global_index;
+    stat64_t events_from_local_index;
 
     stat64_t counter_rollbacks;
     stat64_t counter_rollbacks_length;
