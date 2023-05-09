@@ -12,7 +12,7 @@
 
 typedef struct _init_t init_t;
 
-void guy_init(void);
+void guy_init(region_t *region);
 void guy_on_init(init_t *init_data, region_t *region);
 
 #endif /* MODELS_TUBERCOLOSIS_GUY_INIT_H_ */
