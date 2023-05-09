@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MAX_THREADS=$(lscpu | grep "CPU(s)" | head -n1 | cut -f2 -d':' | sed -e 's/ //g')     #maximum number of threads, which is typically equal to the number of (logical) cores.
+MAX_THREADS=$( cat /proc/cpuinfo | grep processor | wc -l)     #maximum number of threads, which is typically equal to the number of (logical) cores.
 QUARTER=$(($MAX_THREADS/4))
 
 
@@ -15,3 +15,4 @@ for i in ${THREAD_list}; do
 done
 echo "\"" >> thread.conf
 
+BIN_PATH="use-release/test"
