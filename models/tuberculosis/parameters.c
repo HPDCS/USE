@@ -7,12 +7,6 @@
 
 #include "parameters.h"
 
-/* Initial values */
-const unsigned num_healthy = 1529469;
-const unsigned num_infected = 68491;
-const unsigned num_sick = 39;
-const unsigned num_treatment = 161;
-const unsigned num_treated = 1840;
 
 /* Defines age_groups considered: 0-4, 5-14, ...*/
 const unsigned age_groups[AGE_GROUPS] = {0, 5, 15, 25, 35, 45, 55, 65, 75, 85, 90};
