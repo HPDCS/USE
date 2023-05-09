@@ -12,6 +12,7 @@ add_compile_options(
 
 #scheduling-related options
 add_compile_options( 
+-DOPTIMISTIC_MODE=1
 -DMAX_SKIPPED_LP=100000 
 )
 
