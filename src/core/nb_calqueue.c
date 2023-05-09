@@ -42,7 +42,7 @@
 #include "queue.h"
 #include "prints.h"
 #include "timer.h"
-
+#include <state_swapping.h>
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
@@ -1139,7 +1139,8 @@ void nbc_prune(void)
 	
 	nbc_bucket_node  *tmp, *tmp_next;
 	unsigned int counter;
-	
+	clock_timer prune_timer;
+    clock_timer_start(prune_timer);
 	
 	if(!mm_safe(prune_array, threads, TID))
 		return;
@@ -1169,11 +1170,9 @@ void nbc_prune(void)
 
 	to_free_tables_old = to_free_tables_new;
 	to_free_tables_new = NULL;
-	
 
-	
 	//prune events nodes 
-	prune_local_queue_with_ts(local_gvt);
+	  prune_local_queue_with_ts(local_gvt);
 	
 	if(((rootsim_list*)to_remove_local_evts)->head != NULL){
 		struct rootsim_list_node* old_tail = ((struct rootsim_list*)to_remove_local_evts_old)->tail;
@@ -1194,6 +1193,10 @@ void nbc_prune(void)
 		
 	}	
 	mm_new_era(&malloc_status, prune_array, threads, TID);
+    
+    
+    statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(prune_timer));
+	statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
 }
 
 

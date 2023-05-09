@@ -5,6 +5,8 @@
 #include "nb_calqueue.h"
 #include "hpdcs_utils.h"
 
+#include <lp_lock.h>
+
 typedef struct __msg_t msg_t;
 
 typedef struct __temp_thread_pool {
@@ -39,7 +41,6 @@ extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
 extern __thread bool  safe;
 extern __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
-extern volatile unsigned int *lp_lock;
 extern __thread unsigned long long * lp_unsafe_set;
 extern __thread unsigned long long * lp_unsafe_set_debug;
 extern __thread unsigned long long * lp_locked_set;
@@ -47,27 +48,6 @@ extern __thread unsigned int unsafe_events;
 extern __thread list(msg_t) to_remove_local_evts;
 extern __thread list(msg_t) to_remove_local_evts_old;
 extern __thread list(msg_t) freed_local_evts;
-
-
-#define haveLock(lp)				((lp_lock[lp*CACHE_LINE_SIZE/4]) == (tid+1))
-#define checkLock(lp)				(lp_lock[lp*CACHE_LINE_SIZE/4])
-
-#define tryLock(lp)					( (lp_lock[lp*CACHE_LINE_SIZE/4]==0) && (__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], 0, tid+1)) )
-
-#if ENFORCE_LOCALITY == 0
-#define unlock(lp)					__sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0) //can be replaced by an atomic write
-#endif
-
-
-#if ENFORCE_LOCALITY == 1
-static inline bool unlock(unsigned int lp){
- #if DEBUG == 1
-  assertf(lp == UNDEFINED_LP, "trying to unlock an undefined LP%s", "\n");
-  assertf(!haveLock(lp), "trying to unlock without own lock %s", "\n");
- #endif
-  return LPS[lp]->wt_binding == tid || __sync_bool_compare_and_swap(&lp_lock[lp*CACHE_LINE_SIZE/4], tid+1, 0); 
-}					 //can be replaced by an atomic write
-#endif
 
 
 //#define add_lp_unsafe_set(lp)		( lp_unsafe_set[lp/64] |= (1ULL << (lp%64)) )

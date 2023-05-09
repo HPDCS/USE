@@ -36,6 +36,7 @@
 
 #include <numa_migration_support.h>
 #include "metrics_for_lp_migration.h"
+#include <gvt.h>
 
 #if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
@@ -45,13 +46,16 @@
 #endif
 #include "metrics_for_window.h"
 
+#if STATE_SWAPPING == 1
+#include "state_swapping.h"
+#endif
+
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
 
 #define MAX_PATHLEN			512
 
 
-__thread simtime_t local_gvt = 0;
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -101,8 +105,6 @@ unsigned int n_cores;
 /* Total number of logical processes running in the simulation */
 unsigned int n_prc_tot;
 
-/* Commit horizon TODO */
- simtime_t gvt = 0;
 /* Average time between consecutive events */
 simtime_t t_btw_evts = 0.1;
 
@@ -124,6 +126,7 @@ unsigned int num_numa_nodes;
 bool numa_available_bool;
 unsigned int rounds_before_unbalance_check; /// number of window management rounds before numa unbalance check
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
+
 
 size_t node_size_msg_t;
 size_t node_size_state_t;
@@ -156,6 +159,8 @@ void rootsim_error(bool fatal, const char *msg, ...) {
 		// Notify all KLT to shut down the simulation
 		sim_error = true;
 	}
+    assert(0);
+    
 }
 
 /**
@@ -352,7 +357,7 @@ void numa_init(){
 
 	if (num_numa_nodes > 1) {
 
-	    for (int i=0; i < num_numa_nodes; i++) {
+	    for (unsigned int i=0; i < num_numa_nodes; i++) {
 	            numa_mask[i] = numa_allocate_cpumask();
 	            numa_node_to_cpus(i, numa_mask[i]);
 	    }
@@ -361,7 +366,7 @@ void numa_init(){
 	/// set a global array in which are set the cpus on the same numa node
 	/// indexed from 0 to cpu_per_node and from cpu_per_node to N_CPU-1
 	int insert_idx = 0;
-	for (int j=0; j < num_numa_nodes; j++) {
+	for (unsigned int j=0; j < num_numa_nodes; j++) {
 		for (int k=0; k < N_CPU; k++) {
 			if (num_numa_nodes ==1 || numa_bitmask_isbitset(numa_mask[j], k)) {
 				cores_on_numa[insert_idx] = k; 
@@ -424,17 +429,19 @@ void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int e
 //#define print_event(event)	printf("   [LP:%u->%u]: TS:%f TB:%u EP:%u IS_VAL:%u \t\tEvt.ptr:%p Node.ptr:%p\n",event->sender_id, event->receiver_id, event->timestamp, event->tie_breaker, event->epoch, is_valid(event),event, event->node);
 
 
-void check_OnGVT(unsigned int lp_idx){
+void check_OnGVT(unsigned int lp_idx, simtime_t ts, unsigned int tb){
 	unsigned int old_state;
 	current_lp = lp_idx;
 	LPS[lp_idx]->until_ongvt = 0;
 	
-	if(!is_end_sim(lp_idx)){
+	//if(!is_end_sim(lp_idx))
+    {
 		//Restore state on the commit_horizon
 		old_state = LPS[lp_idx]->state;
 		LPS[lp_idx]->state = LP_STATE_ONGVT;
-		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, commit_horizon_ts);
-		rollback(lp_idx, LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
+		//printf("%d- BUILD STATE FOR %d TIMES GVT START LVT:%f commit_horizon:%f\n", current_lp, LPS[current_lp]->until_ongvt, LPS[current_lp]->current_LP_lvt, LPS[current_lp]->commit_horizon_ts);
+		rollback(lp_idx, ts, tb);
+        //statistics_post_lp_data(lp_idx, STAT_ROLLBACK, 1);
 		//printf("%d- BUILD STATE FOR %d TIMES GVT END\n", current_lp );
 		
 		//printf("[%u]ONGVT LP:%u TS:%f TB:%llu\n", tid, lp_idx,LPS[lp_idx]->commit_horizon_ts, LPS[lp_idx]->commit_horizon_tb);
@@ -446,6 +453,7 @@ void check_OnGVT(unsigned int lp_idx){
 		// Restore state on the bound
 		LPS[lp_idx]->state = LP_STATE_ROLLBACK;
 		//printf("%d- BUILD STATE AFTER GVT START LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
+        //statistics_post_lp_data(lp_idx, STAT_ROLLBACK, 1);
 		rollback(lp_idx, INFTY, UINT_MAX);
 		//printf("%d- BUILD STATE AFTER GVT END LVT:%f\n", current_lp, LPS[current_lp]->current_LP_lvt );
 		LPS[lp_idx]->state = old_state;
@@ -453,6 +461,8 @@ void check_OnGVT(unsigned int lp_idx){
 		statistics_post_lp_data(lp_idx, STAT_ONGVT, 1);
 	}
 }
+
+
 
 void round_check_OnGVT(){
 	unsigned int start_from = (n_prc_tot / n_cores) * tid;
@@ -469,7 +479,7 @@ void round_check_OnGVT(){
 				if(LPS[curent_ck]->commit_horizon_ts>0){
 //					printf("[%u]ROUND ONGVT LP:%u TS:%f TB:%llu\n", tid, curent_ck,LPS[curent_ck]->commit_horizon_ts, LPS[curent_ck]->commit_horizon_tb);
 	
-					check_OnGVT(curent_ck);
+					check_OnGVT(curent_ck, LPS[curent_ck]->commit_horizon_ts, LPS[curent_ck]->commit_horizon_tb);
 				}
 				unlock(curent_ck);
 				break;
@@ -480,6 +490,8 @@ void round_check_OnGVT(){
 }
 
 void init_simulation(unsigned int thread_id){
+    clock_timer init_timer;
+    clock_timer_start(init_timer);
 	tid = thread_id;
 	int i = 0;
 	
@@ -535,14 +547,18 @@ void init_simulation(unsigned int thread_id){
 				LPS[current_lp]->state_log_forced = false;
 				LPS[current_lp]->until_ongvt = 0;
 				LPS[current_lp]->until_ckpt_recalc = 0;
-				LPS[current_lp]->ckpt_period = 20;
+				//LPS[current_lp]->ckpt_period = 20;
 				//LPS[current_lp]->epoch = 1;
 		}
 
-              #if ENFORCE_LOCALITY==1
+  #if ENFORCE_LOCALITY==1
 		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
 		init_metrics_for_window();
-              #endif
+  #endif
+	#if STATE_SWAPPING == 1
+	  state_swap_ptr = alloc_state_swapping_struct();
+	  pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
+	#endif
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -558,15 +574,21 @@ void init_simulation(unsigned int thread_id){
 	    }
 	}
 	
+	// Set the CPU affinity
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
 	while(ready_wt!=n_cores);
-	// Set the CPU affinity
-	set_affinity(tid);
-  #if ENFORCE_LOCALITY == 1
+#if ENFORCE_LOCALITY == 1
 	local_binding_init();
-  #endif
-	
+#endif
+  set_affinity(tid);
+
+#if STATE_SWAPPING == 1
+	usleep(10);
+	init_thread_csr_state();
+#endif	
+
+    statistics_post_th_data(tid, STAT_INIT_CLOCKS, clock_timer_value(init_timer));
 }
 
 void executeEvent(unsigned int LP, simtime_t event_ts, unsigned int event_type, void * event_data, unsigned int event_data_size, void * lp_state, bool safety, msg_t * event){
@@ -655,7 +677,29 @@ void thread_loop(unsigned int thread_id) {
 				) 
 				&& !sim_error
 		) {
-		
+
+#if STATE_SWAPPING == 1
+
+		/// set global gvt variable
+		update_global_gvt(local_gvt);
+
+
+  #if CSR_CONTEXT == 0
+		/// check the flag for sync output collection
+		if (state_swap_ptr->state_swap_flag) {
+		  #if VERBOSE == 1
+			printf("committed state reconstruction operation\n");
+		  #endif
+			csr_routine();
+		}
+  #endif
+  #if STATE_SWAPPING == 1
+		print_state_swapping_struct_metrics();
+  #endif
+
+
+#endif
+
 		///* FETCH *///
 #if REPORT == 1
 		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
@@ -675,7 +719,7 @@ void thread_loop(unsigned int thread_id) {
 			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
 #endif
 
-#if ONGVT_PERIOD != -1
+#if ONGVT_PERIOD != -1 && SWAPPING_STATE != 1
 			if(++empty_fetch > 500){
 				round_check_OnGVT();
 			}
@@ -774,7 +818,7 @@ void thread_loop(unsigned int thread_id) {
 			
 			LPS[current_lp]->state = old_state;
 
-			statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
+			//statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
 			if(current_evt_state != ANTI_MSG) {
 				statistics_post_lp_data(current_lp, STAT_EVENT_STRAGGLER, 1);
 			}
@@ -829,7 +873,8 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 		// Take a simulation state snapshot, in some way
-		LogState(current_lp);
+		if(n_cores > 1)
+            LogState(current_lp);
 		
 #if DEBUG == 1
 		if((unsigned long long)current_msg->node & 0x1){
@@ -857,6 +902,7 @@ void thread_loop(unsigned int thread_id) {
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
 		
+#if ONGVT_PERIOD != -1 && SWAPPING_STATE == 0
 		///* ON_GVT *///
 		if(safe) {
 			if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
@@ -865,24 +911,30 @@ void thread_loop(unsigned int thread_id) {
 			}
 			LPS[current_lp]->until_ongvt = 0;
 		}
-#if ONGVT_PERIOD != -1
 		else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
-			check_OnGVT(current_lp);	
+			check_OnGVT(current_lp, LPS[current_lp]->commit_horizon_ts, LPS[current_lp]->commit_horizon_tb);	
 		}
 #endif	
-		
+    
 		if((++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0)/* && safe*/){
-			clean_checkpoint(current_lp, LPS[current_lp]->commit_horizon_ts);
-			//ATTENTION: We should take care of the tie_breaker?
-			clean_buffers_on_gvt(current_lp, LPS[current_lp]->commit_horizon_ts);
-		}
-		
+            simtime_t gc_ts = LPS[current_lp]->commit_horizon_ts;
+    
+    #if STATE_SWAPPING == 1
+            if(fossil_gvt > 0.0){
+            gc_ts = fossil_gvt;
+    #endif
+			clean_checkpoint(current_lp, gc_ts);
+			clean_buffers_on_gvt(current_lp, gc_ts);
+    #if STATE_SWAPPING == 1
+            }
+    #endif
+
+        }
+    
 	#if DEBUG == 0
 		unlock(current_lp);
 	#else				
-		if(!unlock(current_lp)) {
-			printlp("ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp]);
-		}
+		assertf(unlock(current_lp) == 0, "ERROR: unlock failed; previous value: %u\n", lp_lock[current_lp*CACHE_LINE_SIZE/4]);
 	#endif
 
 #if REPORT == 1
@@ -895,39 +947,38 @@ void thread_loop(unsigned int thread_id) {
 			commit_event(current_msg, current_node, current_lp);
 		}
 
-
+//#if CSR_CONTEXT == 0
 //#if ENFORCE_LOCALITY == 1		
 		//check if elapsed time since fetching an event is large enough to start computing stats
 		aggregate_metrics_for_window_management(&w);
 //#endif
+
 		/// do the unbalance check if the locality window is enabled or periodically
 		if ( (w.enabled || periodic_rebalance_check(numa_rebalance_timer) ) ){
 			//printf("Evaluating balance 1\n");
 			if(enable_unbalance_check() ) { 
 				if (pthread_mutex_trylock(&numa_balance_check_mtx) == 0) {
-				  #if VERBOSE == 0
+				  #if VERBOSE == 1
 					printf("Evaluating balance 2\n");
 				  #endif
 					/// rebalancing algorithm and physical migration
-					plan_and_do_lp_migration(numa_state);
+                    if(num_numa_nodes > 1)
+                        plan_and_do_lp_migration(numa_state);
 					/// restart timer for next periodic rebalancing
 					pthread_mutex_unlock(&numa_balance_check_mtx); 
 				}
 			}
 		}
+//#endif
 
-#if REPORT == 1
-		//statistics_post_th_data(tid, STAT_CLOCK_PRUNE, clock_timer_value(queue_op));
-		//statistics_post_th_data(tid, STAT_PRUNE_COUNTER, 1);
-#endif
 		
 end_loop:
 		//CHECK END SIMULATION
-#if ONGVT_PERIOD != -1
-		if(start_periodic_check_ongvt){
+#if ONGVT_PERIOD != -1 && SWAPPING_STATE == 0
+		if(start_periodic_check_ongvt && n_cores > 1){
 			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
 				if(tryLock(last_checked_lp)){
-					check_OnGVT(last_checked_lp);
+					check_OnGVT(last_checked_lp, LPS[last_checked_lp]->commit_horizon_ts, LPS[last_checked_lp]->commit_horizon_tb);
 					unlock(last_checked_lp);
 					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
 				}
@@ -970,15 +1021,21 @@ end_loop:
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();
-	
+    
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} else if (stop || stop_timer){
-		//sleep(5);
+      #if SWAPPING_STATE == 1
+        while(!end_ipi);
+      #endif
+
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
+		  #if STATE_SWAPPING == 1
+			pthread_join(ipi_tid, NULL);
+		  #endif
 			pthread_join(sleeper, NULL);
-
 		}
+        destroy_thread_csr_state();
 	}
 }

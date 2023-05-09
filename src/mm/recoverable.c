@@ -34,6 +34,7 @@
 #include <core.h>
 #include <numerical.h>
 #include "dymelor.h"
+#include "state_swapping.h"
 
 
 /// Recoverable memory state for LPs

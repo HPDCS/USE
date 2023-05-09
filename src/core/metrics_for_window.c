@@ -41,8 +41,8 @@ __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT = START_WINDOW;
 int get_mem_usage() {
     FILE *statFP;
     int oldNumbers[7];
-    int newNumbers[7];
-    int diffNumbers[7];
+//    int newNumbers[7];
+//    int diffNumbers[7];
     char cpu[10];  // Not used
 
     statFP = fopen("/proc/self/statm", "r");
@@ -93,7 +93,7 @@ void init_metrics_for_window() {
 	prev_granularity_ref = 0.0;
 	prev_granularity = 0.0;
 	old_thr = 0.0;
-  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, 0, 0, 0, (start_simul_time)/CLOCKS_PER_US/1000);
+  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0.0, 0.0, 0.0, 0.0, 0.0, (start_simul_time)/CLOCKS_PER_US/1000);
 }
 
 int check_window(){
@@ -197,9 +197,9 @@ void enable_window() {
 		if(diff1 < (1.0+THROUGHPUT_DRIFT)  && diff2 < (1.0+THROUGHPUT_DRIFT) && diff1 > (1.0-THROUGHPUT_DRIFT) && diff2 > (1.0-THROUGHPUT_DRIFT))  w.enabled = 1;
 	}
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
-	if(!w.enabled)
-         
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0, 0, current_thr, 0, 0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
+	
+    if(!w.enabled && current_thr > 0.0)         
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0.0, 0.0, current_thr, 0.0, 0.0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
 	old2_thr = old_thr;
 	old_thr = current_thr;
 
@@ -232,23 +232,23 @@ void aggregate_metrics_for_window_management(window *win) {
 			window_resizing(win, thr_window); //do resizing operations -- window might be enlarged, decreased or stay the same
                     #else
                         if(w.phase == 0) w.phase = 1;
-                    #endif
+                    #endif  
                         
 	#if VERBOSE == 1
 			printf("thr_window %f granularity %f\n", thr_window, granularity);
 			printf("window_resizing %f\n", w.size);
         #endif	
 			if(w.phase == 1){
-        thr_ref = thr_window;
-        granularity_ref = granularity;
-        w.phase++;
-      }
+                thr_ref = thr_window;
+                granularity_ref = granularity;
+                w.phase++;
+            }
 			//fprintf(stderr, "SIZE AFTER RESIZING %f\n", *window_size);
 			//thr_ref = compute_throughput_for_committed_events(&prev_comm_evts_ref, start_window_reset);
 			//granularity_ref = compute_average_granularity(&prev_first_time_exec_evts_ref, &prev_granularity_ref);
-		  else if(w.phase >= 2){
-   		  thr_ratio = thr_window/thr_ref;
-        granularity_ratio = granularity/granularity_ref;
+            else if(w.phase >= 2){
+                thr_ratio = thr_window/thr_ref;
+                granularity_ratio = granularity/granularity_ref;
     #if VERBOSE == 1
 			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
@@ -275,7 +275,9 @@ void aggregate_metrics_for_window_management(window *win) {
 		  	  std = sqrt(std);
 		  	  skip = skip || ( thr_window < (avg-std*3) );
 		  	  skip = skip || ( thr_window > (avg+std*3) );
+    #if VERBOSE == 1
 		  	  printf("Checking sample AVG:%f STD:%f TH:%f SKIP:%d\n", avg, std, thr_window, skip);
+    #endif
 		  	}
 			  	
 		  	th_samples[th_counter%NUM_THROUGHPUT_SAMPLES] = thr_window;

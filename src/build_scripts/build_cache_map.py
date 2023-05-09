@@ -70,10 +70,10 @@ for k in caches_per_cpu:
         res[b] = []
         check[b] = set([])
       if b not in check[a]:
-        res[a] += [(b,rd[k][1])]
+        res[a] += [(b,caches_per_cpu[k][1])]
         #check[a].add(b)
       if a not in check[b]:
-        res[b] += [(a,rd[k][1])]
+        res[b] += [(a,caches_per_cpu[k][1])]
         #check[b].add(a)
 
 #print("RES",res)

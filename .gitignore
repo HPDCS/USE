@@ -1,3 +1,7 @@
+*.mk
+*.project
+*.workspace
+.codelite
 doc-coverage.info
 docs/
 *.tar.gz

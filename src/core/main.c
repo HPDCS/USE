@@ -58,6 +58,12 @@ void start_simulation() {
 #ifdef DISTRIBUTED_FETCH
     printf("\t- DISTRIBUTED_FETCH %u\n", DISTRIBUTED_FETCH);
 #endif
+#if STATE_SWAPPING == 1 && CSR_CONTEXT == 0
+    printf("\t- CSR ASYNCH disabled.\n");
+#endif
+#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
+    printf("\t- CSR ASYNCH enabled.\n");
+#endif
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif

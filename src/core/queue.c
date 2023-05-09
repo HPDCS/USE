@@ -13,9 +13,6 @@
 #include "local_index/local_index.h"
 #endif
 
-//used to take locks on LPs
-volatile unsigned int *lp_lock;
-
 //event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;
 

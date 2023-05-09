@@ -77,7 +77,9 @@
 #define HANDOFF_RECV	31
 #define FADING_RECHECK	40
 
+#ifndef FADING_RECHECK_FREQUENCY
 #define FADING_RECHECK_FREQUENCY	300	// Every 5 Minutes
+#endif
 
 #define MSK 0x1
 #define SET_CHANNEL_BIT(B,K) ( B |= (MSK << K) )

@@ -13,7 +13,7 @@ for i in /sys/devices/system/cpu/cpu*/cache/index*; do
 done
 fi
 
-python3 build_cache_map.py cache.db > hpipe.h
-mkdir -p ../include-gen
-mv hpipe.h ../include-gen
+#python3 build_cache_map.py cache.db > hpipe.h
+#mkdir -p ../include-gen
+#mv hpipe.h ../include-gen
 

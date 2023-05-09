@@ -159,7 +159,7 @@ struct _malloc_state {
 	int max_num_areas;
         int busy_areas;
 	int dirty_areas;
-	simtime_t timestamp;
+	simtime_t timestamp; 
 	struct _malloc_area *areas;
 };
 
@@ -192,6 +192,13 @@ extern double recovery_cost_per_byte;
 extern unsigned long total_checkpoints;
 extern unsigned long total_recoveries;
 extern double checkpoint_bytes_total;
+
+
+extern void alloc_memory_for_freezed_state(void);
+extern void** log_freezed_state(unsigned int lp);
+extern void restore_freezed_state(unsigned int lp);
+
+
 
 
 

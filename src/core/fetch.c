@@ -231,9 +231,10 @@ unsigned int fetch_internal(){
     LP_state *lp_ptr;
     msg_t *event, *local_next_evt, * bound_ptr;
     bool validity, in_past, read_new_min = true, from_get_next_and_valid;
- #if DEBUG == 1 || REPORT ==1
-    unsigned int c = 0;
- #endif
+
+    unsigned int skipped_lps = 0;
+    
+    unsigned int skipped_events = 0;
     
     // Get the minimum node from the calendar queue
     if((node = min_node = getMin(nbcalqueue, &h)) == NULL) return 0;
@@ -259,17 +260,31 @@ unsigned int fetch_internal(){
     if(local_gvt < min){
         local_gvt = min;
     }
+    simtime_t cur_gvt = gvt;
+	if (local_gvt > gvt) {
+		__sync_bool_compare_and_swap(
+			UNION_CAST(&(gvt), unsigned long long *),
+			UNION_CAST(cur_gvt,unsigned long long),
+			UNION_CAST(local_gvt, unsigned long long)
+			);
+	}
         
     while(node != NULL){
         
- #if DEBUG == 1 || REPORT ==1
-        c++;
- #endif
  #if VERBOSE > 0
         diff_lp++;
  #endif
     
-        if(c==MAX_SKIPPED_LP*n_cores){  return 0; } //DEBUG
+        if( 
+            //skipped_lps==n_prc_tot/n_cores || 
+            skipped_lps >= n_prc_tot || 
+            skipped_events > (n_cores*100) ||  
+        (
+				!(
+					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+				) 
+				&& !sim_error)
+        ){  return 0; } //DEBUG
 
 
         from_get_next_and_valid = false;
@@ -363,8 +378,8 @@ unsigned int fetch_internal(){
         ) {
             
 	    #if DEBUG == 1
-	      assertf(lp_idx == UNDEFINED_LP, "trying to unlock an undefined LP%s", "\n");
-	      assertf(!haveLock(lp_idx), "trying to unlock without own lock %s", "\n");
+	      assertf(lp_idx == UNDEFINED_LP, "locking an undefined LP%s", "\n");
+	      assertf(!haveLock(lp_idx), "locked lp without own its lock %s", "\n");
  	    #endif
             validity = is_valid(event);
             
@@ -463,9 +478,14 @@ unsigned int fetch_internal(){
         }
         else {
             read_new_min = false;
+        #if OPTIMISTIC_MODE == ONE_EVT_PER_LP
+            skipped_lps += !is_in_lp_unsafe_set(lp_idx);
+        #endif
             add_lp_unsafe_set(lp_idx);
-
+            skipped_events++;
+            
         #if OPTIMISTIC_MODE == ST_BINDING_LP
+            skipped_lps += !is_in_lp_locked_set(lp_idx);
             add_lp_locked_set(lp_idx);
         #endif
         }
@@ -528,7 +548,7 @@ unsigned int fetch_internal(){
     current_msg =  event;//(msg_t *) node->payload;
     current_node = node;
  #if REPORT == 1
-    statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)c);
+    statistics_post_th_data(tid, STAT_GET_NEXT_FETCH, (double)skipped_events);
  #endif
 
     return 1;

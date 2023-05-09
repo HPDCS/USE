@@ -148,7 +148,7 @@ static inline bool periodic_rebalance_check(clock_timer numa_timer) {
 static inline void set_unbalance_index(numa_struct **numa_state) {
 
 	/// computation of unbalance_index
-	int i,j;
+	unsigned int i,j;
 	int lp;
 	for (i=0; i < num_numa_nodes; i++) { /// iterate numa nodes
 		for (j=0; j < n_prc_tot; j++) { /// iterate n_proc_tot
@@ -304,7 +304,7 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
 
 #if VERBOSE == 1
 	printf("BEFORE SORTING %u\n", elem_count);
-	for (int i = 0; i < elem_count; ++i) {
+	for (unsigned int i = 0; i < elem_count; ++i) {
         printf("thread %u: |%u | %f | %f | %f |\t", tid, lps_to_migrate_array[i].lp_idx, 
         	lps_to_migrate_array[i].migration_score,
         	lps_to_migrate_array[i].expected_skewness,
@@ -319,7 +319,7 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
 
 #if VERBOSE == 1
 	printf("AFTER SORTING %u\n", elem_count);
-	for (int i = 0; i < elem_count; ++i) {
+	for (unsigned int i = 0; i < elem_count; ++i) {
         printf("thread %u: |%u | %f | %f | %f |\t", tid, lps_to_migrate_array[i].lp_idx, 
         	lps_to_migrate_array[i].migration_score,
         	lps_to_migrate_array[i].expected_skewness,
@@ -373,7 +373,7 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 
 	/// set the unbalance index of every numa node
 	set_unbalance_index(numa_state);
-	for(int i=0;i<num_numa_nodes;i++){
+	for(unsigned int i=0;i<num_numa_nodes;i++){
 		scale += numa_state[i]->unbalance_index;
 	}
 	/// choose the numa nodes with max load and min load
@@ -383,7 +383,7 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	simtime_t load_skew = max_load_numa_node->unbalance_index - min_load_numa_node->unbalance_index;
   #if VERBOSE == 0
 	printf("NUMA skew:");
-	for(int i=0;i<num_numa_nodes;i++){
+	for(unsigned int i=0;i<num_numa_nodes;i++){
 		printf("%d:%f ", i, numa_state[i]->unbalance_index/scale);
 	}
 	printf("\n");
@@ -398,7 +398,7 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	rebind_lp_to_numa_nodes(lps_to_migrate_array, max_load_numa_node, min_load_numa_node, load_skew, scale);
   #endif
 out:
-	for(int i=0;i<num_numa_nodes;i++)
+	for(unsigned int i=0;i<num_numa_nodes;i++)
 		numa_state[i]->unbalance_index = 0;
 	rounds_before_unbalance_check = 0;
 	clock_timer_value(time_interval_for_numa_rebalance);

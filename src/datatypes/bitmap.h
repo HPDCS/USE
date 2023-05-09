@@ -12,6 +12,7 @@
 #include <limits.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <atomic.h>
 
 
 /**
@@ -42,9 +43,9 @@ static inline bitmap* allocate_bitmap(unsigned int len){
     bytes       += actual_len<len;
     actual_len   = bytes * CHAR_BIT;
 
-    tmp = (bitmap*) malloc(bytes+2*sizeof(unsigned int));
+    tmp = (bitmap*) aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int));
     
-    bzero(tmp, bytes);
+    bzero(tmp, bytes+2*sizeof(unsigned int));
     
     tmp->virtual_len = len;
     tmp->actual_len  = actual_len;
@@ -73,6 +74,21 @@ static inline void set_bit(bitmap* ptr, unsigned int pos){
     ptr->bits[index] |= b_val; 
 }
 
+static inline void atomic_set_bit(bitmap* ptr, unsigned int pos){
+    if(ptr == NULL || ptr->actual_len <= pos ) abort();
+    unsigned int index, b_pos;
+    unsigned short *bits = (unsigned short*)(ptr->bits);
+ //   unsigned char b_val, b_old;
+//begin:
+    index = pos/(CHAR_BIT*2);
+    b_pos = pos%(CHAR_BIT*2);
+    assert(((unsigned long long)(bits+index))%2 == 0);
+//    b_old = ptr->bits[index];
+//    b_val = b_old | (1 << b_pos);
+    atomic_bit_test_and_set_x86(bits+index, b_pos);
+//    if(!__sync_bool_compare_and_swap(ptr->bits+index, b_old, b_val)) goto begin;
+}
+
 /**
  * @brief sets to 0 the bit at the given pos within a bitmap
  * @param ptr: the reference to a bitmap
@@ -97,6 +113,19 @@ static inline char get_bit(bitmap* ptr, unsigned int pos){
     unsigned int  b_pos = pos%CHAR_BIT;
     unsigned char b_val = (1 << b_pos);
     return (ptr->bits[index] & b_val) > 0; 
+}
+
+
+static inline void clear_bitmap(bitmap *ptr) {
+    if(ptr == NULL) abort();
+    unsigned int index;
+    for (index = 0; index < ptr->actual_len; index++) { 
+        if (get_bit(ptr, index) != 0) {
+            reset_bit(ptr, index);
+        }
+    }
+
+
 }
 
 /**
