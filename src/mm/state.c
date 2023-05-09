@@ -137,7 +137,7 @@ bool LogState(unsigned int lid) {
 	}
 
 	// Switch on the checkpointing mode.
-	switch(rootsim_config.checkpointing) {
+	switch(pdes_config.checkpointing) {
 
 		case COPY_STATE_SAVING:
 			take_snapshot = true;
@@ -370,7 +370,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 		LPS[lid]->num_executed_frames = restore_state->num_executed_frames + reprocessed_events;
 		rollback_lenght -= LPS[lid]->num_executed_frames;
 		LPS[lid]->epoch++;
-		LPS[lid]->from_last_ckpt = reprocessed_events%CHECKPOINT_PERIOD; // TODO
+		LPS[lid]->from_last_ckpt = reprocessed_events%pdes_config.ckpt_period; // TODO
 		// TODO
 		//LPS[lid]->from_last_ckpt = ??;
 
@@ -456,7 +456,7 @@ void ParallelSetState(void *new_state) {
 * @param ckpt_mode The new checkpoint mode
 */
 void set_checkpoint_mode(int ckpt_mode) {
-	rootsim_config.checkpointing = ckpt_mode;
+	pdes_config.checkpointing = ckpt_mode;
 }
 
 

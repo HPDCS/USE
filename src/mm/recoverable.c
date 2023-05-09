@@ -52,9 +52,9 @@ void recoverable_init(void) {
 	
 	register unsigned int i;
 	
-	recoverable_state = rsalloc(sizeof(malloc_state *) * n_prc_tot);
+	recoverable_state = rsalloc(sizeof(malloc_state *) * pdes_config.nprocesses);
 
-	for(i = 0; i < n_prc_tot; i++){
+	for(i = 0; i < pdes_config.nprocesses; i++){
 
 		recoverable_state[i] = rsalloc(sizeof(malloc_state));
 		if(recoverable_state[i] == NULL)
@@ -69,16 +69,15 @@ void recoverable_init(void) {
 //	unsigned int i, j;
 //	malloc_area *current_area;
 //
-//	for(i = 0; i < n_prc_tot; i++) {
+//	for(i = 0; i < pdes_config.nprocesses; i++) {
 //		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
 //			current_area = &(recoverable_state[i]->areas[j]);
 //			if (current_area != NULL) {
 //				if (current_area->self_pointer != NULL) {
-//					#ifdef HAVE_PARALLEL_ALLOCATOR
-//					pool_release_memory(i, current_area->self_pointer);
-//					#else
-//					rsfree(current_area->self_pointer);
-//					#endif
+//					if(pdes_config.enable_custom_alloc)
+//					  	pool_release_memory(i, current_area->self_pointer);
+//					else
+//						rsfree(current_area->self_pointer);
 //				}
 //			}
 //		}
@@ -254,12 +253,11 @@ void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
 
 			if(m_area->self_pointer != NULL) {
 
-				#ifdef HAVE_PARALLEL_ALLOCATOR
-				pool_release_memory(lid, m_area->self_pointer);
-				#else
-				rsfree(m_area->self_pointer);
-				#endif
-
+				if(pdes_config.enable_custom_alloc)
+					pool_release_memory(lid, m_area->self_pointer);
+				else
+					rsfree(m_area->self_pointer);
+				
 				m_area->use_bitmap = NULL;
 				m_area->dirty_bitmap = NULL;
 				m_area->self_pointer = NULL;

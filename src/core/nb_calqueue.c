@@ -48,12 +48,7 @@
 #define LOG_ENQUEUE 0
 #define LOG_RESIZE 0
 
-#define BOOL_CAS_ALE(addr, old, new)  CAS_x86(\
-										UNION_CAST(addr, volatile unsigned long long *),\
-										UNION_CAST(old,  unsigned long long),\
-										UNION_CAST(new,  unsigned long long)\
-									  )
-									  	
+								  	
 #define BOOL_CAS_GCC(addr, old, new)  __sync_bool_compare_and_swap(\
 										(addr),\
 										(old),\
@@ -584,7 +579,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		new_h->size 		 = new_size;
 		new_h->new_table 	 = NULL;
 		new_h->counter.count = 0;
-		new_h->current 		 = ((unsigned long long)-1) << 32;
+		new_h->current 		 = (((unsigned long long)-1)-1) << 32;
 
 		//array =  calloc(new_size, sizeof(nbc_bucket_node));
 		array =  alloc_array_nodes(&malloc_status, new_size);

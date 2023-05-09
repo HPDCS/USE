@@ -32,23 +32,19 @@
 #include <hpdcs_utils.h>
 #include <prints.h>
 #include <utmpx.h>
+#include <gvt.h>
 
+#include <configuration.h>
 
 #include <numa_migration_support.h>
 #include "metrics_for_lp_migration.h"
 #include <gvt.h>
 
-#if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
 #include "local_scheduler.h"
 #include "metrics_for_window.h"
 #include "clock_constant.h"
-#endif
-#include "metrics_for_window.h"
-
-#if STATE_SWAPPING == 1
 #include "state_swapping.h"
-#endif
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
@@ -57,32 +53,23 @@
 
 
 
+unsigned int start_periodic_check_ongvt = 0;
+
+
+
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
 __thread unsigned int tid = 0;
-
 __thread unsigned long long evt_count = 0;
 __thread unsigned long long current_evt_state = 0;
 __thread void* current_evt_monitor = 0x0;
-
-
 __thread struct __bucket_node *current_node = 0x0;
-
 __thread unsigned int last_checked_lp = 0;
-unsigned int start_periodic_check_ongvt = 0;
 __thread unsigned int check_ongvt_period = 0;
-
 __thread unsigned int current_numa_node;
 __thread unsigned int current_cpu;
-
-
 __thread int __event_from = 0;
 
-//__thread simtime_t 		commit_horizon_ts = 0;
-//__thread unsigned int 	commit_horizon_tb = 0;
-
-
-//timer
 #if REPORT == 1
 __thread clock_timer main_loop_time,		//total execution time on single core
 				fetch_timer,				//time used to correctly fetch an event 		
@@ -96,14 +83,9 @@ __thread clock_timer main_loop_time,		//total execution time on single core
 				;
 #endif
 
+
+
 volatile unsigned int ready_wt = 0;
-
-simulation_configuration rootsim_config;
-
-/* Total number of cores required for simulation */
-unsigned int n_cores;
-/* Total number of logical processes running in the simulation */
-unsigned int n_prc_tot;
 
 /* Average time between consecutive events */
 simtime_t t_btw_evts = 0.1;
@@ -117,7 +99,7 @@ LP_state **LPS = NULL;
 volatile bool stop = false;
 volatile bool stop_timer = false;
 pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
-unsigned int sec_stop = 0;
+
 unsigned long long *sim_ended;
 
 numa_struct **numa_state;			/// state of every numa node
@@ -126,16 +108,14 @@ unsigned int num_numa_nodes;
 bool numa_available_bool;
 unsigned int rounds_before_unbalance_check; /// number of window management rounds before numa unbalance check
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
-
-
 size_t node_size_msg_t;
 size_t node_size_state_t;
 
 void * do_sleep(){
-	if(sec_stop != 0)
-		printf("The simulation will last %d seconds\n", sec_stop);
-	sleep(sec_stop);
-	if(sec_stop != 0)
+	if(pdes_config.timeout != 0)
+		printf("The simulation will last %d seconds\n", pdes_config.timeout);
+	sleep(pdes_config.timeout);
+	if(pdes_config.timeout != 0)
 		stop_timer = true;
 	pthread_exit(NULL);
 }
@@ -263,42 +243,24 @@ void nodes_init(){
 void LPs_metada_init() {
 	unsigned int i;
 	int lp_lock_ret;
-
-	//rootsim_config.output_dir = DEFAULT_OUTPUT_DIR;
-	//rootsim_config.gvt_time_period = 1000;
-	//rootsim_config.scheduler = SMALLEST_TIMESTAMP_FIRST;
-	rootsim_config.checkpointing = PERIODIC_STATE_SAVING;
-	rootsim_config.ckpt_period = 100;
-	rootsim_config.gvt_snapshot_cycles = 2;
-	rootsim_config.simulation_time = 0;
-	//rootsim_config.lps_distribution = LP_DISTRIBUTION_BLOCK;
-	//rootsim_config.check_termination_mode = NORM_CKTRM;
-	rootsim_config.blocking_gvt = false;
-	rootsim_config.snapshot = 2001;
-	rootsim_config.deterministic_seed = false;
-	rootsim_config.set_seed = 0;
-	//rootsim_config.verbose = VERBOSE_INFO;
-	//rootsim_config.stats = STATS_ALL;
-	rootsim_config.serial = false;
-	rootsim_config.core_binding = true;
 	
-	LPS = malloc(sizeof(void*) * n_prc_tot);
+	LPS = malloc(sizeof(void*) * pdes_config.nprocesses);
 	sim_ended = malloc(LP_ULL_MASK_SIZE);
-	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, n_prc_tot * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
+	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, pdes_config.nprocesses * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
 			
 	if(LPS == NULL || sim_ended == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();
 	}
 	
-	for (i = 0; i < n_prc_tot; i++) {
+	for (i = 0; i < pdes_config.nprocesses; i++) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
 		sim_ended[i/64] = 0;
 		LPS[i] = malloc(sizeof(LP_state));
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i+1; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
-		LPS[i]->ckpt_period 			= CHECKPOINT_PERIOD;
+		LPS[i]->ckpt_period 			= pdes_config.ckpt_period;
 		LPS[i]->from_last_ckpt 			= 0;
 		LPS[i]->state_log_forced  		= false;
 		LPS[i]->current_base_pointer 	= NULL;
@@ -309,10 +271,8 @@ void LPs_metada_init() {
 		LPS[i]->epoch 					= 1;
 		LPS[i]->num_executed_frames		= 0;
 		LPS[i]->until_clean_ckp			= 0;
-	  #if ENFORCE_LOCALITY == 1
 		bzero(&LPS[i]->local_index, sizeof(LPS[i]->local_index));
 		LPS[i]->wt_binding = UNDEFINED_WT;
-	  #endif
 
 		/* FIELDS FOR COMPUTING AVG METRICS	*/
 		LPS[i]->ema_ti					= 0.0;
@@ -384,7 +344,7 @@ void pin_lps_on_numa_nodes_init() {
 
 	unsigned cur_lp = 0;
 	for(unsigned int j=0;j<num_numa_nodes;j++){
-		for(unsigned int i=0;i<n_prc_tot/num_numa_nodes;i++) {
+		for(unsigned int i=0;i<pdes_config.nprocesses/num_numa_nodes;i++) {
 			set_bit(numa_state[j]->numa_binding_bitmap, cur_lp);
 			LPS[cur_lp]->numa_node 				= j;
 		  #if VERBOSE == 1
@@ -393,7 +353,7 @@ void pin_lps_on_numa_nodes_init() {
 			cur_lp++;
 		}
 	}
-	for(;cur_lp<n_prc_tot;cur_lp++){
+	for(;cur_lp<pdes_config.nprocesses;cur_lp++){
 		set_bit(numa_state[num_numa_nodes-1]->numa_binding_bitmap, cur_lp);
 		LPS[cur_lp]->numa_node 				= num_numa_nodes-1;
 	  #if VERBOSE == 1
@@ -465,7 +425,7 @@ void check_OnGVT(unsigned int lp_idx, simtime_t ts, unsigned int tb){
 
 
 void round_check_OnGVT(){
-	unsigned int start_from = (n_prc_tot / n_cores) * tid;
+	unsigned int start_from = (pdes_config.nprocesses / pdes_config.ncores) * tid;
 	unsigned int curent_ck = start_from;
 	
 	
@@ -485,7 +445,7 @@ void round_check_OnGVT(){
 				break;
 			}
 		}
-		curent_ck = (curent_ck + 1) % n_prc_tot;
+		curent_ck = (curent_ck + 1) % pdes_config.nprocesses;
 	}while(curent_ck != start_from);
 }
 
@@ -520,13 +480,13 @@ void init_simulation(unsigned int thread_id){
 		numa_init();
 		LPs_metada_init();
 		pin_lps_on_numa_nodes_init();
-		dymelor_init(n_prc_tot);
+		dymelor_init(pdes_config.nprocesses);
 		statistics_init();
 		queue_init();
 		numerical_init();
 		nodes_init();
 		//process_init_event
-		for (current_lp = 0; current_lp < n_prc_tot; current_lp++) {	
+		for (current_lp = 0; current_lp < pdes_config.nprocesses; current_lp++) {	
      		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
      		current_msg->sender_id 		= -1;//
      		current_msg->receiver_id 	= current_lp;//
@@ -551,14 +511,15 @@ void init_simulation(unsigned int thread_id){
 				//LPS[current_lp]->epoch = 1;
 		}
 
-  #if ENFORCE_LOCALITY==1
-		pthread_barrier_init(&local_schedule_init_barrier, NULL, n_cores);
-		init_metrics_for_window();
-  #endif
-	#if STATE_SWAPPING == 1
-	  state_swap_ptr = alloc_state_swapping_struct();
-	  pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
-	#endif
+  		if(pdes_config.enforce_locality){
+			pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
+			init_metrics_for_window();
+  		}
+
+  		if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
+			state_swap_ptr = alloc_state_swapping_struct();
+			pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
+		}
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
@@ -577,16 +538,17 @@ void init_simulation(unsigned int thread_id){
 	// Set the CPU affinity
 	__sync_fetch_and_add(&ready_wt, 1);
 	__sync_synchronize();
-	while(ready_wt!=n_cores);
-#if ENFORCE_LOCALITY == 1
-	local_binding_init();
-#endif
+	while(ready_wt!=pdes_config.ncores);
+
+	if(pdes_config.enforce_locality)
+		local_binding_init();
+
   set_affinity(tid);
 
-#if STATE_SWAPPING == 1
-	usleep(10);
-	init_thread_csr_state();
-#endif	
+	if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
+		usleep(10);
+		init_thread_csr_state();
+	}
 
     statistics_post_th_data(tid, STAT_INIT_CLOCKS, clock_timer_value(init_timer));
 }
@@ -659,10 +621,7 @@ stat64_t execute_time;
 
 void thread_loop(unsigned int thread_id) {
 	unsigned int old_state;
-	
-#if ONGVT_PERIOD != -1
 	unsigned int empty_fetch = 0;
-#endif
 	
 	init_simulation(thread_id);
 	
@@ -672,103 +631,84 @@ void thread_loop(unsigned int thread_id) {
 
 	///* START SIMULATION *///
 	while (  
-				(
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
-				) 
-				&& !sim_error
-		) {
+		(
+			 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
+		) 
+		&& !sim_error
+	) 
+	{
 
-#if STATE_SWAPPING == 1
-
-		/// set global gvt variable
-		update_global_gvt(local_gvt);
-
-
-  #if CSR_CONTEXT == 0
-		/// check the flag for sync output collection
-		if (state_swap_ptr->state_swap_flag) {
-		  #if VERBOSE == 1
-			printf("committed state reconstruction operation\n");
-		  #endif
-			csr_routine();
+		if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
+	      #if CSR_CONTEXT == 0
+			/// check the flag for sync output collection
+			if (state_swap_ptr->state_swap_flag) {
+			  #if VERBOSE == 1
+				printf("committed state reconstruction operation\n");
+			  #endif
+				/// set global gvt variable
+				update_global_gvt(local_gvt);
+				csr_routine();
+			}
+	      #endif
+			print_state_swapping_struct_metrics();
 		}
-  #endif
-  #if STATE_SWAPPING == 1
-		print_state_swapping_struct_metrics();
-  #endif
-
-
-#endif
 
 		///* FETCH *///
-#if REPORT == 1
+	  #if REPORT == 1
 		statistics_post_th_data(tid, STAT_EVENT_FETCHED, 1);
 		clock_timer_start(fetch_timer);
-#endif
-	__event_from = 0;
-#if ENFORCE_LOCALITY == 1
-
-		if(check_window() && local_fetch() != 0){ //if window_size > 0 try local_fetch
-
-		} else  
-#endif
-		
-		if(fetch_internal() == 0) {
-#if REPORT == 1
+	  #endif
+	
+		__event_from = 0;
+		if(pdes_config.enforce_locality && check_window() && local_fetch() != 0){} 
+		else if(fetch_internal() == 0) {
+		  #if REPORT == 1
 			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
 			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
-#endif
+		  #endif
 
-#if ONGVT_PERIOD != -1 && SWAPPING_STATE != 1
-			if(++empty_fetch > 500){
-				round_check_OnGVT();
+		  #if SWAPPING_STATE != 1
+			if(pdes_config.ongvt_mode != MS_PERIODIC_ONGVT){
+				if(++empty_fetch > 500){
+					round_check_OnGVT();
+				}
 			}
-#endif
-			goto end_loop;
+		  #endif
+		  	goto end_loop;
 		}
 
-#if ONGVT_PERIOD != -1
 		empty_fetch = 0;
-#endif
-
-		///* HOUSEKEEPING *///
 		// Here we have the lock on the LP //
-
 		// Locally (within the thread) copy lp and ts to processing event
 		current_lp = current_msg->receiver_id;	// LP index
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
 
-#if DEBUG == 1
+	  #if DEBUG == 1
 		assertf(current_evt_state == ELIMINATED, "got eliminatated message %p\n", current_msg);
 		assertf(current_evt_state == NEW_EVT,    "got new_evt message %p\n", current_msg);
-#endif
+	  #endif
 
 		if(__event_from == 2) statistics_post_th_data(tid, STAT_EVT_FROM_LOCAL_FETCH, 1);
 		if(__event_from == 1) statistics_post_th_data(tid, STAT_EVT_FROM_GLOBAL_FETCH, 1);
-  #if ENFORCE_LOCALITY == 1
-		local_binding_push(current_lp);
-  #endif
+		if(pdes_config.enforce_locality) local_binding_push(current_lp);
 		
-#if REPORT == 1
+	  #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_EVENT_FETCHED_SUCC, 1);
 		statistics_post_lp_data(current_lp, STAT_CLOCK_FETCH_SUCC, (double)clock_timer_value(fetch_timer));
-#endif
+	  #endif
 
-
-
-	#if DEBUG == 1
+	  #if DEBUG == 1
 		if(!haveLock(current_lp)){//DEBUG
 			printf(RED("[%u] Executing without lock: LP:%u LK:%u\n"),tid, current_lp, checkLock(current_lp)-1);
 		}
 		if(current_cpu != ((unsigned int)sched_getcpu())){
 			printf("[%u] Current cpu changed form %u to %u\n", tid, current_cpu, sched_getcpu());
 		}
-	#endif
+	  #endif
 
-
-	#if DEBUG == 1	
+	  #if DEBUG == 1	
 		if(current_evt_state == ANTI_MSG && current_evt_monitor == (void*) 0xba4a4a) {
 			printf(RED("TL: 0xba4a4a found!\n")); print_event(current_msg);
 			gdb_abort;
@@ -776,7 +716,7 @@ void thread_loop(unsigned int thread_id) {
 			unlock(current_lp);
 			continue; //TODO: to verify
 		}
-	#endif
+	  #endif
 
 		/* ROLLBACK */
 		// Check whether the event is in the past, if this is the case
@@ -873,7 +813,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 
 		// Take a simulation state snapshot, in some way
-		if(n_cores > 1)
+		if(pdes_config.ncores > 1)
             LogState(current_lp);
 		
 #if DEBUG == 1
@@ -902,33 +842,29 @@ void thread_loop(unsigned int thread_id) {
 		current_msg->frame = LPS[current_lp]->num_executed_frames;
 		LPS[current_lp]->num_executed_frames++;
 		
-#if ONGVT_PERIOD != -1 && SWAPPING_STATE == 0
 		///* ON_GVT *///
 		if(safe) {
-			if(OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
+			if(pdes_config.ongvt_mode == OPPORTUNISTIC_ONGVT && OnGVT(current_lp, LPS[current_lp]->current_base_pointer)){
 				start_periodic_check_ongvt = 1;
 				end_sim(current_lp);
 			}
 			LPS[current_lp]->until_ongvt = 0;
 		}
-		else if((++(LPS[current_lp]->until_ongvt) % ONGVT_PERIOD) == 0){
+		else if(pdes_config.ongvt_mode == EVT_PERIODIC_ONGVT && ((++(LPS[current_lp]->until_ongvt) % pdes_config.ongvt_period) == 0) ){
 			check_OnGVT(current_lp, LPS[current_lp]->commit_horizon_ts, LPS[current_lp]->commit_horizon_tb);	
 		}
-#endif	
     
-		if((++(LPS[current_lp]->until_clean_ckp)%CLEAN_CKP_INTERVAL  == 0)/* && safe*/){
+		if((++(LPS[current_lp]->until_clean_ckp)%pdes_config.ckpt_collection_period  == 0)/* && safe*/){
             simtime_t gc_ts = LPS[current_lp]->commit_horizon_ts;
     
-    #if STATE_SWAPPING == 1
-            if(fossil_gvt > 0.0){
-            gc_ts = fossil_gvt;
-    #endif
+            if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
+	            if(fossil_gvt > 0.0){
+	         	   gc_ts = fossil_gvt;
+	        	}
+        	}
+
 			clean_checkpoint(current_lp, gc_ts);
 			clean_buffers_on_gvt(current_lp, gc_ts);
-    #if STATE_SWAPPING == 1
-            }
-    #endif
-
         }
     
 	#if DEBUG == 0
@@ -948,10 +884,8 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 //#if CSR_CONTEXT == 0
-//#if ENFORCE_LOCALITY == 1		
 		//check if elapsed time since fetching an event is large enough to start computing stats
 		aggregate_metrics_for_window_management(&w);
-//#endif
 
 		/// do the unbalance check if the locality window is enabled or periodically
 		if ( (w.enabled || periodic_rebalance_check(numa_rebalance_timer) ) ){
@@ -974,17 +908,17 @@ void thread_loop(unsigned int thread_id) {
 		
 end_loop:
 		//CHECK END SIMULATION
-#if ONGVT_PERIOD != -1 && SWAPPING_STATE == 0
-		if(start_periodic_check_ongvt && n_cores > 1){
-			if(check_ongvt_period++ % ONGVT_PERIOD == 0){
-				if(tryLock(last_checked_lp)){
-					check_OnGVT(last_checked_lp, LPS[last_checked_lp]->commit_horizon_ts, LPS[last_checked_lp]->commit_horizon_tb);
-					unlock(last_checked_lp);
-					last_checked_lp = (last_checked_lp+1)%n_prc_tot;
+		if(pdes_config.ongvt_period == EVT_PERIODIC_ONGVT){
+			if(start_periodic_check_ongvt && pdes_config.ncores > 1){
+				if((check_ongvt_period++ % pdes_config.ongvt_period) == 0){
+					if(tryLock(last_checked_lp)){
+						check_OnGVT(last_checked_lp, LPS[last_checked_lp]->commit_horizon_ts, LPS[last_checked_lp]->commit_horizon_tb);
+						unlock(last_checked_lp);
+						last_checked_lp = (last_checked_lp+1)%pdes_config.nprocesses;
+					}
 				}
 			}
 		}
-#endif
 
 		if(is_end_sim(current_lp)){
 			if(check_termination()){
@@ -1015,27 +949,28 @@ end_loop:
 #endif
 
 
-#if ENFORCE_LOCALITY == 1
-	printf("Last window for %d is %f\n", tid, get_current_window());
-#endif
+	if(pdes_config.enforce_locality)
+		printf("Last window for %d is %f\n", tid, get_current_window());
+	
 	// Unmount statistical data
 	// FIXME
 	//statistics_fini();
     
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
-	} else if (stop || stop_timer){
-      #if SWAPPING_STATE == 1
-        while(!end_ipi);
-      #endif
-
+	} 
+	else if (stop || stop_timer){
+    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
+	    while(!end_ipi);
+    
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
-		  #if STATE_SWAPPING == 1
-			pthread_join(ipi_tid, NULL);
-		  #endif
+			if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
+				pthread_join(ipi_tid, NULL);
 			pthread_join(sleeper, NULL);
 		}
+      #if CSR_CONTEXT == 1
         destroy_thread_csr_state();
+      #endif
 	}
 }

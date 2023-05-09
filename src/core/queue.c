@@ -9,9 +9,7 @@
 #include "lookahead.h"
 #include "hpdcs_utils.h"
 
-#if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
-#endif
 
 //event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;
@@ -38,7 +36,7 @@ __thread list(msg_t) freed_local_evts = NULL;
 
 
 void queue_init(void) {
-    nbcalqueue = nb_calqueue_init(n_cores,PUB,EPB);
+    nbcalqueue = nb_calqueue_init(pdes_config.ncores,PUB,EPB);
 }
 
 void unsafe_set_init(){
@@ -47,11 +45,11 @@ void unsafe_set_init(){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
-    if( ( lp_unsafe_set_debug=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+    if( ( lp_unsafe_set_debug=malloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
         printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
         abort();    
     }
-    if( ( lp_locked_set=malloc(n_prc_tot*sizeof(unsigned long long))) == NULL ){
+    if( ( lp_locked_set=malloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
         printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
         abort();    
     }
@@ -156,9 +154,9 @@ void queue_deliver_msgs(void) {
 #endif
 
         nbc_enqueue(nbcalqueue, new_hole->timestamp, new_hole, new_hole->receiver_id);
-#if ENFORCE_LOCALITY == 1
-        nb_push(LPS[new_hole->receiver_id], new_hole);
-#endif
+
+        if(pdes_config.enforce_locality)
+            nb_push(LPS[new_hole->receiver_id], new_hole);
         
 #if REPORT == 1
 		statistics_post_lp_data(current_lp, STAT_CLOCK_ENQUEUE, (double)clock_timer_value(queue_op));

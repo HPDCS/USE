@@ -1,4 +1,3 @@
-#if ENFORCE_LOCALITY == 1
 #include <lp_local_struct.h>
 #include <hpdcs_utils.h>
 #include <fetch.h>
@@ -15,8 +14,8 @@ pipe_t *evicted_pipe_pointers[HPIPE_INDEX1_LEN];
 pthread_barrier_t local_schedule_init_barrier;
 
 void local_binding_init(){
-    thread_locked_binding   = init_struct(CURRENT_BINDING_SIZE);
-    thread_unlocked_binding = init_struct(EVICTED_BINDING_SIZE);
+    thread_locked_binding   = init_struct(pdes_config.el_locked_pipe_size);
+    thread_unlocked_binding = init_struct(pdes_config.el_evicted_pipe_size);
     evicted_pipe_pointers[current_cpu] = thread_unlocked_binding; 
     pthread_barrier_wait(&local_schedule_init_barrier);
 }
@@ -72,6 +71,7 @@ void flush_locked_pipe(){
     for(int i=0;i<thread_locked_binding->size;i++){
         entry_to_be_evicted = thread_locked_binding->entries[i]; 
         lp_to_evict = entry_to_be_evicted.lp; 
+        if(lp_to_evict == UNDEFINED_LP) continue;
         LPS[lp_to_evict]->wt_binding = UNDEFINED_WT;
         unlock(lp_to_evict);
         next_ts = entry_to_be_evicted.next_ts;
@@ -203,5 +203,3 @@ int local_fetch(){
     
     return res;
 }
-
-#endif

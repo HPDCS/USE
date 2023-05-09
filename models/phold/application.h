@@ -8,22 +8,8 @@
 #define LOOP			8
 #define EXTERNAL_LOOP	7
 
-#define VARIANCE 0.2
-#ifndef COMPLETE_EVENTS
-#define COMPLETE_EVENTS 5000
-#endif
-#define COMPLETE_TIME 200000
-#define EVENTS_PER_LP 5
-
-#ifndef FAN_OUT
-#define FAN_OUT 1
-#endif
-
-#ifndef LOOP_COUNT
-#define LOOP_COUNT 5
-#endif
-
 #define TAU 1
+#define EVENTS_PER_LP 5
 
 
 // This is the events' payload which is exchanged across LPs
@@ -36,7 +22,9 @@ typedef struct _event_content_type {
 typedef struct _lp_state_type {
 	simtime_t lvt;
 	unsigned int events;
-	unsigned char padding[52];
+	unsigned int event_us;
+	unsigned int fan_out;
+	unsigned int num_events;
 } lp_state_type __attribute__((aligned(64)));
 
 

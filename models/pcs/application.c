@@ -5,13 +5,109 @@
 
 #include "application.h"
 
-bool pcs_statistics = false;
-unsigned int complete_calls = COMPLETE_CALLS;
-
+unsigned int complete_calls;
 
 #define DUMMY_TA 500
 
 double ran;
+
+typedef struct model_parameters{
+	simtime_t ta;
+	simtime_t ta_hot;
+	simtime_t ta_duration;
+	simtime_t ta_change;
+	simtime_t fading_recheck_time;
+	int channels; 
+	int channels_hot; 
+	int total_calls;
+	bool check_fading; 
+	bool fading_recheck;
+	bool variable_ta; 
+	unsigned char arrival_d; 
+	unsigned char duration_d; 
+	unsigned char handoff_d; 
+}
+model_parameters;
+
+struct argp_option model_options[] = {
+  {"ta",                  1000, "TIME", 0, "Interarrival Time"               , 0 },
+  {"hot-ta",              1001, "TIME", 0, "Hot-interarrival Time"               , 0 },
+  {"duration",            1002, "TIME", 0, "Call duration"               , 0 },
+  {"handoff-rate",        1003, "TIME", 0, "Call handoff rate"               , 0 },
+  {"ch",                  1004, "VALUE", 0, "Number of channels per cell"               , 0 },
+  {"hot-ch",              1005, "VALUE", 0, "Number of channels per hot cell"               , 0 },
+  {"enable-fading",       1006, 0, 0, "Enable fading recheck"               , 0 },
+  {"enable-variable-ta",  1007, 0, 0, "Enable variable interarrival time"               , 0 },
+  {"num-calls",           1008, "VALUE", 0, "Number of calls per cell to end the simulation"               , 0 },
+  {"fading_time",         1009, 0, 0, "Fading time"               , 0 },
+  {"arrival-d",        1010, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"duration-d",        1011, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"handoff-d",        1012, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  { 0, 0, 0, 0, 0, 0} 
+};
+
+model_parameters args = {
+	.ta = 0.4,
+	.ta_hot = 0,
+	.ta_duration = 120,
+	.ta_change = 300,
+	.channels = 1000,
+	.variable_ta = 0,
+	.fading_recheck = 0,
+	.fading_recheck_time = 300,
+	.total_calls = 0,
+	.arrival_d = 1, 
+	.duration_d = 1, 
+	.handoff_d = 1, 
+
+};
+
+error_t model_parse_opt(int key, char *arg, struct argp_state *state){
+	(void)state;
+	switch(key){
+		case 1000:
+			args.ta = strtod(arg, NULL);
+			break;
+		case 1001:
+			args.ta_hot = strtod(arg, NULL);
+			break;
+		case 1002:
+			args.ta_duration = strtod(arg, NULL);
+			break;
+		case 1003:
+			args.ta_change = strtod(arg, NULL);
+			break;
+		case 1004:
+			args.channels = atoi(arg);
+			break;
+		case 1005:
+			args.channels_hot = atoi(arg);
+			break;
+		case 1006:
+			args.fading_recheck = 1;
+			break;
+		case 1007:
+			args.variable_ta = 1;
+			break;
+		case 1008:
+			args.total_calls = atoi(arg);
+			break;
+		case 1009:
+			args.fading_recheck_time = atoi(arg);
+			break;
+		case 1010:
+			args.arrival_d = atoi(arg);
+			break;
+		case 1011:
+			args.duration_d = atoi(arg);
+			break;
+		case 1012:
+			args.handoff_d = atoi(arg);
+			break;
+
+	}
+	return 0;
+}
 
 void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
 	unsigned int w;
@@ -50,46 +146,26 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			SetState(state);
 
 			bzero(state, sizeof(lp_state_type));
-			state->channel_counter = CHANNELS_PER_CELL;
 
-			// Read runtime parameters
-			if(IsParameterPresent(event_content, "pcs_statistics"))
-				pcs_statistics = true;
-
-			if(IsParameterPresent(event_content, "ta"))
-				state->ref_ta = state->ta = GetParameterDouble(event_content, "ta");
-			else{
-				if(NUM_HOT && me < NUM_HOT_CELLS)
-					state->ref_ta = state->ta = TA_HOT;
-				else
-					state->ref_ta = state->ta = TA;
-			}
-			if(IsParameterPresent(event_content, "ta_duration"))
-				state->ta_duration = GetParameterDouble(event_content, "ta_duration");
+			if(NUM_HOT && me < NUM_HOT_CELLS)
+				state->ref_ta = state->ta = TA_HOT;
 			else
-				state->ta_duration = TA_DURATION;
+				state->ref_ta = state->ta = args.ta;
+			
+			state->ta_duration = args.ta_duration;
+			state->ta_change = args.ta_change;
 
-
-
-			if(IsParameterPresent(event_content, "ta_change"))
-				state->ta_change = GetParameterDouble(event_content, "ta_change");
+			if(NUM_HOT && me < NUM_HOT_CELLS)
+				state->channels_per_cell = args.channels_hot;
 			else
-				state->ta_change = TA_CHANGE;
+				state->channels_per_cell = args.channels;
+			state->channel_counter = state->channels_per_cell;
+			
+			complete_calls = args.total_calls;
 
-			if(IsParameterPresent(event_content, "channels_per_cell"))
-				state->channels_per_cell = GetParameterInt(event_content, "channels_per_cell");
-			else{
-				if(NUM_HOT && me < NUM_HOT_CELLS)
-					state->channels_per_cell = CHANNELS_PER_HOT_CELL;
-				else
-					state->channels_per_cell = CHANNELS_PER_CELL;
-			}
-
-			if(IsParameterPresent(event_content, "complete_calls"))
-				complete_calls = GetParameterInt(event_content, "complete_calls");
-
-			state->fading_recheck = IsParameterPresent(event_content, "fading_recheck");
-			state->variable_ta = IsParameterPresent(event_content, "variable_ta");
+			state->fading_recheck = args.fading_recheck;
+			state->variable_ta    = args.variable_ta;
+			state->fading_recheck_time = args.fading_recheck_time;
 
 
 			// Show current configuration, only once
@@ -116,7 +192,7 @@ TA_HOT         );
 			state->channel_counter = state->channels_per_cell;
 
 			// Setup channel state
-			state->channel_state = malloc(sizeof(unsigned int) * 2 * (CHANNELS_PER_CELL / BITS + 1));
+			state->channel_state = malloc(sizeof(unsigned int) * 2 * (state->channels_per_cell / BITS + 1));
 			for (w = 0; w < state->channel_counter / (sizeof(int) * 8) + 1; w++)
 				state->channel_state[w] = 0;
 
@@ -125,10 +201,10 @@ TA_HOT         );
 			ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
 
 			// If needed, start the first fading recheck
-			//if (state->fading_recheck) {
-				timestamp = (simtime_t) (FADING_RECHECK_FREQUENCY * Random());
+			if (state->fading_recheck) {
+				timestamp = (simtime_t) (state->fading_recheck_time * Random());
 				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
-		//	}
+			}
 
 			break;
 
@@ -150,7 +226,7 @@ TA_HOT         );
 //				printf("(%d) allocation %d at %f\n", me, new_event_content.channel, now);
 
 				// Determine call duration
-				switch (DURATION_DISTRIBUTION) {
+				switch (args.duration_d) {
 
 					case UNIFORM:
 						new_event_content.call_term_time = now + (simtime_t)(state->ta_duration * Random());
@@ -165,7 +241,7 @@ TA_HOT         );
 				}
 
 				// Determine whether the call will be handed-off or not
-				switch (CELL_CHANGE_DISTRIBUTION) {
+				switch (args.handoff_d) {
 
 					case UNIFORM:
 
@@ -194,7 +270,7 @@ TA_HOT         );
 				state->ta = recompute_ta(state->ref_ta, now);
 
 			// Determine the time at which a new call will be issued
-			switch (DISTRIBUTION) {
+			switch (args.arrival_d) {
 
 				case UNIFORM:
 					timestamp= now + (simtime_t)(state->ta * Random());
@@ -253,14 +329,12 @@ TA_HOT         );
 				new_event_content.call_term_time = event_content->call_term_time;
 
 
-				switch (CELL_CHANGE_DISTRIBUTION) {
+				switch (args.handoff_d) {
 					case UNIFORM:
 						handoff_time  = now + (simtime_t)((state->ta_change) * Random());
-
 						break;
 					case EXPONENTIAL:
 						handoff_time = now + (simtime_t)(Expent( state->ta_change ));
-
 						break;
 					default:
 						handoff_time = now+
@@ -280,19 +354,9 @@ TA_HOT         );
 
 
 				case FADING_RECHECK:
-
-/*
-			if(state->check_fading)
-				state->check_fading = false;
-			else
-				state->check_fading = true;
-*/
-
-			fading_recheck(state);
-
-			timestamp = now + (simtime_t) (FADING_RECHECK_FREQUENCY );
-			ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
-
+						fading_recheck(state);
+						timestamp = now + state->fading_recheck_time;
+						ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
 			break;
 
 

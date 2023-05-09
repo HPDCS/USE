@@ -23,9 +23,10 @@ static char messages[5][256] = {
 	"BITMAP_ENTRIES != virtual_len"
 };
 
-simulation_configuration rootsim_config;
+simulation_configuration pdes_config;
 size_t node_size_msg_t;
 
+// LCOV_EXCL_START
 
 void *rsalloc(size_t size) { return malloc(size); }
 void rsfree(void *ptr) { free(ptr);}
@@ -82,3 +83,5 @@ int main(void)
 
 	exit(res);
 }
+
+// LCOV_EXCL_STOP

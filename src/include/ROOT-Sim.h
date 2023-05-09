@@ -38,8 +38,11 @@
 #include <string.h>
 #include <float.h>
 #include <stdbool.h>
-//#include <core.h>
+#include <configuration.h>
 
+#define n_prc_tot (pdes_config.nprocesses)
+
+extern __thread unsigned int current_lp;
 
 #ifdef INIT
  #undef INIT
@@ -102,10 +105,8 @@ typedef double simtime_t;
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
 
-/// This is the definition of the number of LPs running in the current simulation
-extern unsigned int n_prc_tot;
-
-
+#define MAX_LPs	4096
+#define UNDEFINED_LP (MAX_LPs + 1)
 
 // Topology library
 #define TOPOLOGY_HEXAGON	1000
@@ -115,8 +116,8 @@ extern unsigned int n_prc_tot;
 #define TOPOLOGY_RING		1004
 #define TOPOLOGY_BIDRING	1005
 unsigned int FindReceiver(int topology);
-
-
+unsigned int GetNeighbourFromDirection(int topology, int direction);
+unsigned int GetDirectionCount(int topology);
 
 // Expose to the application level the command line parameter parsers
 int GetParameterInt(void *args, char *name);

@@ -189,9 +189,6 @@ extern struct stats_t *thread_stats;
 extern struct stats_t *lp_stats;
 extern struct stats_t *system_stats;
 
-enum stat_levels {STATS_GLOBAL, STATS_PERF, STATS_LP, STATS_ALL};
-
-
 void statistics_init();
 
 void statistics_fini();

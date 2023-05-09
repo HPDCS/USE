@@ -54,11 +54,11 @@ extern __thread list(msg_t) freed_local_evts;
 #define add_lp_unsafe_set(lp) 		(lp_unsafe_set_debug[lp]=1ULL)
 //#define is_in_lp_unsafe_set(lp) 	( lp_unsafe_set[lp/64]  & (1ULL << (lp%64)) )
 #define is_in_lp_unsafe_set(lp)		( lp_unsafe_set_debug[lp]==1ULL )
-//#define clear_lp_unsafe_set		{unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
-#define clear_lp_unsafe_set         {unsigned int x; for(x = 0; x < (n_prc_tot) ; x++){lp_unsafe_set_debug[x] = 0;}}
+//#define clear_lp_unsafe_set		{unsigned int x; for(x = 0; x < (pdes_config.nprocesses/64 + 1) ; x++){lp_unsafe_set[x] = 0;}
+#define clear_lp_unsafe_set         {unsigned int x; for(x = 0; x < (pdes_config.nprocesses) ; x++){lp_unsafe_set_debug[x] = 0;}}
 
 
-#define clear_lp_locked_set			{ unsigned int x; for(x = 0; x < (n_prc_tot/64 + 1) ; x++){lp_locked_set[x] = 0;}}
+#define clear_lp_locked_set			{ unsigned int x; for(x = 0; x < (pdes_config.nprocesses/64 + 1) ; x++){lp_locked_set[x] = 0;}}
 #define add_lp_locked_set(lp) 		( lp_locked_set[lp/64] |= (1ULL << (lp%64)) )
 #define is_in_lp_locked_set(lp)		( lp_locked_set[lp/64]  & (1ULL << (lp%64)) )
 

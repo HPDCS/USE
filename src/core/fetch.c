@@ -43,18 +43,11 @@
 #include <metrics_for_window.h>
 
 
-#if ENFORCE_LOCALITY == 1
 #include "local_index/local_index.h"
-#endif
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
 
-#define BOOL_CAS_ALE(addr, old, new)  CAS_x86(\
-                                        UNION_CAST(addr, volatile unsigned long long *),\
-                                        UNION_CAST(old,  unsigned long long),\
-                                        UNION_CAST(new,  unsigned long long)\
-                                      )
                                         
 #define BOOL_CAS_GCC(addr, old, new)  __sync_bool_compare_and_swap(\
                                         (addr),\
@@ -111,6 +104,8 @@
 #define OPTIMISTIC_MODE ONE_EVT_PER_LP
 #endif
 
+__thread unsigned int diff_lp = 0;
+__thread simtime_t cur_window;
 
 
 bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
@@ -201,7 +196,6 @@ bool commit_event(msg_t * event, nbc_bucket_node * node, unsigned int lp_idx){
                                                     
 
 
-__thread unsigned int diff_lp = 0;
 
 
 msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
@@ -219,8 +213,6 @@ msg_t* get_next_and_valid(LP_state *lp_ptr, msg_t* current){
     return local_next_evt; 
 }
 
-
-__thread simtime_t cur_window;
 
 unsigned int fetch_internal(){
     table *h;
@@ -260,14 +252,8 @@ unsigned int fetch_internal(){
     if(local_gvt < min){
         local_gvt = min;
     }
-    simtime_t cur_gvt = gvt;
-	if (local_gvt > gvt) {
-		__sync_bool_compare_and_swap(
-			UNION_CAST(&(gvt), unsigned long long *),
-			UNION_CAST(cur_gvt,unsigned long long),
-			UNION_CAST(local_gvt, unsigned long long)
-			);
-	}
+
+    update_global_gvt(local_gvt);
         
     while(node != NULL){
         
@@ -276,12 +262,12 @@ unsigned int fetch_internal(){
  #endif
     
         if( 
-            //skipped_lps==n_prc_tot/n_cores || 
-            skipped_lps >= n_prc_tot || 
-            skipped_events > (n_cores*100) ||  
+            //skipped_lps==pdes_config.nprocesses/pdes_config.ncores || 
+            skipped_lps >= pdes_config.nprocesses || 
+            skipped_events > (pdes_config.ncores*100) ||  
         (
 				!(
-					 (sec_stop == 0 && !stop) || (sec_stop != 0 && !stop_timer)
+					 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
 				) 
 				&& !sim_error)
         ){  return 0; } //DEBUG
@@ -366,13 +352,9 @@ unsigned int fetch_internal(){
         !is_in_lp_locked_set(lp_idx) &&
     #endif
  #endif
- #if DISTRIBUTED_FETCH == 1
-       ( !w.enabled || (ts-local_gvt) > cur_window || haveLock(lp_idx) || is_lp_on_my_numa_node(lp_idx)) &&
- #endif
+        ( !pdes_config.distributed_fetch || (!w.enabled || (ts-local_gvt) > cur_window || haveLock(lp_idx) || is_lp_on_my_numa_node(lp_idx)) ) &&
         (
- #if ENFORCE_LOCALITY == 1
-            haveLock(lp_idx) ||
- #endif 
+            (pdes_config.enforce_locality && haveLock(lp_idx)) ||
             tryLock(lp_idx)
         )
         ) {
@@ -392,9 +374,9 @@ unsigned int fetch_internal(){
         
             curr_evt_state = event->state;
         
-         #if ENFORCE_LOCALITY == 1
-            process_input_channel(lp_ptr);
-         #endif
+            if(pdes_config.enforce_locality)
+                process_input_channel(lp_ptr);
+    
             if(validity) {
                 //from this point the bound variable is freezed and of course is in the past
                 /// GET_NEXT_EXECUTED_AND_VALID: INIZIO ///

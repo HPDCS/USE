@@ -11,14 +11,9 @@
 #define COMPLETE_EVENTS 100000
 #define COMPLETE_TIME 200000
 #define EVENTS_PER_LP 1
-
-#ifndef FAN_OUT
 #define FAN_OUT 1
-#endif
 
-#ifndef LOOP_COUNT
-#define LOOP_COUNT 100
-#endif
+#define LOOP_COUNT 1
 
 #define TAU 1
 
@@ -33,6 +28,7 @@ typedef struct _event_content_type {
 typedef struct _lp_state_type {
 	simtime_t lvt;
 	unsigned int events;
+	unsigned int num_events;
 } lp_state_type;
 
 

@@ -11,17 +11,6 @@
 #include <hpipe.h>
 #include <metrics_for_window.h>
 
-#ifndef CURRENT_BINDING_SIZE
-#define CURRENT_BINDING_SIZE       1
-#endif
-
-#ifndef EVICTED_BINDING_SIZE
-#define EVICTED_BINDING_SIZE       1
-#endif
-
-#ifndef START_WINDOW
-#define START_WINDOW		   0.4
-#endif
 
 extern __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT;
 
@@ -42,7 +31,6 @@ typedef struct pipe_entry {
 } pipe_entry_t;
 
 typedef struct pipe{
-  //pipe_entry_t entries[CURRENT_BINDING_SIZE];
   size_t next_to_insert;   //next index of the array where to insert an lp
   size_t size;
   pipe_entry_t entries[];
@@ -181,7 +169,7 @@ static inline unsigned int detect_best_event_to_schedule(pipe_t *pipe) {
     size_t next_to_insert = pipe->next_to_insert; 
     size_t last_inserted = next_to_insert == 0 ? (pipe->size-1) : (next_to_insert-1);
     unsigned int min_lp = UNDEFINED_LP;
-  
+    if(MAX_LOCAL_DISTANCE_FROM_GVT == 0.0) MAX_LOCAL_DISTANCE_FROM_GVT = pdes_config.el_window_size;
     idx = last_inserted;
     for(i=0;i<pipe->size;i++){
         unsigned int lp = pipe->entries[idx].lp; 
@@ -198,10 +186,6 @@ static inline unsigned int detect_best_event_to_schedule(pipe_t *pipe) {
     }
     return min_lp;
 }
-
-//#undef CURRENT_BINDING_SIZE
-
-
 
 
 #endif

@@ -65,7 +65,7 @@ double Random(void) {
 	//seed1 = (uint32_t *)&thread_seed;
 	//seed2 = (uint32_t *)((char *)&thread_seed + (sizeof(uint32_t)));
 
-	if(rootsim_config.serial) {
+	if(pdes_config.serial) {
 		seed1 = (uint32_t *)&master_seed;
 		seed2 = (uint32_t *)((char *)&master_seed + (sizeof(uint32_t)));
 	} else {
@@ -133,11 +133,12 @@ double Normal(void) {
 	double fac, rsq, v1, v2;
 
 	if(iset == false) {
+
 		do {
 			v1 = 2.0 * Random() - 1.0;
 			v2 = 2.0 * Random() - 1.0;
 			rsq = v1 * v1 + v2 * v2;
-		} while(rsq >= 1.0 || D_DIFFER_ZERO(rsq));
+		} while(rsq >= 1.0 || rsq <= DBL_EPSILON);
 
 		fac = sqrt(-2.0 * log(rsq) / rsq);
 

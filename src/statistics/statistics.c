@@ -14,7 +14,7 @@ struct stats_t *lp_stats;
 struct stats_t *system_stats;
 
 void statistics_init() {
-	if(posix_memalign((void**)&thread_stats, 64, n_cores * sizeof(struct stats_t)) < 0) {
+	if(posix_memalign((void**)&thread_stats, 64, pdes_config.ncores * sizeof(struct stats_t)) < 0) {
 		printf("memalign failed\n");
 	}
 	if(thread_stats == NULL) {
@@ -22,7 +22,7 @@ void statistics_init() {
 		abort();
 	}
 
-	if(posix_memalign((void**)&lp_stats, 64, n_prc_tot * sizeof(struct stats_t)) < 0) {
+	if(posix_memalign((void**)&lp_stats, 64, pdes_config.nprocesses * sizeof(struct stats_t)) < 0) {
 		printf("memalign failed\n");
 	}
 	if(lp_stats == NULL) {
@@ -38,8 +38,8 @@ void statistics_init() {
 		abort();
 	}
 
-	memset(thread_stats, 0, n_cores * sizeof(struct stats_t));
-	memset(lp_stats, 0, n_prc_tot * sizeof(struct stats_t));
+	memset(thread_stats, 0, pdes_config.ncores * sizeof(struct stats_t));
+	memset(lp_stats, 0, pdes_config.nprocesses * sizeof(struct stats_t));
 	memset(system_stats, 0, sizeof(struct stats_t));
 }
 
@@ -239,12 +239,12 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 }
 
 inline void statistics_post_lp_data(unsigned int lp_idx, int type, stat64_t value) {
-	assert(lp_idx < n_prc_tot);
+	assert(lp_idx < pdes_config.nprocesses);
 	statistics_post_data(lp_stats, lp_idx, type, value);
 }
 
 inline void statistics_post_th_data(unsigned int tid, int type, stat64_t value) {
-	assert(tid < n_cores);
+	assert(tid < pdes_config.ncores);
 	statistics_post_data(thread_stats, tid, type, value);
 }
 
@@ -253,7 +253,7 @@ void gather_statistics() {
 	unsigned int i;
 
 	// Aggregate per thread
-	for(i = 0; i < n_cores; i++) {
+	for(i = 0; i < pdes_config.ncores; i++) {
 		system_stats->events_committed     += thread_stats[i].events_committed;
 		
 		system_stats->counter_prune        += thread_stats[i].counter_prune;
@@ -277,10 +277,10 @@ void gather_statistics() {
 
 	system_stats->clock_prune /= system_stats->counter_prune;
 	system_stats->clock_loop_tot = system_stats->clock_loop;
-	system_stats->clock_loop /= n_cores;
+	system_stats->clock_loop /= pdes_config.ncores;
 	
 	// Aggregate per LP
-	for(i = 0; i < n_prc_tot; i++) {
+	for(i = 0; i < pdes_config.nprocesses; i++) {
 		system_stats->events_total         += lp_stats[i].events_total;
 		system_stats->events_straggler     += lp_stats[i].events_straggler;
 		system_stats->events_committed     += lp_stats[i].events_committed;
@@ -354,10 +354,10 @@ void gather_statistics() {
 	system_stats->clock_enqueue       /= system_stats->events_enqueued;
 		
 
-	system_stats->counter_checkpoint_recalc /= n_prc_tot;
+	system_stats->counter_checkpoint_recalc /= pdes_config.nprocesses;
 
 	system_stats->mem_checkpoint /= system_stats->counter_checkpoints;
-	system_stats->checkpoint_period /= n_prc_tot;
+	system_stats->checkpoint_period /= pdes_config.nprocesses;
 }
 
 static void _print_statistics(struct stats_t *stats) {
@@ -373,7 +373,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("Anti events.....................................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_anti, percentage(stats->events_anti, stats->events_total));
 	printf("Useless events..................................: %12llu (%4.2f%%)\n", 
-		(unsigned long long)(stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot),percentage((stats->events_total - stats->events_silent - stats->total_frames+n_prc_tot), stats->events_total));
+		(unsigned long long)(stats->events_total - stats->events_silent - stats->total_frames+pdes_config.nprocesses),percentage((stats->events_total - stats->events_silent - stats->total_frames+pdes_config.nprocesses), stats->events_total));
 #if REVERSIBLE==1
 	printf("Reversible events...............................: %12llu (%4.2f%%)\n",
 		(unsigned long long)stats->events_reverse, percentage(stats->events_reverse, stats->events_total));
@@ -475,14 +475,14 @@ void print_statistics() {
 	gather_statistics();
 
 	printf("Simulation final report:\n");
-	printf("Thread: %u\tLP: %u\n", n_cores, n_prc_tot);
+	printf("Thread: %u\tLP: %u\n", pdes_config.ncores, pdes_config.nprocesses);
 	//printf("Lookahead: %d", 0);
 	printf("\n");
 
 /*
 	printf("\n");
 	printf("===== LPs' STATISTICS =====\n");
-	for (int i = 0; i < n_prc_tot; i++)	{
+	for (int i = 0; i < pdes_config.nprocesses; i++)	{
 		printf("\n---------- LP%u ----------\n", i);
 		_print_statistics(lp_stats+i);
 		printf("\n", i);

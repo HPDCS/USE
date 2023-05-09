@@ -2,12 +2,12 @@ function(test_program name)
     add_executable(test_${name} ${ARGN})
     target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src)
     add_test(NAME test_${name} COMMAND test_${name})
-    target_link_libraries(test_${name} use-datatypes) 
+    target_link_libraries(test_${name} use-datatypes m) 
     set_tests_properties(test_${name} PROPERTIES TIMEOUT 120)
 endfunction()
 
 
-function(test_model name cores lps)
+function(test_model name)
     add_library(${name} STATIC ${ARGN})
     #add_dependencies(${name} ${PROJECT_SOURCE_DIR}/src/include-gen/clock_constant.h)
     target_include_directories(${name} PRIVATE ../src/include ../src/include-gen ${name})
@@ -23,23 +23,28 @@ function(test_model name cores lps)
     
     target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a use-core use-datatypes m numa pthread) 
 
-    add_test(NAME test_${name}_seq COMMAND test_${name} 1 ${lps})
-    add_test(NAME test_${name}_par COMMAND test_${name} ${cores} ${lps})
-    set_tests_properties(test_${name}_seq PROPERTIES TIMEOUT 120)
-    set_tests_properties(test_${name}_par PROPERTIES TIMEOUT 120)
 endfunction()
 
+function(configure_test prefix name)
+    add_test(NAME ${prefix}_${name}_seq COMMAND test_${name} --ncores=1 ${ARGN})
+    add_test(NAME ${prefix}_${name}_par COMMAND test_${name} --ncores=${N} ${ARGN})
+    set_tests_properties(${prefix}_${name}_seq PROPERTIES TIMEOUT 120)
+    set_tests_properties(${prefix}_${name}_par PROPERTIES TIMEOUT 120)
+endfunction()
 
 test_program(bitmap datatypes/bitmap.c)
 test_program(list datatypes/list.c)
+test_program(numerical core/numerical.c)
 
-test_model(phold ${N} 1024 ../models/phold/application.c)
-target_compile_options(phold PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=10000)
+test_model(phold ../models/phold/application.c)
+test_model(phold_count ../models/phold_count/application.c)
+test_model(pcs ../models/pcs/application.c ../models/pcs/functions_app.c)
+test_model(tuberculosis ../models/tuberculosis/application.c ../models/tuberculosis/guy.c ../models/tuberculosis/guy_init.c ../models/tuberculosis/parameters.c)
 
 
-test_model(phold_count ${N} 32 ../models/phold_count/application.c)
-target_compile_options(phold_count PRIVATE -DLOOP_COUNT=1 -DCOMPLETE_EVENTS=100000)
-
-
-test_model(pcs ${N} 1024 ../models/pcs/application.c ../models/pcs/functions_app.c)
-target_compile_options(pcs PRIVATE -DCOMPLETE_CALLS=1000 -DTA_CHANGE=300 -DTA_DURATION=120 -DTA=0.48 -DCHANNELS_PER_CELL=8000 -DFADING_RECHECK_FREQUENCY=30)
+configure_test(test phold_count --nprocesses=256 --num-events=500 --ongvt-mode=1 --ongvt-period=50)
+configure_test(test phold --nprocesses=256 --event-us=5 --num-events=1000)
+configure_test(test pcs --nprocesses=256 --ta=0.48 --num-calls=500 --enable-fading)
+configure_test(test_mem pcs --nprocesses=256 --ta=0.48 --num-calls=500 --enable-custom-alloc)
+configure_test(test_enf_loc pcs --nprocesses=256 --ta=0.48 --num-calls=1500 --enforce-locality --el-dyn-window --el-locked-size=2 --el-evicted-size=2)
+configure_test(test_sync_csr pcs --nprocesses=256 --ta=0.48 --num-calls=500 --ongvt-mode=2 --ongvt-period=500)

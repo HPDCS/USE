@@ -35,13 +35,6 @@
 #include <numerical.h>
 
 
-/// Checkpointing interval not yet set
-#define  INVALID_STATE_SAVING 		0
-/// Copy State Saving checkpointing interval
-#define  COPY_STATE_SAVING 		1
-/// Periodic State Saving checkpointing interval
-#define  PERIODIC_STATE_SAVING		2
-
 
 #define CKPT_RECALC_PERIOD		200
 #define CKPT_RECALC_THRESHOLD	10

@@ -5,7 +5,7 @@
 #include <sched.h>
 #include <string.h>
 #include <errno.h>
-
+#include <argp.h> 
 
 #include <core.h>
 #include <timer.h>
@@ -35,47 +35,12 @@ void *start_thread(){
 
 void start_simulation() {
 
-    pthread_t p_tid[n_cores-1];//pthread_t p_tid[number_of_threads];//
+    pthread_t p_tid[pdes_config.ncores-1];
     int ret;
     unsigned int i;
 
-
-    printf(COLOR_CYAN "\nStarting an execution with %u THREADs, %u LPs :\n", n_cores, n_prc_tot);
-//#if SPERIMENTAL == 1
-//    printf("\t- SPERIMENTAL features enabled.\n");
-//#endif
-//#if PREEMPTIVE == 1
-//    printf("\t- PREEMPTIVE event realease enabled.\n");
-//#endif
-#if DEBUG == 1
-    printf("\t- DEBUG mode enabled.\n");
-#endif
-    printf("\t- DYMELOR enabled.\n");
-    printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
-    printf("\t- CHECKPOINT PERIOD %u\n", CHECKPOINT_PERIOD);
-    printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", CLEAN_CKP_INTERVAL);
-    printf("\t- ON_GVT PERIOD %u\n", ONGVT_PERIOD);
-#ifdef DISTRIBUTED_FETCH
-    printf("\t- DISTRIBUTED_FETCH %u\n", DISTRIBUTED_FETCH);
-#endif
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 0
-    printf("\t- CSR ASYNCH disabled.\n");
-#endif
-#if STATE_SWAPPING == 1 && CSR_CONTEXT == 1
-    printf("\t- CSR ASYNCH enabled.\n");
-#endif
-#if REPORT == 1
-    printf("\t- REPORT prints enabled.\n");
-#endif
-//#if REVERSIBLE == 1
-//    printf("\t- SPECULATIVE SIMULATION\n");
-//#else
-//    printf("\t- CONSERVATIVE SIMULATION\n");
-//#endif
-    printf("\n" COLOR_RESET);
-
-    //Child thread
-    for(i = 0; i < n_cores - 1; i++) {
+    //Child threads
+    for(i = 0; i < pdes_config.ncores - 1; i++) {
         if( (ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
             fprintf(stderr, "%s\n", strerror(errno));
             abort();
@@ -85,29 +50,21 @@ void start_simulation() {
     //Main thread
     thread_loop(0);
 
-    for(i = 0; i < n_cores-1; i++){
+    for(i = 0; i < pdes_config.ncores-1; i++){
         pthread_join(p_tid[i], NULL);
     }
 }
 
+
+
+
+
 int main(int argn, char *argv[]) {
     timer exec_time;
-
-    if(argn < 3) {
-        fprintf(stderr, "Usage: %s: n_threads n_lps\n", argv[0]);
-        exit(EXIT_FAILURE);
-
-    } else {
-        n_cores = atoi(argv[1]);
-        n_prc_tot = atoi(argv[2]);
-        if(argn == 4)
-            sec_stop = atoi(argv[3]);
-    }
-
     
-    if(argn == 4)
-        sec_stop = atoi(argv[3]);
-  
+    parse_options(argn, argv);
+    print_config();
+
     printf("***START SIMULATION***\n\n");
 
     timer_start(exec_time);
@@ -124,7 +81,7 @@ int main(int argn, char *argv[]) {
     printf("Simulation ended  (clocks): %llu\n", clock_timer_value(simulation_clocks));
     printf("Last gvt: %f\n", current_lvt);
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
-    printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/n_cores);
+    printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/pdes_config.ncores);
     //statistics_fini();
 
     return 0;

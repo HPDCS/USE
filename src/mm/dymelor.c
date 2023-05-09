@@ -59,9 +59,6 @@ void dymelor_fini(void){
 }
 
 
-
-
-
 /**
 * This function inizializes a malloc_area
 *
@@ -209,11 +206,9 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 	size_t area_size;
 	bool is_recoverable;
 	int j;
-
-	#ifndef HAVE_PARALLEL_ALLOCATOR
-	(void)lid;
-	#endif
-
+	if(pdes_config.serial) {
+		return rsalloc(size);
+	}
 	size = compute_size(size);
 
 	if(size > MAX_CHUNK_SIZE){
@@ -283,13 +278,12 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 
 		area_size = sizeof(malloc_area *) + bitmap_blocks * BLOCK_SIZE * 2 + num_chunks * size;
 
-	#ifdef HAVE_PARALLEL_ALLOCATOR
-		//insert is recoverable in pool_get_memory (was in GLP)
-		m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
-	#else
-		m_area->self_pointer = rsalloc(area_size);
-		bzero(m_area->self_pointer, area_size);
-	#endif
+		if(pdes_config.enable_custom_alloc)
+			m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
+		else{
+			m_area->self_pointer = rsalloc(area_size);
+			bzero(m_area->self_pointer, area_size);
+		}
 
 		if(m_area->self_pointer == NULL){
 			printf("Is recoverable: ");
@@ -376,7 +370,7 @@ void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
 	int idx, bitmap_blocks;
 	size_t chunk_size;
 
-	if(rootsim_config.serial) {
+	if(pdes_config.serial) {
 		rsfree(ptr);
 		return;
 	}
