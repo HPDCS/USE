@@ -71,6 +71,7 @@ void flush_locked_pipe(){
     for(int i=0;i<thread_locked_binding->size;i++){
         entry_to_be_evicted = thread_locked_binding->entries[i]; 
         lp_to_evict = entry_to_be_evicted.lp; 
+        if(lp_to_evict == UNDEFINED_LP) continue;
         LPS[lp_to_evict]->wt_binding = UNDEFINED_WT;
         unlock(lp_to_evict);
         next_ts = entry_to_be_evicted.next_ts;
