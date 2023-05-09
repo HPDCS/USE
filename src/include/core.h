@@ -13,7 +13,7 @@
 #include <configuration.h>
 
 
-#define THR_POOL_SIZE		1024//128
+#define THR_POOL_SIZE		4096//128
 
 
 #define UNDEFINED_WT (512)

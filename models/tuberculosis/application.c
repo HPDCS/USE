@@ -8,14 +8,64 @@
 #include "application.h"
 #include "guy.h"
 #include "guy_init.h"
+#include <ROOT-Sim.h>
+
 
 #include <math.h>
 
+
+typedef struct model_parameters{
+	unsigned num_healthy;
+  unsigned num_infected;
+  unsigned num_sick;
+  unsigned num_treatment;
+  unsigned num_treated;
+}
+model_parameters;
+
 struct argp_option model_options[] = {
+	{"num_healthy",        1001, "VALUE", 0, "Number of healthy people"               , 0 },
+	{"num_infected",        1002, "VALUE", 0, "Number of infected people"               , 0 },
+	{"num_sick",        1003, "VALUE", 0, "Number of sick people"               , 0 },
+	{"num_treatment",        1004, "VALUE", 0, "Number of people in treatment"               , 0 },
+	{"num_treated",        1005, "VALUE", 0, "Number of treated people"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
-error_t model_parse_opt(int key, char *arg, struct argp_state *state){}
+model_parameters args = {
+	.num_healthy = 1529469,
+  .num_infected = 68491,
+  .num_sick = 39,
+  .num_treatment = 161,
+  .num_treated = 1840,
+};
+
+
+
+error_t model_parse_opt(int key, char *arg, struct argp_state *state){
+
+	(void)state;
+	switch(key){
+		case 1001:
+			args.num_healthy = atoi(arg);
+			break;
+		case 1002:
+			args.num_infected = atoi(arg);
+			break;
+		case 1003:
+			args.num_sick = atoi(arg);
+			break;
+		case 1004:
+			args.num_treatment = atoi(arg);
+			break;
+		case 1005:
+			args.num_treated = atoi(arg);
+			break;
+		default:
+			break;
+	}
+	return 0;
+}
 
 //struct _topology_settings_t topology_settings = {.type = TOPOLOGY_OBSTACLES, .write_enabled = false, .default_geometry = TOPOLOGY_SQUARE};
 //struct _abm_settings_t abm_settings = {0, _TRAVERSE, false};
@@ -75,7 +125,7 @@ static void move_healthy_people(unsigned me, region_t *region, simtime_t now){
 // healthy people are moved at slightly randomized timesteps 0.5, 1.5, 2.5, 3.5...
 // this way we preserve the order of operation as in the original model
 void ProcessEvent(unsigned int me, simtime_t now, int event_type,
-		union {agent_t *agent; unsigned *n; infection_t *i_m; init_t *in_m;} payload, unsigned int event_size, region_t *state) {
+		union {guy_t *guy; unsigned *n; infection_t *i_m; init_t *in_m;} payload, unsigned int event_size, region_t *state) {
 
 	if(!me && event_type != INIT)
 		state->now = now;
@@ -87,10 +137,22 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			region_t *region = malloc(sizeof(region_t));
 			SetState(region);
 			region->healthy = 0;
+			region->guys_infected = 0;
+			region->num_healthy		= args.num_healthy;
+			region->num_sick			= args.num_sick;
+			region->num_infected	= args.num_infected;
+			region->num_treatment	= args.num_treatment;
+			region->num_treated		= args.num_treated;
+
+			region->head_infected = region->tail_infected = NULL;
+			region->head_sick = region->tail_sick =  NULL;
+			region->head_treatment = region->tail_treatment = NULL;
+			region->head_treated = region->tail_treated = NULL;
+
 
 			if(!me){
 				// this function let LP0 coordinate the init phase
-				guy_init();
+				guy_init(region);
 				printf("INIT 0 complete\n");
 			}
 			ScheduleNewEvent(me, now + 1.25 + Random()/2, MIDNIGHT, NULL, 0);
@@ -110,11 +172,11 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			break;
 
 		case GUY_VISIT:
-			guy_on_visit(*payload.agent, me, state, now);
+			guy_on_visit(payload.guy, me, state, now);
 			break;
 
 		case GUY_LEAVE:
-			guy_on_leave(*payload.agent, now);
+			guy_on_leave(payload.guy, now, state);
 			break;
 
 		case GUY_INIT:
@@ -131,8 +193,8 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 
 int OnGVT(unsigned int me, region_t *snapshot) {
 	if(!me){
-		printf("healthy %u, infected %u\n", snapshot->healthy, CountAgents());
-		return snapshot->now > END_TIME;
+		//printf("healthy %u -- infected %u\n", snapshot->healthy, snapshot->guys_infected);
+		return snapshot->now > pdes_config.timeout;
 	}
 	return true;
 }

@@ -10,12 +10,6 @@
 
 #define AGE_GROUPS 11
 
-/* Initial values */
-extern const unsigned num_healthy;
-extern const unsigned num_infected;
-extern const unsigned num_sick;
-extern const unsigned num_treatment;
-extern const unsigned num_treated;
 
 /* Defines age_groups considered: 0-5, 6-15, ...*/
 extern const unsigned age_groups[AGE_GROUPS];
