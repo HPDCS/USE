@@ -39,7 +39,7 @@ test_program(numerical core/numerical.c)
 test_model(phold ../models/phold/application.c)
 test_model(phold_count ../models/phold_count/application.c)
 test_model(pcs ../models/pcs/application.c ../models/pcs/functions_app.c)
-test_model(tuberculosis ../models/tuberculosis/application.c ../models/tuberculosis/guy.c ../models/tuberculosis/guy_init.c ../models/tuberculosis/parameters.c)
+test_model(tuberculosis ../models/tuberculosis/application.c ../models/tuberculosis/guy.c ../models/tuberculosis/guy_init.c ../models/tuberculosis/guy_list.c ../models/tuberculosis/parameters.c)
 
 
 configure_test(test phold_count --nprocesses=256 --num-events=500 --ongvt-mode=1 --ongvt-period=50)
@@ -48,3 +48,4 @@ configure_test(test pcs --nprocesses=256 --ta=0.48 --num-calls=500 --enable-fadi
 configure_test(test_mem pcs --nprocesses=256 --ta=0.48 --num-calls=500 --enable-custom-alloc)
 configure_test(test_enf_loc pcs --nprocesses=256 --ta=0.48 --num-calls=1500 --enforce-locality --el-dyn-window --el-locked-size=2 --el-evicted-size=2)
 configure_test(test_sync_csr pcs --nprocesses=256 --ta=0.48 --num-calls=500 --ongvt-mode=2 --ongvt-period=500)
+configure_test(test_tuberculosis_enf_loc tuberculosis --nprocesses=256 --enforce-locality)
