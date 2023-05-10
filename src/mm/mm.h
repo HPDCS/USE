@@ -70,7 +70,7 @@ typedef struct _lp_mem_region{
 #define INVALID_SOBJ_ID_AECS         -97
 #define MDT_RELEASE_FAILURE_AECS     -96
 
-extern bool allocator_init();
+extern bool allocator_init(unsigned int objs);
 extern void allocator_fini(void);
 void *get_base_pointer(unsigned int gid);
 

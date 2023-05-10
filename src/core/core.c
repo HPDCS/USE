@@ -55,8 +55,7 @@
 
 unsigned int start_periodic_check_ongvt = 0;
 
-extern clock_timer simulation_clocks;
-extern timer exec_time;
+
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -99,7 +98,6 @@ LP_state **LPS = NULL;
 //used to check termination conditions
 volatile bool stop = false;
 volatile bool stop_timer = false;
-volatile unsigned int lp_inizialized = 0;
 pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
 
 unsigned long long *sim_ended;
@@ -476,55 +474,20 @@ void init_simulation(unsigned int thread_id){
 	freed_local_evts = new_list(tid, msg_t);
 
 
+
 	
 	if(tid == 0){
 		numa_init();
 		LPs_metada_init();
 		pin_lps_on_numa_nodes_init();
-		dymelor_init();
+		dymelor_init(pdes_config.nprocesses);
 		statistics_init();
 		queue_init();
 		numerical_init();
 		nodes_init();
-
-  		if(pdes_config.enforce_locality){
-			pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
-			init_metrics_for_window();
-  		}
-
-  		if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
-			state_swap_ptr = alloc_state_swapping_struct();
-			pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
-		}
-		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
-	}
-
-
-	//wait all threads to end the init phase to start togheter
-	
-	// Set the CPU affinity
-	__sync_fetch_and_add(&ready_wt, 1);
-	__sync_synchronize();
-
-	while(ready_wt<pdes_config.ncores)usleep(500);
-
-	if(pdes_config.enforce_locality)
-		local_binding_init();
-
- 	 set_affinity(tid);
-
-	if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
-		usleep(10);
-		init_thread_csr_state();
-	}
-
-
-	while(lp_inizialized < pdes_config.nprocesses){
-			//if(tid != 0) continue;
-			current_lp = __sync_fetch_and_add(&lp_inizialized, 1);
-			if(current_lp >=  pdes_config.nprocesses) continue;
-			if(!pdes_config.serial) allocator_init_for_lp(current_lp);
-			current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
+		//process_init_event
+		for (current_lp = 0; current_lp < pdes_config.nprocesses; current_lp++) {	
+     		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
      		current_msg->sender_id 		= -1;//
      		current_msg->receiver_id 	= current_lp;//
      		current_msg->timestamp 		= 0.0;//
@@ -546,13 +509,23 @@ void init_simulation(unsigned int thread_id){
 				LPS[current_lp]->until_ckpt_recalc = 0;
 				//LPS[current_lp]->ckpt_period = 20;
 				//LPS[current_lp]->epoch = 1;
-	}
-	if(tid == 0) {
-		clock_timer_start(simulation_clocks);
-    	timer_start(exec_time);
+		}
+
+  		if(pdes_config.enforce_locality){
+			pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
+			init_metrics_for_window();
+  		}
+
+  		if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
+			state_swap_ptr = alloc_state_swapping_struct();
+			pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
+		}
+		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
 
+
+	//wait all threads to end the init phase to start togheter
 
 	if(tid == 0 && do_sleep != 0){
 	    int ret;
@@ -561,7 +534,21 @@ void init_simulation(unsigned int thread_id){
 	            abort();
 	    }
 	}
+	
+	// Set the CPU affinity
+	__sync_fetch_and_add(&ready_wt, 1);
+	__sync_synchronize();
+	while(ready_wt!=pdes_config.ncores);
 
+	if(pdes_config.enforce_locality)
+		local_binding_init();
+
+  set_affinity(tid);
+
+	if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT){
+		usleep(10);
+		init_thread_csr_state();
+	}
 
     statistics_post_th_data(tid, STAT_INIT_CLOCKS, clock_timer_value(init_timer));
 }
@@ -636,11 +623,11 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int old_state;
 	unsigned int empty_fetch = 0;
 	
+	init_simulation(thread_id);
 	
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
-	init_simulation(thread_id);
 
 	///* START SIMULATION *///
 	while (  

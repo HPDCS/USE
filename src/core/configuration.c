@@ -112,6 +112,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     case ENFORCE_LOCALITY_KEY:
       pdes_config.enforce_locality = 1;
+      pdes_config.el_locked_pipe_size = 1;
+      pdes_config.el_evicted_pipe_size = 1;
+      pdes_config.el_window_size = 0;
       break;
     case EL_DYN_WINDOW_KEY:
       pdes_config.el_dynamic_window = 1;
@@ -186,9 +189,6 @@ void configuration_init(void){
   pdes_config.ongvt_mode = 0;
 
   pdes_config.enforce_locality = 0;
-  pdes_config.el_locked_pipe_size = 0;
-  pdes_config.el_evicted_pipe_size = 0;
-  pdes_config.el_window_size = 0;
 
   pdes_config.distributed_fetch = 0;
   pdes_config.numa_rebalance = 0;
@@ -215,10 +215,8 @@ void print_config(void){
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
     if(pdes_config.enforce_locality){
-      printf("\t\t|- Starting window   %f\n", pdes_config.el_window_size);
-      printf("\t\t|- Dynamic  window   %u\n", pdes_config.el_dynamic_window);
-      printf("\t\t|- Locked  Pipe size %u\n", pdes_config.el_locked_pipe_size);
-      printf("\t\t|- Evicted Pipe size %u\n", pdes_config.el_evicted_pipe_size);
+      printf("\t\t|- Starting window %f\n", pdes_config.el_window_size);
+      printf("\t\t|- Dynamic  window %u\n", pdes_config.el_dynamic_window);
     }
     printf("\t- DISTRIBUTED FETCH %u\n", pdes_config.distributed_fetch);
     printf("\t- MALLOC-BASED RECOVERABLE ALLOC %u\n", !pdes_config.enable_custom_alloc);

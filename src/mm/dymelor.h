@@ -203,7 +203,7 @@ extern void restore_freezed_state(unsigned int lp);
 
 
 // DyMeLoR API
-extern void dymelor_init();
+extern void dymelor_init(unsigned int objs);
 extern void dymelor_fini(void);
 extern void set_force_full(unsigned int, int);
 extern void dirty_mem(void *, int);

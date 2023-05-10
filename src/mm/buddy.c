@@ -257,29 +257,32 @@ void allocator_fini(void) {
 
 }
 
+bool allocator_init(unsigned int objs) {
+	unsigned int i;
+	(void)objs;
 
-bool allocator_init_for_lp(unsigned int lp){
-    GID_t gid;
-    set_gid(gid, lp);
-    if(1 /*GidToKernel(gid) == kid */) {
-        // TODO: we should tread mem_areas as gid's as well, to
-        // reclaim memory at the end of the simulation.
-        //printf("allocating memory for gid %d with lid %d  whose kernel is %d\n",i,GidToLid(i),GidToKernel(i));
-        mem_areas[lid_to_int(GidToLid(gid))] = get_segment(gid, numa_from_lp(gid), pages+lp);
-        buddies[lid_to_int(GidToLid(gid))] = buddy_new(PER_LP_PREALLOCATED_MEMORY / BUDDY_GRANULARITY);
-        
-    } else {
-        (void)get_segment(gid, numa_from_lp(gid), pages+gid);
-    }
-    return true;
-}
-
-bool allocator_init() {
-    if(pdes_config.serial) return true;
 	// These are a vector of pointers which are later initialized
 	buddies = rsalloc(sizeof(struct _buddy *) * pdes_config.nprocesses);
 	mem_areas = rsalloc(sizeof(void *) * pdes_config.nprocesses);
     pages = rsalloc(sizeof(void *) * pdes_config.nprocesses);
+
+	// we loop over all gid's to let the underlying kernel module
+	// mmap memory for all distributed LPs
+	// TODO: reimplement with foreach
+	for (i = 0; i < pdes_config.nprocesses; i++) {
+		GID_t gid;
+		set_gid(gid, i);
+		if(1 /*GidToKernel(gid) == kid */) {
+			// TODO: we should tread mem_areas as gid's as well, to
+			// reclaim memory at the end of the simulation.
+			//printf("allocating memory for gid %d with lid %d  whose kernel is %d\n",i,GidToLid(i),GidToKernel(i));
+			mem_areas[lid_to_int(GidToLid(gid))] = get_segment(gid, numa_from_lp(gid), pages+i);
+			buddies[lid_to_int(GidToLid(gid))] = buddy_new(PER_LP_PREALLOCATED_MEMORY / BUDDY_GRANULARITY);
+			continue;
+		} else {
+			(void)get_segment(gid, numa_from_lp(gid), pages+gid);
+		}
+	}
 
 	return true;
 }

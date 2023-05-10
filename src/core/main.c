@@ -20,9 +20,6 @@ unsigned long long tid_ticket = 1;
 //extern double delta_count;
 extern int reverse_execution_threshold;
 
-clock_timer simulation_clocks;
-timer exec_time;
-
 void *start_thread(){
 	
 	int tid = (int) __sync_fetch_and_add(&tid_ticket, 1);
@@ -63,13 +60,17 @@ void start_simulation() {
 
 
 int main(int argn, char *argv[]) {
+    timer exec_time;
     
     parse_options(argn, argv);
     print_config();
 
     printf("***START SIMULATION***\n\n");
 
+    timer_start(exec_time);
 
+	clock_timer simulation_clocks;
+	clock_timer_start(simulation_clocks);
 
 	start_simulation();
     double simduration = (double)timer_value_seconds(exec_time);
