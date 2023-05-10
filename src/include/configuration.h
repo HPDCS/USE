@@ -31,6 +31,7 @@ typedef struct _simulation_configuration {
 	enum log_modes checkpointing; 
 	unsigned int ckpt_period;
 	unsigned int ckpt_collection_period;
+	unsigned int ckpt_autonomic_period;
 
 	unsigned int ongvt_period;
 	enum ongvt_mode ongvt_mode;

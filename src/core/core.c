@@ -23,6 +23,7 @@
 
 #include <reverse.h>
 #include <statistics.h>
+#include <autockpt.h>
 
 #include "core.h"
 #include "queue.h"
@@ -281,6 +282,10 @@ void LPs_metada_init() {
 		LPS[i]->ema_granularity			= 0.0;
 		LPS[i]->migration_score			= 0.0;
 		
+
+		LPS[i]->ema_silent_event_granularity = 0.0;
+		LPS[i]->ema_take_snapshot_time		 = 0.0;
+		LPS[i]->ema_rollback_probability	 = 0.0;
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
@@ -599,7 +604,10 @@ stat64_t execute_time;
 
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
+			autockpt_update_ema_silent_event(LP, execute_time);
 		}
+		else
+			autockpt_update_consecutive_forward_count(LP);
 #endif
 		/// computation of metrics for LP migration
 		aggregate_metrics_for_lp_migration(current_lp, event->timestamp, LPS[current_lp]->bound->timestamp, execute_time);
@@ -963,6 +971,12 @@ end_loop:
 
 	if(pdes_config.enforce_locality)
 		printf("Last window for %d is %f\n", tid, get_current_window());
+	if(tid == 0 && pdes_config.ckpt_autonomic_period){
+		unsigned int acc = 0;
+		for(int i = 0; i<pdes_config.nprocesses;i++)
+			acc += LPS[i]->ckpt_period;
+		printf("AVG last ckpt period: %u\n", acc/pdes_config.nprocesses);
+	}	
 	
 	// Unmount statistical data
 	// FIXME
