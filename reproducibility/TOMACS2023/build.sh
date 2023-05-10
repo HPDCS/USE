@@ -2,5 +2,6 @@
 
 mkdir -p use-release
 cd use-release
+rm -r *
 cmake ../../.. -DCMAKE_BUILD_TYPE=Release && make
 cd ..
