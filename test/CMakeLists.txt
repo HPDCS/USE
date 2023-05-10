@@ -48,4 +48,4 @@ configure_test(test pcs --nprocesses=256 --ta=0.48 --num-calls=500 --enable-fadi
 configure_test(test_mem pcs --nprocesses=256 --ta=0.48 --num-calls=500 --enable-custom-alloc)
 configure_test(test_enf_loc pcs --nprocesses=256 --ta=0.48 --num-calls=1500 --enforce-locality --el-dyn-window --el-locked-size=2 --el-evicted-size=2)
 configure_test(test_sync_csr pcs --nprocesses=256 --ta=0.48 --num-calls=500 --ongvt-mode=2 --ongvt-period=500)
-configure_test(test_tuberculosis_enf_loc tuberculosis --nprocesses=256 --enforce-locality)
+configure_test(test_tuberculosis_enf_loc tuberculosis --nprocesses=256 --enforce-locality --el-locked-size=2 --el-evicted-size=2)
