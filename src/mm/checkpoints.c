@@ -36,6 +36,7 @@
 //#include <scheduler/process.h>
 #include <state.h>
 #include <statistics.h>
+#include <autockpt.h>
 
 
 /**
@@ -187,7 +188,7 @@ void *log_full(int lid) {
 
 	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
 	statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
-
+	autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
 	return ckpt;
 }
 

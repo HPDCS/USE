@@ -53,16 +53,28 @@ do
 			do
 				for df in $ENFORCE_LOCALITY_list
 				do
+					cmd="./${BIN_PATH}/test_$test "
+					model_options="--ta=$tav --duration=$tad --handoff-rate=$tac"
+					memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
+					locality_options="--enforce-locality --el-locked-size=$cbs --el-evicted-size=$ebs --el-window-size=$w"
+					
+					#cmd="make $test"
+					#cmd="$cmd ENFORCE_LOCALITY=$df"
+					#cmd="$cmd ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0"
+					#cmd="$cmd CURRENT_BINDING_SIZE=$cbs"
+					#cmd="$cmd EVICTED_BINDING_SIZE=$ebs"
+					#cmd="$cmd START_WINDOW=$w"
 
-					cmd="make $test"
-					cmd="$cmd ENFORCE_LOCALITY=$df ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs START_WINDOW=$w"
+					cmd="$cmd ${model_options}"
+
 					if [ $df = "1" ]; then
-						cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
+						#cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
+						cmd="$cmd ${memory_options} ${locality_options}"
 					fi
-					cmd="$cmd TA_CHANGE=$tac TA_DURATION=$tad TA=$tav"
 
-					echo $cmd
-					$cmd
+					#cmd="$cmd TA_CHANGE=$tac TA_DURATION=$tad TA=$tav"
+					#echo $cmd
+					#$cmd
 
 					if [ $df = "0" ]; then
 						if [ "$w" = "0.1" ]; then
@@ -85,7 +97,11 @@ do
 						do
 							for th in $MAX_THREADS
 							do
-								EX1="./${test} $th $lp ${TEST_DURATION}"
+								runtime_options="-w ${TEST_DURATION} --ncores=$th --nprocesses=$lp"
+								cmd="$cmd ${runtime_options}"
+								echo $cmd
+
+								EX1="./$cmd"
 								
 								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}.dat"
 								
@@ -100,11 +116,14 @@ do
 									echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 									echo $FILE1
 									{ timeout $((TEST_DURATION*2)) $EX1; } &> $FILE1
-									if test $N -ge $MAX_RETRY ; then echo break; break; fi
+									if test $N -ge $MAX_RETRY ; then 
+										echo break; 
+										echo "" >> $FILE1
+										echo $cmd >> $FILE1
+									break; 
+									fi
 									N=$(( N+1 ))
-								done  						
-								echo "" >> $FILE1
-								echo $cmd >> $FILE1
+								done  				
 							done
 						done
 					done

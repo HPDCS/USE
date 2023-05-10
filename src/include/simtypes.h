@@ -120,6 +120,12 @@ typedef struct _LP_state {
 
 	unsigned int numa_node;
 
+	simtime_t ema_silent_event_granularity;
+	simtime_t ema_take_snapshot_time;
+	double ema_rollback_probability;
+	unsigned int consecutive_forward_count;
+	unsigned int consecutive_rollbacks_count;
+
 } LP_state;
 
 

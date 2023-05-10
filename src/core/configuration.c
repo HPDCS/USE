@@ -20,8 +20,9 @@ simulation_configuration pdes_config;
 #define EL_LOCKED_PIPE_SIZE_KEY     259
 #define EL_EVICTED_PIPE_SIZE_KEY    260
 
-#define CKPT_PERIOD_KEY             261
-#define CKPT_FOSSIL_PERIOD_KEY      262
+#define CKPT_PERIOD_KEY             361
+#define CKPT_FOSSIL_PERIOD_KEY      362
+#define CKPT_AUTONOMIC_PERIOD_KEY   363
 
 #define DISTRIBUTED_FETCH_KEY       263
 #define NUMA_REBALANCE_KEY          264
@@ -45,6 +46,7 @@ static struct argp_option options[] = {
 
   {"ckpt-period",         CKPT_PERIOD_KEY          , "#EVENTS" ,  0                  ,  "Number of events to be forward-executed before taking a full-snapshot"   , 0 },
   {"ckpt-fossil-period",  CKPT_FOSSIL_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before collection committed snapshot"   , 0 },
+  {"ckpt-autonomic-period",  CKPT_AUTONOMIC_PERIOD_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Enable autonomic checkpointing period"   , 0 },
   
   {"distributed-fetch",   DISTRIBUTED_FETCH_KEY    , 0         ,  OPTION_ARG_OPTIONAL,  "Enable distributed fetch"   , 0 },
   {"numa-rebalance"   ,   NUMA_REBALANCE_KEY       , 0         ,  OPTION_ARG_OPTIONAL,  "Enable numa load-balancing"   , 0 },
@@ -86,6 +88,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case CKPT_PERIOD_KEY:
       pdes_config.ckpt_period = atoi(arg);
       break;
+
+    case CKPT_AUTONOMIC_PERIOD_KEY:
+      pdes_config.ckpt_autonomic_period = 1;
+      break;
+
     case CKPT_FOSSIL_PERIOD_KEY:
       pdes_config.ckpt_collection_period = atoi(arg);
       break;
@@ -146,6 +153,14 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         printf("Please enable enforce-locality to set evicted pipe size\n");
         argp_usage (state);
       }
+      if(!pdes_config.el_locked_pipe_size && pdes_config.enforce_locality){
+        printf("Please set locked pipe size to enable enforce-locality\n");
+        argp_usage (state);
+      }
+      if(!pdes_config.el_evicted_pipe_size && pdes_config.enforce_locality){
+        printf("Please set evicted pipe size to enable enforce-locality\n");
+        argp_usage (state);
+      }
       if(pdes_config.el_window_size != 0.0 && !pdes_config.enforce_locality){
         printf("Please enable enforce-locality to set starting window size\n");
         argp_usage (state);
@@ -181,6 +196,7 @@ void configuration_init(void){
   pdes_config.checkpointing = PERIODIC_STATE_SAVING;
   pdes_config.ckpt_period = 20;
   pdes_config.ckpt_collection_period = 100;
+  pdes_config.ckpt_autonomic_period = 0;
   pdes_config.serial = false;
   
   pdes_config.timeout = 0;
@@ -209,8 +225,10 @@ void print_config(void){
 #endif
     printf("\t- DYMELOR enabled.\n");
     printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
-    printf("\t- CHECKPOINT PERIOD %u\n", pdes_config.ckpt_period);
-    printf("\t- EVTS/LP BEFORE CLEAN CKP %u\n", pdes_config.ckpt_collection_period);
+    printf("\t- CHECKPOINT\n");
+    printf("\t\t|- period %u\n", pdes_config.ckpt_period);
+    printf("\t\t|- autonomic %u\n", pdes_config.ckpt_autonomic_period);
+    printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
