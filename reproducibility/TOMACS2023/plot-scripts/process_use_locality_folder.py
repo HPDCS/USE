@@ -15,8 +15,8 @@ fields_grep = {
 "Silent events.": "sil_evt",
 "Avg node"      : "avg_nod",
 "Total Clock"   : "tot_clo",
-"Event Proc"    : "evt_clo",
-"time to proce" : "evt_gra",
+"Safe   Event Clocks"    : "evt_clo",
+"time spent in standard execution" : "evt_gra",
 "local ind"     : "loc_idx",
 "global ind"    : "glo_idx",
 "Rollback opera": "tot_rol",
@@ -30,6 +30,7 @@ data = {}
 #print(columns)
 print("test,"+",".join(columns))
 for fname in onlyfiles:
+  #print(fname)
   fname = mypath+fname
   entry = {}
   for c in columns: entry[c] = ""
@@ -58,7 +59,7 @@ for fname in onlyfiles:
 #for k in data:
 #  print(k,data[k])
 
-
+#print("compute avg")
 avg = {}
 
 for k in data:
