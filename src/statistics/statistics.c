@@ -462,8 +462,8 @@ static void _print_statistics(struct stats_t *stats) {
 		(unsigned long long)(stats->events_enqueued*stats->clock_enqueue), percentage(stats->events_enqueued*stats->clock_enqueue,stats->clock_loop_tot));
 	printf("Save  Chkp Clocks.........................: %14llu clocks (%4.2f%%)\n", 
 		(unsigned long long)(stats->counter_checkpoints*stats->clock_checkpoint), percentage(stats->counter_checkpoints*stats->clock_checkpoint,stats->clock_loop_tot));
-	printf("Rollback Clocks...........................: %14llu clocks (%4.2f%%)\n", 
-		(unsigned long long)(stats->counter_rollbacks*stats->clock_rollback), percentage(stats->counter_rollbacks*stats->clock_rollback,stats->clock_loop_tot));
+	printf("Load  Chkp Clocks.........................: %14llu clocks (%4.2f%%)\n", 
+		(unsigned long long)(stats->counter_rollbacks*stats->clock_rollback - (stats->clock_event_tot-stats->clock_safe_tot)), percentage(stats->counter_rollbacks*stats->clock_rollback - (stats->clock_event_tot-stats->clock_safe_tot),stats->clock_loop_tot));
 
 	printf(COLOR_RESET"\n");
 }

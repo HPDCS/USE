@@ -44,6 +44,7 @@
 #include <hpdcs_utils.h>
 #include <prints.h>
 #include <state_swapping.h>
+#include <autockpt.h>
 
 
 
@@ -378,6 +379,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
             statistics_post_lp_data(lid, STAT_ROLLBACK, 1);
             statistics_post_lp_data(lid, STAT_ROLLBACK_LENGTH, (double)rollback_lenght);
             statistics_post_lp_data(lid, STAT_CLOCK_ROLLBACK, (double)clock_timer_value(rollback_timer));
+            autockpt_update_ema_rollback_probability(lid);
         }
     }
 
