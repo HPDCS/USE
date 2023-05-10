@@ -55,7 +55,8 @@
 
 unsigned int start_periodic_check_ongvt = 0;
 
-
+extern clock_timer simulation_clocks;
+extern timer exec_time;
 
 __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;
@@ -521,11 +522,13 @@ void init_simulation(unsigned int thread_id){
 			pthread_create(&ipi_tid, NULL, signal_state_swapping, NULL);
 		}
 		nbcalqueue->hashtable->current  &= 0xffffffff;//MASK_EPOCH
+	}
+	if(tid == 0) {
+		clock_timer_start(simulation_clocks);
+    	timer_start(exec_time);
 		printf("EXECUTED ALL INIT EVENTS\n");
 	}
 
-
-	//wait all threads to end the init phase to start togheter
 
 	if(tid == 0 && do_sleep != 0){
 	    int ret;
@@ -623,11 +626,11 @@ void thread_loop(unsigned int thread_id) {
 	unsigned int old_state;
 	unsigned int empty_fetch = 0;
 	
-	init_simulation(thread_id);
 	
 #if REPORT == 1 
 	clock_timer_start(main_loop_time);
 #endif	
+	init_simulation(thread_id);
 
 	///* START SIMULATION *///
 	while (  
