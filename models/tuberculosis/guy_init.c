@@ -11,7 +11,7 @@
 
 
 
-const unsigned int scale_factor = 100;
+const unsigned int scale_factor = 4;
 
 struct _init_t{
 	unsigned healthy;
@@ -189,42 +189,33 @@ void guy_on_init(init_t *init_data, region_t *region){
 	unsigned i = init_data->infected;
 	region->guys_infected = init_data->infected;
 
-	//printf("init_data->infected %u\n", init_data->infected);
-
 
 	while(i--) {
 		infected = new_infected();
 		try_to_insert_guy(&(region->head_infected), &(region->tail_infected), infected);
-		//printf("lp: %u - i: %u GUY %p -- GUY NEXT %p -- GUY PREV %p -- bday %d\n", current_lp, i, infected, infected->next, infected->prev, infected->birth_day);
 	}
 
 	i = init_data->sick;
-	//printf("init_data->sick %u\n", init_data->sick);
 
 	while(i--) {
 		sick = new_sick();
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), sick);
-		//printf("lp %u - %u: GUY %p -- GUY NEXT %p -- GUY PREV %p\n", current_lp, i, sick, sick->next, sick->prev);
 	}
 
 
 	i = init_data->treatment;
-	//printf("init_data->treatment %u\n", init_data->treatment);
 
 	while(i--) {
 		treatment = new_treatment();
 		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), treatment);
-		//printf("lp %u - i %u: GUY %p -- GUY NEXT %p -- GUY PREV %p\n",current_lp, i, treatment, treatment->next, treatment->prev);
 	}
 
 
 	i = init_data->treated;
-	//printf("init_data->treated %u\n", init_data->treated);
 
 	while(i--) {
 		treated = new_treated();
 		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), treated);
-		//printf("lp %u - i %u: GUY %p -- GUY NEXT %p -- GUY PREV %p\n",current_lp, i, treated, treated->next, treated->prev);
 	}
 
 
