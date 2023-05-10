@@ -143,6 +143,14 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         printf("Please enable enforce-locality to set evicted pipe size\n");
         argp_usage (state);
       }
+      if(!pdes_config.el_locked_pipe_size && pdes_config.enforce_locality){
+        printf("Please set locked pipe size to enable enforce-locality\n");
+        argp_usage (state);
+      }
+      if(!pdes_config.el_evicted_pipe_size && pdes_config.enforce_locality){
+        printf("Please set evicted pipe size to enable enforce-locality\n");
+        argp_usage (state);
+      }
       if(pdes_config.el_window_size != 0.0 && !pdes_config.enforce_locality){
         printf("Please enable enforce-locality to set starting window size\n");
         argp_usage (state);
