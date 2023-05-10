@@ -133,11 +133,12 @@ double Normal(void) {
 	double fac, rsq, v1, v2;
 
 	if(iset == false) {
+
 		do {
 			v1 = 2.0 * Random() - 1.0;
 			v2 = 2.0 * Random() - 1.0;
 			rsq = v1 * v1 + v2 * v2;
-		} while(rsq >= 1.0 || D_DIFFER_ZERO(rsq));
+		} while(rsq >= 1.0 || rsq <= DBL_EPSILON);
 
 		fac = sqrt(-2.0 * log(rsq) / rsq);
 

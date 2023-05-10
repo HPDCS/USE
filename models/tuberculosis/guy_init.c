@@ -10,7 +10,8 @@
 #include "parameters.h"
 
 
-const unsigned int scale_factor = 4;
+
+const unsigned int scale_factor = 100;
 
 struct _init_t{
 	unsigned healthy;
@@ -20,7 +21,15 @@ struct _init_t{
 	unsigned treated;
 };
 
-void guy_init(void){
+void guy_init(region_t *region){
+
+	unsigned int num_healthy = region->num_healthy;
+	unsigned int num_infected = region->num_infected;
+	unsigned int num_sick = region->num_sick;
+	unsigned int num_treatment = region->num_treatment;
+	unsigned int num_treated = region->num_treated;
+
+
 	init_t total = {num_healthy/scale_factor, num_infected/scale_factor, num_sick/scale_factor, num_treatment/scale_factor, num_treated/scale_factor};
 	init_t to_send = {0};
 
@@ -29,6 +38,7 @@ void guy_init(void){
 	rootsim_bitmap initialized[bitmap_required_size(regions)];
 	bitmap_initialize(initialized, regions);
 
+
 	while(remaining){
 		// we pick a new random region
 		i = Random()*regions;
@@ -36,6 +46,8 @@ void guy_init(void){
 			continue;
 		// we mark this region as initialized
 		bitmap_set(initialized, i);
+
+
 		// we compute the number of healthy, sick, infected etc etc people who choose this region
 		to_send.healthy = random_binomial(total.healthy, 1.0/remaining);
 		to_send.infected = random_binomial(total.infected, 1.0/remaining);
@@ -43,8 +55,8 @@ void guy_init(void){
 		to_send.treatment = random_binomial(total.treatment, 1.0/remaining);
 		to_send.treated = random_binomial(total.treated, 1.0/remaining);
 		// we send the actual event
-		//printf("\nrequested i:%u s:%u t:%u f:%u h:%u\n", to_send.infected, to_send.sick, to_send.treated, to_send.treatment, to_send.healthy);
-		//fflush(stdout);
+		/*printf("\n [lp %u] requested i:%u s:%u t:%u f:%u h:%u\n", i, to_send.infected, to_send.sick, to_send.treated, to_send.treatment, to_send.healthy);
+		fflush(stdout);*/
 		ScheduleNewEvent(i, 0.5, GUY_INIT, &to_send, sizeof(init_t));
 		// those people just left this region
 		total.healthy -= to_send.healthy;
@@ -63,7 +75,7 @@ static guy_t* new_base_guy(void){
 	return guy_ptr;
 }
 
-static void new_infected(void){
+static guy_t* new_infected(void){
 	guy_t *guy = new_base_guy();
 
 	// select a random age following the given distribution
@@ -94,6 +106,8 @@ static void new_infected(void){
 	// set infected state
 	bitmap_reset(guy->flags, f_sick);
 	bitmap_reset(guy->flags, f_treatment);
+
+	return guy;
 }
 
 static void sickened_base_setup(guy_t *guy){
@@ -122,7 +136,7 @@ static void sickened_base_setup(guy_t *guy){
 			bitmap_reset(guy->flags, f_smear);
 }
 
-static void new_sick(void){
+static guy_t* new_sick(void){
 	guy_t *guy = new_base_guy();
 
 	sickened_base_setup(guy);
@@ -135,9 +149,11 @@ static void new_sick(void){
 	// set sick state
 	bitmap_set(guy->flags, f_sick);
 	bitmap_reset(guy->flags, f_treatment);
+
+	return guy;
 }
 
-static void new_treatment(void){
+static guy_t* new_treatment(void){
 	guy_t *guy = new_base_guy();
 
 	sickened_base_setup(guy);
@@ -147,9 +163,11 @@ static void new_treatment(void){
 	// set treatment state
 	bitmap_set(guy->flags, f_sick);
 	bitmap_set(guy->flags, f_treatment);
+
+	return guy;
 }
 
-static void new_treated(void){
+static guy_t* new_treated(void){
 	guy_t *guy = new_base_guy();
 
 	sickened_base_setup(guy);
@@ -161,29 +179,54 @@ static void new_treated(void){
 	// set treatment state
 	bitmap_reset(guy->flags, f_sick);
 	bitmap_set(guy->flags, f_treatment);
+
+	return guy;
 }
 
 void guy_on_init(init_t *init_data, region_t *region){
 
+	guy_t *infected, *sick, *treatment, *treated;
 	unsigned i = init_data->infected;
+	region->guys_infected = init_data->infected;
 
-	while(i--)
-		new_infected();
+	//printf("init_data->infected %u\n", init_data->infected);
+
+
+	while(i--) {
+		infected = new_infected();
+		try_to_insert_guy(&(region->head_infected), &(region->tail_infected), infected);
+		//printf("lp: %u - i: %u GUY %p -- GUY NEXT %p -- GUY PREV %p -- bday %d\n", current_lp, i, infected, infected->next, infected->prev, infected->birth_day);
+	}
 
 	i = init_data->sick;
+	//printf("init_data->sick %u\n", init_data->sick);
 
-	while(i--)
-		new_sick();
+	while(i--) {
+		sick = new_sick();
+		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), sick);
+		//printf("lp %u - %u: GUY %p -- GUY NEXT %p -- GUY PREV %p\n", current_lp, i, sick, sick->next, sick->prev);
+	}
+
 
 	i = init_data->treatment;
+	//printf("init_data->treatment %u\n", init_data->treatment);
 
-	while(i--)
-		new_treatment();
+	while(i--) {
+		treatment = new_treatment();
+		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), treatment);
+		//printf("lp %u - i %u: GUY %p -- GUY NEXT %p -- GUY PREV %p\n",current_lp, i, treatment, treatment->next, treatment->prev);
+	}
+
 
 	i = init_data->treated;
+	//printf("init_data->treated %u\n", init_data->treated);
 
-	while(i--)
-		new_treated();
+	while(i--) {
+		treated = new_treated();
+		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), treated);
+		//printf("lp %u - i %u: GUY %p -- GUY NEXT %p -- GUY PREV %p\n",current_lp, i, treated, treated->next, treated->prev);
+	}
+
 
 	region->healthy = init_data->healthy;
 }
