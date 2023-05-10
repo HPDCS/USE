@@ -116,11 +116,14 @@ do
 									echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 									echo $FILE1
 									{ timeout $((TEST_DURATION*2)) $EX1; } &> $FILE1
-									if test $N -ge $MAX_RETRY ; then echo break; break; fi
+									if test $N -ge $MAX_RETRY ; then 
+										echo break; 
+										echo "" >> $FILE1
+										echo $cmd >> $FILE1
+									break; 
+									fi
 									N=$(( N+1 ))
-								done  						
-								echo "" >> $FILE1
-								echo $cmd >> $FILE1
+								done  				
 							done
 						done
 					done
