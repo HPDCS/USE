@@ -64,7 +64,6 @@ static void infect(unsigned me, guy_t *guy, simtime_t now){
 }
 
 static void guy_sick_update(guy_t *guy, unsigned me, simtime_t now, region_t *region){
-	//guy_t *guy = DataAgent(agent, NULL);
 
 	guy_t *removed;
 
@@ -72,7 +71,6 @@ static void guy_sick_update(guy_t *guy, unsigned me, simtime_t now, region_t *re
 	if(!bitmap_check(guy->flags, f_sick) || bitmap_check(guy->flags, f_treatment)) {
 		return;
 	}
-
 	
 	// we check if this guy has been finally diagnosed
 	if(guy->treatment_day <= now){
@@ -136,7 +134,6 @@ void compute_relapse_p(guy_t *guy, simtime_t now){
 }
 
 static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
-	//guy_t *guy = DataAgent(agent, NULL);
 
 	guy_t *removed;
 	// we check whether this is a infected guy, else we exit
@@ -147,8 +144,7 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 	// we check whether this guy is healing since he has reached the maximum infection time
 	if(now >= guy->infection_day + t_infected_max){
 
-		// we don't need this agent anymore...
-		//KillAgent(agent);
+		// we don't need this guy anymore...
 		/*printf("[lp dest %u] : (guy_infected_update HEALTHY) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
 		fflush(stdout);*/
 		removed = remove_guy(&guy);
@@ -211,7 +207,6 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 }
 
 static void guy_treatment_update(guy_t *guy, simtime_t now, region_t *region){
-	//guy_t *guy = DataAgent(agent, NULL);
 
 	guy_t *removed;
 	// we check whether this is a guy under treatment, else we exit
@@ -237,7 +232,6 @@ static void guy_treatment_update(guy_t *guy, simtime_t now, region_t *region){
 }
 
 static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
-	//guy_t *guy = DataAgent(agent, NULL);
 
 	guy_t *removed;
 
@@ -247,7 +241,6 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 
 	if(now >= t_to_healthy + guy->treatment_day) {
 		// this guy can either recover...
-		//KillAgent(agent);
 		/*printf("[lp dest %u] : (guy_treated_update HEALTHY) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
 		fflush(stdout);*/
 		removed = remove_guy(&guy);
@@ -259,9 +252,10 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 		define_diagnose(guy, now);
 		bitmap_set(guy->flags, f_sick);
 
-		removed = remove_guy(&guy);
 		/*printf("[lp dest %u] : (guy_treated_update) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
 		fflush(stdout);*/
+
+		removed = remove_guy(&guy);
 		//insert in sick list
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), guy);
 	}
@@ -269,6 +263,14 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 	// ... or finally live "normally" for another day
 }
 
+
+/**
+ * This method inserts the guy in the right list after an event transition
+ * based on the current state of the guy
+ * 
+ * @param guy The guy to insert 
+ * @param region The current region
+ */
 void insert_in_list(guy_t *guy, region_t *region) {
 
 	if (bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //sick guy
@@ -327,7 +329,7 @@ static double die_probability(unsigned age){
 
 
 void guy_on_leave(guy_t *leave_guy, simtime_t now, region_t *region){
-	//guy_t *guy = DataAgent(agent, NULL);
+
 	guy_t *guy = malloc(sizeof(guy_t));
 	*guy = *leave_guy;
 
@@ -350,8 +352,7 @@ void guy_on_leave(guy_t *leave_guy, simtime_t now, region_t *region){
 	}
 
 	if(guy_dies){
-		//KillAgent(agent);
-		printf("[lp dest: %u] guy_dies : guy %p next %p prev %p\n", current_lp, guy, guy->next, guy->prev);
+		//printf("[lp dest: %u] guy_dies : guy %p next %p prev %p\n", current_lp, guy, guy->next, guy->prev);
 		guy_t *removed = remove_guy(&guy);
 		if (!removed) free(guy);
 		unsigned one = 1;
@@ -359,10 +360,9 @@ void guy_on_leave(guy_t *leave_guy, simtime_t now, region_t *region){
 	}else{
 		unsigned int dest = FindReceiver(TOPOLOGY_SQUARE);
 		ScheduleNewEvent(dest, now + 0.001, GUY_VISIT, guy, sizeof(guy_t));
-		printf("[lp dest %u] : (guy_on_leave) (guy %p) -- prev %p -- next %p \t s: %d t: %d\n", dest, guy, guy->prev, guy->next, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
-		fflush(stdout);
+		/*printf("[lp dest %u] : (guy_on_leave) (guy %p) -- prev %p -- next %p \t s: %d t: %d\n", dest, guy, guy->prev, guy->next, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
+		fflush(stdout);*/
 		remove_guy(&guy);
-		//EnqueueVisit(agent, FindReceiver(TOPOLOGY_SQUARE), GUY_VISIT);
 	}
 }
 
@@ -415,7 +415,6 @@ unsigned infected_gender_origin(infection_t *inf){
 // this handles an infection message
 void guy_on_infection(infection_t *inf, region_t *region, simtime_t now){
 
-	//agent_t agent;
 	// as in the original model, each healthy person has the same probability
 	// of becoming infected (but we do this more efficiently using a binomial PRNG)
 	unsigned infections =
@@ -428,9 +427,6 @@ void guy_on_infection(infection_t *inf, region_t *region, simtime_t now){
 
 	while(infections--){
 		// boilerplate initialization
-
-		//agent = SpawnAgent(sizeof(guy_t));
-		//guy = DataAgent(agent, NULL);
 
 		guy = malloc(sizeof(guy_t));
 		// set infection day

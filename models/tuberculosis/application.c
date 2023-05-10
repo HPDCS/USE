@@ -67,8 +67,6 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 	return 0;
 }
 
-//struct _topology_settings_t topology_settings = {.type = TOPOLOGY_OBSTACLES, .write_enabled = false, .default_geometry = TOPOLOGY_SQUARE};
-//struct _abm_settings_t abm_settings = {0, _TRAVERSE, false};
 
 // From Luc Devroye's book "Non-Uniform Random Variate Generation." p. 522
 unsigned random_binomial(unsigned trials, double p) { // this is exposed since it is used also in guy.c
@@ -85,6 +83,7 @@ unsigned random_binomial(unsigned trials, double p) { // this is exposed since i
 	}
 	return 0;
 }
+
 // this is better than calling FindReceiver() for each healthy person
 static void move_healthy_people(unsigned me, region_t *region, simtime_t now){
 	(void)me;
@@ -138,12 +137,14 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			SetState(region);
 			region->healthy = 0;
 			region->guys_infected = 0;
+			/// parameters initialization
 			region->num_healthy		= args.num_healthy;
 			region->num_sick			= args.num_sick;
 			region->num_infected	= args.num_infected;
 			region->num_treatment	= args.num_treatment;
 			region->num_treated		= args.num_treated;
 
+			/// lists head/tail initialization
 			region->head_infected = region->tail_infected = NULL;
 			region->head_sick = region->tail_sick =  NULL;
 			region->head_treatment = region->tail_treatment = NULL;

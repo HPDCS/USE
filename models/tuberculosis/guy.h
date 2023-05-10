@@ -16,12 +16,10 @@
 typedef struct _infection_t infection_t;
 
 /* methods for list management */
-
-
+void insert_in_list(guy_t *guy, region_t *region);
 void try_to_insert_guy(guy_t **head, guy_t **tail, guy_t *guy);
 guy_t *remove_guy(guy_t **node);
-guy_t *try_to_remove_guy(guy_t **head, guy_t **tail, guy_t *guy);
-void printlist(guy_t *node);
+
 
 void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now);
 void guy_on_leave(guy_t *guy, simtime_t now, region_t *region);
