@@ -186,8 +186,8 @@ void configuration_init(void){
   pdes_config.ongvt_mode = 0;
 
   pdes_config.enforce_locality = 0;
-  pdes_config.el_locked_pipe_size = 1;
-  pdes_config.el_evicted_pipe_size = 1;
+  pdes_config.el_locked_pipe_size = 0;
+  pdes_config.el_evicted_pipe_size = 0;
   pdes_config.el_window_size = 0;
 
   pdes_config.distributed_fetch = 0;
