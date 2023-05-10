@@ -35,8 +35,8 @@
 * @author Roberto Vitali
 *
 */
-void dymelor_init(unsigned int objs) {
-	allocator_init(objs);
+void dymelor_init() {
+	allocator_init();
 	recoverable_init();
 	//unrecoverable_init();
 }
