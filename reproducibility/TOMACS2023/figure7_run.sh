@@ -55,7 +55,7 @@ do
 		cmd="./${BIN_PATH}/test_$test "
 		model_options="--fan-out=${fan_out} --event-us=${loop_count}"
 		memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
-		locality_options="--enforce-locality --el-locked-size=$cbs --el-evicted-size=$ebs --el-window-size=$w --el-dyn-window"
+		locality_options="--enforce-locality --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window"
 
 		cmd="$cmd ${model_options}"
 
@@ -70,10 +70,10 @@ do
 					for threads in $THREAD_list
 					do
 						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period"
-						cmd="$cmd ${runtime_options}"
-						echo $cmd
+						ecmd="$cmd ${runtime_options}"
+						echo $ecmd
 							
-						EX="./$cmd"
+						EX="./$ecmd"
 								
 						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; 
 
@@ -88,17 +88,18 @@ do
 							#1> $FILE 2>&1 time $EX
 							{ timeout $((TEST_DURATION*2)) $EX; } &> $FILE
 							if test $N -ge $MAX_RETRY ; then 
+								echo "" >> $FILE
+								echo $ecmd >> $FILE
 								echo break; 
 								break; 
 							fi
 							N=$(( N+1 ))
 							echo "" >> $FILE
-							echo $cmd >> $FILE
+							echo $ecmd >> $FILE
 						done  
 					done
 				done
 		done
-		rm ${test}
 	done
 done
 done
