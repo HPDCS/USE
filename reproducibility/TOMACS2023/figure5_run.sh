@@ -14,8 +14,8 @@ TA_list="0.24"
 
 LOOKAHEAD_list="0" 
 WINDOW_list="0.1 0.2 0.4 0.8 1.6 3.2"
-CURRENT_BINDING_SIZE="1 2 4 8"
-EVICTED_BINDING_SIZE="1 2 4 8"
+CURRENT_BINDING_SIZE="1 2 4 8 16"
+EVICTED_BINDING_SIZE="1 2 4 8 16"
 
 CKP_PER_list="20"
 
@@ -97,7 +97,7 @@ do
 						do
 							for th in $MAX_THREADS
 							do
-								runtime_options="-w ${TEST_DURATION} --ncores=$th --nprocesses=$lp"
+								runtime_options="-w ${TEST_DURATION} --ncores=$th --nprocesses=$lp --ckpt-autonomic-period"
 								cmd="$cmd ${runtime_options}"
 								echo $cmd
 
@@ -118,11 +118,11 @@ do
 									{ timeout $((TEST_DURATION*2)) $EX1; } &> $FILE1
 									if test $N -ge $MAX_RETRY ; then 
 										echo break; 
-										echo "" >> $FILE1
-										echo $cmd >> $FILE1
 									break; 
 									fi
 									N=$(( N+1 ))
+									echo "" >> $FILE1
+									echo $cmd >> $FILE1
 								done  				
 							done
 						done

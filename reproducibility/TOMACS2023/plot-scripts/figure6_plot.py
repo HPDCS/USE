@@ -97,6 +97,16 @@ q_list = [{
 "lp":lp,
 "ta":ta,
 "w" :"3.2"
+},
+{
+"lp":lp,
+"ta":ta,
+"w" :"6.4"
+},
+{
+"lp":lp,
+"ta":ta,
+"w" :"12.8"
 }
 ]
 
@@ -163,9 +173,12 @@ for metric in metric_list:
             else:
                     dataplot+=[metric_function[metric](filtereDataset[k],baseline_value)]
         axs[count].plot(x_value, dataplot, label=ta2rho[ta])
-    if metric != "tot_rol":
+        axs[count].xaxis.set_ticks(np.arange(0, max(x_value)+1, 2.0))
+    if metric == "com_evt":
+        axs[count].legend(loc='upper right')
+    elif metric == "tot_rol":
         axs[count].legend(loc='lower right')
     else:
-        axs[count].legend(loc='upper left')
+        axs[count].legend(loc='lower right')
         
 plt.savefig('figures/figure6.pdf')
