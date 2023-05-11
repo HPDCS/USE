@@ -120,7 +120,7 @@ for query in q_list:
         baseline_value = [v[metric_idx] for k,v in baseline.items() if checkTest(k, base_query)][0]
         filtereDataset  = {k:v[metric_idx] for k,v in dataset.items()  if checkTest(k, query)}
         
-        ebs_list = [1,2,4,8]
+        ebs_list = [1,2,4,8,16]
         cbs_list = ebs_list[::-1]
 
         dataplot= []
@@ -139,9 +139,9 @@ for query in q_list:
                     dat_tot = {k:v[columns["tot_evt"]] for k,v in dataset.items()  if checkTest(k, query)}[k]
                     dat_sil = {k:v[columns["sil_evt"]] for k,v in dataset.items()  if checkTest(k, query)}[k]
                     dat_abo = {k:v[columns["abo_evt"]] for k,v in dataset.items()  if checkTest(k, query)}[k]
-                    dat_value = (dat_abo)/(dat_tot-dat_sil)
+                    dat_value = (dat_abo)/float(dat_tot-dat_sil)
                     #print(baseline_value, dat_value)
-                    row+=[ int((dat_value) /baseline_value) ]
+                    row+=[ dat_value ]
                 else:
                     row+=[metric_function[metric](filtereDataset[k],baseline_value)]    
 
@@ -153,7 +153,7 @@ for query in q_list:
                     xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".2f", cmap=cmap) 
         else:
             sns.heatmap(dataplot, ax=axs[count], square=True, linewidth=0.5, \
-                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".0f", cmap=cmap)
+                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".2f", cmap=cmap)
             
 
         axs[count].set_xlabel("Evicted pipe size")
