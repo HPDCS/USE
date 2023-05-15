@@ -52,17 +52,16 @@ do
 	for test in $TEST_list 
 	do
 
+		cmd="./${BIN_PATH}/test_$test "
+		model_options="--fan-out=${fan_out} --event-us=${loop_count}"
+		memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
+		locality_options="--enforce-locality --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window"
 
-		cmd="make $test"
-		cmd="$cmd ENFORCE_LOCALITY=${enfl} CURRENT_BINDING_SIZE=${CURRENT_BINDING_SIZE} EVICTED_BINDING_SIZE=${EVICTED_BINDING_SIZE}"
+		cmd="$cmd ${model_options}"
+
 		if [ $enfl = "1" ]; then
-						cmd="$cmd MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
+			cmd="$cmd ${memory_options} ${locality_options}"
 		fi
-		cmd="$cmd PARALLEL_ALLOCATOR=1 MAX_SKIPPED_LP=${max_lp}   PERC_USED_BUCKET=${pub} ELEM_PER_BUCKET=${epb} REPORT=1 CKP_PERIOD=${ck}"
-		cmd="$cmd LOOKAHEAD=${lookahead} FAN_OUT=${fan_out} LOOP_COUNT_US=${loop_count}"
-
-		echo $cmd
-		$cmd
 
 		for run in $RUN_list
 		do
@@ -70,12 +69,16 @@ do
 				do
 					for threads in $THREAD_list
 					do
-					
+						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period"
+						ecmd="$cmd ${runtime_options}"
+						echo $ecmd
 							
-						EX="./${test} $threads $lp ${TEST_DURATION}"
+						EX="./$ecmd"
 								
-						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; touch $FILE
-												
+						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; 
+
+						touch ${FILE}
+
 						N=0 
 						while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
 						do
@@ -84,17 +87,19 @@ do
 							echo $FILE
 							#1> $FILE 2>&1 time $EX
 							{ timeout $((TEST_DURATION*2)) $EX; } &> $FILE
-							if test $N -ge $MAX_RETRY ; then echo break; break; fi
+							if test $N -ge $MAX_RETRY ; then 
+								echo "" >> $FILE
+								echo $ecmd >> $FILE
+								echo break; 
+								break; 
+							fi
 							N=$(( N+1 ))
+							echo "" >> $FILE
+							echo $ecmd >> $FILE
 						done  
-						echo "" >> $FILE1
-						echo $cmd >> $FILE1
-						
-						  
 					done
 				done
 		done
-		rm ${test}
 	done
 done
 done
