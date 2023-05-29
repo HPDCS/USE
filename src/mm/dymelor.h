@@ -206,12 +206,8 @@ extern void restore_freezed_state(unsigned int lp);
 extern void dymelor_init();
 extern void dymelor_fini(void);
 extern void set_force_full(unsigned int, int);
-extern void dirty_mem(void *, int);
 extern size_t get_state_size(int);
 extern size_t get_log_size(malloc_state *);
-extern size_t get_inc_log_size(void *);
-extern int get_granularity(void);
-extern size_t dirty_size(unsigned int, void *, double *);
 extern void recoverable_init(void);
 extern void recoverable_fini(void);
 extern void unrecoverable_init(void);
@@ -248,7 +244,6 @@ extern  void *rsrealloc(void *, size_t);
 extern  void *rscalloc(size_t, size_t);
 
 
-extern void ecs_init(void);
 
 extern malloc_state **recoverable_state;
 
