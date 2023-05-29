@@ -143,6 +143,13 @@ double Poisson(void);
 int Zipf(double skew, int limit);
 
 
+extern inline void dirty(void*, size_t);
+
+#define MODEL_WRITE(var,val)  do{ dirty(&(var), sizeof((var)));(var) = (val);}while(0)
+
+
+
+
 // ROOT-Sim core API
 extern void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
 extern void SetState(void *ptr);

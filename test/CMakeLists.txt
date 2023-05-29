@@ -39,6 +39,7 @@ test_program(numerical core/numerical.c)
 test_model(phold ../models/phold/application.c)
 test_model(phold_count ../models/phold_count/application.c)
 test_model(pcs ../models/pcs/application.c ../models/pcs/functions_app.c)
+test_model(ipcs ../models/inst_pcs/application.c ../models/inst_pcs/functions_app.c)
 test_model(tuberculosis ../models/tuberculosis/application.c ../models/tuberculosis/guy.c ../models/tuberculosis/guy_init.c ../models/tuberculosis/guy_list.c ../models/tuberculosis/parameters.c)
 
 
