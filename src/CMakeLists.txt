@@ -84,6 +84,7 @@ set(src-mm
         mm/checkpoints.c
         mm/state.c
         mm/platform.c
+        mm/incremental_state_saving.c
 )
 
 set(src-reverse

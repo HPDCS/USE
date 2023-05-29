@@ -54,9 +54,6 @@
 
 struct _buddy **buddies;
 // This vector is accessed by the numa.c module to migrate pages
-#ifndef HAVE_NUMA
-static
-#endif
 void **mem_areas;
 
 static inline int left_child(int idx) {

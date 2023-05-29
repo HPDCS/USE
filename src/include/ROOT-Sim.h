@@ -143,7 +143,7 @@ double Poisson(void);
 int Zipf(double skew, int limit);
 
 
-extern inline void dirty(void*, size_t);
+extern void dirty(void*, size_t);
 
 #define MODEL_WRITE(var,val)  do{ dirty(&(var), sizeof((var)));(var) = (val);}while(0)
 
