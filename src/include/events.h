@@ -95,27 +95,6 @@ typedef struct __msg_t
 } msg_t;
 
 
-typedef struct _msg_hdr_t {
-	// Kernel's information
-	unsigned int   		sender;
-	unsigned int   		receiver;
-	// TODO: not required, remove
-	int   			type;
-	unsigned long long	rendezvous_mark;	/// Unique identifier of the message, used for rendez-vous event
-	// TODO: remove until here
-	simtime_t		timestamp;
-	simtime_t		send_time;
-	unsigned long long	mark;
-} msg_hdr_t;
-
-typedef struct _outgoing_t {
-	msg_t **outgoing_msgs;
-	unsigned int size;
-	unsigned int max_size;
-	simtime_t *min_in_transit;
-} outgoing_t;
-
-
 
 static inline bool is_valid(msg_t * event){
 	return  

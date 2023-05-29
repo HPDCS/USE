@@ -53,9 +53,8 @@ static struct argp_option options[] = {
   {"enable-mbind"       , ENABLE_MBIND_KEY         , 0         ,  OPTION_ARG_OPTIONAL,  "Enable mbind"   , 0 },
   {"enable-custom-alloc", ENABLE_CUSTOM_ALLOC_KEY  , 0         ,  OPTION_ARG_OPTIONAL,  "Enable custom alloc"   , 0 },
 
-  {"ongvt-mode",        ONGVT_MODE_KEY   , "MODE-ID" ,  0                  ,  "0=Opportunistic (default) 1=Event-based period 2=millisecond-based period "   , 0 },
-  {"ongvt-period",      ONGVT_PERIOD_KEY   , "PERIOD LEN" ,  0               ,  "Number of events/milliseconds to be executed before onGVT must be invoked"   , 0 },
-
+  {"ongvt-mode",          ONGVT_MODE_KEY           , "MODE-ID" ,  0                  ,  "0=Opportunistic (default) 1=Event-based period 2=millisecond-based period "   , 0 },
+  {"ongvt-period",        ONGVT_PERIOD_KEY         , "PERIOD LEN" ,  0               ,  "Number of events/milliseconds to be executed before onGVT must be invoked"   , 0 },
 
   {"enforce-locality",    ENFORCE_LOCALITY_KEY     , 0         ,  OPTION_ARG_OPTIONAL,  "Use pipes to improve cache exploitation"    , 0 },
   {"el-dyn-window",       EL_DYN_WINDOW_KEY        , 0         ,  OPTION_ARG_OPTIONAL,  "Use pipes with dynamic window"    , 0 },

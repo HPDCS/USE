@@ -19,44 +19,6 @@
 
 typedef struct _LP_state {
 
-/* UNUSED VARIABLES */
-
-
-//#ifdef ENABLE_ULT
-//	/// LP execution state. This MUST be the first declared field in the struct
-//	LP_context_t	context;
-//
-//	/// LP execution state when blocked during the execution of an event
-//	LP_context_t	default_context;
-//
-//	/// Process' stack
-//	void 		*stack;
-//#endif /* ENABLE_ULT */
-//
-//	/// Logical Process lock, used to serialize accesses to concurrent data structures
-//	spinlock_t	lock;
-//	/// ID of the worker thread towards which the LP is bound
-//	unsigned int	worker_thread;
-//	/// Processed rendezvous queue
-//	list(msg_t)	rendezvous_queue;
-//
-//	#ifdef HAVE_CROSS_STATE
-//	unsigned int ECS_synch_table[MAX_CROSS_STATE_DEPENDENCIES];
-//	unsigned int ECS_index;
-//	#endif
-//
-//	unsigned long long	wait_on_rendezvous;
-//	unsigned int		wait_on_object;
-//	/// Processed rendezvous queue
-//	list(msg_t)	rendezvous_queue;
-//	/// Bottom halves queue
-//	list(msg_t)	bottom_halves;
-//	/// Buffer used by KLTs for buffering outgoing messages during the execution of an event
-//	outgoing_t outgoing_buffer;
-//	/// Output messages queue
-//	list(msg_hdr_t)	queue_out;
-
-
 	/// Local ID of the thread (used to translate from bound LPs to local id)
 	unsigned int 	lid;
 
