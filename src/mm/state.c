@@ -150,6 +150,8 @@ bool LogState(unsigned int lid) {
 				LPS[lid]->from_last_ckpt = 0;
 			}
 			break;
+		case INCREMENTAL_STATE_SAVING:
+			take_snapshot = true;
 
 		default:
 			rootsim_error(true, "State saving mode not supported.");
