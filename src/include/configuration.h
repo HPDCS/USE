@@ -16,7 +16,8 @@ enum ongvt_mode {OPPORTUNISTIC_ONGVT=0, EVT_PERIODIC_ONGVT=1, MS_PERIODIC_ONGVT=
 enum log_modes {
 INVALID_STATE_SAVING, /// Checkpointing interval not yet set
 COPY_STATE_SAVING,    /// Copy State Saving checkpointing interval
-PERIODIC_STATE_SAVING		/// Periodic State Saving checkpointing interval
+PERIODIC_STATE_SAVING,		/// Periodic State Saving checkpointing interval
+INCREMENTAL_STATE_SAVING /// Incremental state saving mode
 };
 
 
@@ -32,6 +33,7 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_period;
 	unsigned int ckpt_collection_period;
 	unsigned int ckpt_autonomic_period;
+	unsigned int forced_full_ckpt_period;
 
 	unsigned int ongvt_period;
 	enum ongvt_mode ongvt_mode;
