@@ -11,47 +11,18 @@
 extern void **mem_areas; /// pointers to the lp segment
 
 
-/// This struct keeps metadata of a partition log
-typedef struct __partition_log{
-	size_t size;
-	struct __partition_log *next;
-	simtime_t ts;
-	char *addr;
-	char *log;
-}partition_log;
 
-/// This struct keeps parameters for the iss cost model
-typedef struct __model{
-	double mprotect_cost_per_page;
-	double log_cost_per_page;
-}model_t;
-
-
-/// This struct keeps runtime info for an admittable partition of the state segment
-typedef struct __partition_tree_node{
-	double cost;
-	unsigned long long access_count;
-	char valid;
-	char dirty;
-}partition_node_tree_t;
-
-
-/// This struct keeps all metadata for incremental state saving of a model state
-typedef struct __per_lp_iss_metadata{
-	partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
-	size_t current_incremental_log_size;
-	unsigned int iss_counter;
-}lp_iss_metadata;
 
 lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 model_t iss_costs_model;	 /// runtime tuning of the cost model 
 
 
 
-bool is_next_ckpt_incremental() {
+bool is_next_ckpt_incremental(void) {
 
 	if (pdes_config.checkpointing == PERIODIC_STATE_SAVING)  
 		return false;
+
 	if (iss_states[current_lp].iss_counter++ == pdes_config.ckpt_forced_full_period) {
 		/// its time to take a full snapshot
 		iss_states[current_lp].iss_counter = 0; 
