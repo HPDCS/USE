@@ -196,7 +196,7 @@ void *log_full(int lid) {
 		/* if log is full */
 		if (!recoverable_state[lid]->is_incremental) {
 
-			complete_full_log(&m_area, &ptr, bitmap_blocks);
+			log_all_marea_chunks(m_area, &ptr, bitmap_blocks);
 
 		}
 		
