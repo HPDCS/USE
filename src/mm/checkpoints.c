@@ -288,7 +288,7 @@ bool check_marea_rebuild(malloc_area *m_area, void **ptr, int *bitmap_blocks, in
 }
 
 
-void complete_full_restore(malloc_area **m_area, void **ptr, int bitmap_blocks) {
+void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks) {
 
 	int j, k, idx;
 	size_t chunk_size;
