@@ -58,21 +58,26 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	bzero(iss_states+lp, sizeof(lp_iss_metadata));
 }
 
-unsigned int get_page_id_from_address(unsigned int cur_lp, void *addr){
+int get_page_idx_from_ptr(unsigned int cur_lp, void *addr){
 	unsigned long long base_addr = (unsigned long long)(mem_areas[cur_lp]);
 	unsigned long long pg_addr = ((unsigned long long)addr) & (~ (PAGE_SIZE-1));
+	assert(pg_addr >= base_addr);
+	assert(pg_addr <  (base_addr+PER_LP_PREALLOCATED_MEMORY));
 	unsigned long long offset = pg_addr - base_addr;
 	assert(offset < PER_LP_PREALLOCATED_MEMORY);
 	return (unsigned int) offset/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 }
 
-void* get_page_ptr_from_id(unsigned int cur_lp, unsigned int id){
-	return ((char*)mem_areas[cur_lp]) + id*PAGE_SIZE; 
+void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
+	assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+	assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
+	return ((char*)mem_areas[cur_lp]) + (id-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; 
 }
 
-unsigned int get_lowest_page_from_id(unsigned int page_id){
-	while((page_id << 1) > (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE))
+unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
+	do{
 		page_id<<=1;
+	}while(page_id  < (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE));
 	return page_id >>=1;
 }
 
@@ -96,11 +101,11 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 			cur_partition_size <<=1;
 			if(tree[cur_id].valid) tgt_id = cur_id;
 		}
-		tgt_id = get_lowest_page_from_id(tgt_id);
+		tgt_id = get_lowest_page_from_partition_id(tgt_id);
 		cur_log = (partition_log*) malloc(sizeof(partition_log));
 		cur_log->log = malloc(cur_partition_size*PAGE_SIZE);
 		cur_log->ts = ts;
-		cur_log->addr = get_page_ptr_from_id(cur_lp, tgt_id);
+		cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id);
 		cur_log->size = cur_partition_size*PAGE_SIZE;
 
 		cur_log->next = prev_log;
@@ -128,7 +133,7 @@ void log_incremental_restore(unsigned int cur_lp, partition_log *cur){
 
 /* Marks each partition containing the touched page as dirty */
 void dirty(void* addr, size_t size){
-	unsigned int page_id    	= get_page_id_from_address(current_lp, addr);
+	unsigned int page_id    	= get_page_idx_from_ptr(current_lp, addr);
 	unsigned int cur_id 		= page_id;
 	partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
 
@@ -148,12 +153,36 @@ void dirty(void* addr, size_t size){
 		}
 
 		cur_partition_size<<=1;
-		cur_id<<=1;
+		cur_id>>=1;
 	}
 
-	partition_id = get_lowest_page_from_id(partition_id);
+	partition_id = get_lowest_page_from_partition_id(partition_id);
+
+	printf("logging ptr:%p idx:%u partition_id:%u cur_lp:%u\n", addr, page_id, partition_id, current_lp);
+
 	iss_states[current_lp].current_incremental_log_size += cur_partition_size*PAGE_SIZE;
-	mprotect(get_page_ptr_from_id(current_lp, partition_id), cur_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+	mprotect(get_page_ptr_from_idx(current_lp, partition_id), cur_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+}
+
+
+void iss_first_run_model(unsigned int cur_lp){
+	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
+	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	unsigned int end   = start*2;
+
+	for(unsigned int i = 0; i<start; i++){
+		tree[i].valid = 0;
+		tree[i].cost  = 0;
+		tree[i].dirty = 0;
+	}
+
+	for(unsigned int i = start; i<end; i++){
+		tree[i].valid = 1;
+		tree[i].dirty = 0;
+		tree[i].cost  = 1;
+		mprotect(get_page_ptr_from_idx(cur_lp, i), PAGE_SIZE, PROT_READ);
+	} 
+
 }
 
 
@@ -202,7 +231,7 @@ void run_model(unsigned int cur_lp){
 			cur_partition_size <<=1;
 			if(tree[cur_id].valid) tgt_id = cur_id;
 		}
-		tgt_id = get_lowest_page_from_id(tgt_id);
-		mprotect(get_page_ptr_from_id(cur_lp, tgt_id), cur_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+		tgt_id = get_lowest_page_from_partition_id(tgt_id);
+		mprotect(get_page_ptr_from_idx(cur_lp, tgt_id), cur_partition_size*PAGE_SIZE, PROT_READ);
 	}
 }
