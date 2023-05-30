@@ -294,15 +294,15 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks) {
 	size_t chunk_size;
 	unsigned int bitmap;
 
-	chunk_size = (*m_area)->chunk_size;
+	chunk_size = m_area->chunk_size;
 	RESET_BIT_AT(chunk_size, 0);
 	RESET_BIT_AT(chunk_size, 1);
 
 	// Check how the area has been logged
-	if(CHECK_LOG_MODE_BIT(*m_area)){
+	if(CHECK_LOG_MODE_BIT(m_area)){
 		// The area has been entirely logged
-		memcpy((*m_area)->area, ptr, (*m_area)->num_chunks * chunk_size);
-		*ptr = (void*)((char*) *ptr + (*m_area)->num_chunks * chunk_size);
+		memcpy(m_area->area, ptr, m_area->num_chunks * chunk_size);
+		*ptr = (void*)((char*) *ptr + m_area->num_chunks * chunk_size);
 
 	} else {
 		// The area was partially logged.
@@ -310,7 +310,7 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks) {
 		// Their number is in the alloc_chunks counter
 		for(j = 0; j < bitmap_blocks; j++){
 
-			bitmap = (*m_area)->use_bitmap[j];
+			bitmap = m_area->use_bitmap[j];
 
 			// Check the allocation bitmap on a per-block basis, to enhance scan speed
 			if(bitmap == 0){
@@ -324,7 +324,7 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks) {
 					if(CHECK_BIT_AT(bitmap, k)){
 
 						idx = j * NUM_CHUNKS_PER_BLOCK + k;
-						memcpy((void*)((char*)(*m_area)->area + (idx * chunk_size)), *ptr, chunk_size);
+						memcpy((void*)((char*)m_area->area + (idx * chunk_size)), *ptr, chunk_size);
 						*ptr = (void*)((char*) *ptr + chunk_size);
 
 					}
