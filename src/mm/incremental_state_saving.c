@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <sys/mman.h>
 #include <assert.h>
+#include <signal.h>
 
 #include <ROOT-Sim.h>
 
@@ -51,8 +52,9 @@ bool is_next_ckpt_incremental() {
 
 	if (pdes_config.checkpointing == PERIODIC_STATE_SAVING)  
 		return false;
-	if (iss_states[current_lp].iss_counter++ == pdes_config.ckpt_forced_full_period) { /// after iss_counter incremental state saving take a full log
-		iss_states[current_lp].iss_counter = 0; /// its time to take a full snapshot
+	if (iss_states[current_lp].iss_counter++ == pdes_config.ckpt_forced_full_period) {
+		/// its time to take a full snapshot
+		iss_states[current_lp].iss_counter = 0; 
 		return false;
 	}
 
@@ -60,10 +62,25 @@ bool is_next_ckpt_incremental() {
 
 }
 
+
+void sigsev_tracer_for_dirty(int a, siginfo_t *b, void *c){
+	assert(a==SIGSEGV);
+	(void)c;
+	dirty(b->si_addr, 1);
+}
+
+
 void init_incremental_checkpoint_support(unsigned int num_lps){
+	struct sigaction action;
+
 	iss_states = (lp_iss_metadata*)malloc(sizeof(lp_iss_metadata)*num_lps);
 	iss_costs_model.mprotect_cost_per_page = 1;
 	iss_costs_model.log_cost_per_page = 100;
+
+	action.sa_sigaction = sigsev_tracer_for_dirty;
+	action.sa_flags = SA_SIGINFO;
+	sigaction(SIGSEGV, &action, NULL);
+
 }
 
 void init_incremental_checkpoint_support_per_lp(unsigned int lp){
