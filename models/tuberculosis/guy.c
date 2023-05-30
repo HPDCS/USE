@@ -71,7 +71,10 @@ static void guy_sick_update(guy_t *guy, unsigned me, simtime_t now, region_t *re
 	if(!bitmap_check(guy->flags, f_sick) || bitmap_check(guy->flags, f_treatment)) {
 		return;
 	}
-	
+
+	/*printf("[lp dest %u] : (guy_sick_update) guy %p -- prev %p -- next %p - treatment_day %d - now %f\n", current_lp, guy, guy->prev, guy->next, guy->treatment_day, now);
+	fflush(stdout);*/
+
 	// we check if this guy has been finally diagnosed
 	if(guy->treatment_day <= now){
 		// if there's no error this isn't necessary
@@ -79,7 +82,7 @@ static void guy_sick_update(guy_t *guy, unsigned me, simtime_t now, region_t *re
 		// set the guy to an under treatment state
 		bitmap_set(guy->flags, f_treatment);
 
-		/*printf("[lp dest %u] : (guy_sick_update) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
+		/*printf("[lp dest %u] : (guy_sick_update TREATMENT) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
 		fflush(stdout);*/
 
 		removed = remove_guy(&guy);
@@ -145,7 +148,7 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 	if(now >= guy->infection_day + t_infected_max){
 
 		// we don't need this guy anymore...
-		/*printf("[lp dest %u] : (guy_infected_update HEALTHY) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
+		/*printf("[lp %u] : (guy_infected_update HEALTHY) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
 		fflush(stdout);*/
 		removed = remove_guy(&guy);
 		if (removed != NULL) free(guy);
@@ -178,7 +181,7 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 	}
 
 	// factor to fit desired behaviour (XXX: need to understand better)
-	prob *= 0.9; //prob è spesso un valore > 1 non ho capito il calcolo
+	prob *= 0.9; 
 
 	// the actual check is done here
 	if(Random() < prob){
@@ -194,7 +197,7 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 		// set this guy to a sick state
 		bitmap_set(guy->flags, f_sick);
 
-		/*printf("[lp dest %u] : (guy_infected_update) (guy %p) -- prev %p -- next %p - birthday %d - treatment %d\n", current_lp, guy, guy->prev, guy->next, guy->birth_day, guy->treatment_day);
+		/*printf("[lp dest %u] : (guy_infected_update) (guy %p) -- prev %p -- next %p - sick %d - treatment %d\n", current_lp, guy, guy->prev, guy->next, bitmap_check(guy->flags, f_sick), guy->treatment_day);
 		fflush(stdout);*/
 
 		removed = remove_guy(&guy);
@@ -213,6 +216,8 @@ static void guy_treatment_update(guy_t *guy, simtime_t now, region_t *region){
 	if(!bitmap_check(guy->flags, f_sick) || !bitmap_check(guy->flags, f_treatment)) {
 		return;
 	}
+
+
 	// pre-computed value
 	// static const double daily_prob = p_abandon/t_treatment_max;
 	static const double daily_prob = 0.022/180;
@@ -239,6 +244,9 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 	if(bitmap_check(guy->flags, f_sick) || !bitmap_check(guy->flags, f_treatment))
 		return false;
 
+	//printf("[lp dest %u] : (guy_treated_update) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
+
+
 	if(now >= t_to_healthy + guy->treatment_day) {
 		// this guy can either recover...
 		/*printf("[lp dest %u] : (guy_treated_update HEALTHY) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
@@ -252,7 +260,7 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 		define_diagnose(guy, now);
 		bitmap_set(guy->flags, f_sick);
 
-		/*printf("[lp dest %u] : (guy_treated_update) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
+		/*printf("[lp %u] : (guy_treated_update) (guy %p) -- prev %p -- next %p\n", current_lp, guy, guy->prev, guy->next);
 		fflush(stdout);*/
 
 		removed = remove_guy(&guy);
@@ -297,10 +305,10 @@ void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now){
 	guy_t *visit_guy = malloc(sizeof(guy_t));
 	*visit_guy = *guy;
 
+	//printf("[lp %u] (guy_on_visit) guy %p -- sick %d - treatment %d\n", me, guy, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
 	insert_in_list(visit_guy, region);
 
 	guy_sick_update(visit_guy, me, now, region);
-
 
 	if(guy_infected_update(visit_guy, region, now)) 
 		return; // the guy pointer is invalid cause we removed the guy
@@ -310,7 +318,7 @@ void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now){
 		return;
 	
 
-	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &visit_guy, sizeof(void *));
+	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, visit_guy, sizeof(guy_t));
 
 }
 
@@ -332,6 +340,8 @@ void guy_on_leave(guy_t *leave_guy, simtime_t now, region_t *region){
 
 	guy_t *guy = malloc(sizeof(guy_t));
 	*guy = *leave_guy;
+
+	//printf("[lp %u] (guy_on_leave) guy %p -- sick %d - treatment %d\n", current_lp, leave_guy, bitmap_check(leave_guy->flags, f_sick), bitmap_check(leave_guy->flags, f_treatment));
 
 	insert_in_list(guy, region);
 
@@ -458,7 +468,7 @@ void guy_on_infection(infection_t *inf, region_t *region, simtime_t now){
 		fflush(stdout);*/
 
 		// we immediately schedule the first agent hop
-		ScheduleNewEvent(current_lp, now + 0.001, GUY_LEAVE, &guy, sizeof(void *));
+		ScheduleNewEvent(current_lp, now + 0.001, GUY_LEAVE, guy, sizeof(guy_t));
 	}
 	
 }
