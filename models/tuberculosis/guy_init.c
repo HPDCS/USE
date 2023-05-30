@@ -71,7 +71,7 @@ void guy_init(region_t *region){
 
 static guy_t* new_base_guy(void){
 	guy_t *guy_ptr = malloc(sizeof(guy_t));
-	ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &guy_ptr, sizeof(void*));
+	ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, guy_ptr, sizeof(guy_t));
 	return guy_ptr;
 }
 
