@@ -47,19 +47,19 @@ bool check_not_used_chunk_and_clean(malloc_area *m_area, int *bitmap_blocks) {
 	int j;
 
 	// Copy the bitmap
-	*bitmap_blocks = (*m_area)->num_chunks / NUM_CHUNKS_PER_BLOCK;
+	*bitmap_blocks = m_area->num_chunks / NUM_CHUNKS_PER_BLOCK;
 	if (*bitmap_blocks < 1)
 		*bitmap_blocks = 1;
 
 	// Check if there is at least one chunk used in the area
-	if((*m_area)->alloc_chunks == 0){
+	if(m_area->alloc_chunks == 0){
 
-		(*m_area)->dirty_chunks = 0;
-		(*m_area)->state_changed = 0;
+		m_area->dirty_chunks = 0;
+		m_area->state_changed = 0;
 
-		if ((*m_area)->use_bitmap != NULL) {
+		if (m_area->use_bitmap != NULL) {
 			for(j = 0; j < *bitmap_blocks; j++)
-				(*m_area)->dirty_bitmap[j] = 0;
+				m_area->dirty_bitmap[j] = 0;
 		}
 
 		return true;
