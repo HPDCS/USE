@@ -256,30 +256,30 @@ bool check_marea_rebuild(malloc_area *m_area, void **ptr, int *bitmap_blocks, in
 
 	int j;
 
-	*bitmap_blocks = (*m_area)->num_chunks / NUM_CHUNKS_PER_BLOCK;
+	*bitmap_blocks = m_area->num_chunks / NUM_CHUNKS_PER_BLOCK;
 	if(*bitmap_blocks < 1)
 		*bitmap_blocks = 1;
 
-	if(*restored_areas == (*recoverable_state)->busy_areas || (*m_area)->idx != ((malloc_area*) *ptr)->idx){
+	if(*restored_areas == (*recoverable_state)->busy_areas || m_area->idx != ((malloc_area*) *ptr)->idx){
 
-		(*m_area)->dirty_chunks = 0;
-		(*m_area)->state_changed = 0;
-		if ((*m_area)->use_bitmap != NULL){
+		m_area->dirty_chunks = 0;
+		m_area->state_changed = 0;
+		if (m_area->use_bitmap != NULL){
 			for(j = 0; j < *bitmap_blocks; j++) {
-			  (*m_area)->dirty_bitmap[j] = 0;
+			  m_area->dirty_bitmap[j] = 0;
 			}
 		}
-		(*m_area)->alloc_chunks = 0;
-		(*m_area)->next_chunk = 0;
-		RESET_LOG_MODE_BIT(*m_area);
-		RESET_AREA_LOCK_BIT(*m_area);
-		if ((*m_area)->use_bitmap != NULL) {
+		m_area->alloc_chunks = 0;
+		m_area->next_chunk = 0;
+		RESET_LOG_MODE_BIT(m_area);
+		RESET_AREA_LOCK_BIT(m_area);
+		if (m_area->use_bitmap != NULL) {
 			for(j = 0; j < *bitmap_blocks; j++)
-				(*m_area)->use_bitmap[j] = 0;
+				m_area->use_bitmap[j] = 0;
 			for(j = 0; j < *bitmap_blocks; j++)
-				(*m_area)->dirty_bitmap[j] = 0;
+				m_area->dirty_bitmap[j] = 0;
 		}
-		(*m_area)->last_access = (*recoverable_state)->timestamp;
+		m_area->last_access = (*recoverable_state)->timestamp;
 
 		return true;
 	}
