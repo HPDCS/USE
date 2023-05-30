@@ -414,7 +414,7 @@ void restore_full(int lid, void *ckpt) {
 		/* if restore is full */
 		if (!recoverable_state[lid]->is_incremental) {
 
-			complete_full_restore(&m_area, &ptr, bitmap_blocks);
+			restore_marea_chunk(m_area, &ptr, bitmap_blocks);
 
 		}
 
