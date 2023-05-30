@@ -15,24 +15,17 @@
 
 #define THR_POOL_SIZE		4096//128
 
-
 #define UNDEFINED_WT (512)
-
-#define MODE_SAF	1
-#define MODE_STM	2
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 #define end_sim(lp)			( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
-#define start_sim(lp)		( __sync_fetch_and_or(&sim_ended[lp/64], ~(1ULL << (lp%64))) )
 #define is_end_sim(lp) 		(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))
 
 #define numa_from_lp(lp)			(LPS[lp]->numa_node)
 #define is_lp_on_my_numa_node(lp)	( numa_from_lp(lp) == current_numa_node )	//verifies if the lp is on the same NUMA node of the current thread
-#define is_lp_mine(lp)				( (lp)%pdes_config.ncores == tid)	//Not used: create a 1,1 relationship bwtween threads and LPs
-
 
 #define SIZEOF_ULL					(sizeof(unsigned long long))
 #define LP_BIT_MASK_SIZE			((pdes_config.nprocesses/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL*8)
@@ -41,18 +34,11 @@
 
 
 #define LP_STATE_READY				0x00001
-#define LP_STATE_RUNNING			0x00002
-#define LP_STATE_RUNNING_ECS		0x00004
 #define LP_STATE_ROLLBACK			0x00008
 #define LP_STATE_SILENT_EXEC		0x00010
-#define LP_STATE_SUSPENDED			0x01010
-#define LP_STATE_READY_FOR_SYNCH	0x00011	// This should be a blocked state! Check schedule() and stf()
-#define LP_STATE_WAIT_FOR_SYNCH		0x01001
-#define LP_STATE_WAIT_FOR_UNBLOCK	0x01002
-#define LP_STATE_WAIT_FOR_DATA		0x01004
 #define LP_STATE_ONGVT				0x00100
 
-#define BLOCKED_STATE			0x01000
+#define BLOCKED_STATE				0x01000
 #define is_blocked_state(state)	(bool)(state & BLOCKED_STATE)
 
 struct __bucket_node;
