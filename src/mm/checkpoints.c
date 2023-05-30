@@ -252,7 +252,7 @@ void *log_state(int lid) {
 
 
 
-bool scan_recoverable_area(malloc_area **m_area, void **ptr, int *bitmap_blocks, int *restored_areas, malloc_state **recoverable_state) {
+bool check_marea_rebuild(malloc_area *m_area, void **ptr, int *bitmap_blocks, int *restored_areas, malloc_state **recoverable_state) {
 
 	int j;
 
