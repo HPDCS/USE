@@ -392,7 +392,7 @@ void restore_full(int lid, void *ckpt) {
 
 		m_area = &recoverable_state[lid]->areas[i];
 
-		if (scan_recoverable_area(&m_area, &ptr, &bitmap_blocks, &restored_areas, &recoverable_state[lid])) continue;
+		if (check_marea_rebuild(m_area, &ptr, &bitmap_blocks, &restored_areas, &recoverable_state[lid])) continue;
 
 
 		// Restore the malloc_area
