@@ -183,7 +183,7 @@ void *log_full(int lid) {
 
 		m_area = &recoverable_state[lid]->areas[i];
 
-		if (chunks_not_used(m_area, &bitmap_blocks)) continue;
+		if (check_not_used_chunk_and_clean(m_area, &bitmap_blocks)) continue;
 
 		// Copy malloc_area into the ckpt
 		memcpy(ptr, m_area, sizeof(malloc_area));
