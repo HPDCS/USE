@@ -108,7 +108,7 @@ static int numerical_test(void)
 	if(res < 0) return -1;
   	res = Expent(1.0);
 	if(res < 0) return -1;
-  	//res = Normal();
+  	res = Normal();
 	res = Gamma(1);
 	if(res < 0) return -1;
   	res = Poisson();
@@ -122,7 +122,7 @@ int main(void)
 {
 	pdes_config.serial = 1;
 	numerical_init();
-	printf("Testing reversa numerical library implementation...");
+	printf("Testing numerical library implementation...");
 	int res =  numerical_test();
 	if(res == 0){
 		printf("PASSED\n");
