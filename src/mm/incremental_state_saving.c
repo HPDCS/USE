@@ -43,13 +43,10 @@ model_t iss_costs_model;
 
 bool is_next_ckpt_incremental() {
 
-	if (pdes_config.checkpointing == PERIODIC_STATE_SAVING) {
-		pdes_config.checkpointing == INCREMENTAL_STATE_SAVING; /// change ckpt mode to incremental state saving
-		pdes_config.ckpt_forced_full_period = pdes_config.ckpt_period; /// set iss period
-	}
-
+	if (pdes_config.checkpointing == PERIODIC_STATE_SAVING)  
+		return false;
 	if (iss_states[current_lp].iss_counter == pdes_config.ckpt_forced_full_period) { /// after iss_counter incremental state saving take a full log
-		pdes_config.checkpointing == PERIODIC_STATE_SAVING; /// change ckpt mode to periodic state saving
+		iss_states[current_lp].iss_counter = 0; /// its time to take a full snapshot
 		return false;
 	}
 
