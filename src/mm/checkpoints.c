@@ -68,29 +68,29 @@ bool check_not_used_chunk_and_clean(malloc_area *m_area, int *bitmap_blocks) {
 	return false;
 }
 
-void complete_full_log(malloc_area **m_area, void **ptr, int bitmap_blocks) {
+void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks) {
 
 	size_t chunk_size;
 	int j, k, idx;
 
-	chunk_size = (*m_area)->chunk_size;
+	chunk_size = m_area->chunk_size;
 	RESET_BIT_AT(chunk_size, 0);	// ckpt Mode bit
 	RESET_BIT_AT(chunk_size, 1);	// Lock bit
 
 	// Check whether the area should be completely copied (not on a per-chunk basis)
 	// using a threshold-based heuristic
-	if(CHECK_LOG_MODE_BIT(*m_area)){
+	if(CHECK_LOG_MODE_BIT(m_area)){
 
 		// If the malloc_area is almost (over a threshold) full, copy it entirely
-		memcpy(*ptr, (*m_area)->area, (*m_area)->num_chunks * chunk_size);
-		*ptr = (void*)((char*) *ptr + (*m_area)->num_chunks * chunk_size);
+		memcpy(*ptr, m_area->area, m_area->num_chunks * chunk_size);
+		*ptr = (void*)((char*) *ptr + m_area->num_chunks * chunk_size);
 
 	} else {
 		// Copy only the allocated chunks
 		for(j = 0; j < bitmap_blocks; j++){
 
 			// Check the allocation bitmap on a per-block basis, to enhance scan speed
-			if((*m_area)->use_bitmap[j] == 0) {
+			if(m_area->use_bitmap[j] == 0) {
 				// Empty (no-chunks-allocated) block: skip to the next
 				continue;
 
@@ -98,10 +98,10 @@ void complete_full_log(malloc_area **m_area, void **ptr, int bitmap_blocks) {
 				// At least one chunk is allocated: per-bit scan of the block is required
 				for(k = 0; k < NUM_CHUNKS_PER_BLOCK; k++){
 
-					if(CHECK_BIT_AT((*m_area)->use_bitmap[j], k)){
+					if(CHECK_BIT_AT(m_area->use_bitmap[j], k)){
 
 						idx = j * NUM_CHUNKS_PER_BLOCK + k;
-						memcpy(*ptr, (void*)((char*)(*m_area)->area + (idx * chunk_size)), chunk_size);
+						memcpy(*ptr, (void*)((char*)m_area->area + (idx * chunk_size)), chunk_size);
 						*ptr = (void*)((char*) *ptr + chunk_size);
 
 					}
