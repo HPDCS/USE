@@ -3,8 +3,9 @@
 #include <assert.h>
 
 #include <ROOT-Sim.h>
-#include <mm.h>
 
+#include <mm.h>
+#include <incremental_state_saving.h>
 
 extern void **mem_areas;
 
@@ -33,10 +34,25 @@ typedef struct __partition_tree_node{
 
 typedef struct __per_lp_iss_metadata{
 	partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
+	unsigned int iss_counter;
 }lp_iss_metadata;
 
 lp_iss_metadata *iss_states;
 model_t iss_costs_model;
+
+
+bool is_next_ckpt_incremental() {
+
+	if (pdes_config.checkpointing == PERIODIC_STATE_SAVING)  
+		return false;
+	if (iss_states[current_lp].iss_counter++ == pdes_config.ckpt_forced_full_period) { /// after iss_counter incremental state saving take a full log
+		iss_states[current_lp].iss_counter = 0; /// its time to take a full snapshot
+		return false;
+	}
+
+	return true;
+
+}
 
 void init_incremental_checkpoint_support(unsigned int num_lps){
 	iss_states = (lp_iss_metadata*)malloc(sizeof(lp_iss_metadata)*num_lps);

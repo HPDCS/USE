@@ -144,13 +144,14 @@ bool LogState(unsigned int lid) {
 			take_snapshot = true;
 			break;
 
+
+		case INCREMENTAL_STATE_SAVING:
 		case PERIODIC_STATE_SAVING:
 			if(LPS[lid]->from_last_ckpt >= LPS[lid]->ckpt_period) {
 				take_snapshot = true;
 				LPS[lid]->from_last_ckpt = 0;
 			}
 			break;
-
 		default:
 			rootsim_error(true, "State saving mode not supported.");
 	}
