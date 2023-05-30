@@ -153,6 +153,7 @@ void *log_full(int lid) {
 	int i, bitmap_blocks;
 	size_t size;
 	malloc_area *m_area;
+	partition_log *partial_log;
 
 	// Timers for self-tuning of the simulation platform
 	clock_timer checkpoint_timer;
@@ -193,15 +194,19 @@ void *log_full(int lid) {
 		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
 
 
-		/* if log is full */
+		/// if log is full
 		if (!recoverable_state[lid]->is_incremental) {
 
 			log_all_marea_chunks(m_area, &ptr, bitmap_blocks);
 
+		} else {
+
+			/// partial log
+			partial_log = log_incremental(lid, lvt(lid));
+			* ((void ** )ptr) = partial_log;
+			ptr = (void *) ((char *) ptr + sizeof(void *));
 		}
 		
-
-		//take and count incremental log
 
 		// Reset Dirty Bitmap, as there is a full ckpt in the chain now
 		m_area->dirty_chunks = 0;
@@ -210,6 +215,8 @@ void *log_full(int lid) {
 
 	} // For each m_area in recoverable_state
 
+
+	
 	// Sanity check
 	if ((char *)ckpt + size != ptr){
 		rootsim_error(true, "Actual (full) ckpt size is wrong by %d bytes!\nlid = %d ckpt = %p size = %#x (%d), ptr = %p, ckpt + size = %p\n", (char *)ckpt + size - (char *)ptr, lid, ckpt, size, size, ptr, (char *)ckpt + size);
@@ -218,6 +225,9 @@ void *log_full(int lid) {
 	recoverable_state[lid]->dirty_areas = 0;
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
+
+	/// enable protection after log
+	run_model(lid);
 
 	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
 	statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
@@ -388,8 +398,6 @@ void restore_full(int lid, void *ckpt) {
 	// Scan areas and chunk to restore them
 	for(i = 0; i < recoverable_state[lid]->num_areas; i++){
 
-		/* sposta in altra funzione */
-
 		m_area = &recoverable_state[lid]->areas[i];
 
 		if (check_marea_rebuild(m_area, &ptr, &bitmap_blocks, &restored_areas, &recoverable_state[lid])) continue;
@@ -411,14 +419,15 @@ void restore_full(int lid, void *ckpt) {
 		m_area->dirty_chunks = 0;
 		m_area->state_changed = 0;
 
-		/* if restore is full */
+		/// if restore is full
 		if (!recoverable_state[lid]->is_incremental) {
 
 			restore_marea_chunk(m_area, &ptr, bitmap_blocks);
 
+		} else {
+			/// restore partial log
+			log_incremental_restore(lid, (partition_log *)ptr);
 		}
-
-		// restore partial log
 
 	}
 
@@ -458,6 +467,9 @@ void restore_full(int lid, void *ckpt) {
 	recoverable_state[lid]->dirty_areas = 0;
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
+
+	/// enable protection after restore
+	run_model(lid);
 
 	statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)clock_timer_value(recovery_timer));
 }
