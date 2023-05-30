@@ -112,21 +112,6 @@ void complete_full_log(malloc_area **m_area, void **ptr, int bitmap_blocks) {
 	}
 }
 
-bool is_next_ckpt_incremental() {
-
-	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-		pdes_config.forced_full_ckpt_period = pdes_config.ckpt_period;
-	}
-
-	//TODO integrate logic now it does not compile
-	if (iss_states->iss_counter == pdes_config.forced_full_ckpt_period)
-		return false;
-
-	return true;
-
-}
-
-
 
 
 /**
