@@ -42,7 +42,7 @@
 
 
 
-bool chunks_not_used(malloc_area **m_area, int *bitmap_blocks) {
+bool check_not_used_chunk_and_clean(malloc_area *m_area, int *bitmap_blocks) {
 
 	int j;
 
