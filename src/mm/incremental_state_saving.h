@@ -37,4 +37,9 @@ typedef struct __per_lp_iss_metadata{
 
 bool is_next_ckpt_incremental();
 
+void run_model(unsigned int cur_lp);
+
+partition_log* log_incremental(unsigned int cur_lp, simtime_t ts);
+void log_incremental_restore(unsigned int cur_lp, partition_log *cur);
+
 #endif
