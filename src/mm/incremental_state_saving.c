@@ -45,7 +45,7 @@ bool is_next_ckpt_incremental() {
 
 	if (pdes_config.checkpointing == PERIODIC_STATE_SAVING)  
 		return false;
-	if (iss_states[current_lp].iss_counter == pdes_config.ckpt_forced_full_period) { /// after iss_counter incremental state saving take a full log
+	if (iss_states[current_lp].iss_counter++ == pdes_config.ckpt_forced_full_period) { /// after iss_counter incremental state saving take a full log
 		iss_states[current_lp].iss_counter = 0; /// its time to take a full snapshot
 		return false;
 	}
