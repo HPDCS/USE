@@ -119,7 +119,17 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 }
 
 
-void log_incremental_restore(unsigned int cur_lp, partition_log *cur){
+void log_incremental_destroy_chain(partition_log *cur){
+	partition_log *next = NULL;
+	while(cur){
+		next = cur->next;
+		rsfree(cur->log);
+		rsfree(cur);
+		cur = next;
+	}	
+}
+
+void log_incremental_restore(partition_log *cur){
 	partition_log *next = NULL;
 	while(cur){
 		next = cur->next;

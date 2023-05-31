@@ -512,7 +512,13 @@ void log_restore(int lid, state_t *state_queue_node) {
 *
 */
 void log_delete(void *ckpt){
+	void *tmp;
 	if(ckpt != NULL) {
+		if(((malloc_state*)ckpt)->is_incremental){
+				tmp = (void*)((char*)ckpt + sizeof(malloc_state));
+				tmp = (void *)((char *)tmp + sizeof(seed_type));
+				log_incremental_destroy_chain((partition_log*)tmp);
+		}
 		rsfree(ckpt);
 	}
 }
