@@ -248,7 +248,8 @@ void print_config(void){
     printf("\t\t|- period %u\n", pdes_config.ckpt_period);
     printf("\t\t|- autonomic %u\n", pdes_config.ckpt_autonomic_period);
     printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
-    printf("\t\t|- incremental with mprotect %u\n", pdes_config.iss_enabled_mprotection);
+    printf("\t\t|- ckpt mode %u\n", pdes_config.checkpointing);
+    printf("\t\t\t|- incremental with mprotect %u\n", pdes_config.iss_enabled_mprotection);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);

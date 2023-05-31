@@ -180,6 +180,16 @@ void *log_full(int lid) {
 	memcpy(ptr, &LPS[lid]->seed, sizeof(seed_type));
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
 
+
+	if(recoverable_state[lid]->is_incremental){
+		/// partial log
+		partial_log = log_incremental(lid, lvt(lid));
+		* ((void ** )ptr) = partial_log;
+		ptr = (void *) ((char *) ptr + sizeof(void *));
+	}
+		
+
+
 	for(i = 0; i < recoverable_state[lid]->num_areas; i++){
 
 		m_area = &recoverable_state[lid]->areas[i];
@@ -199,14 +209,7 @@ void *log_full(int lid) {
 
 			log_all_marea_chunks(m_area, &ptr, bitmap_blocks);
 
-		} else {
-
-			/// partial log
-			partial_log = log_incremental(lid, lvt(lid));
-			* ((void ** )ptr) = partial_log;
-			ptr = (void *) ((char *) ptr + sizeof(void *));
-		}
-		
+		} 
 
 		// Reset Dirty Bitmap, as there is a full ckpt in the chain now
 		m_area->dirty_chunks = 0;
@@ -396,6 +399,12 @@ void restore_full(int lid, void *ckpt) {
 	memcpy(&LPS[lid]->seed, ptr, sizeof(seed_type));
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
 
+	if(recoverable_state[lid]->is_incremental){
+		log_incremental_restore(lid, (partition_log *)ptr);
+		ptr = (void *)((char *)ptr + sizeof(void*));
+	}
+
+
 	recoverable_state[lid]->areas = new_area;
 
 	// Scan areas and chunk to restore them
@@ -424,14 +433,8 @@ void restore_full(int lid, void *ckpt) {
 
 		/// if restore is full
 		if (!recoverable_state[lid]->is_incremental) {
-
 			restore_marea_chunk(m_area, &ptr, bitmap_blocks);
-
-		} else {
-			/// restore partial log
-			log_incremental_restore(lid, (partition_log *)ptr);
 		}
-
 	}
 
 
@@ -512,7 +515,13 @@ void log_restore(int lid, state_t *state_queue_node) {
 *
 */
 void log_delete(void *ckpt){
+	void *tmp;
 	if(ckpt != NULL) {
+		if(((malloc_state*)ckpt)->is_incremental){
+				tmp = (void*)((char*)ckpt + sizeof(malloc_state));
+				tmp = (void *)((char *)tmp + sizeof(seed_type));
+				log_incremental_destroy_chain((partition_log*)tmp);
+		}
 		rsfree(ckpt);
 	}
 }

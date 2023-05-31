@@ -389,48 +389,6 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 
 
 
-
-/**
-* This function computes the time barrier, namely the first state snapshot
-* which is associated with a simulation time <= that the passed simtime
-*
-* @author Francesco Quaglia
-* @author Alessandro Pellegrini
-*
-* @param lid The light Process Id
-* @param simtime The simulation time to be associated with a state barrier
-* @return A pointer to the state that represents the time barrier
-*/
-state_t *find_time_barrier(int lid, simtime_t simtime) {
-
-	state_t *barrier_state;
-
-	if(D_EQUAL(simtime, 0.0)) {
-		return list_head(LPS[lid]->queue_states);
-	}
-
-	barrier_state = list_tail(LPS[lid]->queue_states);
-
-	// Must point to the state with lvt immediately before the GVT
-	while (barrier_state != NULL && barrier_state->lvt >= simtime) {
-		barrier_state = list_prev(barrier_state);
-  	}
-  	if(barrier_state == NULL) {
-		barrier_state = list_head(LPS[lid]->queue_states);
-	}
-
-/*
-	// TODO Search for the first full log before the gvt
-	while(true) {
-		if(is_incremental(current->log) == false)
-			break;
-	  	current = list_prev(current);
-	}
-*/
-
-	return barrier_state;
-}
-
 /**
 * This function sets the buffer of the current LP's state
 *
@@ -509,22 +467,28 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 
 	assert(to_state!=NULL);
 
-	while (to_state != NULL && (to_state->last_event->timestamp) >= commit_horizon){
+	while (
+		to_state != NULL && 
+		(to_state->last_event->timestamp) >= commit_horizon 
+	)
+	{
+		
 		to_state = list_prev(to_state);
 	}//to_state is the last checkpoint to keep
 	
-	if(to_state != NULL){// we need an additional state for OnGvt
+	while(
+		to_state != NULL && 
+		((malloc_state*)to_state->log)->is_incremental
+	)
+	{// we need an additional state for OnGvt
 		to_state = list_prev(to_state);
 	}
 	
 	if(to_state != NULL){
 		to_msg = list_prev(to_state->last_event); //last event to be removed
-	
 		///Rimozione msg dalla vecchia lista
 		((struct rootsim_list*)LPS[lid]->queue_in)->head = list_container_of(to_state->last_event);
 		list_container_of(to_state->last_event)->prev = NULL; 
-		
-	
 		to_state = list_prev(to_state); //last checkpoint to be removed
 		//if(to_state != NULL)
 		//	to_msg = to_state->last_event;
