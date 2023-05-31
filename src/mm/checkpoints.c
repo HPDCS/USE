@@ -400,7 +400,7 @@ void restore_full(int lid, void *ckpt) {
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
 
 	if(recoverable_state[lid]->is_incremental){
-		log_incremental_restore(lid, (partition_log *)ptr);
+		log_incremental_restore((partition_log *)ptr);
 		ptr = (void *)((char *)ptr + sizeof(void*));
 	}
 

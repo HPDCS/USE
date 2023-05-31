@@ -45,7 +45,7 @@ void iss_first_run_model(unsigned int cur_lp);
 void iss_update_model(unsigned int cur_lp);
 void iss_protect_memory(unsigned int cur_lp);
 
-partition_log* log_incremental(unsigned int cur_lp, simtime_t ts);
-void log_incremental_restore(unsigned int cur_lp, partition_log *cur);
+partition_log* log_incremental(unsigned int, simtime_t ts);
+void log_incremental_restore(partition_log *cur);
 
 #endif
