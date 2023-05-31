@@ -33,6 +33,7 @@ typedef struct __per_lp_iss_metadata{
 	partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
 	size_t current_incremental_log_size;
 	unsigned int iss_counter;
+	unsigned int total_access_count;
 }lp_iss_metadata;
 
 bool is_next_ckpt_incremental();

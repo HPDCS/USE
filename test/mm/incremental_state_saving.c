@@ -38,15 +38,21 @@ void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id);
 void init_incremental_checkpoint_support(unsigned int num_lps);
 bool is_next_ckpt_incremental(void);
 void init_incremental_checkpoint_support_per_lp(unsigned int lp);
+void iss_unprotect_memory(unsigned int cur_lp);
+void iss_protect_memory(unsigned int cur_lp);
+void iss_update_model(unsigned int cur_lp);
+void iss_run_model(unsigned int cur_lp);
+void iss_first_run_model(unsigned int cur_lp);
 
 
+double estimate_cost(size_t size, double probability);
 
 
 static int iss_test(void)
 {
 	unsigned long long segment_size = PER_LP_PREALLOCATED_MEMORY;
 	unsigned int page_size = PAGE_SIZE;
-	int page_id;
+	int page_id; 
 	mem_areas = malloc(sizeof(void*));
 	void *the_address = (unsigned char *)(10LL << 39);
 	void *page_ptr;
@@ -71,27 +77,134 @@ static int iss_test(void)
 
 	if(counter != pdes_config.ckpt_forced_full_period) return -WRONG_CKPT_PERIOD;
 
+	partition_node_tree_t *tree = &iss_states[0].partition_tree[0];
 
 	iss_first_run_model(current_lp); /// this protects pages
 
-	printf("address:%p page_id:%d seg_size:%lu pag_size:%u\n", mem_areas[0], page_id,PER_LP_PREALLOCATED_MEMORY, PAGE_SIZE);
+	/*
+	printf("address:%p page_id:%d seg_size:%llu pag_size:%llu\n", mem_areas[0], page_id,PER_LP_PREALLOCATED_MEMORY, PAGE_SIZE);
 	printf("page_id+1:%d,page_ptr+1:%p\n", page_id+1, page_ptr);
-
-
 	printf("address:%p %p\n", mem_areas[0]+PAGE_SIZE, page_ptr);
+	*/
+
+	*((char*)mem_areas[0]) = 1;
+	assert(iss_states[0].partition_tree[1].access_count == 0);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 0);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+	assert(iss_states[0].current_incremental_log_size == PAGE_SIZE);
+
+
+	/*
+	printf("%llu\n", iss_states[0].partition_tree[1].access_count);
+	printf("%llu\n", iss_states[0].partition_tree[2].access_count);
+	printf("%llu\n", iss_states[0].partition_tree[3].access_count);
+	printf("%llu\n", iss_states[0].partition_tree[4].access_count);
+	printf("%llu\n", iss_states[0].partition_tree[page_id].access_count);
+	*/
+	
+
+	*((char*)mem_areas[0]) = 1;
+	assert(iss_states[0].partition_tree[1].access_count == 0);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 0);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+
+	iss_unprotect_memory(current_lp);
+
+	*((char*)mem_areas[0]) = 1;
+	assert(iss_states[0].partition_tree[1].access_count == 0);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 0);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+
+	iss_update_model(current_lp);
+
+/*
+	#define TREE 19
+
+	for(int i=0;i<TREE;i++){
+		page_id &= ~1ULL;
+		printf("%u: cost=%f valid=%u access:%llu\n", page_id, iss_states[0].partition_tree[page_id].cost, iss_states[0].partition_tree[page_id].valid, iss_states[0].partition_tree[page_id].access_count);
+		page_id++;
+		printf("%u: cost=%f valid=%u access:%llu\n", page_id, iss_states[0].partition_tree[page_id].cost, iss_states[0].partition_tree[page_id].valid, iss_states[0].partition_tree[page_id].access_count);
+		printf("\n");
+		page_id >>=1;
+	}
+	page_id = 1;
+	page_id <<= TREE-1;
+		printf("\n");
+		printf("\n");
+
+
+	
+	page_id += 1024;
+	printf("page_id %u\n", page_id);
+	for(int i=0;i<TREE;i++){
+		page_id &= ~1ULL;
+		printf("%u: cost=%f valid=%u access:%llu\n", page_id, iss_states[0].partition_tree[page_id].cost, iss_states[0].partition_tree[page_id].valid, iss_states[0].partition_tree[page_id].access_count);
+		page_id++;
+		printf("%u: cost=%f valid=%u access:%llu\n", page_id, iss_states[0].partition_tree[page_id].cost, iss_states[0].partition_tree[page_id].valid, iss_states[0].partition_tree[page_id].access_count);
+		printf("\n");
+		page_id >>=1;
+	}
+	page_id = 1;
+	page_id <<=TREE-1;
+*/
+
+	*((char*)mem_areas[0]) = 1;
+	assert(iss_states[0].partition_tree[1].access_count == 1);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 1);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+
+	iss_protect_memory(current_lp);
+
+	assert(iss_states[0].partition_tree[1].access_count == 1);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 1);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
 
 	*((char*)mem_areas[0]) = 1;
 
-
-	printf("%u\n", iss_states[0].partition_tree[1].access_count);
-	printf("%u\n", iss_states[0].partition_tree[2].access_count);
-	printf("%u\n", iss_states[0].partition_tree[3].access_count);
-	printf("%u\n", iss_states[0].partition_tree[4].access_count);
-	printf("%u\n", iss_states[0].partition_tree[page_id].access_count);
-
 	assert(iss_states[0].partition_tree[1].access_count == 1);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 1);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
 
 
+	iss_update_model(current_lp);
+
+	//printf("OK UNTIL HER\n");
+
+	assert(iss_states[0].partition_tree[1].access_count == 2);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 2);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+
+	//printf("OK UNTIL HER\n");
+
+	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
+
+	iss_update_model(current_lp);
+
+
+	assert(iss_states[0].partition_tree[1].access_count == 3);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id+1].access_count == 1);
+	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
+	
+
+
+	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
+	assert(iss_states[0].partition_tree[1].access_count == 3);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id+1].access_count == 1);
+	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
+
+	iss_unprotect_memory(current_lp);
+	iss_update_model(current_lp);
+	iss_protect_memory(current_lp);
 
 
 	return NO_ERROR;
