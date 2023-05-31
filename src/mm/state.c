@@ -388,48 +388,6 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 
 
 
-
-/**
-* This function computes the time barrier, namely the first state snapshot
-* which is associated with a simulation time <= that the passed simtime
-*
-* @author Francesco Quaglia
-* @author Alessandro Pellegrini
-*
-* @param lid The light Process Id
-* @param simtime The simulation time to be associated with a state barrier
-* @return A pointer to the state that represents the time barrier
-*/
-state_t *find_time_barrier(int lid, simtime_t simtime) {
-
-	state_t *barrier_state;
-
-	if(D_EQUAL(simtime, 0.0)) {
-		return list_head(LPS[lid]->queue_states);
-	}
-
-	barrier_state = list_tail(LPS[lid]->queue_states);
-
-	// Must point to the state with lvt immediately before the GVT
-	while (barrier_state != NULL && barrier_state->lvt >= simtime) {
-		barrier_state = list_prev(barrier_state);
-  	}
-  	if(barrier_state == NULL) {
-		barrier_state = list_head(LPS[lid]->queue_states);
-	}
-
-/*
-	// TODO Search for the first full log before the gvt
-	while(true) {
-		if(is_incremental(current->log) == false)
-			break;
-	  	current = list_prev(current);
-	}
-*/
-
-	return barrier_state;
-}
-
 /**
 * This function sets the buffer of the current LP's state
 *
