@@ -77,12 +77,12 @@ void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
 unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
 	do{
 		page_id<<=1;
-	}while(page_id  < (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE));
+	}while(page_id  < (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*2);
 	return page_id >>=1;
 }
 
 double estimate_cost(size_t size, double probability){
-	return size*iss_costs_model.mprotect_cost_per_page + probability*iss_costs_model.log_cost_per_page;
+	return iss_costs_model.mprotect_cost_per_page + probability*iss_costs_model.log_cost_per_page*size;
 }
 
 
@@ -140,13 +140,19 @@ void dirty(void* addr, size_t size){
 	unsigned int tgt_partition_size = 0;
 	unsigned int cur_partition_size = 1;
 	unsigned int partition_id = page_id;
-	
+	iss_states[current_lp].total_access_count++;
+
 	while(cur_id > 0){
 		/// increase the access count of the target_partition
-		tree[cur_id].access_count++;
+		//tree[cur_id].access_count++;
 		/// track the target_partition as dirty  
-		tree[cur_id].dirty = 1;
-
+		if(cur_partition_size == 1){
+			tree[cur_id].dirty = 1;
+		}
+		else{
+			tree[cur_id].dirty = tree[cur_id<<1].dirty | tree[(cur_id<<1)+1].dirty;
+		}
+			
 		if(tree[cur_id].valid){
 			tgt_partition_size = cur_partition_size;
 			partition_id = cur_id;
@@ -158,10 +164,35 @@ void dirty(void* addr, size_t size){
 
 	partition_id = get_lowest_page_from_partition_id(partition_id);
 
-	printf("logging ptr:%p idx:%u partition_id:%u cur_lp:%u\n", addr, page_id, partition_id, current_lp);
+	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+	mprotect(get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+}
 
-	iss_states[current_lp].current_incremental_log_size += cur_partition_size*PAGE_SIZE;
-	mprotect(get_page_ptr_from_idx(current_lp, partition_id), cur_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+
+
+void iss_unprotect_memory(unsigned int cur_lp){
+	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
+	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	unsigned int end   = start*2;
+	unsigned int cur_id, tgt_id;
+	unsigned int cur_partition_size, tgt_partition_size;
+
+	while(start < end){
+		cur_id = start;
+		cur_partition_size = 1;
+		while(cur_id > 0){
+			if(tree[cur_id].valid){
+				tgt_id = cur_id;
+				tgt_partition_size = cur_partition_size;
+			} 
+			cur_id >>= 1;
+			cur_partition_size <<=1;
+		}
+		tgt_id = get_lowest_page_from_partition_id(tgt_id);
+		mprotect(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+		start += tgt_partition_size;
+	}
+
 }
 
 
@@ -179,59 +210,81 @@ void iss_first_run_model(unsigned int cur_lp){
 	for(unsigned int i = start; i<end; i++){
 		tree[i].valid = 1;
 		tree[i].dirty = 0;
-		tree[i].cost  = 1;
+		tree[i].cost  = 0;
 		mprotect(get_page_ptr_from_idx(cur_lp, i), PAGE_SIZE, PROT_READ);
 	} 
 
 }
 
 
-void run_model(unsigned int cur_lp){
+void iss_update_model(unsigned int cur_lp){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
 	unsigned int size  = 1;
 	unsigned int cur_id = 0;
 	unsigned int tgt_id = 0;
-	unsigned int cur_partition_size;
+	unsigned int cur_partition_size, tgt_partition_size;
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 
 	for(unsigned int i = 0; i<start; i++){
 		tree[i].valid = 0;
-		tree[i].cost  = 0;
+		tree[i].access_count += tree[i].dirty;
 		tree[i].dirty = 0;
 	}
 
 	for(unsigned int i = start; i<end; i++){
 		tree[i].valid = 1;
+		tree[i].access_count += tree[i].dirty;
 		tree[i].dirty = 0;
-		tree[i].cost = estimate_cost(size, ((double)tree[i].cost) / ((double)tree[1].cost) );
+		tree[i].cost = estimate_cost(size, ((double)tree[i].access_count) / ((double)tree[1].access_count) );
 	} 
 	
-	while(start > 0){
+	while(start > 1){
 		size *= 2;
 		for(unsigned int i = start; i<end;i+=2){
 			unsigned int parent = i/2;
-			tree[parent].cost = estimate_cost(size, ((double)tree[i].cost)/((double)tree[1].cost));
-			if(tree[parent].cost <= tree[i].cost+tree[i+1].cost){
+			tree[parent].cost = estimate_cost(size, ((double)tree[i].access_count)/((double)tree[1].access_count));
+			if(tree[parent].cost < tree[i].cost+tree[i+1].cost){
 				tree[parent].valid = 1;
+			}
+			else{
+				tree[parent].valid = 0;
+				tree[parent].cost = tree[i].cost+tree[i+1].cost;
 			}
 		}
 		end    = start;
 		start /= 2; 
-	}
+	}	
+}
 
 
+void iss_protect_memory(unsigned int cur_lp){
+	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	unsigned int end   = start*2;
+	unsigned int size  = 1;
+	unsigned int cur_id = 0;
+	unsigned int tgt_id = 0;
+	unsigned int cur_partition_size, tgt_partition_size;
+	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
+
+	
 	start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	end   = start*2;
 	while(start < end){
 		cur_id = start;
 		cur_partition_size = 1;
 		while(cur_id > 0){
-			cur_id <<= 1;
+			if(tree[cur_id].valid){
+				tgt_id = cur_id;
+				tgt_partition_size = cur_partition_size;
+			}
+			cur_id >>= 1;
 			cur_partition_size <<=1;
-			if(tree[cur_id].valid) tgt_id = cur_id;
 		}
+		
 		tgt_id = get_lowest_page_from_partition_id(tgt_id);
-		mprotect(get_page_ptr_from_idx(cur_lp, tgt_id), cur_partition_size*PAGE_SIZE, PROT_READ);
+		fflush(stdout);
+		mprotect(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE, PROT_READ);
+		start += tgt_partition_size;
 	}
 }
