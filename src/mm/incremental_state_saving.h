@@ -38,6 +38,10 @@ typedef struct __per_lp_iss_metadata{
 
 bool is_next_ckpt_incremental();
 
+void init_incremental_checkpoint_support(unsigned int num_lps);
+void init_incremental_checkpoint_support_per_lp(unsigned int lp);
+void iss_first_run_model(unsigned int cur_lp);
+
 void iss_update_model(unsigned int cur_lp);
 void iss_protect_memory(unsigned int cur_lp);
 
