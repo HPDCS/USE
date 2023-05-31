@@ -8,6 +8,8 @@
 #include <mm.h>
 #include <incremental_state_saving.h>
 
+
+
 extern void **mem_areas; /// pointers to the lp segment
 
 
@@ -16,6 +18,17 @@ extern void **mem_areas; /// pointers to the lp segment
 lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 model_t iss_costs_model;	 /// runtime tuning of the cost model 
 
+
+
+static inline void guard_memory(void* pg_ptr, size_t size){
+	if(!pdes_config.iss_enabled_mprotection) return;
+	mprotect(pg_ptr, size*PAGE_SIZE, PROT_READ);
+}
+
+static inline void unguard_memory(void* pg_ptr, size_t size){
+	if(!pdes_config.iss_enabled_mprotection) return;
+	mprotect(pg_ptr, size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+}
 
 
 bool is_next_ckpt_incremental(void) {
@@ -171,7 +184,7 @@ void dirty(void* addr, size_t size){
 	partition_id = get_lowest_page_from_partition_id(partition_id);
 
 	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
-	mprotect(get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+	unguard_memory(get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE);
 }
 
 
@@ -195,7 +208,7 @@ void iss_unprotect_memory(unsigned int cur_lp){
 			cur_partition_size <<=1;
 		}
 		tgt_id = get_lowest_page_from_partition_id(tgt_id);
-		mprotect(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+		unguard_memory(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE);
 		start += tgt_partition_size;
 	}
 
@@ -217,7 +230,7 @@ void iss_first_run_model(unsigned int cur_lp){
 		tree[i].valid = 1;
 		tree[i].dirty = 0;
 		tree[i].cost  = 0;
-		mprotect(get_page_ptr_from_idx(cur_lp, i), PAGE_SIZE, PROT_READ);
+		guard_memory(get_page_ptr_from_idx(cur_lp, i), PAGE_SIZE);
 	} 
 
 }
@@ -290,7 +303,7 @@ void iss_protect_memory(unsigned int cur_lp){
 		
 		tgt_id = get_lowest_page_from_partition_id(tgt_id);
 		fflush(stdout);
-		mprotect(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE, PROT_READ);
+		guard_memory(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE);
 		start += tgt_partition_size;
 	}
 }
