@@ -227,7 +227,10 @@ void *log_full(int lid) {
 	recoverable_state[lid]->total_inc_size = 0;
 
 	/// enable protection after log
-	run_model(lid);
+	if (recoverable_state[lid]->is_incremental) {
+		iss_update_model(lid);
+		iss_protect_memory(lid);
+	}
 
 	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
 	statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
@@ -469,8 +472,11 @@ void restore_full(int lid, void *ckpt) {
 	recoverable_state[lid]->total_inc_size = 0;
 
 	/// enable protection after restore
-	run_model(lid);
-
+	if (recoverable_state[lid]->is_incremental) {
+		iss_update_model(lid);
+		iss_protect_memory(lid);
+	}
+	
 	statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)clock_timer_value(recovery_timer));
 }
 
