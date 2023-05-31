@@ -104,7 +104,7 @@ size_t get_log_size(malloc_state *logged_state){
 		return 0;
 
 	if (is_incremental(logged_state)) { 
-		return sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size;
+		return sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + sizeof(void *);
 	} else {
 		return sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + logged_state->total_log_size;
 	}
