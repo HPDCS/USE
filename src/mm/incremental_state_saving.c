@@ -130,13 +130,9 @@ void log_incremental_destroy_chain(partition_log *cur){
 }
 
 void log_incremental_restore(partition_log *cur){
-	partition_log *next = NULL;
 	while(cur){
-		next = cur->next;
 		memcpy(cur->addr, cur->log, cur->size);
-		rsfree(cur->log);
-		rsfree(cur);
-		cur = next;
+		cur = cur->next;
 	}
 }
 
