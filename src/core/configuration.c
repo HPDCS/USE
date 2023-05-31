@@ -99,7 +99,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
 
     case ISS_ENABLED:
-      pdes_config.iss_enabled = 1;
+      pdes_config.checkpointing == INCREMENTAL_STATE_SAVING;
       break;
 
     case ISS_ENABLED_MPROTECTION:
@@ -215,7 +215,6 @@ void configuration_init(void){
   pdes_config.ckpt_collection_period = 100;
   pdes_config.ckpt_autonomic_period = 0;
   pdes_config.ckpt_forced_full_period = 0;
-  pdes_config.iss_enabled = 0;
   pdes_config.iss_enabled_mprotection = 0;
   pdes_config.serial = false;
   
@@ -249,8 +248,7 @@ void print_config(void){
     printf("\t\t|- period %u\n", pdes_config.ckpt_period);
     printf("\t\t|- autonomic %u\n", pdes_config.ckpt_autonomic_period);
     printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
-    printf("\t\t|- incremental %u\n", pdes_config.iss_enabled);
-    printf("\t\t\t|- with mprotect %u\n", pdes_config.iss_enabled_mprotection);
+    printf("\t\t|- incremental with mprotect %u\n", pdes_config.iss_enabled_mprotection);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
