@@ -60,6 +60,7 @@ static int iss_test(void)
 
 	pdes_config.checkpointing = INCREMENTAL_STATE_SAVING;
 	pdes_config.ckpt_forced_full_period = 5;
+	pdes_config.iss_enabled_mprotection = 1;
 
 	init_incremental_checkpoint_support(1);
 	init_incremental_checkpoint_support_per_lp(0);
@@ -109,6 +110,7 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[1].valid == 0);
 	assert(iss_states[0].partition_tree[page_id].access_count == 0);
 	assert(iss_states[0].partition_tree[page_id].valid == 1);
+	assert(iss_states[0].current_incremental_log_size == PAGE_SIZE);
 
 	iss_unprotect_memory(current_lp);
 
@@ -174,6 +176,8 @@ static int iss_test(void)
 
 
 	iss_update_model(current_lp);
+	iss_protect_memory(current_lp);
+
 
 	//printf("OK UNTIL HER\n");
 
