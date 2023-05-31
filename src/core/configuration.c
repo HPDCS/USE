@@ -214,7 +214,7 @@ void configuration_init(void){
   pdes_config.ckpt_period = 20;
   pdes_config.ckpt_collection_period = 100;
   pdes_config.ckpt_autonomic_period = 0;
-  pdes_config.ckpt_forced_full_period = 1;
+  pdes_config.ckpt_forced_full_period = 0;
   pdes_config.iss_enabled_mprotection = 0;
   pdes_config.serial = false;
   
