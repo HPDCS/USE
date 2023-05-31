@@ -227,7 +227,7 @@ void *log_full(int lid) {
 	recoverable_state[lid]->total_inc_size = 0;
 
 	/// enable protection after log
-	if (recoverable_state[lid]->is_incremental) {
+	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		iss_update_model(lid);
 		iss_protect_memory(lid);
 	}
@@ -472,7 +472,7 @@ void restore_full(int lid, void *ckpt) {
 	recoverable_state[lid]->total_inc_size = 0;
 
 	/// enable protection after restore
-	if (recoverable_state[lid]->is_incremental) {
+	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		iss_update_model(lid);
 		iss_protect_memory(lid);
 	}
