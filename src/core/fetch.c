@@ -41,6 +41,7 @@
 #include "timer.h"
 
 #include <metrics_for_window.h>
+#include <gvt.h>
 
 
 #include "local_index/local_index.h"

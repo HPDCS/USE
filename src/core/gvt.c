@@ -18,7 +18,7 @@ unsigned int update_global_gvt(simtime_t local_gvt){
 }
 
 
-unsigned int update_fossil_gvt(){
+unsigned int update_fossil_gvt(void){
 	simtime_t cur_gvt = fossil_gvt;
 	if (gvt > cur_gvt) {
 		return __sync_bool_compare_and_swap(

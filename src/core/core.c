@@ -979,8 +979,8 @@ end_loop:
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} 
 	else if (stop || stop_timer){
-    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
-	    while(!end_ipi);
+	    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
+		    while(!end_ipi);
     
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){
