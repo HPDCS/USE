@@ -274,7 +274,7 @@ bool allocator_init_for_lp(unsigned int lp){
     return true;
 }
 
-bool allocator_init() {
+bool allocator_init(void) {
     if(pdes_config.serial) return true;
 	// These are a vector of pointers which are later initialized
 	buddies = rsalloc(sizeof(struct _buddy *) * pdes_config.nprocesses);

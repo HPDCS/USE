@@ -30,14 +30,6 @@
 #include <core.h>
 #include <atomic.h>
 
-typedef struct _map_move {
-	spinlock_t	spinlock;
-	unsigned 	target_node;
-	int      	need_move;
-	int    		in_progress;
-} map_move;
-
-
 struct _buddy {
 	size_t size;
 	size_t longest[1];
@@ -70,8 +62,6 @@ typedef struct _lp_mem_region{
 #define INVALID_SOBJ_ID_AECS         -97
 #define MDT_RELEASE_FAILURE_AECS     -96
 
-extern bool allocator_init();
-extern void allocator_fini(void);
 void *get_base_pointer(unsigned int gid);
 
 extern void *get_segment(unsigned int i, unsigned int numa_node, void ***pages);

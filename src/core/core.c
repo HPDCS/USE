@@ -825,13 +825,6 @@ void thread_loop(unsigned int thread_id) {
 	#endif
 		}
 		
-#if CKPT_RECALC == 1
-		// Check whether to recalculate the checkpoint interval
-		if (LPS[current_lp]->until_ckpt_recalc++ % CKPT_RECALC_PERIOD == 0) {
-			checkpoint_interval_recalculate(current_lp);
-		}
-#endif
-
 		// Take a simulation state snapshot, in some way
 		if(pdes_config.ncores > 1)
             LogState(current_lp);

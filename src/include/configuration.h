@@ -24,7 +24,7 @@ PERIODIC_STATE_SAVING		/// Periodic State Saving checkpointing interval
 typedef struct _simulation_configuration {
 	unsigned int ncores;
 	unsigned int nprocesses;
-	unsigned int timeout;
+	int timeout;
 	
 	unsigned char serial;
 

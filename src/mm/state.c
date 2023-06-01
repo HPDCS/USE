@@ -48,67 +48,6 @@
 
 
 
-/// Function pointer to switch between the parallel and serial version of SetState
-//void (*SetState)(void *new_state);
-//
-//void send_antimessages(unsigned int lid, simtime_t lvt) {
-//
-//}
-//
-//void activate_LP(unsigned int lp, simtime_t lvt, msg_t *evt, void *state) {		
-//	executeEvent(lp, lvt, evt->type, evt->data, evt->data_size, state, true, evt);	
-//}
-
-
-/**
- * Computes the checkpoint interval for the sparse state saving.
- * 
- * @author Davide Cingolani
- *
- * @param
- */
-inline void checkpoint_interval_recalculate(unsigned int lid) {
-	double checkpoint_time;
-	double event_time;
-	double avg_rollback_length;
-
-	// // Check whether to recalculate the checkpoint interval
-	// if (LPS[lid]->until_ckpt_recalc++ < CKPT_RECALC_PERIOD) {
-	// 	return;
-	// }
-	// LPS[lid]->until_ckpt_recalc = 0;
-
-	// // Computes the cost of a checkpoint operation overall
-	// // as the sum of the time average time spent to take
-	// // the snapshot and the time to coast forward.
-	// // Cr = Cckp + Ccf
-	// rollback_time_last = 0;
-	// rollback_time = avg_time_checkpoint() + avg_time_restore();
-
-	// // If the cost, compared to the last one, is grater than the
-	// // threshold given, then increment the checkpoint interval
-	// if (rollback_time > (rollback_time_last + CKPT_RECALC_THRESHOLD)) {
-	// 	LPS[lid]->ckpt_period++;
-	// }
-	// // otherwise, decrement the checkpoint interval
-	// else if (rollback_time < (rollback_time_last - CKPT_RECALC_THRESHOLD)) {
-	// 	LPS[lid]->ckpt_period--;
-	// }
-
-	avg_rollback_length = (double)lp_stats[lid].events_total / (double)lp_stats[lid].counter_checkpoints;
-	checkpoint_time = (double)avg_time_checkpoint(lp_stats[lid]);
-	event_time = (double)avg_time_event(lp_stats[lid]);
-
-	// Recalculate the checkpoint interval
-	LPS[lid]->ckpt_period = (unsigned int)sqrt((checkpoint_time / event_time) * 2 * (avg_rollback_length + 1));
-
-	//printlp("Checkpoint period updated: %lu\n", LPS[lid]->ckpt_period);
-
-	// Update statistics of checkpoint recalculations
-	statistics_post_lp_data(lid, STAT_CKPT_RECALC, 1);
-	statistics_post_lp_data(lid, STAT_CKPT_PERIOD, (double)LPS[lid]->ckpt_period);
-}
-
 /**
 * This function is used to create a state log to be added to the LP's log chain
 *
@@ -179,14 +118,6 @@ skip_switch:
 	}
 
 	return take_snapshot;
-}
-
-
-unsigned long long RestoreState(unsigned int lid, state_t *restore_state) {
-	log_restore(lid, restore_state);
-	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
-	LPS[lid]->state 				= restore_state->state 					;
-	return restore_state->num_executed_frames	;
 }
 
 
@@ -353,6 +284,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 //	}
 	
 	// Restore the simulation state and correct the state base pointer
+	
 	log_restore(lid, restore_state);
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
 	
@@ -400,56 +332,6 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 void ParallelSetState(void *new_state) {
 	LPS[current_lp]->current_base_pointer = new_state;
 }
-
-
-
-
-
-
-
-/**
-* This function sets the checkpoint mode
-*
-* @author Francesco Quaglia
-* @author Alessandro Pellegrini
-*
-* @param ckpt_mode The new checkpoint mode
-*/
-void set_checkpoint_mode(int ckpt_mode) {
-	pdes_config.checkpointing = ckpt_mode;
-}
-
-
-
-
-/**
-* This function sets the checkpoint period
-*
-* @author Francesco Quaglia
-* @author Alessandro Pellegrini
-*
-* @param lid The Logical Process Id
-* @param period The new checkpoint period
-*/
-void set_checkpoint_period(unsigned int lid, int period) {
-	LPS[lid]->ckpt_period = period;
-}
-
-
-/**
-* This function tells the logging subsystem to take a LP state log
-* upon the next invocation to <LogState>(), independently of the current
-* checkpointing period
-*
-* @author Alessandro Pellegrini
-*
-* @param lid The Logical Process Id
-* @param period The new checkpoint period
-*/
-void force_LP_checkpoint(unsigned int lid) {
-	LPS[lid]->state_log_forced = true;
-}
-
 
 
 
