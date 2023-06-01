@@ -15,26 +15,26 @@ struct stats_t *system_stats;
 
 void statistics_init() {
 	if(posix_memalign((void**)&thread_stats, 64, pdes_config.ncores * sizeof(struct stats_t)) < 0) {
-		printf("memalign failed\n");
+		printf("memalign failed\n"); // LCOV_EXCL_LINE
 	}
 	if(thread_stats == NULL) {
-		printf("Unable to allocate thread statistics vector\n");
+		printf("Unable to allocate thread statistics vector\n"); // LCOV_EXCL_LINE
 		abort();
 	}
 
 	if(posix_memalign((void**)&lp_stats, 64, pdes_config.nprocesses * sizeof(struct stats_t)) < 0) {
-		printf("memalign failed\n");
+		printf("memalign failed\n"); // LCOV_EXCL_LINE
 	}
 	if(lp_stats == NULL) {
-		printf("Unable to allocate LP statistics vector\n");
+		printf("Unable to allocate LP statistics vector\n"); // LCOV_EXCL_LINE
 		abort();
 	}
 
 	if(posix_memalign((void**)&system_stats, 64, sizeof(struct stats_t)) < 0) {
-		printf("memalign failed\n");
+		printf("memalign failed\n"); // LCOV_EXCL_LINE
 	}
 	if(lp_stats == NULL) {
-		printf("Unable to allocate LP statistics vector\n");
+		printf("Unable to allocate LP statistics vector\n"); // LCOV_EXCL_LINE
 		abort();
 	}
 
@@ -65,21 +65,12 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].events_straggler += value;
 			break;
 
-		case STAT_EVENT_STASH:
-			stats[idx].events_stash += value;
-			break;
-
 		case STAT_EVENT_SILENT_FOR_GVT:
 			stats[idx].events_silent_for_gvt += value;
 			break;
 
-
 		case STAT_EVENT_SILENT:
 			stats[idx].events_silent += value;
-			break;
-
-		case STAT_EVENT_UNDO:
-			stats[idx].events_undo += value;
 			break;
 
 		case STAT_EVENT_FETCHED:
@@ -112,10 +103,6 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].counter_prune++;
 			break;
 
-		case STAT_SAFETY_CHECK:
-			stats[idx].counter_safety_check++;
-			break;
-
 		case STAT_ROLLBACK:
 			stats[idx].counter_rollbacks += value;
 			break;
@@ -134,65 +121,29 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 		case STAT_CKPT_MEM:
 			stats[idx].mem_checkpoint += value;
-			//stats[idx].mem_checkpoint /= stats[idx].counter_checkpoints;
 			break;
 
 		case STAT_RECOVERY:
 			stats[idx].counter_recoveries += value;
 			break;
 
-		case STAT_CKPT_RECALC:
-			stats[idx].counter_checkpoint_recalc += value;
-			break;
-
-		case STAT_CKPT_PERIOD:
-			stats[idx].checkpoint_period += (value - stats[idx].checkpoint_period) / stats[idx].counter_checkpoint_recalc;
-			//stats[idx].checkpoint_period /= stats[idx].counter_checkpoint_recalc;
-			break;
-
-
 		// ========= TIME STATS ========= //
 		case STAT_CLOCK_EVENT:
 			stats[idx].clock_event += value;
-			//stats[idx].clock_event /= stats[idx].events_total;
-			break;
-
-		case STAT_CLOCK_DEQUEUE:
-			stats[idx].clock_dequeue += value;
-			break;
-
-		//case STAT_CLOCK_FETCH:
-		//	stats[idx].clock_fetch += value;
-		//	break;
-
-		case STAT_CLOCK_DEQ_LP:
-			stats[idx].clock_deq_lp += value;
 			break;
 
 		case STAT_CLOCK_ENQUEUE:
 			stats[idx].clock_enqueue += value;
 			break;
 
-		case STAT_CLOCK_DELETE:
-			stats[idx].clock_delete += value;
-			break;
-
 		case STAT_CLOCK_LOOP:
 			stats[idx].clock_loop += value;
-			break;
-
-		case STAT_CLOCK_UNDO_EVENT:
-			stats[idx].clock_undo_event += value;
 			break;
 
 		case STAT_CLOCK_PRUNE:
 			stats[idx].clock_prune += value;
 			break;
 
-		case STAT_CLOCK_SAFETY_CHECK:
-			stats[idx].clock_safety_check += value;
-			break;
-		
 		case STAT_CLOCK_SILENT:
 			stats[idx].clock_silent += value;
 			break;
@@ -201,19 +152,12 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].clock_rollback += value;
 			break;
 
-		case STAT_CLOCK_BTW_EVT:
-//			tot_time_between_events += value;
-//			t_btw_evts = tot_time_between_events/events_fetched;
-			break;
-
 		case STAT_CKPT_TIME:
 			stats[idx].clock_checkpoint += value;
-			//stats[idx].clock_checkpoint /= stats[idx].counter_checkpoints;
 			break;
 
 		case STAT_RECOVERY_TIME:
 			stats[idx].clock_recovery += value;
-			//stats[idx].clock_recovery /= stats[idx].counter_recoveries;
 			break;
 
 		case STAT_CLOCK_FETCH_SUCC:
@@ -233,8 +177,8 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 		case STAT_INIT_CLOCKS:
             stats[idx].clock_init += value;
             break;
-		default:
-			printf("Unrecognized stat type (%d)\n", type);
+		default:																					// LCOV_EXCL_LINE
+			printf("Unrecognized stat type (%d)\n", type);  // LCOV_EXCL_LINE
 	}
 }
 
