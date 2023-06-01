@@ -19,7 +19,7 @@ void statistics_init() {
 	}
 	if(thread_stats == NULL) {
 		printf("Unable to allocate thread statistics vector\n"); // LCOV_EXCL_LINE
-		abort();
+		abort();																								 // LCOV_EXCL_LINE
 	}
 
 	if(posix_memalign((void**)&lp_stats, 64, pdes_config.nprocesses * sizeof(struct stats_t)) < 0) {
@@ -27,7 +27,7 @@ void statistics_init() {
 	}
 	if(lp_stats == NULL) {
 		printf("Unable to allocate LP statistics vector\n"); // LCOV_EXCL_LINE
-		abort();
+		abort();																						 // LCOV_EXCL_LINE
 	}
 
 	if(posix_memalign((void**)&system_stats, 64, sizeof(struct stats_t)) < 0) {
@@ -35,7 +35,7 @@ void statistics_init() {
 	}
 	if(lp_stats == NULL) {
 		printf("Unable to allocate LP statistics vector\n"); // LCOV_EXCL_LINE
-		abort();
+		abort();																						 // LCOV_EXCL_LINE
 	}
 
 	memset(thread_stats, 0, pdes_config.ncores * sizeof(struct stats_t));

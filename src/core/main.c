@@ -81,7 +81,7 @@ int main(int argn, char *argv[]) {
     printf("Last gvt: %f\n", current_lvt);
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/pdes_config.ncores);
-    //statistics_fini();
+    statistics_fini();
 
     return 0;
 }
