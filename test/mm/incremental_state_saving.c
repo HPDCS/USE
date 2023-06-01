@@ -57,7 +57,6 @@ static int iss_test(void)
 	void *the_address = (unsigned char *)(10LL << 39);
 	void *page_ptr;
 	unsigned int  counter = 0;
-
 	pdes_config.checkpointing = INCREMENTAL_STATE_SAVING;
 	pdes_config.ckpt_forced_full_period = 5;
 	pdes_config.iss_enabled_mprotection = 1;
@@ -69,7 +68,7 @@ static int iss_test(void)
 	if(!mem_areas[0]) return -CANNOT_MMAP;
 
 	page_id = get_page_idx_from_ptr(current_lp, mem_areas[0]);
-	if(page_id != (segment_size/page_size)) return -INVALID_PAGE_ID;
+	if(page_id != (int)(segment_size/page_size)) return -INVALID_PAGE_ID;
 
 	page_ptr= get_page_ptr_from_idx(current_lp, page_id+1);
 	if(page_ptr != (mem_areas[0]+PAGE_SIZE)) return -INVALID_PAGE_PTR;
@@ -78,50 +77,13 @@ static int iss_test(void)
 
 	if(counter != pdes_config.ckpt_forced_full_period) return -WRONG_CKPT_PERIOD;
 
-	partition_node_tree_t *tree = &iss_states[0].partition_tree[0];
-
-	iss_first_run_model(current_lp); /// this protects pages
-	iss_protect_all_memory(current_lp);
+	//partition_node_tree_t *tree = &iss_states[0].partition_tree[0];
 
 	/*
 	printf("address:%p page_id:%d seg_size:%llu pag_size:%llu\n", mem_areas[0], page_id,PER_LP_PREALLOCATED_MEMORY, PAGE_SIZE);
 	printf("page_id+1:%d,page_ptr+1:%p\n", page_id+1, page_ptr);
 	printf("address:%p %p\n", mem_areas[0]+PAGE_SIZE, page_ptr);
 	*/
-
-	*((char*)mem_areas[0]) = 1;
-	assert(iss_states[0].partition_tree[1].access_count == 0);
-	assert(iss_states[0].partition_tree[1].valid == 0);
-	assert(iss_states[0].partition_tree[page_id].access_count == 0);
-	assert(iss_states[0].partition_tree[page_id].valid == 1);
-	assert(iss_states[0].current_incremental_log_size == PAGE_SIZE);
-
-
-	/*
-	printf("%llu\n", iss_states[0].partition_tree[1].access_count);
-	printf("%llu\n", iss_states[0].partition_tree[2].access_count);
-	printf("%llu\n", iss_states[0].partition_tree[3].access_count);
-	printf("%llu\n", iss_states[0].partition_tree[4].access_count);
-	printf("%llu\n", iss_states[0].partition_tree[page_id].access_count);
-	*/
-	
-
-	*((char*)mem_areas[0]) = 1;
-	assert(iss_states[0].partition_tree[1].access_count == 0);
-	assert(iss_states[0].partition_tree[1].valid == 0);
-	assert(iss_states[0].partition_tree[page_id].access_count == 0);
-	assert(iss_states[0].partition_tree[page_id].valid == 1);
-	assert(iss_states[0].current_incremental_log_size == PAGE_SIZE);
-
-	iss_unprotect_all_memory(current_lp);
-
-	*((char*)mem_areas[0]) = 1;
-	assert(iss_states[0].partition_tree[1].access_count == 0);
-	assert(iss_states[0].partition_tree[1].valid == 0);
-	assert(iss_states[0].partition_tree[page_id].access_count == 0);
-	assert(iss_states[0].partition_tree[page_id].valid == 1);
-
-	iss_update_model(current_lp);
 
 /*
 	#define TREE 19
@@ -155,6 +117,36 @@ static int iss_test(void)
 	page_id <<=TREE-1;
 */
 
+
+
+	iss_first_run_model(current_lp); /// this protects pages
+	iss_protect_all_memory(current_lp);
+	*((char*)mem_areas[0]) = 1;
+
+	assert(iss_states[0].partition_tree[1].access_count == 0);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 0);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+	assert(iss_states[0].current_incremental_log_size == PAGE_SIZE);
+
+	*((char*)mem_areas[0]) = 1;
+	assert(iss_states[0].partition_tree[1].access_count == 0);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 0);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+	assert(iss_states[0].current_incremental_log_size == PAGE_SIZE);
+
+	iss_unprotect_all_memory(current_lp);
+	iss_protect_all_memory(current_lp);
+
+	*((char*)mem_areas[0]) = 1;
+	assert(iss_states[0].partition_tree[1].access_count == 0);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id].access_count == 0);
+	assert(iss_states[0].partition_tree[page_id].valid == 1);
+
+	iss_update_model(current_lp);
+
 	*((char*)mem_areas[0]) = 1;
 	assert(iss_states[0].partition_tree[1].access_count == 1);
 	assert(iss_states[0].partition_tree[1].valid == 0);
@@ -177,21 +169,17 @@ static int iss_test(void)
 
 
 	iss_update_model(current_lp);
-	iss_protect_all_memory(current_lp);
-
-
-	//printf("OK UNTIL HER\n");
 
 	assert(iss_states[0].partition_tree[1].access_count == 2);
 	assert(iss_states[0].partition_tree[1].valid == 0);
 	assert(iss_states[0].partition_tree[page_id].access_count == 2);
 	assert(iss_states[0].partition_tree[page_id].valid == 1);
 
-	//printf("OK UNTIL HER\n");
 
+	iss_protect_all_memory(current_lp);
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
-
 	iss_update_model(current_lp);
+	iss_protect_all_memory(current_lp);
 
 
 	assert(iss_states[0].partition_tree[1].access_count == 3);
@@ -200,16 +188,69 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
 	
 
-
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
-	assert(iss_states[0].partition_tree[1].access_count == 3);
+	iss_update_model(current_lp);
+
+
+	assert(iss_states[0].partition_tree[1].access_count == 4);
 	assert(iss_states[0].partition_tree[1].valid == 0);
-	assert(iss_states[0].partition_tree[page_id+1].access_count == 1);
+	assert(iss_states[0].partition_tree[page_id+1].access_count == 2);
 	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
 
-	iss_unprotect_all_memory(current_lp);
+
+	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
 	iss_update_model(current_lp);
+
+	assert(iss_states[0].partition_tree[1].access_count == 4);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id+1].access_count == 2);
+	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
+
+	iss_update_model(current_lp);
+	iss_states[current_lp].current_incremental_log_size = 0; // clean log size
+	assert(iss_states[0].partition_tree[1].access_count == 4);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id+1].access_count == 2);
+	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
+
+
 	iss_protect_all_memory(current_lp);
+	*(((char*)mem_areas[0])+PAGE_SIZE) = 2;
+	iss_update_model(current_lp);
+	iss_states[current_lp].current_incremental_log_size = 0; // clean log size
+
+	iss_protect_all_memory(current_lp);
+	*(((char*)mem_areas[0])+PAGE_SIZE) = 2;
+	iss_update_model(current_lp);
+	iss_states[current_lp].current_incremental_log_size = 0; // clean log size
+
+	iss_protect_all_memory(current_lp);
+	*(((char*)mem_areas[0])+PAGE_SIZE) = 2;
+
+	partition_log *log = log_incremental(current_lp, 0.0);
+
+
+
+	iss_update_model(current_lp);
+	
+	assert(iss_states[0].partition_tree[1].access_count == 7);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id+1].access_count == 5);
+	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
+	assert(*(((char*)mem_areas[0])+PAGE_SIZE) == 2);
+
+	*(((char*)mem_areas[0])+PAGE_SIZE) = 3;
+	assert(*(((char*)mem_areas[0])+PAGE_SIZE) == 3);
+	log_incremental_restore(log);
+	log_incremental_destroy_chain(log);
+
+	assert(iss_states[0].partition_tree[1].access_count == 7);
+	assert(iss_states[0].partition_tree[1].valid == 0);
+	assert(iss_states[0].partition_tree[page_id+1].access_count == 5);
+	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
+	assert(*(((char*)mem_areas[0])+PAGE_SIZE) == 2);
+
+
 
 
 	return NO_ERROR;
