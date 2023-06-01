@@ -34,12 +34,12 @@
 #define STAT_EVENT                  100        /// Number of events processed
 #define STAT_EVENT_REVERSE          101        /// Number of events processed in reversible mode
 #define STAT_EVENT_STRAGGLER        102        /// Number of straggler events received
-#define STAT_EVENT_STASH            103        /// ???
+
 #define STAT_EVENT_SILENT           104        /// Average time to execute the silent execution phase
 #define STAT_EVENT_COMMIT           105        /// Number of commits
 #define STAT_EVENT_FETCHED          106        /// Number of call to fetched
 #define STAT_EVENT_ENQUEUE          107        /// Number of events flushed
-#define STAT_EVENT_UNDO             108        /// Number of events flushed
+
 #define STAT_EVENT_ANTI             109        /// Number of canceled events already treated
 #define STAT_EVENT_FETCHED_SUCC     110        /// Number of events fetched
 #define STAT_EVENT_FETCHED_UNSUCC   111        /// Number of fetch failed
@@ -53,16 +53,16 @@
 #define STAT_CLOCK_FETCH            202        /// Average time spent to fetch a new event
 #define STAT_CLOCK_EVENT_REV        203        /// Average time to execute a reversible event
 #define STAT_CLOCK_SILENT           204        /// Average time to execute the coasting forward operation
-#define STAT_CLOCK_UNDO_EVENT       206        /// Average time to execute the reverse scrubbing operation
+//                                  205
+//                                  206
 #define STAT_CLOCK_ENQUEUE          207        /// Average time to enqueue an event
-#define STAT_CLOCK_DEQUEUE          209        /// Average time to dequeue an event
 #define STAT_CLOCK_LOOP             208        /// Average time spent in the main loop
-#define STAT_CLOCK_IDLE             208        /// Average time spent do nothing usefull
-#define STAT_CLOCK_DEQ_LP           210        /// Average time ???
-#define STAT_CLOCK_DELETE           211        /// Average time ???
+#define STAT_CLOCK_IDLE             209        /// Average time spent do nothing usefull
+//                                  210
+//                                  211
 #define STAT_CLOCK_PRUNE            212        /// Average time to execute the prune operation
-#define STAT_CLOCK_SAFETY_CHECK     213        /// Average time to execute the safety check
-#define STAT_CLOCK_BTW_EVT          214        /// Average time between two events
+//                                  213
+//                                  214
 #define STAT_CLOCK_FETCH_SUCC       215        /// Average time spent to fetch a new event
 #define STAT_CLOCK_FETCH_UNSUCC     216        /// Average time spent to fetch a new event
 #define STAT_INIT_CLOCKS            217        /// Number of clocks for init
@@ -74,12 +74,10 @@
 #define STAT_RECOVERY_TIME          304        /// Average time to restore a simulation state
 #define STAT_ROLLBACK               305        /// Number of rollback operations
 #define STAT_ROLLBACK_LENGTH        306        /// Number of rollback operations
-#define STAT_CKPT_RECALC            307        /// Number of recalculation operations done
-#define STAT_CKPT_PERIOD            308        /// Average value of the checkpoint interval
 #define STAT_ONGVT                  309        /// Average value of the checkpoint interval
 
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
-#define STAT_SAFETY_CHECK           401        /// Number of safety check operations
+
 
 typedef double stat64_t;
 
