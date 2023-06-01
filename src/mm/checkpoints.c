@@ -232,7 +232,7 @@ void *log_full(int lid) {
 	/// enable protection after log
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		iss_update_model(lid);
-		iss_protect_memory(lid);
+		iss_protect_all_memory(lid);
 	}
 
 	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
@@ -477,7 +477,7 @@ void restore_full(int lid, void *ckpt) {
 	/// enable protection after restore
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		iss_update_model(lid);
-		iss_protect_memory(lid);
+		iss_protect_all_memory(lid);
 	}
 	
 	statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)clock_timer_value(recovery_timer));
@@ -499,7 +499,15 @@ void restore_full(int lid, void *ckpt) {
 */
 void log_restore(int lid, state_t *state_queue_node) {
 	statistics_post_lp_data(lid, STAT_RECOVERY, 1.0);
-	restore_full(lid, state_queue_node->log);
+	
+	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+		iss_unprotect_all_memory(lid);
+		restore_full(lid, state_queue_node->log);
+		iss_protect_all_memory(lid);
+	}
+	else
+		restore_full(lid, state_queue_node->log);
+	
 }
 
 

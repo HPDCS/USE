@@ -19,7 +19,7 @@ static char messages[5][256] = {
 	"returned an invalid page id number",
 	"cannot mmap segment",
 	"returned an invalid page ptr",
-	"unexpected fullcheckpoint request"
+	"unexpected fullcheckpoint request",
 };
 
 
@@ -38,7 +38,7 @@ void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id);
 void init_incremental_checkpoint_support(unsigned int num_lps);
 bool is_next_ckpt_incremental(void);
 void init_incremental_checkpoint_support_per_lp(unsigned int lp);
-void iss_unprotect_memory(unsigned int cur_lp);
+void iss_unprotect_all_memory(unsigned int cur_lp);
 void iss_protect_memory(unsigned int cur_lp);
 void iss_update_model(unsigned int cur_lp);
 void iss_run_model(unsigned int cur_lp);
@@ -81,6 +81,7 @@ static int iss_test(void)
 	partition_node_tree_t *tree = &iss_states[0].partition_tree[0];
 
 	iss_first_run_model(current_lp); /// this protects pages
+	iss_protect_all_memory(current_lp);
 
 	/*
 	printf("address:%p page_id:%d seg_size:%llu pag_size:%llu\n", mem_areas[0], page_id,PER_LP_PREALLOCATED_MEMORY, PAGE_SIZE);
@@ -112,7 +113,7 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[page_id].valid == 1);
 	assert(iss_states[0].current_incremental_log_size == PAGE_SIZE);
 
-	iss_unprotect_memory(current_lp);
+	iss_unprotect_all_memory(current_lp);
 
 	*((char*)mem_areas[0]) = 1;
 	assert(iss_states[0].partition_tree[1].access_count == 0);
@@ -160,7 +161,7 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[page_id].access_count == 1);
 	assert(iss_states[0].partition_tree[page_id].valid == 1);
 
-	iss_protect_memory(current_lp);
+	iss_protect_all_memory(current_lp);
 
 	assert(iss_states[0].partition_tree[1].access_count == 1);
 	assert(iss_states[0].partition_tree[1].valid == 0);
@@ -176,7 +177,7 @@ static int iss_test(void)
 
 
 	iss_update_model(current_lp);
-	iss_protect_memory(current_lp);
+	iss_protect_all_memory(current_lp);
 
 
 	//printf("OK UNTIL HER\n");
@@ -206,9 +207,9 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[page_id+1].access_count == 1);
 	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
 
-	iss_unprotect_memory(current_lp);
+	iss_unprotect_all_memory(current_lp);
 	iss_update_model(current_lp);
-	iss_protect_memory(current_lp);
+	iss_protect_all_memory(current_lp);
 
 
 	return NO_ERROR;

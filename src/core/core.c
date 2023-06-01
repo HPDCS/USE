@@ -46,6 +46,7 @@
 #include "metrics_for_window.h"
 #include "clock_constant.h"
 #include "state_swapping.h"
+#include <incremental_state_saving.h>
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
@@ -541,6 +542,7 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->state_log_forced = true;
 			if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 				iss_first_run_model(current_lp);
+				iss_protect_all_memory(current_lp);
 			}
 			LogState(current_lp);
 			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
@@ -997,8 +999,8 @@ end_loop:
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} 
 	else if (stop || stop_timer){
-    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
-	    while(!end_ipi);
+	    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
+		    while(!end_ipi);
     
 		printf(GREEN( "[%u] Execution ended correctly\n"), tid);
 		if(tid==0){

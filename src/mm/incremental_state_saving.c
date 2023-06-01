@@ -6,6 +6,7 @@
 #include <ROOT-Sim.h>
 
 #include <mm.h>
+#include <dymelor.h>
 #include <incremental_state_saving.h>
 
 
@@ -187,31 +188,12 @@ void dirty(void* addr, size_t size){
 	unguard_memory(get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE);
 }
 
+void iss_unprotect_all_memory(unsigned int cur_lp){
+	unguard_memory(get_page_ptr_from_idx(cur_lp, get_lowest_page_from_partition_id(1)), PER_LP_PREALLOCATED_MEMORY);
+}
 
-
-void iss_unprotect_memory(unsigned int cur_lp){
-	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
-	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
-	unsigned int end   = start*2;
-	unsigned int cur_id, tgt_id;
-	unsigned int cur_partition_size, tgt_partition_size;
-
-	while(start < end){
-		cur_id = start;
-		cur_partition_size = 1;
-		while(cur_id > 0){
-			if(tree[cur_id].valid){
-				tgt_id = cur_id;
-				tgt_partition_size = cur_partition_size;
-			} 
-			cur_id >>= 1;
-			cur_partition_size <<=1;
-		}
-		tgt_id = get_lowest_page_from_partition_id(tgt_id);
-		unguard_memory(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE);
-		start += tgt_partition_size;
-	}
-
+void iss_protect_all_memory(unsigned int cur_lp){
+	guard_memory(get_page_ptr_from_idx(cur_lp,  get_lowest_page_from_partition_id(1)), PER_LP_PREALLOCATED_MEMORY);
 }
 
 
@@ -230,7 +212,6 @@ void iss_first_run_model(unsigned int cur_lp){
 		tree[i].valid = 1;
 		tree[i].dirty = 0;
 		tree[i].cost  = 0;
-		guard_memory(get_page_ptr_from_idx(cur_lp, i), PAGE_SIZE);
 	} 
 
 }
@@ -240,9 +221,6 @@ void iss_update_model(unsigned int cur_lp){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
 	unsigned int size  = 1;
-	unsigned int cur_id = 0;
-	unsigned int tgt_id = 0;
-	unsigned int cur_partition_size, tgt_partition_size;
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 
 	for(unsigned int i = 0; i<start; i++){
@@ -277,10 +255,34 @@ void iss_update_model(unsigned int cur_lp){
 }
 
 
+/*void iss_unprotect_memory(unsigned int cur_lp){
+	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
+	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	unsigned int end   = start*2;
+	unsigned int cur_id, tgt_id;
+	unsigned int cur_partition_size, tgt_partition_size;
+
+	while(start < end){
+		cur_id = start;
+		cur_partition_size = 1;
+		while(cur_id > 0){
+			if(tree[cur_id].valid){
+				tgt_id = cur_id;
+				tgt_partition_size = cur_partition_size;
+			} 
+			cur_id >>= 1;
+			cur_partition_size <<=1;
+		}
+		tgt_id = get_lowest_page_from_partition_id(tgt_id);
+		unguard_memory(get_page_ptr_from_idx(cur_lp, tgt_id), tgt_partition_size*PAGE_SIZE);
+		start += tgt_partition_size;
+	}
+
+}
+
 void iss_protect_memory(unsigned int cur_lp){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
-	unsigned int size  = 1;
 	unsigned int cur_id = 0;
 	unsigned int tgt_id = 0;
 	unsigned int cur_partition_size, tgt_partition_size;
@@ -307,3 +309,4 @@ void iss_protect_memory(unsigned int cur_lp){
 		start += tgt_partition_size;
 	}
 }
+*/
