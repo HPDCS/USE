@@ -25,7 +25,7 @@ INCREMENTAL_STATE_SAVING /// Incremental state saving mode
 typedef struct _simulation_configuration {
 	unsigned int ncores;
 	unsigned int nprocesses;
-	unsigned int timeout;
+	int timeout;
 	
 	unsigned char serial;
 

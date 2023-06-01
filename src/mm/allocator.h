@@ -61,7 +61,6 @@ typedef struct _map_move {
 
 
 #define MDT_PAGES	80
-#define PAGE_SIZE (4*1<<10)
 #define MDT_ENTRIES ((MDT_PAGES * PAGE_SIZE) / sizeof(mdt_entry))
 #define MAX_SEGMENT_SIZE 16384 // this is expressed in number of pages
  
@@ -78,7 +77,10 @@ char* allocate_mdt(void);
 char *allocate_pages(int num_pages);
 char* allocate_page(void);
 mdt_entry* get_new_mdt_entry(int );
-int allocator_init();
+
+extern bool allocator_init(void);
+extern void allocator_fini(void);
+
 bool allocator_init_for_lp(unsigned int lp);
 void* allocate_segment(unsigned int, size_t, unsigned int numa_node);
 void audit(void);
@@ -86,20 +88,6 @@ int release_mdt_entry(int);
 void audit_map(unsigned int);
 void set_daemon_maps(mem_map *, map_move* );
 int init_move(int);
-//int lock(int);
-//int unlock(int);
-void set_BH_map(mem_map* );
-int init_BH(void);
-int insert_BH(int , void*, int );
-void* get_BH(int);
-
-
-#ifdef HAVE_NUMA
-int get_numa_node(int);
-void move_sobj(int , unsigned );
-void move_segment(mdt_entry *, unsigned );
-int move_request(int , int );
-#endif
 
 
 #endif /* _ALLOCATOR_H */

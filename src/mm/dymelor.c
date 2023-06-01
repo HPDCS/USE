@@ -26,7 +26,7 @@
 
 #include <dymelor.h>
 #include <mm.h>
-
+#include <allocator.h>
 
 /**
 * This function inizializes the dymelor subsystem
