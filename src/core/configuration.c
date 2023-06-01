@@ -99,7 +99,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
 
     case ISS_ENABLED:
-      pdes_config.checkpointing == INCREMENTAL_STATE_SAVING;
+      pdes_config.checkpointing = INCREMENTAL_STATE_SAVING;
       break;
 
     case ISS_ENABLED_MPROTECTION:
