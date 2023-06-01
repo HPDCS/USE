@@ -1,3 +1,4 @@
+// LCOV_EXCL_START
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -194,3 +195,4 @@ int allocation(lp_state_type *pointer) {
         return index;
 }
 
+// LCOV_EXCL_END

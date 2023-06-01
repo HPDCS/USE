@@ -1,3 +1,4 @@
+// LCOV_EXCL_START
 #include <stdlib.h>
 #include <stdio.h>
 #include <strings.h>
@@ -367,3 +368,4 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 		return false;
 	return true;
 }
+// LCOV_EXCL_END

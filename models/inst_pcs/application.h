@@ -1,3 +1,4 @@
+// LCOV_EXCL_START
 #include <ROOT-Sim.h>
 
 
@@ -139,3 +140,4 @@ void fading_recheck(lp_state_type *pointer);
 extern int channels_per_cell;
 
 
+// LCOV_EXCL_END
