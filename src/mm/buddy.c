@@ -34,7 +34,9 @@
 #include <hpdcs_utils.h>
 #include <ROOT-Sim.h>
 #include <configuration.h>
+#include <segment.h>
 
+#define BUDDY_GRANULARITY (PAGE_SIZE)
 
 /// Macro to find the maximum among two values
 #define max(a, b) (a > b ? a : b)
