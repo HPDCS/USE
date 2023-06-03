@@ -221,13 +221,13 @@ void iss_first_run_model(unsigned int cur_lp){
 	unsigned int end   = start*2;
 
 	for(unsigned int i = 0; i<start; i++){
-		tree[i].valid = 0;
+               tree[i].valid[0] = 0;
 		tree[i].cost  = 0;
 		tree[i].dirty = 0;
 	}
 
 	for(unsigned int i = start; i<end; i++){
-		tree[i].valid = 1;
+               tree[i].valid[0] = 1;
 		tree[i].dirty = 0;
 		tree[i].cost  = 0;
 	} 
@@ -239,15 +239,17 @@ void iss_update_model(unsigned int cur_lp){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
 	unsigned int size  = 1;
+       unsigned int parent= 0;
+       unsigned int cur_model = iss_states[cur_lp].current_model; 
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 
 	for(unsigned int i = 0; i<start; i++){
-		tree[i].valid = 0;
+               tree[i].valid[cur_model] = 0;
 		tree[i].dirty = 0;
 	}
 
 	for(unsigned int i = start; i<end; i++){
-		tree[i].valid = 1;
+		tree[i].valid[cur_model] = 1;
 		tree[i].dirty = 0;
 		tree[i].cost = estimate_cost(size, ((double)tree[i].access_count) / ((double)tree[1].access_count) );
 	} 
@@ -255,13 +257,13 @@ void iss_update_model(unsigned int cur_lp){
 	while(start > 1){
 		size *= 2;
 		for(unsigned int i = start; i<end;i+=2){
-			unsigned int parent = i/2;
+			parent = i/2;
 			tree[parent].cost = estimate_cost(size, ((double)tree[parent].access_count)/((double)tree[1].access_count));
 			if(tree[parent].cost < tree[i].cost+tree[i+1].cost){
-				tree[parent].valid = 1;
+                               tree[parent].valid[cur_model] = 1;
 			}
 			else{
-				tree[parent].valid = 0;
+                               tree[parent].valid[cur_model] = 0;
 				tree[parent].cost = tree[i].cost+tree[i+1].cost;
 			}
 			
