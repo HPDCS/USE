@@ -126,17 +126,17 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 		//	printf("log partition %u %u %u\n", start, tgt_id, tgt_partition_size);
 			tgt_id = get_lowest_page_from_partition_id(tgt_id);
 			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
-			cur_log->log = rsalloc(tgt_partition_size*PAGE_SIZE);
+			cur_log->size = tgt_partition_size*PAGE_SIZE;
+			cur_log->next = prev_log;
 			cur_log->ts = ts;
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id);
-			cur_log->size = tgt_partition_size*PAGE_SIZE;
-		//	printf("log partition %p\n", cur_log->addr);
-
-			cur_log->next = prev_log;
+			cur_log->log = rsalloc(tgt_partition_size*PAGE_SIZE);
+			cur_log->check = 0xDEADBEEF;
 			prev_log = cur_log; 
 
 			iss_states[cur_lp].current_incremental_log_size-=cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
+			assert(start == tgt_id);
 			start = tgt_id + tgt_partition_size;
 		}
 		else

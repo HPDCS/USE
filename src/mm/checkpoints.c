@@ -184,11 +184,10 @@ void *log_full(int lid) {
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
 		partial_log = log_incremental(lid, lvt(lid));
-		* ((void ** )ptr) = partial_log;
+		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 	}
 		
-
 
 	for(i = 0; i < recoverable_state[lid]->num_areas; i++){
 
@@ -400,7 +399,7 @@ void restore_full(int lid, void *ckpt) {
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
 
 	if(recoverable_state[lid]->is_incremental){
-		log_incremental_restore((partition_log *)ptr);
+		log_incremental_restore(*(partition_log **)ptr);
 		ptr = (void *)((char *)ptr + sizeof(void*));
 	}
 
@@ -528,7 +527,7 @@ void log_delete(void *ckpt){
 		if(((malloc_state*)ckpt)->is_incremental){
 				tmp = (void*)((char*)ckpt + sizeof(malloc_state));
 				tmp = (void *)((char *)tmp + sizeof(seed_type));
-				log_incremental_destroy_chain((partition_log*)tmp);
+				log_incremental_destroy_chain(*(partition_log**)tmp);
 		}
 		rsfree(ckpt);
 	}
