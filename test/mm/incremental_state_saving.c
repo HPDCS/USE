@@ -27,8 +27,10 @@ static char messages[5][256] = {
 
 void **mem_areas; /// pointers to the lp segment
 __thread unsigned int current_lp = 0;
+ __thread unsigned int tid = 0;
 simulation_configuration pdes_config;
 void rsfree(void *ptr){ free(ptr); }
+void* rsalloc(size_t len){ return malloc(len); }
 extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
 

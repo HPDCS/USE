@@ -1,7 +1,7 @@
 #ifndef __ISS_H_
 #define __ISS_H_
 
-#include <mm.h>
+#include <segment.h>
 
 /// This struct keeps metadata of a partition log
 typedef struct __partition_log{

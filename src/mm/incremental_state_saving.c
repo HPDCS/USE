@@ -8,6 +8,7 @@
 #include <mm.h>
 #include <dymelor.h>
 #include <incremental_state_saving.h>
+#include <segment.h>
 
 
 extern void **mem_areas; /// pointers to the lp segment
@@ -18,14 +19,14 @@ model_t iss_costs_model;	 /// runtime tuning of the cost model
 
 static inline void guard_memory(void* pg_ptr, size_t size){
 	if(!pdes_config.iss_enabled_mprotection) return;
-	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]]]+PER_LP_PREALLOCATED_MEMORY);
+	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]+PER_LP_PREALLOCATED_MEMORY);
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	mprotect(pg_ptr, size, PROT_READ);
 }
 
 static inline void unguard_memory(void* pg_ptr, size_t size){
 	if(!pdes_config.iss_enabled_mprotection) return;
-	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]]]+PER_LP_PREALLOCATED_MEMORY);
+	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]+PER_LP_PREALLOCATED_MEMORY);
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	mprotect(pg_ptr, size, PROT_READ | PROT_WRITE);
 }
@@ -167,6 +168,7 @@ void log_incremental_restore(partition_log *cur){
 
 /* Marks each partition containing the touched page as dirty */
 void dirty(void* addr, size_t size){
+	//printf("%u: lp %u %p\n", tid, current_lp, addr);
 	unsigned int page_id    	= get_page_idx_from_ptr(current_lp, addr);
 	unsigned int cur_id 		= page_id;
 	partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];

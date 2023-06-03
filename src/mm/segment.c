@@ -22,8 +22,8 @@
 * @author Alessandro Pellegrini
 * @author Francesco Quaglia
 */
-
 #include "mm.h"
+#include "segment.h"
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -66,7 +66,6 @@ void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
 	/// Addresses are determined in the same way across all kernel instances
 	the_address = init_address + PER_LP_PREALLOCATED_MEMORY * gid_to_int(gid);
 	*pages = rsalloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(void*));
-
 
 	for(i = 0; i < NUM_MMAP; i++) {
 		mmapped[i] = mmap(the_address, MAX_MMAP, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS /*|MAP_FIXED*/, 0, 0);
