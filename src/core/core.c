@@ -520,11 +520,13 @@ void init_simulation(unsigned int thread_id){
 		//if(tid != 0) continue;
 		current_lp = __sync_fetch_and_add(&lp_inizialized, 1);
 		if(current_lp >=  pdes_config.nprocesses) continue;
-		if(!pdes_config.serial) allocator_init_for_lp(current_lp);
-		if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
-			init_incremental_checkpoint_support_per_lp(current_lp);
+		
+		if(!pdes_config.serial){
+		 	allocator_init_for_lp(current_lp);
+			if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+				init_incremental_checkpoint_support_per_lp(current_lp);
+			}
 		}
-
 		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
  		current_msg->sender_id 		= -1;//
  		current_msg->receiver_id 	= current_lp;//
@@ -540,10 +542,6 @@ void init_simulation(unsigned int thread_id){
 			LPS[current_lp]->bound = current_msg;
 			LPS[current_lp]->num_executed_frames++;
 			LPS[current_lp]->state_log_forced = true;
-			if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-				iss_first_run_model(current_lp);
-				iss_protect_all_memory(current_lp);
-			}
 			LogState(current_lp);
 			((state_t*)((rootsim_list*)LPS[current_lp]->queue_states)->head->data)->lvt = -1;// Required to exclude the INIT event from timeline
 			LPS[current_lp]->state_log_forced = false;

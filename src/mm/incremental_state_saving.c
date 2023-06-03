@@ -18,12 +18,16 @@ model_t iss_costs_model;	 /// runtime tuning of the cost model
 
 static inline void guard_memory(void* pg_ptr, size_t size){
 	if(!pdes_config.iss_enabled_mprotection) return;
-	mprotect(pg_ptr, size*PAGE_SIZE, PROT_READ);
+	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]]]+PER_LP_PREALLOCATED_MEMORY);
+	assert(size <= PER_LP_PREALLOCATED_MEMORY);
+	mprotect(pg_ptr, size, PROT_READ);
 }
 
 static inline void unguard_memory(void* pg_ptr, size_t size){
 	if(!pdes_config.iss_enabled_mprotection) return;
-	mprotect(pg_ptr, size*PAGE_SIZE, PROT_READ | PROT_WRITE);
+	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]]]+PER_LP_PREALLOCATED_MEMORY);
+	assert(size <= PER_LP_PREALLOCATED_MEMORY);
+	mprotect(pg_ptr, size, PROT_READ | PROT_WRITE);
 }
 
 
@@ -51,12 +55,12 @@ void sigsev_tracer_for_dirty(int a, siginfo_t *b, void *c){
 
 
 void init_incremental_checkpoint_support(unsigned int num_lps){
-	struct sigaction action;
 
-	iss_states = (lp_iss_metadata*)malloc(sizeof(lp_iss_metadata)*num_lps);
+	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*num_lps);
 	iss_costs_model.mprotect_cost_per_page = 1;
 	iss_costs_model.log_cost_per_page = 100;
 
+	struct sigaction action;
 	action.sa_sigaction = sigsev_tracer_for_dirty;
 	action.sa_flags = SA_SIGINFO;
 	sigaction(SIGSEGV, &action, NULL);
@@ -120,8 +124,8 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 		if(tgt_id){
 		//	printf("log partition %u %u %u\n", start, tgt_id, tgt_partition_size);
 			tgt_id = get_lowest_page_from_partition_id(tgt_id);
-			cur_log = (partition_log*) malloc(sizeof(partition_log));
-			cur_log->log = malloc(tgt_partition_size*PAGE_SIZE);
+			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
+			cur_log->log = rsalloc(tgt_partition_size*PAGE_SIZE);
 			cur_log->ts = ts;
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id);
 			cur_log->size = tgt_partition_size*PAGE_SIZE;
