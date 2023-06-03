@@ -131,7 +131,6 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 			cur_log->ts = ts;
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id);
 			cur_log->log = rsalloc(tgt_partition_size*PAGE_SIZE);
-			cur_log->check = 0xDEADBEEF;
 			prev_log = cur_log; 
 
 			iss_states[cur_lp].current_incremental_log_size-=cur_log->size;
