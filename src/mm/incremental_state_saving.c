@@ -102,17 +102,17 @@ double estimate_cost(size_t size, double probability){
 partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
-	unsigned int cur_partition_size, tgt_partition_size, cur_id, tgt_id;
+	unsigned int cur_partition_size, tgt_partition_size, cur_id, tgt_id, last_dirty = 0;
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 	partition_log *cur_log = NULL, *prev_log = NULL;
 	//printf("should log %llu\n", iss_states[cur_lp].current_incremental_log_size);
 	while(start < end){
 		cur_id = start;
-		tgt_id = 0;
+        last_dirty = tgt_id = 0;
 		cur_partition_size = 1;
 		while(cur_id > 0){
 		//	if(cur_partition_size == 1 && cur_id < 266666)printf("checking %u %u %u\n", cur_id, tree[cur_id].valid, tree[cur_id].dirty);
-
+            if(!last_dirty && tree[cur_id].dirty) last_dirty = cur_id;
 			if(tree[cur_id].valid)
 			  tgt_partition_size = cur_partition_size;
 			if(tree[cur_id].valid && tree[cur_id].dirty){
@@ -136,10 +136,13 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 			iss_states[cur_lp].current_incremental_log_size-=cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 			assert(start == tgt_id);
-			start = tgt_id + tgt_partition_size;
 		}
-		else
-			start+=tgt_partition_size;
+        else{
+            if(last_dirty == 0) break;
+            start = last_dirty <<= 1 + 1;
+            start = get_lowest_page_from_partition_id(start);
+        }
+        start+=tgt_partition_size;
 
 	}
 	assert(iss_states[cur_lp].current_incremental_log_size == 0);
