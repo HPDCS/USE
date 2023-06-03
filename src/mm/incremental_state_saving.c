@@ -178,24 +178,24 @@ void dirty(void* addr, size_t size){
 	unsigned int tgt_partition_size = 0;
 	unsigned int cur_partition_size = 1;
 	unsigned int partition_id = page_id;
+    bool was_dirty = 0;
+    
 	iss_states[current_lp].total_access_count++;
 
+
 	while(cur_id > 0){
-		/// increase the access count of the target_partition
-		//tree[cur_id].access_count++;
-		/// track the target_partition as dirty  
-		if(cur_partition_size == 1){
-			tree[cur_id].dirty = 1;
-		}
-		else{
-			tree[cur_id].dirty = 1; //  tree[cur_id<<1].dirty | tree[(cur_id<<1)+1].dirty;
-		}
+        was_dirty = tree[cur_id].dirty;
+		tree[cur_id].dirty = 1;
 			
 		if(tree[cur_id].valid){
 			tgt_partition_size = cur_partition_size;
 			partition_id = cur_id;
 		}
-
+        
+        if(!was_dirty){
+            tree[cur_id].access_count += 1;
+        }
+        
 		cur_partition_size<<=1;
 		cur_id>>=1;
 	}
@@ -243,13 +243,11 @@ void iss_update_model(unsigned int cur_lp){
 
 	for(unsigned int i = 0; i<start; i++){
 		tree[i].valid = 0;
-		tree[i].access_count += tree[i].dirty;
 		tree[i].dirty = 0;
 	}
 
 	for(unsigned int i = start; i<end; i++){
 		tree[i].valid = 1;
-		tree[i].access_count += tree[i].dirty;
 		tree[i].dirty = 0;
 		tree[i].cost = estimate_cost(size, ((double)tree[i].access_count) / ((double)tree[1].access_count) );
 	} 
@@ -259,11 +257,6 @@ void iss_update_model(unsigned int cur_lp){
 		for(unsigned int i = start; i<end;i+=2){
 			unsigned int parent = i/2;
 			tree[parent].cost = estimate_cost(size, ((double)tree[parent].access_count)/((double)tree[1].access_count));
-			//if(i == 262144){
-			//	printf("i %u i+1 %u par %u\n", i, i+1, parent);
-			//	printf("i %f i+1 %f par %f pro %f\n", tree[i].cost, tree[i+1].cost, tree[parent].cost, ((double)tree[parent].access_count)/((double)tree[1].access_count));
-			//	printf("i %u i+1 %u par %u all %u\n", tree[i].access_count, tree[i+1].access_count, tree[parent].access_count, tree[1].access_count);
-			//}
 			if(tree[parent].cost < tree[i].cost+tree[i+1].cost){
 				tree[parent].valid = 1;
 			}
@@ -271,6 +264,7 @@ void iss_update_model(unsigned int cur_lp){
 				tree[parent].valid = 0;
 				tree[parent].cost = tree[i].cost+tree[i+1].cost;
 			}
+			
 		}
 		end    = start;
 		start /= 2; 
