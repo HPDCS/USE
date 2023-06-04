@@ -14,30 +14,33 @@ typedef struct __partition_log{
 
 /// This struct keeps parameters for the iss cost model
 typedef struct __model{
-	double mprotect_cost_per_page;
-	double log_cost_per_page;
+	float mprotect_cost_per_page;
+	float log_cost_per_page;
 }model_t;
 
 
 /// This struct keeps runtime info for an admittable partition of the state segment
 typedef struct __partition_tree_node{
-	double cost;
-	unsigned long long access_count;
-	char valid[2];
-	char dirty;
+	float cost;
+	int access_count;
+	short valid[2];
+	short dirty;
 }partition_node_tree_t;
 
 
 /// This struct keeps all metadata for incremental state saving of a model state
 typedef struct __per_lp_iss_metadata{
 	partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
-	size_t current_incremental_log_size;
-	unsigned int iss_counter;
-	unsigned int total_access_count;
-    char current_model;
+	ssize_t current_incremental_log_size;
+	int iss_counter;
+    int iss_model_round;
+    int count_tracked;
+    short current_model;
 }lp_iss_metadata;
 
 bool is_next_ckpt_incremental();
+
+void iss_log_incremental_reset(unsigned int lp);
 
 void init_incremental_checkpoint_support(unsigned int num_lps);
 void init_incremental_checkpoint_support_per_lp(unsigned int lp);

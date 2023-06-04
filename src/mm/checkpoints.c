@@ -147,6 +147,8 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks) {
 *
 * @todo must be declared static. This will entail changing the logic in gvt.c to save a state before rebuilding.
 */
+extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
+
 void *log_full(int lid) {
 
 	void *ptr = NULL, *ckpt = NULL;
@@ -183,11 +185,12 @@ void *log_full(int lid) {
 
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
+        iss_unprotect_all_memory(lid);
 		partial_log = log_incremental(lid, lvt(lid));
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 	}
-		
+        
 
 	for(i = 0; i < recoverable_state[lid]->num_areas; i++){
 
@@ -215,7 +218,7 @@ void *log_full(int lid) {
 		m_area->state_changed = 0;
 		bzero((void *)m_area->dirty_bitmap, bitmap_blocks * BLOCK_SIZE);
 
-	} // For each m_area in recoverable_state
+	} // For each m_area in recoverable_state 
 
 
 	
@@ -230,8 +233,10 @@ void *log_full(int lid) {
 
 	/// enable protection after log
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+        iss_log_incremental_reset(lid);
 		iss_update_model(lid);
 		iss_protect_all_memory(lid);
+        assert(iss_states[lid].current_incremental_log_size == 0);
 	}
 
 	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
@@ -473,12 +478,6 @@ void restore_full(int lid, void *ckpt) {
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
 
-	/// enable protection after restore
-	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-		iss_update_model(lid);
-		iss_protect_all_memory(lid);
-	}
-	
 	statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)clock_timer_value(recovery_timer));
 }
 
@@ -502,6 +501,7 @@ void log_restore(int lid, state_t *state_queue_node) {
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
 		iss_unprotect_all_memory(lid);
 		restore_full(lid, state_queue_node->log);
+        iss_log_incremental_reset(lid);
 		iss_protect_all_memory(lid);
 	}
 	else
