@@ -35,6 +35,7 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_autonomic_period;
 	unsigned int ckpt_forced_full_period;
 	unsigned char iss_enabled_mprotection;
+	unsigned int mem_support_log;
 
 	unsigned int ongvt_period;
 	enum ongvt_mode ongvt_mode;

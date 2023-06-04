@@ -26,6 +26,7 @@ simulation_configuration pdes_config;
 #define CKPT_FORCED_FULL_PERIOD_KEY 364
 #define ISS_ENABLED                 365
 #define ISS_ENABLED_MPROTECTION     366
+#define MEM_SUPPORT_LOG             367
 
 #define DISTRIBUTED_FETCH_KEY       263
 #define NUMA_REBALANCE_KEY          264
@@ -53,7 +54,8 @@ static struct argp_option options[] = {
   {"ckpt_forced_full_period",  CKPT_FORCED_FULL_PERIOD_KEY, "#CHECKPOINTS"         ,  0,  "Number of incremental checkpoints before taking a full log"   , 0 },
   {"iss_enabled",               ISS_ENABLED ,         0        ,  OPTION_ARG_OPTIONAL,  "Use incremental state saving as checkpointing mechanism"   , 0 },
   {"iss_enabled_mprotection",   ISS_ENABLED_MPROTECTION ,         0        ,  OPTION_ARG_OPTIONAL,  "Use incremental state saving as checkpointing mechanism"   , 0 },
- 
+  {"mem_support_log",   MEM_SUPPORT_LOG ,         0        ,  OPTION_ARG_OPTIONAL,  "Use incremental state saving as checkpointing mechanism"   , 0 },
+
   {"distributed-fetch",   DISTRIBUTED_FETCH_KEY    , 0         ,  OPTION_ARG_OPTIONAL,  "Enable distributed fetch"   , 0 },
   {"numa-rebalance"   ,   NUMA_REBALANCE_KEY       , 0         ,  OPTION_ARG_OPTIONAL,  "Enable numa load-balancing"   , 0 },
   {"enable-mbind"       , ENABLE_MBIND_KEY         , 0         ,  OPTION_ARG_OPTIONAL,  "Enable mbind"   , 0 },
@@ -104,6 +106,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     case ISS_ENABLED_MPROTECTION:
       pdes_config.iss_enabled_mprotection = 1;
+      break;
+
+    case MEM_SUPPORT_LOG:
+      pdes_config.mem_support_log = 1; /// 1 being di-dymelor
       break;
 
     case CKPT_FORCED_FULL_PERIOD_KEY:
@@ -216,6 +222,7 @@ void configuration_init(void){
   pdes_config.ckpt_autonomic_period = 0;
   pdes_config.ckpt_forced_full_period = 1;
   pdes_config.iss_enabled_mprotection = 0;
+  pdes_config.mem_support_log = 0; 
   pdes_config.serial = false;
   
   pdes_config.timeout = 0;
@@ -248,6 +255,7 @@ void print_config(void){
     printf("\t\t|- period %u\n", pdes_config.ckpt_period);
     printf("\t\t|- autonomic %u\n", pdes_config.ckpt_autonomic_period);
     printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
+    printf("\t\t - memory subsystem support %u\n", pdes_config.mem_support_log);
     printf("\t\t|- ckpt mode %u\n", pdes_config.checkpointing);
     printf("\t\t\t|- incremental with mprotect %u\n", pdes_config.iss_enabled_mprotection);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
