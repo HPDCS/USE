@@ -225,10 +225,6 @@ void set_affinity(unsigned int tid){
 	
 }
 
-inline void SetState(void *ptr) { //make it as macro?
-	ParallelSetState(ptr); 
-}
-
 void nodes_init(){
 		size_t tmp_size;
 		unsigned int i;

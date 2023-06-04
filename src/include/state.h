@@ -35,9 +35,6 @@
 #include <numerical.h>
 
 
-extern bool processing_silent_execution;
-
-
 #define lvt(lid) (LPS[lid]->bound != NULL ? LPS[lid]->bound->timestamp : 0.0)
 
 /// Structure for LP's state
@@ -51,8 +48,6 @@ typedef struct _state_t {
 	/// This log has been taken after the execution of this event. This is useful to speedup silent execution.
 	msg_t		*last_event;
 
-	/* ADDED FOR PADS 2018 */
-	seed_type	seed;
 	unsigned long long num_executed_frames;
 	
 	/// Execution state
@@ -60,12 +55,9 @@ typedef struct _state_t {
 } state_t;
 
 
-extern void ParallelSetState(void *new_state);
+extern void SetState(void *new_state);
 extern bool LogState(unsigned int);
 extern void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_breaker);
-extern void rebuild_state(unsigned int lid, state_t *state_pointer, simtime_t time);
-extern void set_checkpoint_period(unsigned int lid, int period);
-extern unsigned int silent_execution(unsigned int lid, void *state_buffer, msg_t *evt, simtime_t until_ts, unsigned int tie_breaker);
 extern void clean_checkpoint(unsigned int lid, simtime_t commit_horizon);
 
 #endif /* _STATE_MGNT_H_ */

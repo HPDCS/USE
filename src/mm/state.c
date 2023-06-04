@@ -107,7 +107,6 @@ skip_switch:
 		new_state.last_event = LPS[lid]->bound;
 		new_state.state = LPS[lid]->state;
 
-		new_state.seed 					= LPS[lid]->seed 					;
 		new_state.num_executed_frames	= LPS[lid]->num_executed_frames		;
 
 		// We take as the buffer state the last one associated with a SetState() call, if any
@@ -330,7 +329,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 *
 * @todo malloc wrapper
 */
-void ParallelSetState(void *new_state) {
+void SetState(void *new_state) {
 	LPS[current_lp]->current_base_pointer = new_state;
 }
 
