@@ -52,6 +52,43 @@ int compute_bitmap_blocks(int chunks) {
 
 }
 
+void set_chunk_dirty_from_address(void *addr, int lp) {
+
+	size_t chunk_size, area_size;
+	int j, k, i, blocks, num_chunks;
+	unsigned long long marea_base_addr, chunk_base_address;
+	malloc_area *target_marea;
+	malloc_state *m_state;
+	unsigned long long offset;
+	unsigned int index;
+
+	unsigned long long start_address = (unsigned long long)addr;
+
+	m_state = recoverable_state[lp];
+	int num_areas = m_state->num_areas;
+
+	malloc_area *areas = m_state->areas;
+	assert(areas != NULL);
+	
+
+	for (j=0; j < num_areas; j++) {
+		num_chunks = areas[j].num_chunks;
+		chunk_size = areas[j].chunk_size;
+		blocks = compute_bitmap_blocks(num_chunks);
+		area_size = num_chunks * chunk_size;
+		marea_base_addr = ((unsigned long long) areas[j].area); 
+		if (start_address >= marea_base_addr && start_address < marea_base_addr + area_size) {
+			target_marea = &areas[j];
+			offset = start_address - marea_base_addr;
+			index = offset / chunk_size;
+			SET_DIRTY_BIT(target_marea, index); 
+			break;
+		}
+	}
+
+	
+}
+
 void clean_bitmap(unsigned int *use_bitmap, int blocks, unsigned int **bitmap) {
 
 	int j;
@@ -63,9 +100,8 @@ void clean_bitmap(unsigned int *use_bitmap, int blocks, unsigned int **bitmap) {
 }
 
 
-bool check_not_used_chunk_and_clean(malloc_area *m_area, int bitmap_blocks, int dirty_blocks) {
+bool check_not_used_chunk_and_clean(malloc_area *m_area, int dirty_blocks) {
 
-	int j;
 
 	// Check if there is at least one chunk used in the area
 	if(m_area->alloc_chunks == 0 && m_area->dirty_chunks == 0){ /// skip areas not dirtied and not used
@@ -226,7 +262,7 @@ void *log_full(int lid) {
 		bitmap_blocks = compute_bitmap_blocks(m_area->num_chunks);
 		dirty_blocks = compute_bitmap_blocks(m_area->dirty_chunks);
 		
-		if (check_not_used_chunk_and_clean(m_area, bitmap_blocks, dirty_blocks)) continue;
+		if (check_not_used_chunk_and_clean(m_area, dirty_blocks)) continue;
 
 		// Copy malloc_area into the ckpt
 		memcpy(ptr, m_area, sizeof(malloc_area));
@@ -302,8 +338,6 @@ void *log_state(int lid) {
 
 bool check_marea_rebuild(malloc_area *m_area, void **ptr, int bitmap_blocks, int dirty_blocks, int *restored_areas, malloc_state **recoverable_state) {
 
-	int j;
-
 
 	if( (*restored_areas == (*recoverable_state)->busy_areas && (*recoverable_state)->dirty_areas == 0) || m_area->idx != ((malloc_area*) *ptr)->idx){
 
@@ -360,9 +394,7 @@ void restore_chunks_in_marea(malloc_area *m_area, unsigned int *bitmap, int bloc
 
 void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, int dirty_blocks, bool is_incremental) {
 
-	int j, k, idx;
 	size_t chunk_size;
-	unsigned int bitmap;
 
 	chunk_size = m_area->chunk_size;
 	RESET_BIT_AT(chunk_size, 0);
@@ -418,7 +450,7 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, int
 void restore_full(int lid, void *ckpt) {
 
 	void * ptr;
-	int i, j, bitmap_blocks, dirty_blocks, original_num_areas, restored_areas;
+	int i, bitmap_blocks, dirty_blocks, original_num_areas, restored_areas;
 	malloc_area *m_area, *new_area;
 
 	// Timers for simulation platform self-tuning
@@ -502,8 +534,8 @@ void restore_full(int lid, void *ckpt) {
 
 				bitmap_blocks = compute_bitmap_blocks(m_area->num_chunks);
 
-				clean_bitmap(m_area, bitmap_blocks, &(m_area->use_bitmap));
-				clean_bitmap(m_area, dirty_blocks, &(m_area->dirty_bitmap));
+				clean_bitmap(m_area->use_bitmap, bitmap_blocks, &(m_area->use_bitmap));
+				clean_bitmap(m_area->use_bitmap, dirty_blocks, &(m_area->dirty_bitmap));
 
 			}
 		}
