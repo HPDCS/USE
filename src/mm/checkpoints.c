@@ -132,6 +132,8 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, in
 		copy_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 
 		if (is_incremental) {
+			memcpy(*ptr, m_area->dirty_bitmap, dirty_blocks * BLOCK_SIZE);
+			*ptr = (void*)((char*) *ptr + dirty_blocks * BLOCK_SIZE);
 			copy_chunks_in_marea(m_area, m_area->dirty_bitmap, dirty_blocks, ptr, chunk_size);
 		}
 
@@ -235,8 +237,7 @@ void *log_full(int lid) {
 
 		if (pdes_config.mem_support_log) {
 			// Copy dirty_bitmap into the ckpt
-			memcpy(ptr, m_area->dirty_bitmap, dirty_blocks * BLOCK_SIZE);
-			ptr = (void*)((char*)ptr + dirty_blocks * BLOCK_SIZE);
+			
 			log_all_marea_chunks(m_area, &ptr, bitmap_blocks, dirty_blocks, recoverable_state[lid]->is_incremental);
 		}
 
@@ -370,7 +371,7 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, int
 	// Check how the area has been logged
 	if(!is_incremental && CHECK_LOG_MODE_BIT(m_area)){
 		// The area has been entirely logged
-		memcpy(m_area->area, ptr, m_area->num_chunks * chunk_size);
+		memcpy(m_area->area, *ptr, m_area->num_chunks * chunk_size);
 		*ptr = (void*)((char*) *ptr + m_area->num_chunks * chunk_size);
 
 	} else {
@@ -380,6 +381,8 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, int
 		restore_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 
 		if (is_incremental) {
+			memcpy(m_area->dirty_bitmap, *ptr, dirty_blocks * BLOCK_SIZE);
+			*ptr = (void*)((char*) *ptr + dirty_blocks * BLOCK_SIZE);
 			restore_chunks_in_marea(m_area, m_area->dirty_bitmap, dirty_blocks, ptr, chunk_size);
 		}
 		
@@ -467,8 +470,6 @@ void restore_full(int lid, void *ckpt) {
 
 		if (pdes_config.mem_support_log) {
 			// Restore dirty_bitmap
-			memcpy(m_area->dirty_bitmap, ptr, dirty_blocks * BLOCK_SIZE);
-			ptr = (void*)((char*)ptr + dirty_blocks * BLOCK_SIZE);
 			restore_marea_chunk(m_area, &ptr, bitmap_blocks, dirty_blocks, recoverable_state[lid]->is_incremental);
 		}
 
