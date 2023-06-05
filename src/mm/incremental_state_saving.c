@@ -111,14 +111,19 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 	partition_log *cur_log = NULL, *prev_log = NULL;
     unsigned int or_size = iss_states[cur_lp].current_incremental_log_size;
     int prev = 0;
-    
-	if(iss_states[cur_lp].current_incremental_log_size != 0)
+    unsigned int last_restart = 0;
+	   
+    unsigned int tmp = 0, last_computed = 0;
 
 	while(start < end){
 		//printf("%u start %u\n", tid, start);
+        assert(last_restart < start);
+        last_restart = start;
         cur_id = start;
         first_dirty = tgt_id = 0;
 		tgt_partition_size = cur_partition_size = 1;
+        tmp = 0;
+        last_computed = 0;
 		while(cur_id > 0){
 
            if(!first_dirty && tree[cur_id].dirty) {
@@ -149,23 +154,24 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 			assert(start == tgt_id);
 		}
         else{
-            if(first_dirty == 0) break;
-            unsigned int tmp = first_dirty;
-            tgt_partition_size = (prev == -1);
-        
+            if(first_dirty <= 1) break;
+            tmp = first_dirty;
+            tgt_partition_size = (prev == 0);
+            last_computed = first_dirty;
             if(prev & 1){
-                first_dirty +=  1;
-                first_dirty <<= 1;
+                last_computed +=  1;
+                last_computed = get_lowest_page_from_partition_id(last_computed);
+                assert(start != last_computed);
+                start = last_computed;
             }
-            else{
+            else if(prev !=0){
+                tgt_partition_size = 1;
                 first_dirty <<= 1;
                 first_dirty +=  1;
+                first_dirty = get_lowest_page_from_partition_id(first_dirty);
+                assert(start != first_dirty);
+                start = first_dirty;
             }
-            first_dirty = get_lowest_page_from_partition_id(first_dirty);
-            tgt_partition_size = 0;
-            assert(start != first_dirty);
-            start = first_dirty;
-            //tgt_partition_size = 1;
         }
         start+=tgt_partition_size;
 
