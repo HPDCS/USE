@@ -102,17 +102,17 @@ double estimate_cost(size_t size, double probability){
 partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
-	unsigned int cur_partition_size, tgt_partition_size, cur_id, tgt_id;
+	unsigned int cur_partition_size, tgt_partition_size, cur_id, tgt_id, last_dirty = 0;
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 	partition_log *cur_log = NULL, *prev_log = NULL;
 	//printf("should log %llu\n", iss_states[cur_lp].current_incremental_log_size);
 	while(start < end){
 		cur_id = start;
-		tgt_id = 0;
+        last_dirty = tgt_id = 0;
 		cur_partition_size = 1;
 		while(cur_id > 0){
 		//	if(cur_partition_size == 1 && cur_id < 266666)printf("checking %u %u %u\n", cur_id, tree[cur_id].valid, tree[cur_id].dirty);
-
+            if(!last_dirty && tree[cur_id].dirty) last_dirty = cur_id;
 			if(tree[cur_id].valid)
 			  tgt_partition_size = cur_partition_size;
 			if(tree[cur_id].valid && tree[cur_id].dirty){
@@ -136,10 +136,13 @@ partition_log* log_incremental(unsigned int cur_lp, simtime_t ts){
 			iss_states[cur_lp].current_incremental_log_size-=cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 			assert(start == tgt_id);
-			start = tgt_id + tgt_partition_size;
 		}
-		else
-			start+=tgt_partition_size;
+        else{
+            if(last_dirty == 0) break;
+            start = last_dirty <<= 1 + 1;
+            start = get_lowest_page_from_partition_id(start);
+        }
+        start+=tgt_partition_size;
 
 	}
 	assert(iss_states[cur_lp].current_incremental_log_size == 0);
@@ -175,24 +178,24 @@ void dirty(void* addr, size_t size){
 	unsigned int tgt_partition_size = 0;
 	unsigned int cur_partition_size = 1;
 	unsigned int partition_id = page_id;
+    bool was_dirty = 0;
+    
 	iss_states[current_lp].total_access_count++;
 
+
 	while(cur_id > 0){
-		/// increase the access count of the target_partition
-		//tree[cur_id].access_count++;
-		/// track the target_partition as dirty  
-		if(cur_partition_size == 1){
-			tree[cur_id].dirty = 1;
-		}
-		else{
-			tree[cur_id].dirty = 1; //  tree[cur_id<<1].dirty | tree[(cur_id<<1)+1].dirty;
-		}
+        was_dirty = tree[cur_id].dirty;
+		tree[cur_id].dirty = 1;
 			
 		if(tree[cur_id].valid){
 			tgt_partition_size = cur_partition_size;
 			partition_id = cur_id;
 		}
-
+        
+        if(!was_dirty){
+            tree[cur_id].access_count += 1;
+        }
+        
 		cur_partition_size<<=1;
 		cur_id>>=1;
 	}
@@ -218,13 +221,13 @@ void iss_first_run_model(unsigned int cur_lp){
 	unsigned int end   = start*2;
 
 	for(unsigned int i = 0; i<start; i++){
-		tree[i].valid = 0;
+               tree[i].valid[0] = 0;
 		tree[i].cost  = 0;
 		tree[i].dirty = 0;
 	}
 
 	for(unsigned int i = start; i<end; i++){
-		tree[i].valid = 1;
+               tree[i].valid[0] = 1;
 		tree[i].dirty = 0;
 		tree[i].cost  = 0;
 	} 
@@ -236,17 +239,17 @@ void iss_update_model(unsigned int cur_lp){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
 	unsigned int size  = 1;
+       unsigned int parent= 0;
+       unsigned int cur_model = iss_states[cur_lp].current_model; 
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 
 	for(unsigned int i = 0; i<start; i++){
-		tree[i].valid = 0;
-		tree[i].access_count += tree[i].dirty;
+               tree[i].valid[cur_model] = 0;
 		tree[i].dirty = 0;
 	}
 
 	for(unsigned int i = start; i<end; i++){
-		tree[i].valid = 1;
-		tree[i].access_count += tree[i].dirty;
+		tree[i].valid[cur_model] = 1;
 		tree[i].dirty = 0;
 		tree[i].cost = estimate_cost(size, ((double)tree[i].access_count) / ((double)tree[1].access_count) );
 	} 
@@ -254,20 +257,16 @@ void iss_update_model(unsigned int cur_lp){
 	while(start > 1){
 		size *= 2;
 		for(unsigned int i = start; i<end;i+=2){
-			unsigned int parent = i/2;
+			parent = i/2;
 			tree[parent].cost = estimate_cost(size, ((double)tree[parent].access_count)/((double)tree[1].access_count));
-			//if(i == 262144){
-			//	printf("i %u i+1 %u par %u\n", i, i+1, parent);
-			//	printf("i %f i+1 %f par %f pro %f\n", tree[i].cost, tree[i+1].cost, tree[parent].cost, ((double)tree[parent].access_count)/((double)tree[1].access_count));
-			//	printf("i %u i+1 %u par %u all %u\n", tree[i].access_count, tree[i+1].access_count, tree[parent].access_count, tree[1].access_count);
-			//}
 			if(tree[parent].cost < tree[i].cost+tree[i+1].cost){
-				tree[parent].valid = 1;
+                               tree[parent].valid[cur_model] = 1;
 			}
 			else{
-				tree[parent].valid = 0;
+                               tree[parent].valid[cur_model] = 0;
 				tree[parent].cost = tree[i].cost+tree[i+1].cost;
 			}
+			
 		}
 		end    = start;
 		start /= 2; 

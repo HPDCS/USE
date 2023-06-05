@@ -23,7 +23,7 @@ typedef struct __model{
 typedef struct __partition_tree_node{
 	double cost;
 	unsigned long long access_count;
-	char valid;
+	char valid[2];
 	char dirty;
 }partition_node_tree_t;
 
@@ -34,6 +34,7 @@ typedef struct __per_lp_iss_metadata{
 	size_t current_incremental_log_size;
 	unsigned int iss_counter;
 	unsigned int total_access_count;
+    char current_model;
 }lp_iss_metadata;
 
 bool is_next_ckpt_incremental();
