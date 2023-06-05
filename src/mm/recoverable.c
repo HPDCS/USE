@@ -106,10 +106,17 @@ size_t get_log_size(malloc_state *logged_state){
 	size_t log_size;
 
 	if (is_incremental(logged_state)) { 
+
 		log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + sizeof(void *);
-		if (pdes_config.iss_enabled_mprotection) log_size += (logged_state->dirty_bitmap_size + logged_state->dirty_areas * sizeof(malloc_area));
+		
+		if (pdes_config.mem_support_log && pdes_config.iss_enabled_mprotection) {
+			log_size += (logged_state->dirty_bitmap_size + logged_state->dirty_areas * sizeof(malloc_area));
+		}
+	
 	} else {
+
 		log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + logged_state->total_log_size;
+		
 		if (pdes_config.iss_enabled_mprotection) log_size += (logged_state->dirty_bitmap_size + logged_state->dirty_areas * sizeof(malloc_area));
 	}
 
