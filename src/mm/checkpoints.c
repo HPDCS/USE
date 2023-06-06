@@ -74,6 +74,8 @@ void set_chunk_dirty_from_address(void *addr, int lp) {
 	for (j=0; j < num_areas; j++) {
 		num_chunks = areas[j].num_chunks;
 		chunk_size = areas[j].chunk_size;
+		RESET_BIT_AT(chunk_size, 0);	// ckpt Mode bit
+		RESET_BIT_AT(chunk_size, 1);	// Lock bit
 		blocks = compute_bitmap_blocks(num_chunks);
 		area_size = num_chunks * chunk_size;
 		marea_base_addr = ((unsigned long long) areas[j].area); 
@@ -82,6 +84,7 @@ void set_chunk_dirty_from_address(void *addr, int lp) {
 			offset = start_address - marea_base_addr;
 			index = offset / chunk_size;
 			SET_DIRTY_BIT(target_marea, index); 
+			target_marea->dirty_chunks++;
 			break;
 		}
 	}
