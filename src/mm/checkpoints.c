@@ -92,14 +92,14 @@ void set_chunk_dirty_from_address(void *addr, int lp) {
 	
 }
 
-void clean_bitmap(unsigned int *use_bitmap, int blocks, unsigned int **bitmap) {
+void clean_bitmap(int blocks, unsigned int *bitmap) {
 
 	int j;
-	if (use_bitmap != NULL) {
+	if (bitmap != NULL) {
 		for(j = 0; j < blocks; j++)
-			*bitmap[j] = 0;
+			bitmap[j] = 0;
+		
 	}
-
 }
 
 
