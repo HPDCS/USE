@@ -103,7 +103,7 @@ void clean_bitmap(unsigned int *use_bitmap, int blocks, unsigned int **bitmap) {
 }
 
 
-bool check_not_used_chunk_and_clean(malloc_area *m_area, int dirty_blocks) {
+bool check_not_used_chunk_and_clean(malloc_area *m_area, int blocks) {
 
 
 	// Check if there is at least one chunk used in the area
@@ -112,7 +112,7 @@ bool check_not_used_chunk_and_clean(malloc_area *m_area, int dirty_blocks) {
 		m_area->dirty_chunks = 0;
 		m_area->state_changed = 0;
 
-		clean_bitmap(m_area->use_bitmap, dirty_blocks, &(m_area->dirty_bitmap));
+		clean_bitmap(m_area->use_bitmap, blocks, &(m_area->dirty_bitmap));
 		
 		return true; /// do not log this area skip to the next one
 	}
