@@ -41,6 +41,43 @@
 #include <incremental_state_saving.h>
 
 
+void update_log_ckpt_statistics(int lid, double size, clock_timer time, bool is_incremental) {
+
+
+	if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental || pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
+
+		statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(time));
+		statistics_post_lp_data(lid, STAT_CKPT_MEM, size);
+	}
+
+	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (is_incremental || (!is_incremental && pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
+
+		statistics_post_lp_data(lid, STAT_INC_CKPT, 1.0);
+		statistics_post_lp_data(lid, STAT_INC_CKPT_TIME, (double)clock_timer_value(time));
+		statistics_post_lp_data(lid, STAT_CKPT_MEM, size);
+	}
+
+
+	
+}
+
+
+void update_restore_ckpt_statistics(int lid, clock_timer time, bool is_incremental) {
+
+	if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental || pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
+
+		statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)clock_timer_value(time));
+	}
+
+	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (is_incremental || (!is_incremental && pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
+
+		statistics_post_lp_data(lid, STAT_INC_RESTORE, 1.0);
+		statistics_post_lp_data(lid, STAT_INC_RECOVERY_TIME, (double)clock_timer_value(time));
+	}
+
+	
+}
+
 
 int compute_bitmap_blocks(int chunks) {
 
@@ -316,8 +353,8 @@ void *log_full(int lid) {
 		iss_protect_all_memory(lid);
 	}
 
-	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
-	statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
+	update_log_ckpt_statistics(lid, (double) size, checkpoint_timer, recoverable_state[lid]->is_incremental);
+	
 	autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
 	return ckpt;
 }
@@ -563,7 +600,6 @@ void restore_full(int lid, void *ckpt) {
 	}
 
 	recoverable_state[lid]->timestamp = -1;
-	recoverable_state[lid]->is_incremental = false;
 	recoverable_state[lid]->dirty_areas = 0;	
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
@@ -574,7 +610,9 @@ void restore_full(int lid, void *ckpt) {
 		iss_protect_all_memory(lid);
 	}
 	
-	statistics_post_lp_data(lid, STAT_RECOVERY_TIME, (double)clock_timer_value(recovery_timer));
+	update_restore_ckpt_statistics(lid, recovery_timer, recoverable_state[lid]->is_incremental);
+
+	recoverable_state[lid]->is_incremental = false;
 }
 
 
