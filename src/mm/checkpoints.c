@@ -160,7 +160,7 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bo
 
 	// Check whether the area should be completely copied (not on a per-chunk basis)
 	// using a threshold-based heuristic
-	if(!pdes_config.iss_enabled && CHECK_LOG_MODE_BIT(m_area)){
+	if(! (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) && CHECK_LOG_MODE_BIT(m_area)){
 
 		// If the malloc_area is almost (over a threshold) full, copy it entirely
 		memcpy(*ptr, m_area->area, m_area->num_chunks * chunk_size);
@@ -176,7 +176,7 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bo
 
 		/// copy use bitmap when iss is not enabled
 		/// when iss is enabled only copy the use bitmap if the log is not incremental or mprotect is enabled
-		if (!pdes_config.iss_enabled || ( pdes_config.iss_enabled && (!is_incremental || pdes_config.iss_enabled_mprotection ) ) ) {
+		if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental || pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
 
 			memcpy(*ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
 			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
@@ -184,7 +184,7 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bo
 		}
 
 		/// copy dirty bitmap only if iss is enabled and the log is incremental or the mprotect is enabled
-		if (pdes_config.iss_enabled && (is_incremental || pdes_config.iss_enabled_mprotection)) {
+		if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (is_incremental || (!is_incremental && pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
 
 			memcpy(*ptr, m_area->dirty_bitmap, bitmap_blocks * BLOCK_SIZE);
 			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
@@ -266,7 +266,7 @@ void *log_full(int lid) {
 
 
 	/// log not supported by dymelor metadata
-	if(!pdes_config.mem_support_log && recoverable_state[lid]->is_incremental){
+	if( (pdes_config.iss_enabled_mprotection == MPROTECT) && recoverable_state[lid]->is_incremental){
 		/// partial log
 		partial_log = log_incremental(lid, lvt(lid));
 		*((void ** )ptr) = partial_log;
@@ -311,7 +311,7 @@ void *log_full(int lid) {
 	recoverable_state[lid]->total_inc_size = 0;
 
 	/// enable protection after log
-	if (!pdes_config.mem_support_log && pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+	if ( (pdes_config.iss_enabled_mprotection == MPROTECT) && pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		iss_update_model(lid);
 		iss_protect_all_memory(lid);
 	}
@@ -414,7 +414,7 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, boo
 	RESET_BIT_AT(chunk_size, 1);
 
 	// Check how the area has been logged
-	if(!pdes_config.iss_enabled && CHECK_LOG_MODE_BIT(m_area)){
+	if( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) && CHECK_LOG_MODE_BIT(m_area)){
 		// The area has been entirely logged
 		memcpy(m_area->area, *ptr, m_area->num_chunks * chunk_size);
 		*ptr = (void*)((char*) *ptr + m_area->num_chunks * chunk_size);
@@ -430,7 +430,7 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, boo
 		
 		/// copy-back use bitmap when iss is not enabled
 		/// when iss is enabled only copy-back the use bitmap if the log is not incremental or mprotect is enabled
-		if (!pdes_config.iss_enabled || ( pdes_config.iss_enabled && (!is_incremental || pdes_config.iss_enabled_mprotection ) ) ) {
+		if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental || pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
 
 			// Restore use bitmap
 			memcpy(m_area->use_bitmap, *ptr, bitmap_blocks * BLOCK_SIZE);
@@ -439,7 +439,7 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, boo
 		}
 
 		/// copy-back dirty bitmap only if iss is enabled and the log is incremental or the mprotect is enabled
-		if (pdes_config.iss_enabled && (is_incremental || pdes_config.iss_enabled_mprotection)) {
+		if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (is_incremental || pdes_config.iss_enabled_mprotection == DDYMELOR)) {
 			memcpy(m_area->dirty_bitmap, *ptr, bitmap_blocks * BLOCK_SIZE);
 			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
 			restore_chunks_in_marea(m_area, m_area->dirty_bitmap, bitmap_blocks, ptr, chunk_size);
@@ -498,7 +498,7 @@ void restore_full(int lid, void *ckpt) {
 	memcpy(&LPS[lid]->seed, ptr, sizeof(seed_type));
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
 
-	if(!pdes_config.mem_support_log && recoverable_state[lid]->is_incremental){
+	if((pdes_config.iss_enabled_mprotection == MPROTECT) && recoverable_state[lid]->is_incremental){
 		log_incremental_restore(*(partition_log **)ptr);
 		ptr = (void *)((char *)ptr + sizeof(void*));
 	}
@@ -569,7 +569,7 @@ void restore_full(int lid, void *ckpt) {
 	recoverable_state[lid]->total_inc_size = 0;
 
 	/// enable protection after restore
-	if (!pdes_config.mem_support_log && pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+	if ((pdes_config.iss_enabled_mprotection == MPROTECT) && pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		iss_update_model(lid);
 		iss_protect_all_memory(lid);
 	}
@@ -594,7 +594,7 @@ void restore_full(int lid, void *ckpt) {
 void log_restore(int lid, state_t *state_queue_node) {
 	statistics_post_lp_data(lid, STAT_RECOVERY, 1.0);
 	
-	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+	if(pdes_config.iss_enabled_mprotection == MPROTECT && pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
 		iss_unprotect_all_memory(lid);
 		restore_full(lid, state_queue_node->log);
 		iss_protect_all_memory(lid);
@@ -622,7 +622,7 @@ void log_delete(void *ckpt){
 		if(((malloc_state*)ckpt)->is_incremental){
 				tmp = (void*)((char*)ckpt + sizeof(malloc_state));
 				tmp = (void *)((char *)tmp + sizeof(seed_type));
-				if (!pdes_config.mem_support_log) log_incremental_destroy_chain(*(partition_log**)tmp);
+				if (pdes_config.iss_enabled_mprotection == MPROTECT) log_incremental_destroy_chain(*(partition_log**)tmp);
 		}
 		rsfree(ckpt);
 	}
