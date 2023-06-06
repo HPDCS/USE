@@ -160,7 +160,7 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bo
 
 	// Check whether the area should be completely copied (not on a per-chunk basis)
 	// using a threshold-based heuristic
-	if(!is_incremental && CHECK_LOG_MODE_BIT(m_area)){
+	if(!pdes_config.iss_enabled && CHECK_LOG_MODE_BIT(m_area)){
 
 		// If the malloc_area is almost (over a threshold) full, copy it entirely
 		memcpy(*ptr, m_area->area, m_area->num_chunks * chunk_size);
@@ -168,14 +168,29 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bo
 
 	} else {
 		
+		/// iss = 0 : original code 
+		/// iss = 1 AND mprotect = 1 → depends on the type of log (full/incremental)
+		///							   full: only copy use bitmap
+		///							   incremental: only copy dirty bitmap
+		/// iss = 1 AND mprotect = 1 → copy both use_bitmap and dirty_bitmap
 
-		if (is_incremental) {
+		/// copy use bitmap when iss is not enabled
+		/// when iss is enabled only copy the use bitmap if the log is not incremental or mprotect is enabled
+		if (!pdes_config.iss_enabled || ( pdes_config.iss_enabled && (!is_incremental || pdes_config.iss_enabled_mprotection ) ) ) {
+
+			memcpy(*ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
+			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
+			copy_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
+		}
+
+		/// copy dirty bitmap only if iss is enabled and the log is incremental or the mprotect is enabled
+		if (pdes_config.iss_enabled && (is_incremental || pdes_config.iss_enabled_mprotection)) {
+
 			memcpy(*ptr, m_area->dirty_bitmap, bitmap_blocks * BLOCK_SIZE);
 			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
 			copy_chunks_in_marea(m_area, m_area->dirty_bitmap, bitmap_blocks, ptr, chunk_size);
-		} else {
-			copy_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 		}
+		
 
 	}
 }
@@ -271,14 +286,9 @@ void *log_full(int lid) {
 		memcpy(ptr, m_area, sizeof(malloc_area));
 		ptr = (void*)((char*)ptr + sizeof(malloc_area));
 
-		memcpy(ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
-		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
 
-		if (pdes_config.mem_support_log) {
-			// Copy dirty_bitmap into the ckpt
-			
-			log_all_marea_chunks(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
-		}
+		log_all_marea_chunks(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
+		
 
 
 		// Reset Dirty Bitmap, as there is a full ckpt in the chain now
@@ -404,23 +414,35 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, boo
 	RESET_BIT_AT(chunk_size, 1);
 
 	// Check how the area has been logged
-	if(!is_incremental && CHECK_LOG_MODE_BIT(m_area)){
+	if(!pdes_config.iss_enabled && CHECK_LOG_MODE_BIT(m_area)){
 		// The area has been entirely logged
 		memcpy(m_area->area, *ptr, m_area->num_chunks * chunk_size);
 		*ptr = (void*)((char*) *ptr + m_area->num_chunks * chunk_size);
 
 	} else {
-		// The area was partially logged.
-		// Logged chunks are the ones associated with a used bit whose value is 1
-		// Their number is in the alloc_chunks counter
-		
 
-		if (is_incremental) {
+		/// iss = 0 : original code 
+		/// iss = 1 AND mprotect = 1 → depends on the type of log (full/incremental)
+		///							   full: only copy-back use bitmap
+		///							   incremental: only copy-back dirty bitmap
+		/// iss = 1 AND mprotect = 1 → copy-back both use_bitmap and dirty_bitmap
+
+		
+		/// copy-back use bitmap when iss is not enabled
+		/// when iss is enabled only copy-back the use bitmap if the log is not incremental or mprotect is enabled
+		if (!pdes_config.iss_enabled || ( pdes_config.iss_enabled && (!is_incremental || pdes_config.iss_enabled_mprotection ) ) ) {
+
+			// Restore use bitmap
+			memcpy(m_area->use_bitmap, *ptr, bitmap_blocks * BLOCK_SIZE);
+			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
+			restore_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
+		}
+
+		/// copy-back dirty bitmap only if iss is enabled and the log is incremental or the mprotect is enabled
+		if (pdes_config.iss_enabled && (is_incremental || pdes_config.iss_enabled_mprotection)) {
 			memcpy(m_area->dirty_bitmap, *ptr, bitmap_blocks * BLOCK_SIZE);
 			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
 			restore_chunks_in_marea(m_area, m_area->dirty_bitmap, bitmap_blocks, ptr, chunk_size);
-		} else {
-			restore_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 		}
 		
 	}
@@ -501,14 +523,9 @@ void restore_full(int lid, void *ckpt) {
 
 		restored_areas++;
 
-		// Restore use bitmap
-		memcpy(m_area->use_bitmap, ptr, bitmap_blocks * BLOCK_SIZE);
-		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
-
-		if (pdes_config.mem_support_log) {
-			// Restore dirty_bitmap
-			restore_marea_chunk(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
-		}
+		
+		restore_marea_chunk(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
+		
 
 		// Reset dirty bitmap
 		bzero(m_area->dirty_bitmap, bitmap_blocks * BLOCK_SIZE);
