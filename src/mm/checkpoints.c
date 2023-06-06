@@ -112,7 +112,7 @@ bool check_not_used_chunk_and_clean(malloc_area *m_area, int blocks) {
 		m_area->dirty_chunks = 0;
 		m_area->state_changed = 0;
 
-		clean_bitmap(m_area->use_bitmap, blocks, &(m_area->dirty_bitmap));
+		clean_bitmap(blocks, m_area->dirty_bitmap);
 		
 		return true; /// do not log this area skip to the next one
 	}
@@ -150,7 +150,7 @@ void copy_chunks_in_marea(malloc_area *m_area, unsigned int *bitmap, int blocks,
 }
 
 
-void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, int dirty_blocks, bool is_incremental) {
+void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bool is_incremental) {
 
 	size_t chunk_size;
 
@@ -264,9 +264,8 @@ void *log_full(int lid) {
 		m_area = &recoverable_state[lid]->areas[i];
 
 		bitmap_blocks = compute_bitmap_blocks(m_area->num_chunks);
-		dirty_blocks = compute_bitmap_blocks(m_area->dirty_chunks);
 		
-		if (check_not_used_chunk_and_clean(m_area, dirty_blocks)) continue;
+		if (check_not_used_chunk_and_clean(m_area, bitmap_blocks)) continue;
 
 		// Copy malloc_area into the ckpt
 		memcpy(ptr, m_area, sizeof(malloc_area));
@@ -278,15 +277,15 @@ void *log_full(int lid) {
 		if (pdes_config.mem_support_log) {
 			// Copy dirty_bitmap into the ckpt
 			
-			log_all_marea_chunks(m_area, &ptr, bitmap_blocks, dirty_blocks, recoverable_state[lid]->is_incremental);
+			log_all_marea_chunks(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
 		}
 
 
 		// Reset Dirty Bitmap, as there is a full ckpt in the chain now
-		clean_bitmap(m_area->use_bitmap, dirty_blocks, &(m_area->dirty_bitmap));
+		clean_bitmap(bitmap_blocks, m_area->dirty_bitmap);
 		m_area->dirty_chunks = 0;
 		m_area->state_changed = 0;
-		bzero((void *)m_area->dirty_bitmap, dirty_blocks * BLOCK_SIZE); 
+		bzero((void *)m_area->dirty_bitmap, bitmap_blocks * BLOCK_SIZE); 
 
 	} // For each m_area in recoverable_state
 
@@ -340,7 +339,7 @@ void *log_state(int lid) {
 
 
 
-bool check_marea_rebuild(malloc_area *m_area, void **ptr, int bitmap_blocks, int dirty_blocks, int *restored_areas, malloc_state **recoverable_state) {
+bool check_marea_rebuild(malloc_area *m_area, void **ptr, int bitmap_blocks, int *restored_areas, malloc_state **recoverable_state) {
 
 
 	if( (*restored_areas == (*recoverable_state)->busy_areas && (*recoverable_state)->dirty_areas == 0) || m_area->idx != ((malloc_area*) *ptr)->idx){
@@ -348,15 +347,15 @@ bool check_marea_rebuild(malloc_area *m_area, void **ptr, int bitmap_blocks, int
 		m_area->dirty_chunks = 0;
 		m_area->state_changed = 0;
 
-		clean_bitmap(m_area->use_bitmap, dirty_blocks, &(m_area->dirty_bitmap));
+		clean_bitmap(bitmap_blocks, m_area->dirty_bitmap);
 		
 		m_area->alloc_chunks = 0;
 		m_area->next_chunk = 0;
 		RESET_LOG_MODE_BIT(m_area);
 		RESET_AREA_LOCK_BIT(m_area);
 
-		clean_bitmap(m_area->use_bitmap, bitmap_blocks, &(m_area->use_bitmap));
-		clean_bitmap(m_area->use_bitmap, dirty_blocks, &(m_area->dirty_bitmap));
+		clean_bitmap(bitmap_blocks, m_area->use_bitmap);
+		clean_bitmap(bitmap_blocks, m_area->dirty_bitmap);
 		
 		m_area->last_access = (*recoverable_state)->timestamp;
 
@@ -396,7 +395,7 @@ void restore_chunks_in_marea(malloc_area *m_area, unsigned int *bitmap, int bloc
 }
 
 
-void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, int dirty_blocks, bool is_incremental) {
+void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, bool is_incremental) {
 
 	size_t chunk_size;
 
@@ -491,8 +490,8 @@ void restore_full(int lid, void *ckpt) {
 		m_area = &recoverable_state[lid]->areas[i];
 
 		bitmap_blocks = compute_bitmap_blocks(m_area->num_chunks);
-		dirty_blocks = compute_bitmap_blocks(m_area->dirty_chunks);
-		if (check_marea_rebuild(m_area, &ptr, bitmap_blocks, dirty_blocks, &restored_areas, &recoverable_state[lid])) continue;
+
+		if (check_marea_rebuild(m_area, &ptr, bitmap_blocks, &restored_areas, &recoverable_state[lid])) continue;
 
 
 		// Restore the malloc_area
@@ -508,11 +507,11 @@ void restore_full(int lid, void *ckpt) {
 
 		if (pdes_config.mem_support_log) {
 			// Restore dirty_bitmap
-			restore_marea_chunk(m_area, &ptr, bitmap_blocks, dirty_blocks, recoverable_state[lid]->is_incremental);
+			restore_marea_chunk(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
 		}
 
 		// Reset dirty bitmap
-		bzero(m_area->dirty_bitmap, dirty_blocks * BLOCK_SIZE);
+		bzero(m_area->dirty_bitmap, bitmap_blocks * BLOCK_SIZE);
 		m_area->dirty_chunks = 0;
 		m_area->state_changed = 0;
 
@@ -536,14 +535,12 @@ void restore_full(int lid, void *ckpt) {
 			RESET_LOG_MODE_BIT(m_area);
 			RESET_AREA_LOCK_BIT(m_area);
 
-			if (m_area->use_bitmap != NULL) {
+			bitmap_blocks = compute_bitmap_blocks(m_area->num_chunks);
 
-				bitmap_blocks = compute_bitmap_blocks(m_area->num_chunks);
+			clean_bitmap(bitmap_blocks, m_area->use_bitmap);
+			clean_bitmap(bitmap_blocks, m_area->dirty_bitmap);
 
-				clean_bitmap(m_area->use_bitmap, bitmap_blocks, &(m_area->use_bitmap));
-				clean_bitmap(m_area->use_bitmap, dirty_blocks, &(m_area->dirty_bitmap));
-
-			}
+			
 		}
 		recoverable_state[lid]->num_areas = original_num_areas;
 	}
