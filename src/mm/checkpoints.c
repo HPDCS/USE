@@ -622,7 +622,7 @@ void log_delete(void *ckpt){
 		if(((malloc_state*)ckpt)->is_incremental){
 				tmp = (void*)((char*)ckpt + sizeof(malloc_state));
 				tmp = (void *)((char *)tmp + sizeof(seed_type));
-				log_incremental_destroy_chain(*(partition_log**)tmp);
+				if (!pdes_config.mem_support_log) log_incremental_destroy_chain(*(partition_log**)tmp);
 		}
 		rsfree(ckpt);
 	}
