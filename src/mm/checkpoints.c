@@ -168,12 +168,13 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, in
 
 	} else {
 		
-		copy_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 
 		if (is_incremental) {
-			memcpy(*ptr, m_area->dirty_bitmap, dirty_blocks * BLOCK_SIZE);
-			*ptr = (void*)((char*) *ptr + dirty_blocks * BLOCK_SIZE);
-			copy_chunks_in_marea(m_area, m_area->dirty_bitmap, dirty_blocks, ptr, chunk_size);
+			memcpy(*ptr, m_area->dirty_bitmap, bitmap_blocks * BLOCK_SIZE);
+			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
+			copy_chunks_in_marea(m_area, m_area->dirty_bitmap, bitmap_blocks, ptr, chunk_size);
+		} else {
+			copy_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 		}
 
 	}
@@ -413,12 +414,14 @@ void restore_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks, int
 		// The area was partially logged.
 		// Logged chunks are the ones associated with a used bit whose value is 1
 		// Their number is in the alloc_chunks counter
-		restore_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
+		
 
 		if (is_incremental) {
-			memcpy(m_area->dirty_bitmap, *ptr, dirty_blocks * BLOCK_SIZE);
-			*ptr = (void*)((char*) *ptr + dirty_blocks * BLOCK_SIZE);
-			restore_chunks_in_marea(m_area, m_area->dirty_bitmap, dirty_blocks, ptr, chunk_size);
+			memcpy(m_area->dirty_bitmap, *ptr, bitmap_blocks * BLOCK_SIZE);
+			*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
+			restore_chunks_in_marea(m_area, m_area->dirty_bitmap, bitmap_blocks, ptr, chunk_size);
+		} else {
+			restore_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 		}
 		
 	}
