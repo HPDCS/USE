@@ -131,7 +131,9 @@ void set_chunk_dirty_from_address(void *addr, int lp) {
 	
 }
 
-void clean_bitmap(int blocks, unsigned int *bitmap) { bzero((void *)bitmap, blocks * BLOCK_SIZE); }
+void clean_bitmap(int blocks, unsigned int *bitmap) { 
+	if (bitmap != NULL) bzero((void *) bitmap, blocks * BLOCK_SIZE); 
+}
 
 
 bool check_not_used_chunk_and_clean(malloc_area *m_area, int blocks) {
