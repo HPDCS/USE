@@ -51,6 +51,7 @@ static struct argp_option options[] = {
   {"ckpt-fossil-period",  CKPT_FOSSIL_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before collection committed snapshot"   , 0 },
   {"ckpt-autonomic-period",  CKPT_AUTONOMIC_PERIOD_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Enable autonomic checkpointing period"   , 0 },
   {"ckpt_forced_full_period",  CKPT_FORCED_FULL_PERIOD_KEY, "#CHECKPOINTS"         ,  0,  "Number of incremental checkpoints before taking a full log"   , 0 },
+  {"iss_enabled",                ISS_ENABLED ,         0        ,  OPTION_ARG_OPTIONAL,  "Use mprotect as tracking mechanism for write accesses"   , 0 },
   {"iss_mode",                ISS_MODE ,         0        ,  OPTION_ARG_OPTIONAL,  "Use mprotect as tracking mechanism for write accesses"   , 0 },
 
   {"distributed-fetch",   DISTRIBUTED_FETCH_KEY    , 0         ,  OPTION_ARG_OPTIONAL,  "Enable distributed fetch"   , 0 },
@@ -97,8 +98,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       pdes_config.ckpt_autonomic_period = 1;
       break;
 
-    case ISS_MODE:
+    case ISS_ENABLED:
       pdes_config.checkpointing = INCREMENTAL_STATE_SAVING;
+      break;
+
+    case ISS_MODE:
       pdes_config.iss_mode = MPROTECT;
       break;
 
