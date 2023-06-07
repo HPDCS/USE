@@ -58,7 +58,7 @@ double Random(void) {
 	uint32_t *seed2;
     
     double tmp = 0.0;
-    drand48_r(&thlocal_seed, &tmp);
+//    drand48_r(&thlocal_seed, &tmp);
 	
 //UPDATED
     

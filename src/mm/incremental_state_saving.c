@@ -315,7 +315,7 @@ void iss_update_model(unsigned int cur_lp){
     partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
     iss_states[current_lp].iss_model_round++;
     if((iss_states[current_lp].iss_model_round%10)!=0) return;
-    //return;
+//    return;
     //iss_states[cur_lp].cur_virtual_ts = 1;
 
     if(iss_states[cur_lp].disabled < 2){
