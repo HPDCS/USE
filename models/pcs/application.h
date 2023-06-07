@@ -84,7 +84,7 @@ typedef struct _sir_data_per_cell{
     double power; // Power allocated to the call
 } sir_data_per_cell;
 
-// Taglia di 16 byte
+// Taglia di 24 byte
 typedef struct _channel{
 	int channel_id; // Number of the channel
 	sir_data_per_cell *sir_data; // Signal/Interference Ratio data
@@ -125,6 +125,7 @@ typedef struct _lp_state_type{
 	struct _channel *channels;
 	int dummy;
 	bool dummy_flag;
+    void *cold_state;
 } lp_state_type;
 
 

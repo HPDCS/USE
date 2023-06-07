@@ -42,6 +42,7 @@
 static seed_type master_seed;
 //static __thread seed_type thread_seed = 0;
 
+__thread struct drand48_data thlocal_seed;
 
 /**
 * This function returns a number in between (0,1), according to a Uniform Distribution.
@@ -55,9 +56,13 @@ double Random(void) {
 
 	uint32_t *seed1;
 	uint32_t *seed2;
-
-	//UPDATED
-
+    
+    double tmp = 0.0;
+    drand48_r(&thlocal_seed, &tmp);
+	
+//UPDATED
+    
+    
 
 	//if(thread_seed == 0)
 	//	thread_seed = master_seed;

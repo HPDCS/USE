@@ -149,6 +149,9 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks) {
 */
 extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
+extern __thread int __in_log_full;
+
+
 void *log_full(int lid) {
 
 	void *ptr = NULL, *ckpt = NULL;
@@ -161,9 +164,9 @@ void *log_full(int lid) {
 	clock_timer checkpoint_timer;
 	clock_timer_start(checkpoint_timer);
 
-
+    __in_log_full =1 ;
 	recoverable_state[lid]->is_incremental = is_next_ckpt_incremental(); /// call routine for determining the type of checkpointing
-	size = get_log_size(recoverable_state[lid]);
+    size = get_log_size(recoverable_state[lid]);
 
 	ckpt = rsalloc(size);
 
@@ -181,15 +184,19 @@ void *log_full(int lid) {
 	// Copy the per-LP Seed State (to make the numerical library rollbackable and PWD)
 	memcpy(ptr, &LPS[lid]->seed, sizeof(seed_type));
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
-
-
+    
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
-        iss_unprotect_all_memory(lid);
+        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
+       	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
 		partial_log = log_incremental(lid, lvt(lid));
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 	}
+    else{
+       	statistics_post_lp_data(lid, STAT_CKPT_FULL, 1.0);
+        statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
+    }
         
 
 	for(i = 0; i < recoverable_state[lid]->num_areas; i++){
@@ -198,6 +205,8 @@ void *log_full(int lid) {
 
 		if (check_not_used_chunk_and_clean(m_area, &bitmap_blocks)) continue;
 
+
+
 		// Copy malloc_area into the ckpt
 		memcpy(ptr, m_area, sizeof(malloc_area));
 		ptr = (void*)((char*)ptr + sizeof(malloc_area));
@@ -205,12 +214,9 @@ void *log_full(int lid) {
 		memcpy(ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
 		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
 
-
 		/// if log is full
 		if (!recoverable_state[lid]->is_incremental) {
-
 			log_all_marea_chunks(m_area, &ptr, bitmap_blocks);
-
 		} 
 
 		// Reset Dirty Bitmap, as there is a full ckpt in the chain now
@@ -223,7 +229,7 @@ void *log_full(int lid) {
 
 	
 	// Sanity check
-	if ((char *)ckpt + size != ptr){
+    if ((char *)ckpt + size != ptr){
 		rootsim_error(true, "Actual (full) ckpt size is wrong by %d bytes!\nlid = %d ckpt = %p size = %#x (%d), ptr = %p, ckpt + size = %p\n", (char *)ckpt + size - (char *)ptr, lid, ckpt, size, size, ptr, (char *)ckpt + size);
 	}
 
@@ -231,17 +237,14 @@ void *log_full(int lid) {
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
 
-	/// enable protection after log
-	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-        iss_log_incremental_reset(lid);
-		iss_update_model(lid);
-		iss_protect_all_memory(lid);
-        assert(iss_states[lid].current_incremental_log_size == 0);
-	}
-
-	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
-	statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
-	autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
+    if(recoverable_state[lid]->is_incremental)
+        statistics_post_lp_data(lid, STAT_CKPT_TIME_INCR, (double)clock_timer_value(checkpoint_timer));
+	else
+        statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
+	
+    autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
+    
+    __in_log_full = 0 ;
 	return ckpt;
 }
 
@@ -267,7 +270,22 @@ void *log_full(int lid) {
 */
 void *log_state(int lid) {
 	statistics_post_lp_data(lid, STAT_CKPT, 1.0);
-	return log_full(lid);
+    void *res;
+	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+        size_t logsize = iss_states[lid].current_incremental_log_size;
+		//iss_unprotect_all_memory(lid);
+		res = log_full(lid);
+        //assert(iss_states[lid].current_incremental_log_size == logsize);
+        iss_log_incremental_reset(lid);
+		iss_update_model(lid);
+        assert(iss_states[lid].current_incremental_log_size == 0);
+        iss_protect_all_memory(lid);
+
+	}
+	else
+		res = log_full(lid);
+    
+	return res;
 }
 
 
@@ -500,7 +518,16 @@ void log_restore(int lid, state_t *state_queue_node) {
 	
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
 		iss_unprotect_all_memory(lid);
-		restore_full(lid, state_queue_node->log);
+        state_t *tgt = state_queue_node;
+        state_t *cur = tgt;
+        while(((malloc_state*)cur->log)->is_incremental){
+            cur = list_prev(cur);
+        }
+        while(cur != tgt){
+            restore_full(lid, cur->log);
+            cur = list_next(cur);
+        }
+        restore_full(lid, state_queue_node->log);
         iss_log_incremental_reset(lid);
 		iss_protect_all_memory(lid);
 	}

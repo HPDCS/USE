@@ -200,8 +200,16 @@ unsigned int get_current_numa_node(){
 
 unsigned int cores_on_numa[N_CPU];
 
+
+extern __thread struct drand48_data thlocal_seed;
+
+
+
+
 void set_affinity(unsigned int tid){
 	unsigned int cpu_per_node;
+    short seed[3] = {1233, 1329, 134};
+    seed48_r(&seed, &thlocal_seed);
 	cpu_set_t mask;
 	cpu_per_node = N_CPU/num_numa_nodes;
 	

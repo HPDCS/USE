@@ -26,7 +26,6 @@
 #define WEEKEND_FACTOR		5
 
 
-
 double recompute_ta(double ref_ta, simtime_t time_now) {
 
 	int now = (int)time_now;
@@ -97,6 +96,7 @@ void deallocation(unsigned int me, lp_state_type *pointer, int ch, simtime_t lvt
 		free(c->sir_data);
 
 		free(c);
+        //fading_recheck(pointer);
 	} else {
 		printf("(%d) Unable to deallocate on %p, channel is %d at time %f\n", me, c, ch, lvt);
 		abort();
@@ -160,14 +160,19 @@ int allocation(lp_state_type *pointer) {
 	//force this
 
 		if(1){
+            unsigned int count_steps= 0;
+//            printf("START updates fading\n");
 			ch = pointer->channels->prev;
-
-			while(ch != NULL){
+            while(ch != NULL){
+            count_steps++;
+                //&                printf("\tupdates fading\n");
 				ch->sir_data->fading = Expent(1.0);
 
 				summ += generate_cross_path_gain() *  ch->sir_data->power * ch->sir_data->fading ;
 				ch = ch->prev;
 			}
+            if((pointer->arriving_calls % 1000)==0)
+            printf("END updates fading %u\n", count_steps);
 		}
 
 		if (summ == 0.0) {

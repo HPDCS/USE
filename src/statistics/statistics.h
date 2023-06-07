@@ -68,8 +68,15 @@
 #define STAT_INIT_CLOCKS            217        /// Number of clocks for init
 
 #define STAT_CKPT                   300        /// Number of checkpoints taken  
-#define STAT_CKPT_TIME              301        /// Average time to take one checkpoint
+#define STAT_CKPT_FULL              310        /// Number of checkpoints taken  
+#define STAT_CKPT_INCR              311        /// Number of checkpoints taken  
+
+#define STAT_CKPT_TIME              331        /// Average time to take one checkpoint
+#define STAT_CKPT_TIME_INCR         332        /// Average time to take one checkpoint
+
 #define STAT_CKPT_MEM               302        /// Average memory consumption used by a checkpoint
+#define STAT_CKPT_MEM_INCR          312        /// Average memory consumption used by a checkpoint
+
 #define STAT_RECOVERY               303        /// Number of state restoration done
 #define STAT_RECOVERY_TIME          304        /// Average time to restore a simulation state
 #define STAT_ROLLBACK               305        /// Number of rollback operations
@@ -103,6 +110,8 @@ struct stats_t {
     stat64_t counter_rollbacks_length;
     stat64_t counter_recoveries;
     stat64_t counter_checkpoints;
+    stat64_t counter_checkpoints_incr;
+    stat64_t counter_checkpoints_full;
     stat64_t counter_prune;
     stat64_t counter_safety_check;
     stat64_t counter_checkpoint_recalc;
@@ -125,10 +134,12 @@ struct stats_t {
     stat64_t clock_safe;	//PADS2018
     stat64_t clock_recovery;
     stat64_t clock_checkpoint;
+    stat64_t clock_checkpoint_incr;
     stat64_t clock_rollback;
     stat64_t clock_init;
 
-    stat64_t mem_checkpoint;
+    stat64_t mem_checkpoint_full;
+    stat64_t mem_checkpoint_incr;
     stat64_t checkpoint_period;
 
     stat64_t total_frames;

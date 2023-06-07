@@ -39,7 +39,7 @@ struct argp_option model_options[] = {
   {"enable-fading",       1006, 0, 0, "Enable fading recheck"               , 0 },
   {"enable-variable-ta",  1007, 0, 0, "Enable variable interarrival time"               , 0 },
   {"num-calls",           1008, "VALUE", 0, "Number of calls per cell to end the simulation"               , 0 },
-  {"fading_time",         1009, 0, 0, "Fading time"               , 0 },
+  {"fading_time",         1009, "VALUE", 0, "Fading time"               , 0 },
   {"arrival-d",        1010, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
   {"duration-d",        1011, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
   {"handoff-d",        1012, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
@@ -93,7 +93,7 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 			args.total_calls = atoi(arg);
 			break;
 		case 1009:
-			args.fading_recheck_time = atoi(arg);
+			args.fading_recheck_time =  strtod(arg, NULL);
 			break;
 		case 1010:
 			args.arrival_d = atoi(arg);
@@ -138,7 +138,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			// Initialize the LP's state
 			state = (lp_state_type *)malloc(sizeof(lp_state_type));
-			if (state == NULL){
+            if (state == NULL){
 				printf("Out of memory!\n");
 				exit(EXIT_FAILURE);
 			}
@@ -146,7 +146,8 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			SetState(state);
 
 			bzero(state, sizeof(lp_state_type));
-
+            //state->cold_state = malloc(4096*10);
+			
 			if(NUM_HOT && me < NUM_HOT_CELLS)
 				state->ref_ta = state->ta = TA_HOT;
 			else

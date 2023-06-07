@@ -3,6 +3,9 @@
 
 #include <segment.h>
 
+
+//typedef dirty_ts unsigned short;
+
 /// This struct keeps metadata of a partition log
 typedef struct __partition_log{
 	size_t size;
@@ -23,8 +26,8 @@ typedef struct __model{
 typedef struct __partition_tree_node{
 	float cost;
 	int access_count;
-	short valid[2];
-	short dirty;
+	char valid[2];
+	unsigned short dirty;
 }partition_node_tree_t;
 
 
@@ -35,7 +38,9 @@ typedef struct __per_lp_iss_metadata{
 	int iss_counter;
     int iss_model_round;
     int count_tracked;
-    short current_model;
+    int disabled;
+    unsigned short cur_virtual_ts;
+    char current_model;
 }lp_iss_metadata;
 
 bool is_next_ckpt_incremental();
