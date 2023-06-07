@@ -387,6 +387,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n");
 
 	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
+	printf("Save Full Checkpoint operations.................: %12llu\n", (unsigned long long)stats->counter_checkpoints - (unsigned long long)stats->counter_checkpoints_iss);
 	printf("Save Incremental Checkpoint operations..........: %12llu\n", (unsigned long long)stats->counter_checkpoints_iss);
 	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
 	printf("Incremental Restore Checkpoint operations.......: %12llu\n", (unsigned long long)stats->counter_restore_iss);
