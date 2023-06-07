@@ -96,7 +96,7 @@ void set_chunk_dirty_from_address(void *addr, int lp) {
 
 	unsigned long long start_address = (unsigned long long)addr;
 
-	m_state = recoverable_state[lp];
+	m_state = recoverable_state[current_lp];
 	int num_areas = m_state->num_areas;
 
 	malloc_area *areas = m_state->areas;
@@ -120,9 +120,9 @@ void set_chunk_dirty_from_address(void *addr, int lp) {
 				if(target_marea->state_changed == 0) {
 					m_state->dirty_bitmap_size += blocks * BLOCK_SIZE;
 					m_state->dirty_areas++;
-					target_marea->last_access = current_lvt;
-					m_state->total_inc_size += chunk_size;
 				}
+				target_marea->last_access = current_lvt;
+				m_state->total_inc_size += chunk_size;
 			}
 			break;
 		}
@@ -200,10 +200,6 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bo
 		*ptr = (void*)((char*) *ptr + m_area->num_chunks * chunk_size);
 
 	} else {
-
-		/// copy the use bitmap regardless of the type of log
-		memcpy(*ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
-		*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
 		
 		/// iss = 0 : original code 
 		/// iss = 1 AND mprotect = 1 → depends on the type of log (full/incremental)
@@ -213,7 +209,7 @@ void log_all_marea_chunks(malloc_area *m_area, void **ptr, int bitmap_blocks, bo
 
 		/// copy use bitmap when iss is not enabled
 		/// when iss is enabled only copy the use bitmap if the log is not incremental or mprotect is enabled
-		if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental || pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
+		if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental) ) ) {
 
 			copy_chunks_in_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 		}
@@ -321,10 +317,12 @@ void *log_full(int lid) {
 		memcpy(ptr, m_area, sizeof(malloc_area));
 		ptr = (void*)((char*)ptr + sizeof(malloc_area));
 
+		/// copy the use bitmap regardless of the type of log
+		memcpy(ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
+		ptr = (void*)((char*) ptr + bitmap_blocks * BLOCK_SIZE);
 
 		log_all_marea_chunks(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
 		
-
 
 		// Reset Dirty Bitmap, as there is a full ckpt in the chain now
 		clean_bitmap(bitmap_blocks, m_area->dirty_bitmap);
@@ -456,9 +454,6 @@ void restore_all_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks,
 
 	} else {
 
-		// Restore use bitmap regardless of the type of log
-		memcpy(m_area->use_bitmap, *ptr, bitmap_blocks * BLOCK_SIZE);
-		*ptr = (void*)((char*) *ptr + bitmap_blocks * BLOCK_SIZE);
 
 		/// iss = 0 : original code 
 		/// iss = 1 AND mprotect = 1 → depends on the type of log (full/incremental)
@@ -469,7 +464,7 @@ void restore_all_marea_chunk(malloc_area *m_area, void **ptr, int bitmap_blocks,
 		
 		/// copy-back use bitmap when iss is not enabled
 		/// when iss is enabled only copy-back the use bitmap if the log is not incremental or mprotect is enabled
-		if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental || pdes_config.iss_enabled_mprotection == MPROTECT) ) ) {
+		if ( !(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || ( pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && (!is_incremental ) ) ) {
 
 			copy_chunks_from_marea(m_area, m_area->use_bitmap, bitmap_blocks, ptr, chunk_size);
 		}
@@ -557,7 +552,10 @@ void restore_full(int lid, void *ckpt) {
 
 		restored_areas++;
 
-		
+		// Restore use bitmap regardless of the type of log
+		memcpy(m_area->use_bitmap, ptr, bitmap_blocks * BLOCK_SIZE);
+		ptr = (void*)((char*) ptr + bitmap_blocks * BLOCK_SIZE);
+
 		restore_all_marea_chunk(m_area, &ptr, bitmap_blocks, recoverable_state[lid]->is_incremental);
 		
 
