@@ -149,10 +149,10 @@ extern void dirty(void*, size_t);
 		if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){\
 			if (pdes_config.iss_mode == MPROTECT) {\
 				do{ dirty(&(var), sizeof((var))); (var) = (val); } while(0);\
-			}\
-		} else {\
+			} else {\
 				do { set_chunk_dirty_from_address(&(var), val); (var) = (val); } while(0);\
 			}\
+		}\
 	})
 
 
