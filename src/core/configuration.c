@@ -26,7 +26,6 @@ simulation_configuration pdes_config;
 #define CKPT_FORCED_FULL_PERIOD_KEY 364
 #define ISS_ENABLED                 365
 #define ISS_ENABLED_MPROTECTION     366
-#define MEM_SUPPORT_LOG             367
 
 #define DISTRIBUTED_FETCH_KEY       263
 #define NUMA_REBALANCE_KEY          264
@@ -53,6 +52,7 @@ static struct argp_option options[] = {
   {"ckpt-autonomic-period",  CKPT_AUTONOMIC_PERIOD_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Enable autonomic checkpointing period"   , 0 },
   {"ckpt_forced_full_period",  CKPT_FORCED_FULL_PERIOD_KEY, "#CHECKPOINTS"         ,  0,  "Number of incremental checkpoints before taking a full log"   , 0 },
   {"iss_enabled",               ISS_ENABLED ,         0        ,  OPTION_ARG_OPTIONAL,  "Use incremental state saving as checkpointing mechanism"   , 0 },
+  {"iss_enabled_mprotection",   ISS_ENABLED_MPROTECTION ,         0        ,  OPTION_ARG_OPTIONAL,  "Use mprotect as tracking mechanism for write accesses"   , 0 },
 
   {"distributed-fetch",   DISTRIBUTED_FETCH_KEY    , 0         ,  OPTION_ARG_OPTIONAL,  "Enable distributed fetch"   , 0 },
   {"numa-rebalance"   ,   NUMA_REBALANCE_KEY       , 0         ,  OPTION_ARG_OPTIONAL,  "Enable numa load-balancing"   , 0 },
