@@ -147,7 +147,7 @@ extern void dirty(void*, size_t);
 extern void set_chunk_dirty_from_address(void *, int);
 
 #define MODEL_WRITE(var,val)({\
-		if (pdes_config.iss_enabled_mprotection == MPROTECT) {\
+		if (pdes_config.iss_mode == MPROTECT) {\
 			do{ dirty(&(var), sizeof((var)));(var) = (val);} while(0);\
 		}else {\
 			do { set_chunk_dirty_from_address(&(var), val); (var) = (val); } while (0);\

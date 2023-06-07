@@ -39,7 +39,7 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_collection_period;
 	unsigned int ckpt_autonomic_period;
 	unsigned int ckpt_forced_full_period;
-	enum iss_mode iss_enabled_mprotection;
+	enum iss_mode iss_mode;
 
 	unsigned int ongvt_period;
 	enum ongvt_mode ongvt_mode;
