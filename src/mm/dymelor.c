@@ -326,6 +326,10 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 			mem_pool->dirty_areas++;
 		}
 
+		if (m_area->state_changed == 1 && m_area->dirty_chunks == 0) {
+			mem_pool->dirty_bitmap_size += bitmap_blocks * BLOCK_SIZE;
+		}
+
 		m_area->state_changed = 1;
 		m_area->last_access = current_lvt;
 
@@ -333,8 +337,14 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 			if((double)m_area->alloc_chunks / (double)m_area->num_chunks > MAX_LOG_THRESHOLD){
 				SET_LOG_MODE_BIT(m_area);
 				mem_pool->total_log_size += (m_area->num_chunks - (m_area->alloc_chunks - 1)) * size;
-			} else
+			} else {
 				mem_pool->total_log_size += size;
+				if(!CHECK_DIRTY_BIT(m_area, m_area->next_chunk)){
+					SET_DIRTY_BIT(m_area, m_area->next_chunk);
+					m_area->dirty_chunks++;
+					mem_pool->total_inc_size += size;
+				}
+			}
 		} 
 
 		//~ int chk_size = m_area->chunk_size;

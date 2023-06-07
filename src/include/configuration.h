@@ -20,6 +20,11 @@ PERIODIC_STATE_SAVING,		/// Periodic State Saving checkpointing interval
 INCREMENTAL_STATE_SAVING /// Incremental state saving mode
 };
 
+enum iss_mode{
+MPROTECT, /// incremental state saving supported by memory protection
+DDYMELOR /// incremental state saving supported by di-dymelor
+};
+
 
 
 typedef struct _simulation_configuration {
@@ -34,7 +39,7 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_collection_period;
 	unsigned int ckpt_autonomic_period;
 	unsigned int ckpt_forced_full_period;
-	unsigned char iss_enabled_mprotection;
+	enum iss_mode iss_mode;
 
 	unsigned int ongvt_period;
 	enum ongvt_mode ongvt_mode;

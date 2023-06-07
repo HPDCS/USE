@@ -25,7 +25,7 @@ simulation_configuration pdes_config;
 #define CKPT_AUTONOMIC_PERIOD_KEY   363
 #define CKPT_FORCED_FULL_PERIOD_KEY 364
 #define ISS_ENABLED                 365
-#define ISS_ENABLED_MPROTECTION     366
+#define ISS_MODE                    366
 
 #define DISTRIBUTED_FETCH_KEY       263
 #define NUMA_REBALANCE_KEY          264
@@ -51,9 +51,8 @@ static struct argp_option options[] = {
   {"ckpt-fossil-period",  CKPT_FOSSIL_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before collection committed snapshot"   , 0 },
   {"ckpt-autonomic-period",  CKPT_AUTONOMIC_PERIOD_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Enable autonomic checkpointing period"   , 0 },
   {"ckpt_forced_full_period",  CKPT_FORCED_FULL_PERIOD_KEY, "#CHECKPOINTS"         ,  0,  "Number of incremental checkpoints before taking a full log"   , 0 },
-  {"iss_enabled",               ISS_ENABLED ,         0        ,  OPTION_ARG_OPTIONAL,  "Use incremental state saving as checkpointing mechanism"   , 0 },
-  {"iss_enabled_mprotection",   ISS_ENABLED_MPROTECTION ,         0        ,  OPTION_ARG_OPTIONAL,  "Use mprotect as tracking mechanism for write accesses"   , 0 },
- 
+  {"iss_mode",                ISS_MODE ,         0        ,  OPTION_ARG_OPTIONAL,  "Use mprotect as tracking mechanism for write accesses"   , 0 },
+
   {"distributed-fetch",   DISTRIBUTED_FETCH_KEY    , 0         ,  OPTION_ARG_OPTIONAL,  "Enable distributed fetch"   , 0 },
   {"numa-rebalance"   ,   NUMA_REBALANCE_KEY       , 0         ,  OPTION_ARG_OPTIONAL,  "Enable numa load-balancing"   , 0 },
   {"enable-mbind"       , ENABLE_MBIND_KEY         , 0         ,  OPTION_ARG_OPTIONAL,  "Enable mbind"   , 0 },
@@ -98,12 +97,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       pdes_config.ckpt_autonomic_period = 1;
       break;
 
-    case ISS_ENABLED:
+    case ISS_MODE:
       pdes_config.checkpointing = INCREMENTAL_STATE_SAVING;
-      break;
-
-    case ISS_ENABLED_MPROTECTION:
-      pdes_config.iss_enabled_mprotection = 1;
+      pdes_config.iss_mode = MPROTECT;
       break;
 
     case CKPT_FORCED_FULL_PERIOD_KEY:
@@ -182,6 +178,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         printf("Please enable enforce-locality to set starting window size\n");
         argp_usage (state);
       }
+      if(pdes_config.iss_mode == MPROTECT && pdes_config.checkpointing != INCREMENTAL_STATE_SAVING){
+        printf("Wrong configuration for checkpointing. It's not possible to have memory protection without incremental state saving\n");
+        argp_usage (state);
+      }
       if(pdes_config.ncores < 1)
       {
         printf("Please provide a valid number of cores to be used for simulation\n");
@@ -215,7 +215,7 @@ void configuration_init(void){
   pdes_config.ckpt_collection_period = 100;
   pdes_config.ckpt_autonomic_period = 0;
   pdes_config.ckpt_forced_full_period = 1;
-  pdes_config.iss_enabled_mprotection = 0;
+  pdes_config.iss_mode = DDYMELOR;
   pdes_config.serial = false;
   
   pdes_config.timeout = 0;
@@ -249,7 +249,7 @@ void print_config(void){
     printf("\t\t|- autonomic %u\n", pdes_config.ckpt_autonomic_period);
     printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
     printf("\t\t|- ckpt mode %u\n", pdes_config.checkpointing);
-    printf("\t\t\t|- incremental with mprotect %u\n", pdes_config.iss_enabled_mprotection);
+    printf("\t\t\t|- incremental with mprotect %u\n", pdes_config.iss_mode);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);

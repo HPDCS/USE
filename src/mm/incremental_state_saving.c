@@ -18,14 +18,14 @@ model_t iss_costs_model;	 /// runtime tuning of the cost model
 
 
 static inline void guard_memory(void* pg_ptr, size_t size){
-	if(!pdes_config.iss_enabled_mprotection) return;
+	if(!pdes_config.iss_mode) return;
 	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]+PER_LP_PREALLOCATED_MEMORY);
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	mprotect(pg_ptr, size, PROT_READ);
 }
 
 static inline void unguard_memory(void* pg_ptr, size_t size){
-	if(!pdes_config.iss_enabled_mprotection) return;
+	if(!pdes_config.iss_mode) return;
 	assert(pg_ptr >= mem_areas[current_lp] && pg_ptr < mem_areas[current_lp]+PER_LP_PREALLOCATED_MEMORY);
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	mprotect(pg_ptr, size, PROT_READ | PROT_WRITE);

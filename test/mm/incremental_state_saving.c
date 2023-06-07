@@ -61,7 +61,7 @@ static int iss_test(void)
 	unsigned int  counter = 0;
 	pdes_config.checkpointing = INCREMENTAL_STATE_SAVING;
 	pdes_config.ckpt_forced_full_period = 5;
-	pdes_config.iss_enabled_mprotection = 1;
+	pdes_config.iss_mode = 1;
 
 	init_incremental_checkpoint_support(1);
 	init_incremental_checkpoint_support_per_lp(0);

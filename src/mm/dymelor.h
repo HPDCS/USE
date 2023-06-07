@@ -87,6 +87,9 @@
 // This macro is used to retrieve a cache line in O(1)
 #define GET_CACHE_LINE_NUMBER(P) ((unsigned long)((P >> 4) & (CACHE_SIZE - 1)))
 
+/// Macro used to get the chunk_size for a given m_area
+#define GET_AREA_CHUNK_SIZE(x) ((x).chunk_size & (~3))
+
 // Macros to check, set and unset bits in the malloc_area masks
 #define CHECK_USE_BIT(A,I) ( CHECK_BIT_AT(									\
 			((unsigned int*)(((malloc_area*)A)->use_bitmap))[(int)((int)I / NUM_CHUNKS_PER_BLOCK)],	\

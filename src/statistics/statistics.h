@@ -75,6 +75,12 @@
 #define STAT_ROLLBACK               305        /// Number of rollback operations
 #define STAT_ROLLBACK_LENGTH        306        /// Number of rollback operations
 #define STAT_ONGVT                  309        /// Average value of the checkpoint interval
+#define STAT_INC_CKPT               310        /// Number of incremental checkpoints 
+#define STAT_INC_CKPT_TIME          311        /// Average time to take an incremental checkpoint
+#define STAT_INC_CKPT_MEM           312        /// Average memory consumption used by an incremental checkpoint
+#define STAT_INC_RESTORE            313        /// Number of incremental restore
+#define STAT_INC_RECOVERY_TIME      314        /// Average time to restore an incremental checkpoint
+
 
 #define STAT_PRUNE_COUNTER          400        /// Number of pruning operations
 
@@ -103,6 +109,8 @@ struct stats_t {
     stat64_t counter_rollbacks_length;
     stat64_t counter_recoveries;
     stat64_t counter_checkpoints;
+    stat64_t counter_checkpoints_iss; //DSRT23
+    stat64_t counter_restore_iss; //DSRT23
     stat64_t counter_prune;
     stat64_t counter_safety_check;
     stat64_t counter_checkpoint_recalc;
@@ -125,11 +133,14 @@ struct stats_t {
     stat64_t clock_safe;	//PADS2018
     stat64_t clock_recovery;
     stat64_t clock_checkpoint;
+    stat64_t clock_checkpoint_iss; //DSRT23
+    stat64_t clock_recovery_iss; //DSRT23
     stat64_t clock_rollback;
     stat64_t clock_init;
 
     stat64_t mem_checkpoint;
     stat64_t checkpoint_period;
+    stat64_t mem_checkpoint_iss; //DSRT23
 
     stat64_t total_frames;
     
