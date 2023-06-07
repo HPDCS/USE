@@ -272,14 +272,19 @@ void *log_state(int lid) {
 	statistics_post_lp_data(lid, STAT_CKPT, 1.0);
     void *res;
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
-        size_t logsize = iss_states[lid].current_incremental_log_size;
+        	size_t logsize = iss_states[lid].current_incremental_log_size;
 		//iss_unprotect_all_memory(lid);
 		res = log_full(lid);
-        //assert(iss_states[lid].current_incremental_log_size == logsize);
-        iss_log_incremental_reset(lid);
+        	//assert(iss_states[lid].current_incremental_log_size == logsize);
+	        //iss_log_incremental_reset(lid);
 		iss_update_model(lid);
-        assert(iss_states[lid].current_incremental_log_size == 0);
-        iss_protect_all_memory(lid);
+        	//assert(iss_states[lid].current_incremental_log_size == 0);
+        	if(recoverable_state[lid]->is_incremental){
+			iss_protect_all_memory(lid);
+			iss_log_incremental_reset(lid);
+		}
+		else
+			iss_states[lid].current_incremental_log_size = logsize;
 
 	}
 	else

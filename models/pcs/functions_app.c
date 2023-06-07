@@ -171,7 +171,7 @@ int allocation(lp_state_type *pointer) {
 				summ += generate_cross_path_gain() *  ch->sir_data->power * ch->sir_data->fading ;
 				ch = ch->prev;
 			}
-            if((pointer->arriving_calls % 1000)==0)
+            if((pointer->arriving_calls % 5000)==0)
             printf("END updates fading %u\n", count_steps);
 		}
 

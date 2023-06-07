@@ -62,7 +62,7 @@ void sigsev_tracer_for_dirty(int a, siginfo_t *b, void *c){
 void init_incremental_checkpoint_support(unsigned int num_lps){
 
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*num_lps);
-	iss_costs_model.mprotect_cost_per_page = 30;
+	iss_costs_model.mprotect_cost_per_page = 50;
 	iss_costs_model.log_cost_per_page = 100;
 
 	struct sigaction action;
@@ -314,7 +314,7 @@ void iss_update_model(unsigned int cur_lp){
 	unsigned int cur_round = 0;
     partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
     iss_states[current_lp].iss_model_round++;
-    if((iss_states[current_lp].iss_model_round%100)!=0) return;
+    if((iss_states[current_lp].iss_model_round%10)!=0) return;
     //return;
     //iss_states[cur_lp].cur_virtual_ts = 1;
 

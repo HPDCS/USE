@@ -146,7 +146,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			SetState(state);
 
 			bzero(state, sizeof(lp_state_type));
-            //state->cold_state = malloc(4096*10);
+            		state->cold_state = malloc(4096*20);
 			
 			if(NUM_HOT && me < NUM_HOT_CELLS)
 				state->ref_ta = state->ta = TA_HOT;
@@ -258,7 +258,7 @@ TA_HOT         );
 
 				}
 
-				if(new_event_content.call_term_time <= handoff_time+HANDOFF_SHIFT) {
+				if(new_event_content.call_term_time <= handoff_time+HANDOFF_SHIFT || 1) {
 					ScheduleNewEvent(me, new_event_content.call_term_time, END_CALL, &new_event_content, sizeof(new_event_content));
 				} else {
 					new_event_content.cell = FindReceiver(TOPOLOGY_HEXAGON);
