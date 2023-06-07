@@ -56,7 +56,7 @@
 #define BLOCK_SIZE sizeof(unsigned int)
 
 
-#define MIN_CHUNK_SIZE 128	// Size (in bytes) of the smallest chunk provideable by DyMeLoR
+#define MIN_CHUNK_SIZE 32	// Size (in bytes) of the smallest chunk provideable by DyMeLoR
 #define MAX_CHUNK_SIZE 4194304	// Size (in bytes) of the biggest one. Notice that if this number
 				// is too large, performance (and memory usage) might be affected.
 				// If it is too small, large amount of memory requests by the
@@ -68,7 +68,7 @@
 				// malloc_areas are filled at runtime, subsequent malloc() requests
 				// by the application level software will fail.
 #define MAX_LIMIT_NUM_AREAS MAX_NUM_AREAS
-#define MIN_NUM_CHUNKS 512	// Minimum number of chunks per malloc_area
+#define MIN_NUM_CHUNKS 2048	// Minimum number of chunks per malloc_area
 #define MAX_NUM_CHUNKS 4096	// Maximum number of chunks per malloc_area
 
 #define MAX_LOG_THRESHOLD 1.7	// Threshold to check if a malloc_area is underused TODO: retest

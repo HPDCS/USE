@@ -367,7 +367,20 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 	return (void*)((char*)ptr + sizeof(long long));
 }
 
-
+void print_max_chunk_in_area(unsigned int lp){
+    int i = 0;
+    int max = 0;
+    printf("MAX CHUNK ID IN LP %u\n", lp);
+    for(int j=0; j< 14;j++){
+        max = 0;
+        if(recoverable_state[lp]->areas[j].self_pointer == NULL) continue;
+        for(i=0; i<recoverable_state[lp]->areas[j].num_chunks & (-3);i++){
+            if(CHECK_USE_BIT(&recoverable_state[lp]->areas[j], i) && i > max)
+                    max = i;
+        }
+        printf("MAX CHUNK FOR LP 0 %u over %u\n", max, recoverable_state[lp]->areas[j].num_chunks & (-3));
+    }
+}
 
 
 // TODO: multiple checks on m_area->is_recoverable. The code should be refactored
