@@ -105,18 +105,14 @@ size_t get_log_size(malloc_state *logged_state){
 
 	size_t log_size;
 
-	if (!pdes_config.checkpointing == INCREMENTAL_STATE_SAVING || !logged_state->is_incremental) {
+	if (!(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) || !logged_state->is_incremental) {
 		log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + logged_state->total_log_size;
-
 	} else {
 
 		if (pdes_config.iss_enabled_mprotection == DDYMELOR) {
-
 			log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->dirty_areas * sizeof(malloc_area) + logged_state->bitmap_size*2 + logged_state->total_inc_size;
-			
 		} else {
-			
-			log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size;
+			log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + sizeof(void *);
 		}
 	}
 
