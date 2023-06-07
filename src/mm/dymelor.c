@@ -279,8 +279,14 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 
 		area_size = sizeof(malloc_area *) + bitmap_blocks * BLOCK_SIZE * 2 + num_chunks * size;
 
-		if(pdes_config.enable_custom_alloc)
-			m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
+		if(pdes_config.enable_custom_alloc){
+			if(pdes_config.checkpointing == PERIODIC_STATE_SAVING)
+                m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
+            else if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && pdes_config.iss_enabled_mprotection){
+                m_area->self_pointer = (malloc_area *)rsalloc(area_size -num_chunks*size);
+                bzero(m_area->self_pointer, area_size -num_chunks*size);
+            }
+        }
 		else{
 			m_area->self_pointer = rsalloc(area_size);
 			bzero(m_area->self_pointer, area_size);
@@ -298,8 +304,12 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 		m_area->use_bitmap = (unsigned int *)((char *)m_area->self_pointer + sizeof(malloc_area *));
 
 		m_area->dirty_bitmap = (unsigned int*)((char *)m_area->use_bitmap + bitmap_blocks * BLOCK_SIZE);
-
-		m_area->area = (void *)((char*)m_area->use_bitmap + bitmap_blocks * BLOCK_SIZE * 2);
+        
+        if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && pdes_config.iss_enabled_mprotection){
+            m_area->area = pool_get_memory(lid, num_chunks*size, numa_node);
+        }
+        else
+            m_area->area = (void *)((char*)m_area->use_bitmap + bitmap_blocks * BLOCK_SIZE * 2);
 	}
 
 	if(m_area->area == NULL) {
