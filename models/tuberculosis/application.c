@@ -162,6 +162,13 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 				// this function let LP0 coordinate the init phase
 				guy_init(region);
 				printf("INIT 0 complete\n");
+				printf("Model configuration: \n");
+				printf("- Healthy guys: %u\n", region->num_healthy);
+				printf("- Sick guys: %u\n", region->num_sick);
+				printf("- Infected guys: %u\n", region->num_infected);
+				printf("- Treatment guys: %u\n", region->num_treatment);
+				printf("- Treated guys: %u\n", region->num_treated);
+				printf("- End simulation time: %u\n", region->end_sim);
 			}
 			ScheduleNewEvent(me, now + 1.25 + Random()/2, MIDNIGHT, NULL, 0);
 			break;
