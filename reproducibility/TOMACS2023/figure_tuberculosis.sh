@@ -14,7 +14,7 @@ NUMA_LIST="0 1"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-TEST_DURATION="30"
+TEST_DURATION="120"
 
 
 CURRENT_BINDING_SIZE="2" 
