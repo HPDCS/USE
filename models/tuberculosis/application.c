@@ -20,6 +20,7 @@ typedef struct model_parameters{
   unsigned num_sick;
   unsigned num_treatment;
   unsigned num_treated;
+  simtime_t end_sim;
 }
 model_parameters;
 
@@ -29,6 +30,7 @@ struct argp_option model_options[] = {
 	{"num_sick",        1003, "VALUE", 0, "Number of sick people"               , 0 },
 	{"num_treatment",        1004, "VALUE", 0, "Number of people in treatment"               , 0 },
 	{"num_treated",        1005, "VALUE", 0, "Number of treated people"               , 0 },
+	{"end_sim",        1006, "VALUE", 0, "Simulation end time"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
@@ -38,6 +40,7 @@ model_parameters args = {
   .num_sick = 39,
   .num_treatment = 161,
   .num_treated = 1840,
+  .end_sim	   = 10.0,
 };
 
 
@@ -60,6 +63,9 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 			break;
 		case 1005:
 			args.num_treated = atoi(arg);
+			break;
+		case 1006:
+			args.end_sim = strtod(arg, NULL);
 			break;
 		default:
 			break;
@@ -143,6 +149,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			region->num_infected	= args.num_infected;
 			region->num_treatment	= args.num_treatment;
 			region->num_treated		= args.num_treated;
+			region->end_sim			= args.end_sim;
 
 			/// lists head/tail initialization
 			region->head_infected = region->tail_infected = NULL;
@@ -195,7 +202,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 int OnGVT(unsigned int me, region_t *snapshot) {
 	if(!me){
 		//printf("healthy %u -- infected %u\n", snapshot->healthy, snapshot->guys_infected);
-		return snapshot->now > pdes_config.timeout;
+		return snapshot->now > snapshot->end_sim;
 	}
 	return true;
 }

@@ -53,6 +53,8 @@ typedef struct _region_t{
 	unsigned num_treatment;
 	unsigned num_treated;
 
+	simtime_t end_sim;
+
   /* head/tail of guy's lists */
 	guy_t *head_infected, *head_sick, *head_treatment, *head_treated;
 	guy_t *tail_infected, *tail_sick, *tail_treatment, *tail_treated;
