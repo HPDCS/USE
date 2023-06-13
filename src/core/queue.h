@@ -11,7 +11,8 @@ typedef struct __msg_t msg_t;
 
 typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
-	msg_t messages[THR_POOL_SIZE]  __attribute__ ((aligned (64)));
+	unsigned int _thr_pool_size; 
+	msg_t messages[]  __attribute__ ((aligned (64)));
 } __temp_thread_pool;
 
 void queue_init(void);
@@ -39,8 +40,8 @@ extern nb_calqueue* nbcalqueue;
 extern __thread msg_t * current_msg __attribute__ ((aligned (64)));
 extern __thread msg_t * new_current_msg __attribute__ ((aligned (64)));
 extern __thread bool  safe;
-extern __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
+extern __thread __temp_thread_pool *_thr_pool;
 extern __thread unsigned long long * lp_unsafe_set;
 extern __thread unsigned long long * lp_unsafe_set_debug;
 extern __thread unsigned long long * lp_locked_set;
@@ -63,5 +64,8 @@ extern __thread list(msg_t) freed_local_evts;
 #define is_in_lp_locked_set(lp)		( lp_locked_set[lp/64]  & (1ULL << (lp%64)) )
 
 #define queue_pool_size _thr_pool._thr_pool_count;
+
+#define THR_POOL_SIZE		128
+
 
 #endif

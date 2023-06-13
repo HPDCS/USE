@@ -13,8 +13,6 @@
 #include <configuration.h>
 
 
-#define THR_POOL_SIZE		4096//128
-
 #define UNDEFINED_WT (512)
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
