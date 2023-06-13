@@ -4,26 +4,32 @@
 #include <ROOT-Sim.h>
 
 #include "application.h"
-
-unsigned int complete_calls;
-
-#define DUMMY_TA 500
-
-double ran;
+#include <sys/mman.h>
 
 typedef struct model_parameters{
 	simtime_t ta;
-	simtime_t ta_hot;
 	simtime_t ta_duration;
 	simtime_t ta_change;
 	simtime_t fading_recheck_time;
-	int channels; 
-	int channels_hot; 
-	int total_calls;
+
+	unsigned int channels; 
+	unsigned int total_calls;
+
+	simtime_t ta_hot;
+	unsigned int channels_hot; 
+	unsigned int num_hot;
+
+  unsigned int *hot_spot_ids;
+
+  double change_hot_spot_rate;
+  double last_change_hot_spot;
+
 	bool check_fading; 
 	bool fading_recheck;
 	bool variable_ta; 
 	bool enable_hot;
+
+	bool enable_moving_hot;
 	unsigned char arrival_d; 
 	unsigned char duration_d; 
 	unsigned char handoff_d; 
@@ -45,6 +51,7 @@ struct argp_option model_options[] = {
   {"duration-d",          1011, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
   {"handoff-d",           1012, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
   {"enable-hot",          1013, 0, 0, "Enable hot cells"               , 0 },
+  {"enable-dyn-hot",      1014, 0, 0, "Enable dyn hot cells"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
@@ -62,10 +69,15 @@ model_parameters args = {
 	.duration_d = 1, 
 	.handoff_d = 1, 
 	.enable_hot = 0,
-
+	.enable_moving_hot = 0,
+	.num_hot = 0,
+	.hot_spot_ids = NULL,
+	.change_hot_spot_rate = 2000.0,
+	.last_change_hot_spot = 0.0,
 };
 
 error_t model_parse_opt(int key, char *arg, struct argp_state *state){
+	unsigned int i;
 	(void)state;
 	switch(key){
 		case 1000:
@@ -106,13 +118,43 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 			break;
 		case 1012:
 			args.handoff_d = atoi(arg);
+			break;
 		case 1013:
 			args.enable_hot = 1;
 			break;
+		case 1014:
+			args.enable_moving_hot = 1;
+			break;
+    case ARGP_KEY_END:
+    	if(args.enable_hot){
+    		args.num_hot = NUM_HOT_CELLS;
+    		args.ta_hot = TA_HOT;
+    		args.channels_hot = CHANNELS_PER_HOT_CELL;
+    		args.hot_spot_ids = mmap(NULL, n_prc_tot*sizeof(char), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    		for(i=0;i<args.num_hot;i++){
+    			args.hot_spot_ids[i] = 1;
+    		}
+	    }
+    	break;
+
 
 	}
 	return 0;
 }
+
+
+void build_unbalance(){
+	unsigned int i,j=0;
+
+	for(i=0;i<n_prc_tot;i++){
+		if(GetNumaNode(i) == 0){
+			args.hot_spot_ids[i] = 1;
+			j++;
+			if(j >= args.num_hot) break;
+		}
+	}
+}
+
 
 void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
 	unsigned int w;
@@ -134,6 +176,15 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 	if(state != NULL) {
 		state->lvt = now;
 		state->executed_events++;
+
+		if(args.enable_hot){
+			double cold = state->ta;
+			if(args.hot_spot_ids[me])
+				state->ta = args.ta_hot;
+			else
+				state->ta = args.ta;
+			if(cold != state->ta) printf("%u: change state!\n", me);
+		}
 	}
 
 
@@ -154,46 +205,51 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			state->ta_duration = args.ta_duration;
 			state->ta_change = args.ta_change;
-
-
-			if(args.enable_hot && me < NUM_HOT_CELLS)
-				state->ref_ta = state->ta = TA_HOT;
-			else
-				state->ref_ta = state->ta = args.ta;
-			
-			if(args.enable_hot && me < NUM_HOT_CELLS)
-				state->channels_per_cell = CHANNELS_PER_HOT_CELL; //args.channels_hot;
-			else
-				state->channels_per_cell = args.channels;
-
+			state->ref_ta = state->ta = args.ta;
+			state->channels_per_cell = args.channels;
 			state->channel_counter = state->channels_per_cell;
-			complete_calls = args.total_calls;
 			state->fading_recheck = args.fading_recheck;
 			state->variable_ta    = args.variable_ta;
 			state->fading_recheck_time = args.fading_recheck_time;
 
 
+			
+			if(args.enable_hot){
+				state->channels_per_cell = args.channels_hot;
+				if(args.hot_spot_ids[me])
+					state->ta = args.ta_hot;
+			}
+
+
+
 			// Show current configuration, only once
 			if(me == 0) {
-				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nta: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
-					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
-				printf("TARGET_SKEW: %f\n"
-					"PERC_HOT: %f\n"
-					"NUM_HOT_CELLS  : %d\n"
-					"NUM_CLD_CELLS_IN_MAX  : %d\n"
-					"LOAD_FROM_CLD_CELLS : %f\n"
-					"LOAD_FROM_HOT_CELLS : %f\n"
-					"TA_HOT         : %f\n"
-					"CHANNELS_PER_HOT_CELL :   %f\n",
-TARGET_SKEW ,
-PERC_HOT    ,
-NUM_HOT_CELLS  ,
-NUM_CLD_CELLS_IN_MAX  ,
-LOAD_FROM_CLD_CELLS ,
-LOAD_FROM_HOT_CELLS ,
-TA_HOT         ,
-CHANNELS_PER_HOT_CELL);
-				fflush(stdout);
+				printf("CURRENT CONFIGURATION:\n");
+				printf("ncomplete calls: %d\n", args.total_calls);
+				printf("ta: %f\n", args.ta);
+				printf("ta_duration: %f\n", state->ta_duration);
+				printf("ta_change: %f\n", state->ta_change); 
+				printf("channels_per_cell: %d\n", args.channels);
+				printf("expected occ. channels: %f\n", state->ta_duration/args.ta);
+				printf("fading_recheck: %d\n", args.fading_recheck); 
+				printf("variable_ta: %d\n", state->variable_ta);
+				if(args.enable_hot){
+					printf("hotspot config:\n");
+					printf("   |- #partitions: %d\n", 		PARTITIONS);
+					printf("   |- percentage of hot cells within the simulation model: %f\n", PERC_HOT);
+					printf("   |- #cells per partition: %d\n", CELLS_PER_PARTITION);
+					printf("   |- target skew: %f\n", 		TARGET_SKEW);
+					printf("   |- slim partition:\n");
+					printf("      |- #used channels: %f\n", MIN_LOAD_PARTITION);
+					printf("   |- fat partition:\n");
+					printf("      |- #used channels: %f\n", MAX_LOAD_PARTITION);
+					printf("      |- #hot  cells (fat partition): %d\n", args.num_hot);
+					printf("      |- #used channels from hot  cells: %f\n", LOAD_FROM_HOT_CELLS);
+					printf("      |- #cold cells (fat partition): %d\n", NUM_CLD_CELLS_IN_MAX);
+					printf("      |- #used channels from cold cells: %f\n", LOAD_FROM_CLD_CELLS);
+					printf("      |- #channel per hot cell :   %d\n", 	args.channels_hot);
+					printf("      |- ta_hot         : %f\n", args.ta_hot);
+			  }
 			}
 
 			state->channel_counter = state->channels_per_cell;
@@ -320,13 +376,6 @@ CHANNELS_PER_HOT_CELL);
 			state->arriving_handoffs++;
 			state->arriving_calls++;
 
-			ran = Random();
-
-			if(me == 1 && ran < 0.3 && event_content->from == 2){//&& state->dummy_flag == false) {
-				*(event_content->dummy) = 1;
-				state->dummy_flag = true;
-			}
-
 			if (state->channel_counter == 0)
 				state->blocked_on_handoff++;
 			else {
@@ -377,7 +426,17 @@ CHANNELS_PER_HOT_CELL);
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	(void)me;
-	if (snapshot->complete_calls < complete_calls)
+	if(me == 0 && args.enable_hot && args.enable_moving_hot && (snapshot->lvt - args.last_change_hot_spot) > args.change_hot_spot_rate){
+		printf("%u: ITS time to get a change at %f\n", me, snapshot->lvt);
+		for(unsigned int i = 0; i<n_prc_tot;i++){
+			args.hot_spot_ids[i] = 0;
+		}
+		build_unbalance();
+		args.last_change_hot_spot = snapshot->lvt;
+
+	}
+
+	if (snapshot->complete_calls < args.total_calls)
 		return false;
 	return true;
 }

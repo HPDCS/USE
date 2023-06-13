@@ -142,6 +142,7 @@ double Gamma(int ia);
 double Poisson(void);
 int Zipf(double skew, int limit);
 
+unsigned int GetNumaNode(unsigned int lp);
 
 // ROOT-Sim core API
 extern void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size);

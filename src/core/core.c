@@ -124,6 +124,7 @@ void * do_sleep(){
 }
 
 
+unsigned int GetNumaNode(unsigned int lp){return LPS[lp]->numa_node;}
 
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
