@@ -13,11 +13,11 @@ from scipy.signal import savgol_filter
 
 seconds = 120 #240
 lp_list=['256', '1024', '4096']
-ran = [0.65,1.35]
-quantiles = [10, 90]
+ran = [0.8,1.8]
+quantiles = [25, 75]
 datafiles = {}
 runs =  [str(x) for x in range(12)]
-
+max_treads=40
 
 def configure_globals(test):
     global seconds
@@ -33,13 +33,17 @@ def configure_globals(test):
         runs =  [str(x) for x in range(6)]
 
     for test in test_list:
-        for conf in ['', 'lo', 'lo_re_df']:
-            for lp in lp_list:
-                for r in runs:
-                    datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{r}"] = conversion[conf]
+        for lp in lp_list:
+            for r in runs:
+                for conf in ['', 'lo', 'lo_re_df']:
+                    datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{r}"] = conversion[conf]
                     if conf == 'lo_re_df':
-                        datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{str(int(r)+6)}"] = conversion[conf]
-
+                        datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{str(int(r))}"] = conversion[conf]
+                if test == 'pcs':
+                    datafiles[f"seq-1-{lp}-{seconds}-{str(int(r))}"] = '3'
+                else:
+                    datafiles[f"seq_hs-1-{lp}-{seconds}-{str(int(r))}"] = '3'
+                
 
 
 def get_samples_from_file(filename, seconds):
@@ -50,7 +54,9 @@ def get_samples_from_file(filename, seconds):
     max_ts = 0
 
     tot_evt = 0
-
+    cnt = 0
+    if "_lo" not in filename:
+        cnt += 1
 
     for line in f.readlines():
         if 'Committed events..............................' in line:
@@ -58,6 +64,9 @@ def get_samples_from_file(filename, seconds):
 
         line = line.strip()
         if 'thref' in line:
+            if cnt == 0:
+                cnt+=1
+                continue
             ts   = int(line.split(' ')[-1])
             line = line.split('thref')[0].split(' ')[-2]
             if ts == 0:
@@ -75,7 +84,7 @@ def get_samples_from_file(filename, seconds):
             continue
 
 
-    iterations = 3
+    iterations = 6
     sigma = 3
 
     for i in range(iterations):
@@ -121,6 +130,7 @@ enfl_to_dash={
     "0":[1, 0],
     "1":[1, 1],
     "2":[2, 1],
+    "3":[3, 1],
 }
 
 
@@ -136,14 +146,8 @@ conversion = {
 test_list = ['pcs', 'pcs_hs']
 
 
-
-
-
-
-                    
-
-
 colors = {
+'3':"darkred",
 '2':"darkblue",
 '1':"indigo",    
 '0':"darkcyan",        

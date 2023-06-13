@@ -13,22 +13,21 @@ if __name__ == "__main__":
 
     bp_dict = {}
     tests= [sys.argv[2]]
-    ti_list=[]
-    for i in range(5)[1:]:
-        ti_list += [i*seconds/4]
+    
     dataset = {}
-    #print(f"processing {sys.argv[1]}")
+    
+
     for f in common.datafiles:
         if os.path.isfile(sys.argv[1]+'/'+f):
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
-    #    else:
-    #        print(f"file {sys.argv[1]+'/'+f} not found...still trying")
+    
 
     x_value = []
     for i in range(seconds*2):
         x_value += [0.5*i]
     final = {}
-    #for run in runs:
+
+
     for test in tests:
         for nlp in lp_list:
             isFirst=True
@@ -45,7 +44,7 @@ if __name__ == "__main__":
                 dataset[f] = res
                 dataplot = []
                 for i in range(len(dataset[f])):
-                    if dataset[f][i][1]<1000*seconds/2: continue
+                    #if dataset[f][i][1]<1000*seconds/2: continue
                     if len(dataplot) == 0:
                         dataplot += [dataset[f][i][0]*dataset[f][i][1]]
                     else:
@@ -107,7 +106,8 @@ if __name__ == "__main__":
             count+=1
             if len(lp_list) == 1: cur_ax = axs
             else: cur_ax = axs[count] 
-            cur_ax.set_ylabel("Speedup w.r.t USE")
+            #cur_ax.set_ylabel("Speedup w.r.t USE")
+            cur_ax.set_ylabel("Throughput")
             cur_ax.title.set_text(" ".join(["#simulation objects:"+lp]))
 
             baseline = 0
@@ -118,53 +118,66 @@ if __name__ == "__main__":
                 if f"-{lp}-" not in k: continue
                 if 'hs' in test and 'hs' not in k: continue
                 if 'hs' not in test and 'hs' in k: continue
-                name = k.replace(f'-{seconds}', '').replace('-48', '').replace(f'-{lp}', '')
+                #print(k)
+                name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
                 name = name.replace('pcs_hs_lo_re_df', 'el2') 
                 name = name.replace('pcs_hs_lo', 'el1') 
                 name = name.replace('pcs_hs', 'el0') 
                 name = name.replace('pcs_lo_re_df', 'el2') 
                 name = name.replace('pcs_lo', 'el1') 
-                name = name.replace('pcs', 'el0') 
-                if name == 'el0' : 
+                name = name.replace('pcs', 'el0')
+                #print(name) 
+                if name == 'seq-1' : 
                     #print(k)
                     baseline = final[k][0] 
                     y += [baseline]
-                    bp_dict[k]['label'] = 'baseline'
+                    #print(baseline)
+                    bp_dict[k]['label'] = 'sequential'
+                    cur_bp += [bp_dict[k].copy()]
+                if name == 'seq_hs-1' : 
+                    #print(k)
+                    baseline = final[k][0] 
+                    y += [baseline]
+                    #print(baseline)
+                    bp_dict[k]['label'] = 'sequential'
                     cur_bp += [bp_dict[k].copy()]
             for k in final:
                 if f"-{lp}-" not in k: continue
                 if 'hs' in test and 'hs' not in k: continue
                 if 'hs' not in test and 'hs' in k: continue
-                name = k.replace(f'-{seconds}', '').replace('-48', '').replace(f'-{lp}', '')
+                name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
                 name = name.replace('pcs_hs_lo_re_df', 'el2') 
                 name = name.replace('pcs_hs_lo', 'el1') 
                 name = name.replace('pcs_hs', 'el0') 
                 name = name.replace('pcs_lo_re_df', 'el2') 
                 name = name.replace('pcs_lo', 'el1') 
                 name = name.replace('pcs', 'el0') 
-                if name == 'el0': continue
+                if name == 'seq-1': continue
+                if name == 'seq_hs-1': continue
                 if name == 'el1':
-                    name = 'cache opt.'
+                    name = 'cache\nopt.'
                 elif name == 'el2':
-                    name = 'cache + NUMA opt.'
+                    name = 'cache\n+ NUMA opt.'
+                elif name == 'el0':
+                    name = 'baseline'
                 x += [name]
                 y += [final[k][0]]
                 bp_dict[k]['label'] = name
                 cur_bp += [bp_dict[k].copy()]
                 if maxval < y[-1]: maxval = y[-1]
                 if minval > y[-1]: minval = y[-1]
-            
+            #print("BASELINE", baseline, lp)
             for d in cur_bp:
                 #print(d)
                 for v in d:
                     #print(v, d[v])
                     if v != 'label':
-                        d[v] = d[v]/baseline
+                        d[v] = d[v] #/baseline
 
             cur_ax.bxp(cur_bp, showfliers=False, showmeans=True)
-            cur_ax.set_ylim(ran)
+            #cur_ax.set_ylim(ran)
             cur_ax.yaxis.grid()
-            cur_ax.yaxis.set_ticks(np.arange(ran[0], ran[1], 0.05))
+            #cur_ax.yaxis.set_ticks(np.arange(ran[0], ran[1], 0.05))
             #cur_ax.set_ylabel("Speedup w.r.t USE")
 
         
