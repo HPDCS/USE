@@ -91,7 +91,7 @@ void init_metrics_for_window() {
 	prev_granularity_ref = 0.0;
 	prev_granularity = 0.0;
 	old_thr = 0.0;
-  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0.0, 0.0, 0.0, 0.0, 0.0, (start_simul_time)/CLOCKS_PER_US/1000);
+  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f\n", 0.0, 0.0, 0.0, 0.0, 0.0, (start_simul_time)/CLOCKS_PER_US/1000, local_gvt);
 }
 
 int check_window(){
@@ -194,7 +194,7 @@ void enable_window() {
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
 	
     if(!w.enabled && current_thr > 0.0)         
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", 0.0, 0.0, current_thr, 0.0, 0.0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f\n", 0.0, 0.0, current_thr, 0.0, 0.0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt);
 	old2_thr = old_thr;
 	old_thr = current_thr;
 
@@ -239,7 +239,7 @@ void aggregate_metrics_for_window_management(window *win) {
     #if VERBOSE == 1
 			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt);
 			  if(thr_window == 0.0) goto end;
 			  if(isnan(thr_window)) goto end;
 			  if(isinf(thr_window)) goto end;
