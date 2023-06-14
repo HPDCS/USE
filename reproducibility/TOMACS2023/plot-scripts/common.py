@@ -17,7 +17,10 @@ ran = [0.8,1.8]
 quantiles = [25, 75]
 datafiles = {}
 runs =  [str(x) for x in range(12)]
-max_treads=40
+max_treads='40'
+
+enfl_list=['0', '1']
+numa_list=['0', '1']
 
 def configure_globals(test):
     global seconds
@@ -25,29 +28,47 @@ def configure_globals(test):
     global datafiles
     global runs
 
-    if test == 'pcs':
-        pass
-    else:
-        seconds = 240
-        lp_list = ['4096']
-        runs =  [str(x) for x in range(6)]
-
-    for test in test_list:
+    if test == 'tuberculosis':
         for lp in lp_list:
-            for r in runs:
-                for conf in ['', 'lo', 'lo_re_df']:
-                    datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{r}"] = conversion[conf]
-                    if conf == 'lo_re_df':
-                        datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{str(int(r))}"] = conversion[conf]
-                if test == 'pcs':
-                    datafiles[f"seq-1-{lp}-{seconds}-{str(int(r))}"] = '3'
-                else:
-                    datafiles[f"seq_hs-1-{lp}-{seconds}-{str(int(r))}"] = '3'
+            for r in range(5):
+                datafiles[f"{test}-enfl_0-numa_0-threads_1-lp_{lp}-run_{r+1}"] = '1'
+
+
+    if test == 'tuberculosis':
+        for enf in enfl_list:
+            for n in numa_list:
+                if enf == 0 and n == 1: 
+                    continue
+                for lp in lp_list:
+                    for r in range(5):
+                        datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_treads}-lp_{lp}-run_{r+1}"] = '0'
+
+
+    if test != 'tuberculosis':
+        if test == 'pcs':
+            pass
+        else:
+            seconds = 240
+            lp_list = ['4096']
+            runs =  [str(x) for x in range(6)]
+
+    
+            for lp in lp_list:
+                for r in runs:
+                    for conf in ['', 'lo', 'lo_re_df']:
+                        datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{r}"] = conversion[conf]
+                        if conf == 'lo_re_df':
+                            datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{str(int(r))}"] = conversion[conf]
+                    if test == 'pcs':
+                        datafiles[f"seq-1-{lp}-{seconds}-{str(int(r))}"] = '3'
+                    else:
+                        datafiles[f"seq_hs-1-{lp}-{seconds}-{str(int(r))}"] = '3'
                 
 
 
 def get_samples_from_file(filename, seconds):
     f = open(filename)
+
     expected = int(seconds)*2
 
     samples = []
@@ -55,7 +76,7 @@ def get_samples_from_file(filename, seconds):
 
     tot_evt = 0
     cnt = 0
-    if "_lo" not in filename:
+    if "_lo" not in filename and "-enfl_" not in filename:
         cnt += 1
 
     for line in f.readlines():
@@ -63,6 +84,7 @@ def get_samples_from_file(filename, seconds):
             tot_evt =  int(line.split(' ')[-2])
 
         line = line.strip()
+        #print("LINE " + str(line))
         if 'thref' in line:
             if cnt == 0:
                 cnt+=1
@@ -108,6 +130,7 @@ def get_samples_from_file(filename, seconds):
             final_sample += [(samples[i][0], samples[i][1]-constant)]
         else:
             final_sample += [(samples[i][0], samples[i][1]-constant)]
+        #print("final sample " + str(final_sample))
         if final_sample[-1][1] < 0:
             print("ERROR @",filename, constant, final_sample[-1], samples)
             exit()
