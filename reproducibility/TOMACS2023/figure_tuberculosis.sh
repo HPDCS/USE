@@ -14,7 +14,7 @@ NUMA_LIST="0 1"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-TEST_DURATION="120"
+TEST_DURATION="240"
 
 
 CURRENT_BINDING_SIZE="2" 
@@ -33,8 +33,8 @@ do
 	do
 
 		cmd="./${BIN_PATH}/test_$test "
-		memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
-		locality_options="--enforce-locality --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window"
+		memory_options="--numa-rebalance --distributed-fetch"
+		locality_options="--enforce-locality --enable-custom-alloc --enable-mbind --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window"
 
 		if [ $numa = "1" && $enfl = "0" ]; then
 			echo skip this case
