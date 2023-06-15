@@ -14,9 +14,9 @@ NUMA_LIST="0 1"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-TEST_DURATION="240" #"120"
+TEST_DURATION="120"
 
-thread_l="1 40"
+
 CURRENT_BINDING_SIZE="2" 
 EVICTED_BINDING_SIZE="2" 
 
@@ -33,10 +33,8 @@ do
 	do
 
 		cmd="./${BIN_PATH}/test_$test "
-		memory_options="--numa-rebalance --distributed-fetch"
-		locality_options="--enforce-locality --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window --enable-custom-alloc --enable-mbind"
-
-		
+		memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
+		locality_options="--enforce-locality --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window"
 
 		if [ $numa = "1" && $enfl = "0" ]; then
 			echo skip this case
@@ -55,15 +53,8 @@ do
 		do
 			for lp in $LP_list
 				do
-					for threads in $thread_l
+					for threads in $THREAD_list
 					do
-
-						if [ $threads = "1" && $enfl = "1" ]; then
-							echo skip this
-							continue;
-						fi
-
-
 						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period"
 						ecmd="$cmd ${runtime_options}"
 						echo $ecmd
