@@ -465,19 +465,9 @@ void init_simulation(unsigned int thread_id){
 	
 	// Initialize the set ??
 	unsafe_set_init();
-
-	for(;i<THR_POOL_SIZE;i++)
-	{
-		_thr_pool.messages[i].father = 0;
-	}
-	_thr_pool._thr_pool_count = 0;
-
-	to_remove_local_evts = new_list(tid, msg_t);
-	to_remove_local_evts_old = new_list(tid, msg_t);
-	freed_local_evts = new_list(tid, msg_t);
+	queue_init_per_thread();
 
 
-	
 	if(tid == 0){
 		numa_init();
 		LPs_metada_init();

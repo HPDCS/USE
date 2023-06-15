@@ -78,6 +78,7 @@ if __name__ == "__main__":
                     #print(min_th)
                     
                 for f in dataset:
+                    if 'seq' in f: continue
                     if f.split('-')[2] != nlp: continue
                     if f[-2:] != "-"+run : continue
                     if 'hs' not in test:

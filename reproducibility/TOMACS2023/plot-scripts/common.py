@@ -13,11 +13,14 @@ from scipy.signal import savgol_filter
 
 seconds = 120 #240
 lp_list=['256', '1024', '4096']
-ran = [0.65,1.35]
-quantiles = [10, 90]
+ran = [0.8,1.8]
+quantiles = [25, 75]
 datafiles = {}
 runs =  [str(x) for x in range(12)]
+max_treads='40'
 
+enfl_list=['0', '1']
+numa_list=['0', '1']
 
 def configure_globals(test):
     global seconds
@@ -25,39 +28,67 @@ def configure_globals(test):
     global datafiles
     global runs
 
-    if test == 'pcs':
-        pass
-    else:
-        seconds = 240
-        lp_list = ['4096']
-        runs =  [str(x) for x in range(6)]
+    if test == 'tuberculosis':
+        for lp in lp_list:
+            for r in range(5):
+                datafiles[f"{test}-enfl_0-numa_0-threads_1-lp_{lp}-run_{r+1}"] = '1'
 
-    for test in test_list:
-        for conf in ['', 'lo', 'lo_re_df']:
+
+    if test == 'tuberculosis':
+        for enf in enfl_list:
+            for n in numa_list:
+                if enf == 0 and n == 1: 
+                    continue
+                for lp in lp_list:
+                    for r in range(5):
+                        datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_treads}-lp_{lp}-run_{r+1}"] = '0'
+
+
+    if test != 'tuberculosis':
+        if test == 'pcs':
+            pass
+        else:
+            seconds = 240
+            lp_list = ['4096']
+            runs =  [str(x) for x in range(6)]
+
+    
             for lp in lp_list:
                 for r in runs:
-                    datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{r}"] = conversion[conf]
-                    if conf == 'lo_re_df':
-                        datafiles[f"{test}{'_' if conf != '' else ''}{conf}-48-{lp}-{seconds}-{str(int(r)+6)}"] = conversion[conf]
-
+                    for conf in ['', 'lo', 'lo_re_df']:
+                        datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{r}"] = conversion[conf]
+                        if conf == 'lo_re_df':
+                            datafiles[f"{test}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{str(int(r))}"] = conversion[conf]
+                    if test == 'pcs':
+                        datafiles[f"seq-1-{lp}-{seconds}-{str(int(r))}"] = '3'
+                    else:
+                        datafiles[f"seq_hs-1-{lp}-{seconds}-{str(int(r))}"] = '3'
+                
 
 
 def get_samples_from_file(filename, seconds):
     f = open(filename)
+
     expected = int(seconds)*2
 
     samples = []
     max_ts = 0
 
     tot_evt = 0
-
+    cnt = 0
+    if "_lo" not in filename and "-enfl_" not in filename:
+        cnt += 1
 
     for line in f.readlines():
         if 'Committed events..............................' in line:
             tot_evt =  int(line.split(' ')[-2])
 
         line = line.strip()
+        #print("LINE " + str(line))
         if 'thref' in line:
+            if cnt == 0:
+                cnt+=1
+                continue
             ts   = int(line.split(' ')[-1])
             line = line.split('thref')[0].split(' ')[-2]
             if ts == 0:
@@ -75,7 +106,7 @@ def get_samples_from_file(filename, seconds):
             continue
 
 
-    iterations = 3
+    iterations = 6
     sigma = 3
 
     for i in range(iterations):
@@ -99,6 +130,7 @@ def get_samples_from_file(filename, seconds):
             final_sample += [(samples[i][0], samples[i][1]-constant)]
         else:
             final_sample += [(samples[i][0], samples[i][1]-constant)]
+        #print("final sample " + str(final_sample))
         if final_sample[-1][1] < 0:
             print("ERROR @",filename, constant, final_sample[-1], samples)
             exit()
@@ -121,6 +153,7 @@ enfl_to_dash={
     "0":[1, 0],
     "1":[1, 1],
     "2":[2, 1],
+    "3":[3, 1],
 }
 
 
@@ -136,14 +169,8 @@ conversion = {
 test_list = ['pcs', 'pcs_hs']
 
 
-
-
-
-
-                    
-
-
 colors = {
+'3':"darkred",
 '2':"darkblue",
 '1':"indigo",    
 '0':"darkcyan",        

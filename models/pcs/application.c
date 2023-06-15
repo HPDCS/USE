@@ -23,6 +23,7 @@ typedef struct model_parameters{
 	bool check_fading; 
 	bool fading_recheck;
 	bool variable_ta; 
+	bool enable_hot;
 	unsigned char arrival_d; 
 	unsigned char duration_d; 
 	unsigned char handoff_d; 
@@ -40,9 +41,10 @@ struct argp_option model_options[] = {
   {"enable-variable-ta",  1007, 0, 0, "Enable variable interarrival time"               , 0 },
   {"num-calls",           1008, "VALUE", 0, "Number of calls per cell to end the simulation"               , 0 },
   {"fading_time",         1009, 0, 0, "Fading time"               , 0 },
-  {"arrival-d",        1010, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
-  {"duration-d",        1011, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
-  {"handoff-d",        1012, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"arrival-d",           1010, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"duration-d",          1011, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"handoff-d",           1012, "VALUE", 0, "0=Uniform 1=Exponential (default)"               , 0 },
+  {"enable-hot",          1013, 0, 0, "Enable hot cells"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
@@ -59,6 +61,7 @@ model_parameters args = {
 	.arrival_d = 1, 
 	.duration_d = 1, 
 	.handoff_d = 1, 
+	.enable_hot = 0,
 
 };
 
@@ -103,6 +106,8 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 			break;
 		case 1012:
 			args.handoff_d = atoi(arg);
+		case 1013:
+			args.enable_hot = 1;
 			break;
 
 	}
@@ -147,22 +152,22 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			bzero(state, sizeof(lp_state_type));
 
-			if(NUM_HOT && me < NUM_HOT_CELLS)
+			state->ta_duration = args.ta_duration;
+			state->ta_change = args.ta_change;
+
+
+			if(args.enable_hot && me < NUM_HOT_CELLS)
 				state->ref_ta = state->ta = TA_HOT;
 			else
 				state->ref_ta = state->ta = args.ta;
 			
-			state->ta_duration = args.ta_duration;
-			state->ta_change = args.ta_change;
-
-			if(NUM_HOT && me < NUM_HOT_CELLS)
-				state->channels_per_cell = args.channels_hot;
+			if(args.enable_hot && me < NUM_HOT_CELLS)
+				state->channels_per_cell = CHANNELS_PER_HOT_CELL; //args.channels_hot;
 			else
 				state->channels_per_cell = args.channels;
-			state->channel_counter = state->channels_per_cell;
-			
-			complete_calls = args.total_calls;
 
+			state->channel_counter = state->channels_per_cell;
+			complete_calls = args.total_calls;
 			state->fading_recheck = args.fading_recheck;
 			state->variable_ta    = args.variable_ta;
 			state->fading_recheck_time = args.fading_recheck_time;
@@ -170,7 +175,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 			// Show current configuration, only once
 			if(me == 0) {
-				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nTA: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
+				printf("CURRENT CONFIGURATION:\ncomplete calls: %d\nta: %f\nta_duration: %f\nta_change: %f\nchannels_per_cell: %d\nfading_recheck: %d\nvariable_ta: %d\n",
 					complete_calls, state->ta, state->ta_duration, state->ta_change, state->channels_per_cell, state->fading_recheck, state->variable_ta);
 				printf("TARGET_SKEW: %f\n"
 					"PERC_HOT: %f\n"
@@ -178,14 +183,16 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 					"NUM_CLD_CELLS_IN_MAX  : %d\n"
 					"LOAD_FROM_CLD_CELLS : %f\n"
 					"LOAD_FROM_HOT_CELLS : %f\n"
-					"TA_HOT         : %f\n",
+					"TA_HOT         : %f\n"
+					"CHANNELS_PER_HOT_CELL :   %f\n",
 TARGET_SKEW ,
 PERC_HOT    ,
 NUM_HOT_CELLS  ,
 NUM_CLD_CELLS_IN_MAX  ,
 LOAD_FROM_CLD_CELLS ,
 LOAD_FROM_HOT_CELLS ,
-TA_HOT         );
+TA_HOT         ,
+CHANNELS_PER_HOT_CELL);
 				fflush(stdout);
 			}
 
