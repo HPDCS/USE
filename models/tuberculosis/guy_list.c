@@ -1,4 +1,19 @@
 #include "guy.h"
+#include "t_bitmap.h"
+
+
+void scan_list_for_stats(guy_t *head) {
+
+	guy_t *node;
+	int count_sick, count_treat;
+
+	while (!head) {
+
+		if (bitmap_check(head->flags, f_sick)) count_sick++;
+		if (bitmap_check(head->flags, f_treatment)) count_treat++;
+		head = head->next;
+	}
+}
 
 
 
@@ -34,8 +49,10 @@ void try_to_insert_guy(guy_t **head, guy_t **tail, guy_t *guy) {
 
 	if (*head == NULL) { /// first insertion
 		insert_guy_in_list(head, tail, guy);
+		//printf("CORRECT FIRST INSERT %d\n ", *head == guy);
 	} else { /// append 
 		insert_guy_in_list(&((*tail)->next), tail, guy);
+		//printf("CORRECT INSERT %d \n ", *tail == guy);
 	}
 }
 
@@ -80,6 +97,7 @@ guy_t *remove_guy(guy_t **node) {
 	} else if ((*node)->next == NULL) { /// last element
 		removed = remove_guy_from_list(&((*node)->prev->next), node, *node);
 	} else { /// any element
+		//printf("(*node)->prev->next %p --- (*node)->next->prev %p\n", (*node)->prev->next, (*node)->next->prev);
 		removed = remove_guy_from_list(&((*node)->prev->next), &((*node)->next->prev), *node);
 	}
 

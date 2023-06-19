@@ -19,6 +19,7 @@ typedef struct _infection_t infection_t;
 void insert_in_list(guy_t *guy, region_t *region);
 void try_to_insert_guy(guy_t **head, guy_t **tail, guy_t *guy);
 guy_t *remove_guy(guy_t **node);
+void scan_list_for_stats(guy_t *);
 
 
 void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now);
