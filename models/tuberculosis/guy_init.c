@@ -57,7 +57,7 @@ void guy_init(region_t *region){
 		// we send the actual event
 		/*printf("\n [lp %u] requested i:%u s:%u t:%u f:%u h:%u\n", i, to_send.infected, to_send.sick, to_send.treated, to_send.treatment, to_send.healthy);
 		fflush(stdout);*/
-		ScheduleNewEvent(i, 0.5, GUY_INIT, &to_send, sizeof(init_t));
+		ScheduleNewEvent(i, 0.4 + 0.1*Random(), GUY_INIT, &to_send, sizeof(init_t));
 		// those people just left this region
 		total.healthy -= to_send.healthy;
 		total.infected -= to_send.infected;
@@ -70,8 +70,9 @@ void guy_init(region_t *region){
 }
 
 static guy_t* new_base_guy(void){
-	guy_t *guy_ptr = malloc(sizeof(guy_t));
-	ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, guy_ptr, sizeof(guy_t));
+	guy_t *guy_ptr = malloc(sizeof(guy_t)); //&guy_ptr e sizeof(guy_t *)
+	//printf("[lp dest: %u] guy_dies : guy %p next %p prev %p\n", current_lp, guy_ptr, guy_ptr->next, guy_ptr->prev);
+	//ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &guy_ptr, sizeof(guy_t *));
 	return guy_ptr;
 }
 
@@ -193,6 +194,8 @@ void guy_on_init(init_t *init_data, region_t *region){
 	while(i--) {
 		infected = new_infected();
 		try_to_insert_guy(&(region->head_infected), &(region->tail_infected), infected);
+		//printf("[lp dest: %u] NEW INFECTED : guy %p next %p prev %p    infection_day %d\n", current_lp, infected, infected->next, infected->prev, infected->infection_day);
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &infected, sizeof(guy_t *));
 	}
 
 	i = init_data->sick;
@@ -200,6 +203,8 @@ void guy_on_init(init_t *init_data, region_t *region){
 	while(i--) {
 		sick = new_sick();
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), sick);
+		//printf("[lp dest: %u] NEW SICK : guy %p next %p prev %p    infection_day %d\n", current_lp, sick, sick->next, sick->prev, sick->infection_day);
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &sick, sizeof(guy_t *));
 	}
 
 
@@ -208,6 +213,8 @@ void guy_on_init(init_t *init_data, region_t *region){
 	while(i--) {
 		treatment = new_treatment();
 		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), treatment);
+		//printf("[lp dest: %u] NEW TREAMENT : guy %p next %p prev %p    infection_day %d\n", current_lp, treatment, treatment->next, treatment->prev, treatment->infection_day);
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treatment, sizeof(guy_t *));
 	}
 
 
@@ -216,6 +223,8 @@ void guy_on_init(init_t *init_data, region_t *region){
 	while(i--) {
 		treated = new_treated();
 		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), treated);
+		//printf("[lp dest: %u] NEW TREATED : guy %p next %p prev %p    infection_day %d\n", current_lp, treated, treated->next, treated->prev, treated->infection_day);
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treated, sizeof(guy_t *));
 	}
 
 
