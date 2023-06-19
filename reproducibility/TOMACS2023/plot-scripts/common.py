@@ -11,8 +11,9 @@ from matplotlib.lines import Line2D
 from scipy.signal import savgol_filter
 
 
-seconds = 120 #240
-lp_list=['256', '1024', '4096']
+seconds = 240
+lp_list=['4096']
+#lp_list=['256', '1024', '4096']
 ran = [0.8,1.8]
 quantiles = [25, 75]
 datafiles = {}
@@ -27,6 +28,7 @@ def configure_globals(test):
     global lp_list
     global datafiles
     global runs
+    global ran
 
     if test == 'tuberculosis':
         for lp in lp_list:
@@ -41,7 +43,7 @@ def configure_globals(test):
                     continue
                 for lp in lp_list:
                     for r in range(5):
-                        datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_treads}-lp_{lp}-run_{r+1}"] = '0'
+                        datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_treads}-lp_4096-run_{r+1}"] = '0'
 
 
     if test != 'tuberculosis':

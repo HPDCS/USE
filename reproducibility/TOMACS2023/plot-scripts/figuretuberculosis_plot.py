@@ -94,6 +94,7 @@ if __name__ == "__main__":
                     final[key] = []
                 final[key] += [avg]
 
+
     #forma: enfl-numa-lps:[run1, run2, run3, run4, run5]
     #print("FINAL " + str(final))
 
@@ -113,7 +114,16 @@ if __name__ == "__main__":
     for k in final:
         final[k] = (numpy.average(final[k]),numpy.std(final[k]))
     
-    #print("FINAL AFTER" + str(final))
+    print("FINAL AFTER" + str(final) + "len : " + str(len(final)))
+
+
+    #for k in final:
+    #    if '4096' not in k: continue
+    #    if k not in portion:
+    #        portion[k] = ()
+     #   portion[k] += final[k]
+
+    #print("portion: " + str(portion))
 
     for test in tests:
         fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
@@ -145,7 +155,7 @@ if __name__ == "__main__":
                 #if str(tmp) not in k: continue
                 if f"-{lp}" not in k: continue
 
-                #print("LP COUNT " + str(lp) + " key " + str(k))
+                print("LP COUNT " + str(lp) + " key " + str(k))
                 
                 name = k.replace('tuberculosis-', '').replace('-40-', '-').replace(f'-{lp}', '')
                 name = name.replace('0-0', 'el0')
@@ -182,7 +192,7 @@ if __name__ == "__main__":
                 #if str(tmp) not in k: continue
                 if f"-{lp}" not in k: continue
 
-                #print("LP COUNT 2 " + str(lp) + " key " + str(k))
+                print("LP COUNT 2 " + str(lp) + " key " + str(k))
                 
                 name = k.replace('tuberculosis-', '').replace('-40-', '-').replace(f'-{lp}', '')
                 name = name.replace('0-0', 'el0')
@@ -216,10 +226,6 @@ if __name__ == "__main__":
                 bp_dict[k]['label'] = name
                 cur_bp += [bp_dict[k].copy()]
 
-                #print("bp_dict : " + str(bp_dict) + " cur_bp : " + str(cur_bp))
-                if maxval < y[-1]: maxval = y[-1]
-                if minval > y[-1]: minval = y[-1]
-            #print("BASELINE", baseline, lp)
 
             for d in cur_bp:
                 #print("dictionary: " + str(d))
@@ -228,12 +234,13 @@ if __name__ == "__main__":
                     if v != 'label':
                         d[v] = d[v] #/baseline
 
+
             cur_ax.bxp(cur_bp, showfliers=False, showmeans=True)
             #cur_ax.set_ylim(ran)
             cur_ax.yaxis.grid()
-            cur_ax.yaxis.set_ticks(np.arange(minval, maxval, 0.05))
+            #cur_ax.yaxis.set_ticks(np.arange(minval, maxval, 0.05))
             #cur_ax.set_ylabel("Speedup w.r.t USE")
 
         
-        plt.savefig(f'figures/{sys.argv[1][:-1].replace("/", "-")}-{test}-3.pdf')
+        plt.savefig(f'figures/{sys.argv[1][:-1].replace("/", "-")}-{test}-9 .pdf')
 
