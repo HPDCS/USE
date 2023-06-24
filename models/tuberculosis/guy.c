@@ -87,6 +87,7 @@ static void guy_sick_update(guy_t *guy, unsigned me, simtime_t now, region_t *re
 
 		removed = remove_guy(&guy);
 
+		scan_list_for_stats(region->head_sick);
 		// insert in the treatment list
 		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), removed);
 
@@ -202,6 +203,7 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 
 		removed = remove_guy(&guy);
 
+		scan_list_for_stats(region->head_infected);
 		// insert in the sick list
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), removed);
 
@@ -231,6 +233,7 @@ static void guy_treatment_update(guy_t *guy, simtime_t now, region_t *region){
 		fflush(stdout);*/
 
 		removed = remove_guy(&guy);
+		scan_list_for_stats(region->head_treatment);
 		// insert in treated list
 		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), removed);
 	}
@@ -264,6 +267,7 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 		fflush(stdout);*/
 
 		removed = remove_guy(&guy);
+		scan_list_for_stats(region->head_treated);
 		//insert in sick list
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), removed);
 	}
@@ -283,12 +287,16 @@ void insert_in_list(guy_t *guy, region_t *region) {
 
 	if (bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //sick guy
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), guy);
+		scan_list_for_stats(region->head_sick);
 	} else if (bitmap_check(guy->flags, f_sick) && bitmap_check(guy->flags, f_treatment)) { //treatment guy
 		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), guy);
+		scan_list_for_stats(region->head_treatment);
 	} else if (!bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //infected guy
 		try_to_insert_guy(&(region->head_infected), &(region->tail_infected), guy);
+		scan_list_for_stats(region->head_infected);
 	} else { //treated
 		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), guy);
+		scan_list_for_stats(region->head_treated);
 	}
 	
 }
@@ -321,8 +329,8 @@ void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now){
 	if(guy_treated_update(visit_guy, region, now)) 
 		return;
 	
-	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &visit_guy, sizeof(guy_t *));
-	remove_guy(&visit_guy);
+	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &visit_guy, sizeof(guy_t ));
+
 }
 
 
@@ -374,7 +382,7 @@ void guy_on_leave(guy_t *guy, simtime_t now, region_t *region){
 		ScheduleNewEvent(Random()*RegionsCount(), now + 0.001, RECEIVE_HEALTHY, &one, sizeof(unsigned));
 	}else{
 		unsigned int dest = FindReceiver(TOPOLOGY_SQUARE);
-		ScheduleNewEvent(dest, now + 0.001, GUY_VISIT, guy, sizeof(guy_t));
+		ScheduleNewEvent(dest, now + 0.001, GUY_VISIT, guy, sizeof(guy_t ));
 		/*printf("[lp dest %u] : (guy_on_leave) (guy %p) -- prev %p -- next %p \t s: %d t: %d\n", dest, guy, guy->prev, guy->next, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
 		fflush(stdout);*/
 		//remove_guy(&guy);
@@ -473,7 +481,7 @@ void guy_on_infection(infection_t *inf, region_t *region, simtime_t now){
 		fflush(stdout);*/
 
 		// we immediately schedule the first agent hop
-		ScheduleNewEvent(current_lp, now + 0.001, GUY_LEAVE, &guy, sizeof(guy_t *));
+		ScheduleNewEvent(current_lp, now + 0.001, GUY_LEAVE, &guy, sizeof(guy_t ));
 	}
 	
 }
