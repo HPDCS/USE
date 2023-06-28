@@ -6,11 +6,21 @@ void scan_list_for_stats(guy_t *head) {
 
 	guy_t *node;
 	int count_sick, count_treat;
+	int count_all;
+	double avg_sick, avg_treat;
 
 	while (!head) {
 
 		if (bitmap_check(head->flags, f_sick)) count_sick++;
 		if (bitmap_check(head->flags, f_treatment)) count_treat++;
+		count_all++;
+		head = head->next;
+	}
+
+	avg_sick = count_sick / count_all;
+	avg_treat = count_treat / count_all;
+
+}
 		head = head->next;
 	}
 }
