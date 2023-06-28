@@ -328,9 +328,12 @@ void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now){
 	guy_treatment_update(visit_guy, now, region);
 	if(guy_treated_update(visit_guy, region, now)) 
 		return;
-	
-	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &visit_guy, sizeof(guy_t ));
 
+	*guy = *visit_guy; //need to copy back before sending?
+	
+	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &guy, sizeof(guy_t ));
+	remove_guy(&visit_guy);
+	free(visit_guy);
 }
 
 
