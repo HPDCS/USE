@@ -130,7 +130,7 @@ static void move_healthy_people(unsigned me, region_t *region, simtime_t now){
 // healthy people are moved at slightly randomized timesteps 0.5, 1.5, 2.5, 3.5...
 // this way we preserve the order of operation as in the original model
 void ProcessEvent(unsigned int me, simtime_t now, int event_type,
-		union {guy_t *guy; unsigned *n; infection_t *i_m; init_t *in_m;} payload, unsigned int event_size, region_t *state) {
+		union {guy_t *guy; guy_t **guy_leave; unsigned *n; infection_t *i_m; init_t *in_m;} payload, unsigned int event_size, region_t *state) {
 
 	if(!me && event_type != INIT)
 		state->now = now;
@@ -191,7 +191,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			break;
 
 		case GUY_LEAVE:
-			guy_on_leave(payload.guy, now, state);
+			guy_on_leave(*payload.guy_leave, now, state);
 			break;
 
 		case GUY_INIT:
