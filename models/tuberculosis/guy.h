@@ -12,6 +12,8 @@
 #include "application.h"
 
 
+#define INSERT    1
+#define REMOVE    2
 
 typedef struct _infection_t infection_t;
 
@@ -19,7 +21,7 @@ typedef struct _infection_t infection_t;
 void insert_in_list(guy_t *guy, region_t *region);
 void try_to_insert_guy(guy_t **head, guy_t **tail, guy_t *guy);
 guy_t *remove_guy(guy_t **node);
-void scan_list_for_stats(guy_t *);
+void scan_list_for_stats(guy_t *, region_t *, unsigned int);
 
 
 void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now);
