@@ -87,9 +87,12 @@ static void guy_sick_update(guy_t *guy, unsigned me, simtime_t now, region_t *re
 
 		removed = remove_guy(&guy);
 
-		scan_list_for_stats(region->head_sick);
+		scan_list_for_stats(region->head_sick, region, REMOVE);
+
 		// insert in the treatment list
 		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), removed);
+
+		scan_list_for_stats(region->head_treatment, region, INSERT);
 
 		return;
 	}
@@ -203,9 +206,12 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 
 		removed = remove_guy(&guy);
 
-		scan_list_for_stats(region->head_infected);
+		scan_list_for_stats(region->head_infected, region, REMOVE);
+
 		// insert in the sick list
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), removed);
+
+		scan_list_for_stats(region->head_sick, region, INSERT);
 
 	} 
 	return false;
@@ -233,9 +239,13 @@ static void guy_treatment_update(guy_t *guy, simtime_t now, region_t *region){
 		fflush(stdout);*/
 
 		removed = remove_guy(&guy);
-		scan_list_for_stats(region->head_treatment);
+
+		scan_list_for_stats(region->head_treatment, region, REMOVE);
+
 		// insert in treated list
 		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), removed);
+
+		scan_list_for_stats(region->head_treated, region, INSERT);
 	}
 }
 
@@ -267,9 +277,13 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 		fflush(stdout);*/
 
 		removed = remove_guy(&guy);
-		scan_list_for_stats(region->head_treated);
+
+		scan_list_for_stats(region->head_treated, region, REMOVE);
+
 		//insert in sick list
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), removed);
+
+		scan_list_for_stats(region->head_sick, region, INSERT);
 	}
 	return false;
 	// ... or finally live "normally" for another day
@@ -287,20 +301,36 @@ void insert_in_list(guy_t *guy, region_t *region) {
 
 	if (bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //sick guy
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), guy);
-		scan_list_for_stats(region->head_sick);
+		scan_list_for_stats(region->head_sick, region, INSERT);
 	} else if (bitmap_check(guy->flags, f_sick) && bitmap_check(guy->flags, f_treatment)) { //treatment guy
 		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), guy);
-		scan_list_for_stats(region->head_treatment);
+		scan_list_for_stats(region->head_treatment, region, INSERT);
 	} else if (!bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //infected guy
 		try_to_insert_guy(&(region->head_infected), &(region->tail_infected), guy);
-		scan_list_for_stats(region->head_infected);
+		scan_list_for_stats(region->head_infected, region, INSERT);
 	} else { //treated
 		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), guy);
-		scan_list_for_stats(region->head_treated);
+		scan_list_for_stats(region->head_treated, region, INSERT);
 	}
 	
 }
 
+guy_t* retrieve_from_list(guy_t *guy, region_t *region) {
+
+	guy_t *my_guy;
+	if (bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //sick guy
+		my_guy = is_guy_in_list(region->head_sick, guy);
+	} else if (bitmap_check(guy->flags, f_sick) && bitmap_check(guy->flags, f_treatment)) { //treatment guy
+		my_guy = is_guy_in_list(region->head_treatment, guy);
+	} else if (!bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //infected guy
+		my_guy = is_guy_in_list(region->head_infected, guy);
+	} else { //treated
+		my_guy = is_guy_in_list(region->head_treated, guy);
+	}
+
+	return my_guy;
+	
+}
 
 // this is the routine every guy follows when he enters a region.
 // I remained faithful to the original model:
