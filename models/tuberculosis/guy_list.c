@@ -39,7 +39,7 @@ bool is_treated(guy_t *guy) {
 
 double compute_variance(guy_t *node, int n, double avg) {
 
-	int sum = 0, c; 
+	int sum = 0, c = 0; 
 	double variance; 
 
 	while (!node) {
@@ -129,22 +129,6 @@ void scan_list_for_stats(guy_t *node, region_t *region, unsigned int type) {
 			break;
 	}
 
-}
-
-	while (!head) {
-
-		if (bitmap_check(head->flags, f_sick)) count_sick++;
-		if (bitmap_check(head->flags, f_treatment)) count_treat++;
-		count_all++;
-		head = head->next;
-	}
-
-	avg_sick = count_sick / count_all;
-	avg_treat = count_treat / count_all;
-
-}
-		head = head->next;
-	}
 }
 
 

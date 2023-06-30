@@ -315,22 +315,6 @@ void insert_in_list(guy_t *guy, region_t *region) {
 	
 }
 
-guy_t* retrieve_from_list(guy_t *guy, region_t *region) {
-
-	guy_t *my_guy;
-	if (bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //sick guy
-		my_guy = is_guy_in_list(region->head_sick, guy);
-	} else if (bitmap_check(guy->flags, f_sick) && bitmap_check(guy->flags, f_treatment)) { //treatment guy
-		my_guy = is_guy_in_list(region->head_treatment, guy);
-	} else if (!bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) { //infected guy
-		my_guy = is_guy_in_list(region->head_infected, guy);
-	} else { //treated
-		my_guy = is_guy_in_list(region->head_treated, guy);
-	}
-
-	return my_guy;
-	
-}
 
 // this is the routine every guy follows when he enters a region.
 // I remained faithful to the original model:
@@ -401,7 +385,7 @@ void guy_on_leave(guy_t *guy, simtime_t now, region_t *region){
 	}
 
 	if(guy_dies){
-		printf("[lp dest: %u] guy_dies : guy %p next %p prev %p infection_day %d\n", current_lp, guy, guy->next, guy->prev, guy->infection_day);
+		//printf("[lp dest: %u] guy_dies : guy %p next %p prev %p infection_day %d\n", current_lp, guy, guy->next, guy->prev, guy->infection_day);
 		removed = remove_guy(&guy);
 		if (!removed) free(removed);
 		unsigned one = 1;
