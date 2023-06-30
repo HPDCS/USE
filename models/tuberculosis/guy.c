@@ -342,12 +342,9 @@ void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now){
 
 	guy_t *visit_guy = malloc(sizeof(guy_t));
 	*visit_guy = *guy;
-	visit_guy = guy;
 
-
-	//printf("[lp %u] (guy_on_visit) guy %p -- sick %d - treatment %d\n", me, guy, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
 	insert_in_list(visit_guy, region);
-
+	//printf("[lp %u] (guy_on_visit) visit_guy %p - guy %p -- sick %d - treatment %d\n", me, visit_guy, guy, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
 
 	guy_sick_update(visit_guy, me, now, region);
 	
@@ -362,8 +359,8 @@ void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now){
 	*guy = *visit_guy; //need to copy back before sending?
 	
 	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &guy, sizeof(guy_t ));
-	remove_guy(&visit_guy);
-	free(visit_guy);
+	//remove_guy(&visit_guy);
+	//free(visit_guy);
 }
 
 
@@ -380,14 +377,10 @@ static double die_probability(unsigned age){
 }
 
 
+
+
 void guy_on_leave(guy_t *guy, simtime_t now, region_t *region){
 
-	//guy_t *guy = malloc(sizeof(guy_t));
-	//*guy = *leave_guy;
-
-	//printf("[lp %u] (guy_on_leave) guy %p -- sick %d - treatment %d\n", current_lp, guy, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
-
-	//insert_in_list(guy, region);
 
 	guy_t *removed;
 	bool guy_dies = false;
@@ -397,9 +390,9 @@ void guy_on_leave(guy_t *guy, simtime_t now, region_t *region){
 		// non-sick guy case
 		guy_dies = Random() < die_probability((unsigned)now - guy->birth_day);	
 		if (guy_dies) {
-			printf("non sick guy dies %d - guy %p - prev %p - next %p - infection_day %d\n", guy_dies, guy,
+			/*printf("non sick guy dies %d - guy %p - prev %p - next %p - infection_day %d\n", guy_dies, guy,
 				guy->prev, guy->next, guy->infection_day);
-			fflush(stdout);
+			fflush(stdout);*/
 		}
 	}else{
 		// sick guy case
@@ -408,7 +401,7 @@ void guy_on_leave(guy_t *guy, simtime_t now, region_t *region){
 	}
 
 	if(guy_dies){
-		//printf("[lp dest: %u] guy_dies : guy %p next %p prev %p infection_day %d\n", current_lp, guy, guy->next, guy->prev, guy->infection_day);
+		printf("[lp dest: %u] guy_dies : guy %p next %p prev %p infection_day %d\n", current_lp, guy, guy->next, guy->prev, guy->infection_day);
 		removed = remove_guy(&guy);
 		if (!removed) free(removed);
 		unsigned one = 1;
@@ -418,7 +411,6 @@ void guy_on_leave(guy_t *guy, simtime_t now, region_t *region){
 		ScheduleNewEvent(dest, now + 0.001, GUY_VISIT, guy, sizeof(guy_t ));
 		/*printf("[lp dest %u] : (guy_on_leave) (guy %p) -- prev %p -- next %p \t s: %d t: %d\n", dest, guy, guy->prev, guy->next, bitmap_check(guy->flags, f_sick), bitmap_check(guy->flags, f_treatment));
 		fflush(stdout);*/
-		//remove_guy(&guy);
 	}
 }
 
@@ -509,6 +501,8 @@ void guy_on_infection(infection_t *inf, region_t *region, simtime_t now){
 		bitmap_reset(guy->flags, f_treatment);
 
 		try_to_insert_guy(&(region->head_infected), &(region->tail_infected), guy);
+
+		scan_list_for_stats(region->head_infected, region, INSERT);
 
 		/*printf("[lp dest %u] : (guy_on_infection) (guy %p) -- prev %p -- next %p -- infection_day %d\n", current_lp, guy, guy->prev, guy->next, guy->infection_day);
 		fflush(stdout);*/
