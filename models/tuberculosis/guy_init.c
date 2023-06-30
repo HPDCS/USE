@@ -195,7 +195,7 @@ void guy_on_init(init_t *init_data, region_t *region){
 		/*printf("[lp dest: %u] NEW INFECTED : guy %p next %p prev %p    infection_day %d\n", current_lp, infected, infected->next, infected->prev, infected->infection_day);
 		fflush(stdout);*/
 		scan_list_for_stats(region->head_infected, region, INSERT);
-		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &infected, sizeof(guy_t ));
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &infected, sizeof(guy_t *));
 	}
 
 	i = init_data->sick;
@@ -206,7 +206,7 @@ void guy_on_init(init_t *init_data, region_t *region){
 		/*printf("[lp dest: %u] NEW SICK : guy %p next %p prev %p    infection_day %d\n", current_lp, sick, sick->next, sick->prev, sick->infection_day);
 		fflush(stdout);*/
 		scan_list_for_stats(region->head_sick, region, INSERT);
-		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &sick, sizeof(guy_t ));
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &sick, sizeof(guy_t *));
 	}
 
 
@@ -218,7 +218,7 @@ void guy_on_init(init_t *init_data, region_t *region){
 		/*printf("[lp dest: %u] NEW TREAMENT : guy %p next %p prev %p    infection_day %d\n", current_lp, treatment, treatment->next, treatment->prev, treatment->infection_day);
 		fflush(stdout);*/
 		scan_list_for_stats(region->head_treatment, region, INSERT);
-		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treatment, sizeof(guy_t ));
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treatment, sizeof(guy_t *));
 	}
 
 
@@ -230,7 +230,7 @@ void guy_on_init(init_t *init_data, region_t *region){
 		/*printf("[lp dest: %u] NEW TREATED : guy %p next %p prev %p    infection_day %d\n", current_lp, treated, treated->next, treated->prev, treated->infection_day);
 		fflush(stdout);*/
 		scan_list_for_stats(region->head_treated, region, INSERT);
-		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treated, sizeof(guy_t ));
+		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treated, sizeof(guy_t *));
 	}
 
 

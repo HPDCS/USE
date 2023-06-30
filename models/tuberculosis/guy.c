@@ -339,12 +339,9 @@ void guy_on_visit(guy_t *guy, unsigned me, region_t *region, simtime_t now){
 	guy_treatment_update(visit_guy, now, region);
 	if(guy_treated_update(visit_guy, region, now)) 
 		return;
-
-	*guy = *visit_guy; //need to copy back before sending?
 	
-	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &guy, sizeof(guy_t ));
-	//remove_guy(&visit_guy);
-	//free(visit_guy);
+	ScheduleNewEvent(me, now + 0.75 + Random()/2, GUY_LEAVE, &visit_guy, sizeof(guy_t *));
+	
 }
 
 
@@ -492,7 +489,7 @@ void guy_on_infection(infection_t *inf, region_t *region, simtime_t now){
 		fflush(stdout);*/
 
 		// we immediately schedule the first agent hop
-		ScheduleNewEvent(current_lp, now + 0.001, GUY_LEAVE, &guy, sizeof(guy_t ));
+		ScheduleNewEvent(current_lp, now + 0.001, GUY_LEAVE, &guy, sizeof(guy_t *));
 	}
 	
 }
