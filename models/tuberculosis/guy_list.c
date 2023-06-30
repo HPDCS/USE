@@ -44,8 +44,9 @@ double compute_variance(guy_t *node, int n, double avg) {
 
 	while (!node) {
 		c++;
-		sum += pow((c - avg), 2);  
-	}  
+		sum += pow((c - avg), 2);
+		node = node->next;
+	}
 
 	variance = sum / (n-1);   
 
