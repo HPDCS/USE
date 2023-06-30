@@ -1,13 +1,135 @@
 #include "guy.h"
 #include "t_bitmap.h"
+#include <math.h>
+#include <assert.h>
 
 
-void scan_list_for_stats(guy_t *head) {
+bool is_sick(guy_t *guy) {
+	if (bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) {
+		return true;
+	} else {
+		return false;
+	}
+}
 
-	guy_t *node;
-	int count_sick, count_treat;
-	int count_all;
-	double avg_sick, avg_treat;
+bool is_treatment(guy_t *guy) {
+	if (bitmap_check(guy->flags, f_sick) && bitmap_check(guy->flags, f_treatment)) {
+		return true;
+	}else {
+		return false;
+	}
+}
+
+bool is_infected(guy_t *guy) {
+	if (!bitmap_check(guy->flags, f_sick) && !bitmap_check(guy->flags, f_treatment)) {
+		return true;
+	}else {
+		return false;
+	}
+}
+
+bool is_treated(guy_t *guy) {
+	if (!bitmap_check(guy->flags, f_sick) && bitmap_check(guy->flags, f_treatment)) {
+		return true;
+	}else {
+		return false;
+	}
+}
+
+
+double compute_variance(guy_t *node, int n, double avg) {
+
+	int sum = 0, c; 
+	double variance; 
+
+	while (!node) {
+		c++;
+		sum += pow((c - avg), 2);  
+	}  
+
+	variance = sum / (n-1);   
+
+	//printf("VARIANCE %f\n", variance);
+	return variance; 
+}
+
+
+void scan_list_for_stats(guy_t *node, region_t *region, unsigned int type) {
+
+	double old_avg_sick = region->avg_sick;
+	double old_avg_infected = region->avg_infected;
+	double old_avg_treatment = region->avg_treatment;
+	double old_avg_treated = region->avg_treated;
+	int prev_count_all = region->count_all;
+
+	switch (type) {
+		case INSERT:
+
+			region->count_all++;
+
+			if (is_sick(node)) {
+
+				region->count_sick++;
+				region->avg_sick = (old_avg_sick * prev_count_all + 1) / region->count_all;
+				region->variance_sick = compute_variance(node, region->count_all, region->avg_sick);
+
+			}else if (is_treatment(node)) {
+
+				region->count_treatment++;
+				region->avg_treatment = (old_avg_treatment * prev_count_all + 1) / region->count_all;
+				region->variance_treatment = compute_variance(node, region->count_all, region->avg_treatment);
+
+			}else if (is_infected(node)) {
+
+				region->count_infected++;
+				region->avg_infected = (old_avg_infected * prev_count_all + 1) / region->count_all;
+				region->variance_infected = compute_variance(node, region->count_all, region->avg_infected);
+
+			}else if (is_treated(node)) {
+
+				region->count_treated++;
+				region->avg_treated = (old_avg_treated * prev_count_all + 1) / region->count_all;
+				region->variance_treated = compute_variance(node, region->count_all, region->avg_treated);
+
+			}
+		break;
+
+		case REMOVE:
+
+			region->count_all--;
+
+			if (is_sick(node)) {
+
+				region->count_sick--;
+				region->avg_sick = (old_avg_sick * prev_count_all - 1) / region->count_all;
+				region->variance_sick = compute_variance(node, region->count_all, region->avg_sick);
+
+			}else if (is_treatment(node)) {
+
+				region->count_treatment--;
+				region->avg_treatment = (old_avg_treatment * prev_count_all - 1) / region->count_all;
+				region->variance_treatment = compute_variance(node, region->count_all, region->avg_treatment);
+
+			}else if (is_infected(node)) {
+
+				region->count_infected--;
+				region->avg_infected = (old_avg_infected * prev_count_all - 1) / region->count_all;
+				region->variance_infected = compute_variance(node, region->count_all, region->avg_infected);
+
+			}else if (is_treated(node)) {
+
+				region->count_treated--;
+				region->avg_treated = (old_avg_treated * prev_count_all - 1) / region->count_all;
+				region->variance_treated = compute_variance(node, region->count_all, region->avg_treated);
+
+			}
+		break;
+
+		default:
+			break;
+	}
+
+}
 
 	while (!head) {
 
