@@ -145,7 +145,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			region->guys_infected = 0;
 			/// parameters initialization
 			region->num_healthy		= args.num_healthy;
-			region->num_sick			= args.num_sick;
+			region->num_sick		= args.num_sick;
 			region->num_infected	= args.num_infected;
 			region->num_treatment	= args.num_treatment;
 			region->num_treated		= args.num_treated;
@@ -157,6 +157,22 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			region->head_treatment = region->tail_treatment = NULL;
 			region->head_treated = region->tail_treated = NULL;
 
+			///init fields for stats
+			region->count_sick = args.num_sick;
+			region->count_infected = args.num_infected;
+			region->count_treatment = args.num_treatment;
+			region->count_treated = args.num_treated;
+			region->count_all = region->count_sick + region->count_infected + region->count_treatment + region->count_treated;
+
+			region->avg_sick = region->count_sick / region->count_all;
+			region->avg_infected = region->count_infected / region->count_all;
+			region->avg_treatment = region->count_treatment / region->count_all;
+			region->avg_treated = region->count_treated / region->count_all;
+
+			region->variance_sick = 0.0;
+			region->variance_infected = 0.0;
+			region->variance_treatment = 0.0;
+			region->variance_treated = 0.0;
 
 			if(!me){
 				// this function let LP0 coordinate the init phase

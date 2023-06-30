@@ -58,6 +58,10 @@ typedef struct _region_t{
   /* head/tail of guy's lists */
 	guy_t *head_infected, *head_sick, *head_treatment, *head_treated;
 	guy_t *tail_infected, *tail_sick, *tail_treatment, *tail_treated;
+
+	int count_all, count_infected, count_sick, count_treatment, count_treated;
+	double avg_infected, avg_sick, avg_treatment, avg_treated;
+	double variance_sick, variance_infected, variance_treatment, variance_treated;
 	
 	simtime_t now;
 	void *sick,*infected,*treated,*treatment;
