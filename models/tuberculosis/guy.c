@@ -90,7 +90,7 @@ static void guy_sick_update(guy_t *guy, unsigned me, simtime_t now, region_t *re
 		scan_list_for_stats(region->head_sick, region, REMOVE);
 
 		// insert in the treatment list
-		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), removed);
+		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), guy);
 
 		scan_list_for_stats(region->head_treatment, region, INSERT);
 
@@ -209,7 +209,7 @@ static bool guy_infected_update(guy_t *guy, region_t *region, simtime_t now){
 		scan_list_for_stats(region->head_infected, region, REMOVE);
 
 		// insert in the sick list
-		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), removed);
+		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), guy);
 
 		scan_list_for_stats(region->head_sick, region, INSERT);
 
@@ -243,7 +243,7 @@ static void guy_treatment_update(guy_t *guy, simtime_t now, region_t *region){
 		scan_list_for_stats(region->head_treatment, region, REMOVE);
 
 		// insert in treated list
-		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), removed);
+		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), guy);
 
 		scan_list_for_stats(region->head_treated, region, INSERT);
 	}
@@ -281,7 +281,7 @@ static bool guy_treated_update(guy_t *guy, region_t *region, simtime_t now){
 		scan_list_for_stats(region->head_treated, region, REMOVE);
 
 		//insert in sick list
-		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), removed);
+		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), guy);
 
 		scan_list_for_stats(region->head_sick, region, INSERT);
 	}
