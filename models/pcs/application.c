@@ -216,6 +216,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			
 			if(args.enable_hot){
 				state->channels_per_cell = args.channels_hot;
+				state->rounds = 0;
 				if(args.hot_spot_ids[me])
 					state->ta = args.ta_hot;
 			}
@@ -426,14 +427,18 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	(void)me;
-	if(me == 0 && args.enable_hot && args.enable_moving_hot && (snapshot->lvt - args.last_change_hot_spot) > args.change_hot_spot_rate){
+	if(me == 0 && args.enable_hot && args.enable_moving_hot && (snapshot->lvt - args.last_change_hot_spot) > args.change_hot_spot_rate && (snapshot->rounds % 2 == 0) ){
 		printf("%u: ITS time to get a change at %f\n", me, snapshot->lvt);
+
 		for(unsigned int i = 0; i<n_prc_tot;i++){
 			args.hot_spot_ids[i] = 0;
 		}
+
 		build_unbalance();
 		args.last_change_hot_spot = snapshot->lvt;
 
+	} else {
+		snapshot->rounds++;
 	}
 
 	if (snapshot->complete_calls < args.total_calls)

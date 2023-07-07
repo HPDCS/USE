@@ -119,6 +119,8 @@ typedef struct _lp_state_type{
 	bool fading_recheck;
 	bool variable_ta; // Should the call interarrival frequency change depending on the current time?
 
+	int rounds;
+
 	unsigned int *channel_state;
 	struct _channel *channels;
 	int dummy;
