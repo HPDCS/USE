@@ -10,9 +10,9 @@
 #define PARTITIONS 2
 #define CELLS_PER_PARTITION  (n_prc_tot/PARTITIONS)
 
-#define PERC_HOT 0.2
+#define PERC_HOT 0.1
 #define NUM_HOT_CELLS  ((unsigned int)(PERC_HOT*n_prc_tot))
-#define TARGET_SKEW 0.5
+#define TARGET_SKEW 0.7
 
 #define MIN_LOAD_PARTITION	   (CELLS_PER_PARTITION/args.ta)
 #define MAX_LOAD_PARTITION	   (MIN_LOAD_PARTITION*(1+TARGET_SKEW))
