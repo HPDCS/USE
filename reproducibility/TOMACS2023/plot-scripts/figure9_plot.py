@@ -46,7 +46,7 @@ if __name__ == "__main__":
                 if len(lp_list) == 1: cur_ax = axs
                 else: cur_ax = axs[count] 
                 cur_ax.set_xlabel("Seconds")
-                cur_ax.set_ylabel("Throughput")
+                cur_ax.set_ylabel("Throughput ($10^6$ evts per sec)")
                 cur_ax.title.set_text(" ".join(["#simulation objects:"+nlp]))
                 cur_ax.set_xticks(ti_list)
                 #cur_ax.set_ylim([0,0.75])
@@ -88,7 +88,8 @@ if __name__ == "__main__":
                         
                     enfl=datafiles[f]
                     x_value = [x[1]/1000 for x in dataset[f][0]]
-                    dataplot= [x[0]/min_th for x in dataset[f][0]]
+                    #dataplot= [x[0]/min_th for x in dataset[f][0]]
+                    dataplot= [x[0] for x in dataset[f][0]]
 
                     y_filtered = savgol_filter(dataplot, 10, 3)
                     mins = []
@@ -102,7 +103,7 @@ if __name__ == "__main__":
                     #print(len(dataplot), len(y_filtered), len(maxs), len(mins))
                     #cur_ax.plot(x_value[1:], dataplot[1:], color=colors[enfl], dashes=enfl_to_dash[enfl])
                     cur_ax.plot(x_value, y_filtered, color=colors[enfl], dashes=enfl_to_dash[enfl])
-                    cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
+                    #cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
 
                     custom_lines += [Line2D([0], [0], color=colors[enfl], dashes=enfl_to_dash[enfl])]
                     if enfl == '0':
