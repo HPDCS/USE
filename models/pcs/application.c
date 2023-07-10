@@ -19,7 +19,7 @@ typedef struct model_parameters{
 	unsigned int channels_hot; 
 	unsigned int num_hot;
 
-  unsigned int *hot_spot_ids;
+ char *hot_spot_ids;
 
   double change_hot_spot_rate;
   double last_change_hot_spot;
@@ -72,7 +72,7 @@ model_parameters args = {
 	.enable_moving_hot = 0,
 	.num_hot = 0,
 	.hot_spot_ids = NULL,
-	.change_hot_spot_rate = 2000.0,
+	.change_hot_spot_rate = 1000.0,
 	.last_change_hot_spot = 0.0,
 };
 
@@ -127,13 +127,18 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 			break;
     case ARGP_KEY_END:
     	if(args.enable_hot){
-    		args.num_hot = NUM_HOT_CELLS;
+		args.num_hot = NUM_HOT_CELLS;
     		args.ta_hot = TA_HOT;
     		args.channels_hot = CHANNELS_PER_HOT_CELL;
     		args.hot_spot_ids = mmap(NULL, n_prc_tot*sizeof(char), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		printf("%u %p %u\n", n_prc_tot, args.hot_spot_ids, args.num_hot);
     		for(i=0;i<args.num_hot;i++){
     			args.hot_spot_ids[i] = 1;
     		}
+		for(;i<n_prc_tot;i++){
+//	printf("setting cold %u\n", i);		
+	args.hot_spot_ids[i] = 0;
+		}
 	    }
     	break;
 
@@ -147,11 +152,17 @@ void build_unbalance(){
 	unsigned int i,j=0;
 
 	for(i=0;i<n_prc_tot;i++){
+		if(args.hot_spot_ids[i]) continue;
 		if(GetNumaNode(i) == 0){
-			args.hot_spot_ids[i] = 1;
-			j++;
-			if(j >= args.num_hot) break;
+			if(j< args.num_hot){
+				args.hot_spot_ids[i] = 1;
+				j++;
+			}//if(j >= args.num_hot*1.1) break;
+			else
+				args.hot_spot_ids[i] = 0;
 		}
+		if(GetNumaNode(i) == 1)
+			args.hot_spot_ids[i] = 0;
 	}
 }
 
@@ -216,8 +227,10 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			
 			if(args.enable_hot){
 				state->channels_per_cell = args.channels_hot;
-				if(args.hot_spot_ids[me])
+				if(args.hot_spot_ids[me]){
 					state->ta = args.ta_hot;
+//					printf("AHAH\n");
+				}
 			}
 
 
@@ -225,7 +238,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			// Show current configuration, only once
 			if(me == 0) {
 				printf("CURRENT CONFIGURATION:\n");
-				printf("ncomplete calls: %d\n", args.total_calls);
+				printf("complete calls: %d\n", args.total_calls);
 				printf("ta: %f\n", args.ta);
 				printf("ta_duration: %f\n", state->ta_duration);
 				printf("ta_change: %f\n", state->ta_change); 
@@ -429,7 +442,7 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	if(me == 0 && args.enable_hot && args.enable_moving_hot && (snapshot->lvt - args.last_change_hot_spot) > args.change_hot_spot_rate){
 		printf("%u: ITS time to get a change at %f\n", me, snapshot->lvt);
 		for(unsigned int i = 0; i<n_prc_tot;i++){
-			args.hot_spot_ids[i] = 0;
+			//args.hot_spot_ids[i] = 0;
 		}
 		build_unbalance();
 		args.last_change_hot_spot = snapshot->lvt;
