@@ -23,6 +23,7 @@ typedef struct model_parameters{
 
   double change_hot_spot_rate;
   double last_change_hot_spot;
+  int rounds;
 
 	bool check_fading; 
 	bool fading_recheck;
@@ -72,8 +73,9 @@ model_parameters args = {
 	.enable_moving_hot = 0,
 	.num_hot = 0,
 	.hot_spot_ids = NULL,
-	.change_hot_spot_rate = 1000.0,
+	.change_hot_spot_rate = 1500.0,
 	.last_change_hot_spot = 0.0,
+	.rounds = 0,
 };
 
 error_t model_parse_opt(int key, char *arg, struct argp_state *state){
@@ -147,11 +149,30 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 	return 0;
 }
 
+void turn_on_hs(int node){
+	unsigned int i,j=0;
+
+	for (i=0; i < n_prc_tot; i++) {
+		if(GetNumaNode(i) == node){
+			if(j< args.num_hot){
+				args.hot_spot_ids[i] = 1;
+				j++;
+			} else
+					return;
+		}
+	}
+
+
+}
 
 void build_unbalance(){
 	unsigned int i,j=0;
 
-	for(i=0;i<n_prc_tot;i++){
+	for (i=0; i < n_prc_tot; i++) {
+		args.hot_spot_ids[i] = 0;
+	}
+
+	/*for(i=0;i<n_prc_tot;i++){
 		if(args.hot_spot_ids[i]) continue;
 		if(GetNumaNode(i) == 0){
 			if(j< args.num_hot){
@@ -163,7 +184,7 @@ void build_unbalance(){
 		}
 		if(GetNumaNode(i) == 1)
 			args.hot_spot_ids[i] = 0;
-	}
+	}*/
 }
 
 
@@ -227,7 +248,6 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			
 			if(args.enable_hot){
 				state->channels_per_cell = args.channels_hot;
-				state->rounds = 0;
 				if(args.hot_spot_ids[me]){
 					state->ta = args.ta_hot;
 //					printf("AHAH\n");
@@ -440,16 +460,58 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	(void)me;
-	if(me == 0 && args.enable_hot && args.enable_moving_hot && ( (snapshot->lvt - args.last_change_hot_spot) > args.change_hot_spot_rate ) && (snapshot->rounds % 2 == 0) ){
-		printf("%u: ITS time to get a change at %f\n", me, snapshot->lvt);
-		for(unsigned int i = 0; i<n_prc_tot;i++){
-			//args.hot_spot_ids[i] = 0;
+	if(me == 0 && args.enable_hot && args.enable_moving_hot) {
+		if(args.rounds == 0 && snapshot->lvt > 1100){
+			build_unbalance();
+			args.rounds++;
 		}
-		build_unbalance();
-		args.last_change_hot_spot = snapshot->lvt;
+		if(args.rounds == 1 && snapshot->lvt > 2200){
+			turn_on_hs(1);
+			args.rounds++;
+		}
+		if(args.rounds == 2 && snapshot->lvt > 3300){
+			build_unbalance();
+			args.rounds++;
+		}
+                if(args.rounds == 3 && snapshot->lvt > 4400){
+                        turn_on_hs(0);
+                        args.rounds++;
+                }
+                if(args.rounds == 4 && snapshot->lvt > 5500){
+                        build_unbalance();
+                        args.rounds++;
+                }
+                if(args.rounds == 5 && snapshot->lvt > 6600){
+                        turn_on_hs(1);
+                        args.rounds++;
+                }
+                if(args.rounds == 6 && snapshot->lvt > 7700){
+                        build_unbalance();
+                        args.rounds++;
+                }
 
-	} else {
-		snapshot->rounds++;
+
+		if  (0 && (snapshot->lvt - args.last_change_hot_spot) > args.change_hot_spot_rate ) {
+
+				//if ( (args.rounds % 2) == 0 ) {
+
+					
+					if (args.rounds % 2) {
+						printf("%u: ITS time to turn on hs at %f\n", me, snapshot->lvt);
+						turn_on_hs(0);
+					} else {
+						printf("%u: ITS time to turn off hs at %f\n", me, snapshot->lvt);
+						build_unbalance();
+					}
+
+				//}
+					
+				args.rounds++;
+				args.last_change_hot_spot = snapshot->lvt;
+				
+
+		}
+	
 	}
 
 	if (snapshot->complete_calls < args.total_calls)
