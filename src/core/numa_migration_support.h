@@ -14,7 +14,7 @@
 
 
 extern void migrate_segment(unsigned int id, int numa_node);
-
+extern long long start_simul_time;
 
 #define BALANCE_OVERFLOW 0.30
 #define UNBALANCE_ROUNDS_CHECK 10
@@ -379,11 +379,19 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	/// compute the skewness between the nodes
 	simtime_t load_skew = max_load_numa_node->unbalance_index - min_load_numa_node->unbalance_index;
   #if VERBOSE == 0
-	printf("NUMA skew:");
+        int p_len = 10+num_numa_nodes*(2+6)+1;
+        char *print=malloc(p_len);
+        int cur = 10;
+        strcpy(print, "NUMA skew:");
+	//printf("NUMA skew:");
 	for(unsigned int i=0;i<num_numa_nodes;i++){
-		printf("%d:%f ", i, numa_state[i]->unbalance_index/scale);
+	   sprintf(print+cur, "%d", i); cur++;
+	   print[cur] = ':';cur++;
+           sprintf(print+cur,"%.3f ", numa_state[i]->unbalance_index/scale);cur+=6;
 	}
-	printf("\n");
+        print[p_len] = '\0';
+	printf("%s ts:%llu\n", print, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
+        free(print);
   #endif
 	if(load_skew/scale < BALANCE_OVERFLOW) 
 		goto out;
