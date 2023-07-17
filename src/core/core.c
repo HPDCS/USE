@@ -667,21 +667,27 @@ void thread_loop(unsigned int thread_id) {
 	  #endif
 	
 		__event_from = 0;
-		if(pdes_config.enforce_locality && check_window() && local_fetch() != 0){} 
-		else if(fetch_internal() == 0) {
-		  #if REPORT == 1
-			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
-			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
-		  #endif
+		if(tid != 19 && tid !=39){
+			if(pdes_config.enforce_locality && check_window() && local_fetch() != 0){} 
+			else if(fetch_internal() == 0) {
+			  #if REPORT == 1
+				statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
+				statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
+			  #endif
 
-		  #if SWAPPING_STATE != 1
-			if(pdes_config.ongvt_mode != MS_PERIODIC_ONGVT){
-				if(++empty_fetch > 500){
-					round_check_OnGVT();
+			  #if SWAPPING_STATE != 1
+				if(pdes_config.ongvt_mode != MS_PERIODIC_ONGVT){
+					if(++empty_fetch > 500){
+						round_check_OnGVT();
+					}
 				}
+			  #endif
+			  	goto end_loop;
 			}
-		  #endif
-		  	goto end_loop;
+		}
+		else{
+			int res = fetch_internal();
+			goto end_loop;
 		}
 
 		empty_fetch = 0;

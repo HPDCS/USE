@@ -345,7 +345,7 @@ unsigned int fetch_internal(){
        
 	//if ( w.enabled && ts-local_gvt < cur_window && haveLock(lp_idx) && !is_lp_on_my_numa_node(lp_idx)) flush_locked_pipe();
 
-       	if(
+       	if(tid != 19 && tid != 39 &&
  #if OPTIMISTIC_MODE != FULL_SPECULATIVE
     #if OPTIMISTIC_MODE == ONE_EVT_PER_LP
         !is_in_lp_unsafe_set(lp_idx) &&
