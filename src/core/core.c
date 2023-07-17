@@ -587,6 +587,7 @@ stat64_t execute_time;
 
 		statistics_post_lp_data(LP, STAT_EVENT, 1);
 		statistics_post_lp_data(LP, STAT_CLOCK_EVENT, execute_time);
+		statistics_post_th_data(tid, STAT_EVENT, 1);
 
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
@@ -761,7 +762,8 @@ void thread_loop(unsigned int thread_id) {
 				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
 #endif
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			
+			statistics_post_th_data(tid, STAT_ROLLBACK, 1);
+
 			LPS[current_lp]->state = old_state;
 
 			//statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);

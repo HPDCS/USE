@@ -19,10 +19,13 @@ unsigned long long th_counter = 0;
 unsigned long long start_simul_time = 0;
 
 static double old2_thr, old_thr, thr_ref;
+static double old2_pro, old_pro, pro_ref;
 static simtime_t prev_granularity, prev_granularity_ref, granularity_ref;
 static unsigned int prev_comm_evts, prev_comm_evts_ref, prev_first_time_exec_evts, prev_comm_evts_window, prev_first_time_exec_evts_ref;
 
 
+static unsigned long long prev_rolls, curr_rolls, prev_exe, curr_exe;
+double curr_prob_rolls;
 static pthread_mutex_t stat_mutex, window_check_mtx;
 
 
@@ -118,11 +121,18 @@ double compute_throughput_for_committed_events(unsigned int *prev_comm_evts, clo
 	for (i = 0; i < pdes_config.ncores; i++) {
 		comm_evts += thread_stats[i].events_committed;
 	}
-	//comm_evts=0;
-        //for(i=0;i<pdes_config.nprocesses;i++)
+	curr_rolls=0;
+    for(i=0;i<pdes_config.ncores;i++)
 	{
-        //    comm_evts += lp_stats[i].events_total - lp_stats[i].events_silent;
+        curr_rolls += thread_stats[i].counter_rollbacks;
+        curr_exe += thread_stats[i].events_total - thread_stats[i].events_silent;
 	}
+	if(prev_rolls){
+		curr_prob_rolls = ((double)curr_rolls-prev_rolls)/((double)curr_exe - prev_exe);
+	}
+	prev_exe = curr_exe;
+	prev_rolls = curr_rolls;
+
 	th += comm_evts - *prev_comm_evts;
 	*prev_comm_evts = comm_evts;
 
@@ -194,9 +204,11 @@ void enable_window() {
 	printf("stability check: %2.f%% %2.f%%\n", 100*diff1, 100*diff2);
 	
     if(!w.enabled && current_thr > 0.0)         
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f\n", 0.0, 0.0, current_thr, 0.0, 0.0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt);
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f proll %f\n", 0.0, 0.0, current_thr, 0.0, 0.0, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt, curr_prob_rolls);
 	old2_thr = old_thr;
 	old_thr = current_thr;
+
+
 
 }
 
@@ -239,7 +251,7 @@ void aggregate_metrics_for_window_management(window *win) {
     #if VERBOSE == 1
 			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt);
+			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f proll %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt, curr_prob_rolls);
 			  if(thr_window == 0.0) goto end;
 			  if(isnan(thr_window)) goto end;
 			  if(isinf(thr_window)) goto end;
@@ -266,6 +278,7 @@ void aggregate_metrics_for_window_management(window *win) {
 		  	if (!skip && pdes_config.el_dynamic_window && reset_window(win, thr_ratio, granularity_ratio)) {
 			    printf("RESET WINDOW\n");
 			    thr_ref = 0.0;
+				pro_ref = 0.0;
 			    granularity_ref = 0.0;
 			    rounds_before_unbalance_check = 0;
 			    clock_timer_start(start_window_reset);
