@@ -14,15 +14,7 @@
 #include <math.h>
 
 
-typedef struct model_parameters{
-	unsigned num_healthy;
-  unsigned num_infected;
-  unsigned num_sick;
-  unsigned num_treatment;
-  unsigned num_treated;
-  simtime_t end_sim;
-}
-model_parameters;
+
 
 struct argp_option model_options[] = {
 	{"num_healthy",        1001, "VALUE", 0, "Number of healthy people"               , 0 },
@@ -35,7 +27,7 @@ struct argp_option model_options[] = {
 };
 
 model_parameters args = {
-	.num_healthy = 1529469,
+  .num_healthy = 1529469,
   .num_infected = 68491,
   .num_sick = 39,
   .num_treatment = 161,
@@ -44,6 +36,7 @@ model_parameters args = {
 };
 
 
+int horror_trick = 0;
 
 error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 
@@ -69,6 +62,17 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 			break;
 		default:
 			break;
+	}
+	double scale = 1024, mult = 0.33;
+	if(!horror_trick && pdes_config.nprocesses > 2){
+		horror_trick = 1;
+		if(pdes_config.nprocesses >= scale){
+	                args.num_healthy 		*= mult;//*(pdes_config.nprocesses/scale);
+        	        args.num_sick 			*= mult;//*(pdes_config.nprocesses/scale);
+                	args.num_infected 	*= mult;//*(pdes_config.nprocesses/scale);
+                	args.num_treatment 	*= mult;//*(pdes_config.nprocesses/scale);
+                	args.num_treated 		*= mult;//*(pdes_config.nprocesses/scale);
+		}
 	}
 	return 0;
 }
@@ -118,7 +122,8 @@ static void move_healthy_people(unsigned me, region_t *region, simtime_t now){
 		// we compute the number of healthy people who choose this direction
 		to_send = random_binomial(region->healthy, 1.0/actual_neighbours);
 		// we send the actual event
-		ScheduleNewEvent(GetNeighbourFromDirection(TOPOLOGY_SQUARE, i), now, RECEIVE_HEALTHY, &to_send, sizeof(unsigned));
+//		ScheduleNewEvent(GetNeighbourFromDirection(TOPOLOGY_SQUARE, i), now, RECEIVE_HEALTHY, &to_send, sizeof(unsigned));
+		ScheduleNewEvent(GetNeighbourFromDirection(TOPOLOGY_SQUARE, i), now+Expent(1.0), RECEIVE_HEALTHY, &to_send, sizeof(unsigned));
 		// those people just left this region
 		region->healthy -= to_send;
 		// we processed a valid neighbour so we decrease the counter
@@ -132,6 +137,7 @@ static void move_healthy_people(unsigned me, region_t *region, simtime_t now){
 void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 		union {guy_t *guy; guy_t **guy_leave; unsigned *n; infection_t *i_m; init_t *in_m;} payload, unsigned int event_size, region_t *state) {
 
+//	printf("TS_DEBUG:%d %d %f\n", me, event_type, now);
 	if(!me && event_type != INIT)
 		state->now = now;
 
@@ -144,11 +150,11 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			region->healthy = 0;
 			region->guys_infected = 0;
 			/// parameters initialization
-			region->num_healthy		= args.num_healthy;
-			region->num_sick		= args.num_sick;
-			region->num_infected	= args.num_infected;
-			region->num_treatment	= args.num_treatment;
-			region->num_treated		= args.num_treated;
+			/*region->num_healthy		= args.num_healthy ;//* (pdes_config.nprocesses/1024);
+			region->num_sick		= args.num_sick    ;//* (pdes_config.nprocesses/1024);
+			region->num_infected	= args.num_infected        ;//* (pdes_config.nprocesses/1024);
+			region->num_treatment	= args.num_treatment       ;//* (pdes_config.nprocesses/1024);
+			region->num_treated		= args.num_treated ;//* (pdes_config.nprocesses/1024);*/
 			region->end_sim			= args.end_sim;
 
 			/// lists head/tail initialization
@@ -158,40 +164,41 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			region->head_treated = region->tail_treated = NULL;
 
 			///init fields for stats
-			region->count_sick = args.num_sick;
-			region->count_infected = args.num_infected;
-			region->count_treatment = args.num_treatment;
-			region->count_treated = args.num_treated;
-			region->count_all = region->count_sick + region->count_infected + region->count_treatment + region->count_treated;
+			region->count_sick = 0;
+			region->count_infected = 0;
+			region->count_treatment = 0;
+			region->count_treated = 0;
+			region->count_all = 0;
 
-			region->avg_sick = region->count_sick / region->count_all;
-			region->avg_infected = region->count_infected / region->count_all;
-			region->avg_treatment = region->count_treatment / region->count_all;
-			region->avg_treated = region->count_treated / region->count_all;
+			region->avg_sick = 0.0;
+			region->avg_infected = 0.0;
+			region->avg_treatment = 0.0;
+			region->avg_treated = 0.0;
 
 			region->variance_sick = 0.0;
 			region->variance_infected = 0.0;
 			region->variance_treatment = 0.0;
 			region->variance_treated = 0.0;
-
+			region->id = me;
 			if(!me){
 				// this function let LP0 coordinate the init phase
 				guy_init(region);
 				printf("INIT 0 complete\n");
 				printf("Model configuration: \n");
-				printf("- Healthy guys: %u\n", region->num_healthy);
-				printf("- Sick guys: %u\n", region->num_sick);
-				printf("- Infected guys: %u\n", region->num_infected);
-				printf("- Treatment guys: %u\n", region->num_treatment);
-				printf("- Treated guys: %u\n", region->num_treated);
-				printf("- End simulation time: %u\n", region->end_sim);
+				printf("- Healthy guys: %u\n", args.num_healthy);
+				printf("- Sick guys: %u\n", args.num_sick);
+				printf("- Infected guys: %u\n", args.num_infected);
+				printf("- Treatment guys: %u\n", args.num_treatment);
+				printf("- Treated guys: %u\n", args.num_treated);
+				printf("- End simulation time: %u\n", args.end_sim);
 			}
 			ScheduleNewEvent(me, now + 1.25 + Random()/2, MIDNIGHT, NULL, 0);
 			break;
 
 		case MIDNIGHT:
 			move_healthy_people(me, state, now);
-			ScheduleNewEvent(me, now + 0.25 + Random()/2, MIDNIGHT, NULL, 0);
+			//ScheduleNewEvent(me, now + 0.25 + Random()/2, MIDNIGHT, NULL, 0);
+			ScheduleNewEvent(me, now + Expent(10.0), MIDNIGHT, NULL, 0);
 			break;
 
 		case RECEIVE_HEALTHY:
@@ -207,7 +214,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			break;
 
 		case GUY_LEAVE:
-			guy_on_leave(*payload.guy_leave, now, state);
+			guy_on_leave(payload.guy, now, state);
 			break;
 
 		case GUY_INIT:
@@ -224,7 +231,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 
 int OnGVT(unsigned int me, region_t *snapshot) {
 	if(!me){
-		//printf("healthy %u -- infected %u\n", snapshot->healthy, snapshot->guys_infected);
+		//printf("healthy %u -- infected %u\n", snapshot->healthy, snapshot->count_infected);
 		return snapshot->now > snapshot->end_sim;
 	}
 	return true;

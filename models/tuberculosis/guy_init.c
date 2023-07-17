@@ -23,11 +23,11 @@ struct _init_t{
 
 void guy_init(region_t *region){
 
-	unsigned int num_healthy = region->num_healthy;
-	unsigned int num_infected = region->num_infected;
-	unsigned int num_sick = region->num_sick;
-	unsigned int num_treatment = region->num_treatment;
-	unsigned int num_treated = region->num_treated;
+	unsigned int num_healthy = args.num_healthy;
+	unsigned int num_infected = args.num_infected;
+	unsigned int num_sick = args.num_sick;
+	unsigned int num_treatment = args.num_treatment;
+	unsigned int num_treated = args.num_treated;
 
 
 	init_t total = {num_healthy/scale_factor, num_infected/scale_factor, num_sick/scale_factor, num_treatment/scale_factor, num_treated/scale_factor};
@@ -192,47 +192,48 @@ void guy_on_init(init_t *init_data, region_t *region){
 	while(i--) {
 		infected = new_infected();
 		try_to_insert_guy(&(region->head_infected), &(region->tail_infected), infected);
-		/*printf("[lp dest: %u] NEW INFECTED : guy %p next %p prev %p    infection_day %d\n", current_lp, infected, infected->next, infected->prev, infected->infection_day);
-		fflush(stdout);*/
+		//if (current_lp == 790) printf("[lp dest: %u] NEW INFECTED : guy %p next %p prev %p    infection_day %d\n", current_lp, infected, infected->next, infected->prev, infected->infection_day);
 		scan_list_for_stats(region->head_infected, region, INSERT);
 		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &infected, sizeof(guy_t *));
 	}
+
+	//if (current_lp == 790) printf("count infected %d count all %d\n", region->count_infected, region->count_all);
 
 	i = init_data->sick;
 
 	while(i--) {
 		sick = new_sick();
 		try_to_insert_guy(&(region->head_sick), &(region->tail_sick), sick);
-		/*printf("[lp dest: %u] NEW SICK : guy %p next %p prev %p    infection_day %d\n", current_lp, sick, sick->next, sick->prev, sick->infection_day);
-		fflush(stdout);*/
+		//if (current_lp == 790) printf("[lp dest: %u] NEW SICK : guy %p next %p prev %p    infection_day %d\n", current_lp, sick, sick->next, sick->prev, sick->infection_day);
 		scan_list_for_stats(region->head_sick, region, INSERT);
 		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &sick, sizeof(guy_t *));
 	}
 
+	//if (current_lp == 790) printf("count sick %d count all %d\n", region->count_sick, region->count_all);
 
 	i = init_data->treatment;
 
 	while(i--) {
 		treatment = new_treatment();
 		try_to_insert_guy(&(region->head_treatment), &(region->tail_treatment), treatment);
-		/*printf("[lp dest: %u] NEW TREAMENT : guy %p next %p prev %p    infection_day %d\n", current_lp, treatment, treatment->next, treatment->prev, treatment->infection_day);
-		fflush(stdout);*/
+		//if (current_lp == 790) printf("[lp dest: %u] NEW TREAMENT : guy %p next %p prev %p    infection_day %d\n", current_lp, treatment, treatment->next, treatment->prev, treatment->infection_day);
 		scan_list_for_stats(region->head_treatment, region, INSERT);
 		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treatment, sizeof(guy_t *));
 	}
 
+	//if (current_lp == 790) printf("count treatment %d count all %d\n", region->count_treatment, region->count_all);
 
 	i = init_data->treated;
 
 	while(i--) {
 		treated = new_treated();
 		try_to_insert_guy(&(region->head_treated), &(region->tail_treated), treated);
-		/*printf("[lp dest: %u] NEW TREATED : guy %p next %p prev %p    infection_day %d\n", current_lp, treated, treated->next, treated->prev, treated->infection_day);
-		fflush(stdout);*/
+		//if (current_lp == 790) printf("[lp dest: %u] NEW TREATED : guy %p next %p prev %p    infection_day %d\n", current_lp, treated, treated->next, treated->prev, treated->infection_day);
 		scan_list_for_stats(region->head_treated, region, INSERT);
 		ScheduleNewEvent(current_lp, 0.75 +  Random()/2, GUY_LEAVE, &treated, sizeof(guy_t *));
 	}
 
+	//if (current_lp == 790) printf("count treated %d count all %d\n", region->count_treated, region->count_all);
 
 	region->healthy = init_data->healthy;
 }
