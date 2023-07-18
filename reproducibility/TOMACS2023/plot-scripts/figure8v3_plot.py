@@ -107,7 +107,7 @@ if __name__ == "__main__":
             if len(lp_list) == 1: cur_ax = axs
             else: cur_ax = axs[count] 
             #cur_ax.set_ylabel("Speedup w.r.t USE")
-            cur_ax.set_ylabel("Throughput")
+            cur_ax.set_ylabel("Throughput ($10^6$ evts per sec)")
             cur_ax.title.set_text(" ".join(["#simulation objects:"+lp]))
 
             baseline = 0
