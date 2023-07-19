@@ -55,6 +55,7 @@ static struct argp_option options[] = {
   {"ckpt-period",         CKPT_PERIOD_KEY          , "#EVENTS" ,  0                  ,  "Number of events to be forward-executed before taking a full-snapshot"   , 0 },
   {"ckpt-fossil-period",  CKPT_FOSSIL_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before collection committed snapshot"   , 0 },
   {"ckpt-autonomic-period",  CKPT_AUTONOMIC_PERIOD_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Enable autonomic checkpointing period"   , 0 },
+  {"ckpt-autoperiod-bound",  CKPT_AUTOPERIOD_BOUND_KEY, "#EVENTS",0                  ,  "Maximum value for autonomic checkpointing period"   , 0 },
   
   {"distributed-fetch",   DISTRIBUTED_FETCH_KEY    , 0         ,  OPTION_ARG_OPTIONAL,  "Enable distributed fetch"   , 0 },
   {"df-bound",            DISTRIBUTED_FETCH_BOUND_KEY, "#LPS"  ,  0                  ,  "Distributed fetch bound"   , 0 },
@@ -109,6 +110,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case CKPT_FOSSIL_PERIOD_KEY:
       pdes_config.ckpt_collection_period = atoi(arg);
       break;
+    case CKPT_AUTOPERIOD_BOUND_KEY:
+      pdes_config.ckpt_autoperiod_bound = atoi(arg);
+      break;
+
 
     case ONGVT_PERIOD_KEY:
       pdes_config.ongvt_period = atoi(arg);
@@ -215,6 +220,8 @@ void configuration_init(void){
   pdes_config.ckpt_period = 20;
   pdes_config.ckpt_collection_period = 100;
   pdes_config.ckpt_autonomic_period = 0;
+  pdes_config.ckpt_autoperiod_bound = -1;
+
   pdes_config.serial = false;
   pdes_config.observe_period = 500;
 
@@ -248,6 +255,7 @@ void print_config(void){
     printf("\t- CHECKPOINT\n");
     printf("\t\t|- period %u\n", pdes_config.ckpt_period);
     printf("\t\t|- autonomic %u\n", pdes_config.ckpt_autonomic_period);
+    printf("\t\t|- bound %u\n", pdes_config.ckpt_autoperiod_bound);
     printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
