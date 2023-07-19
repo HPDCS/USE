@@ -10,19 +10,22 @@
 #define PARTITIONS 2
 #define CELLS_PER_PARTITION  (n_prc_tot/PARTITIONS)
 
-#define PERC_HOT 0.2
+#define PERC_HOT 0.1
 #define NUM_HOT_CELLS  ((unsigned int)(PERC_HOT*n_prc_tot))
+#define TARGET_SKEW 0.7
+
+#define MIN_LOAD_PARTITION	   (CELLS_PER_PARTITION/args.ta)
+#define MAX_LOAD_PARTITION	   (MIN_LOAD_PARTITION*(1+TARGET_SKEW))
 
 #define NUM_CLD_CELLS_IN_MAX ((n_prc_tot/PARTITIONS)-NUM_HOT_CELLS)
 #define LOAD_FROM_CLD_CELLS  (NUM_CLD_CELLS_IN_MAX/args.ta)
-
-#define TARGET_SKEW 0.5
-#define MIN_LOAD_PARTITION	   (CELLS_PER_PARTITION/args.ta)
-#define MAX_LOAD_PARTITION	   (MIN_LOAD_PARTITION*(1+TARGET_SKEW))
 #define LOAD_FROM_HOT_CELLS    (MAX_LOAD_PARTITION-LOAD_FROM_CLD_CELLS)
 #define TA_HOT                 (NUM_HOT_CELLS/LOAD_FROM_HOT_CELLS)
 
-#define CHANNELS_PER_HOT_CELL	((unsigned int)(args.ta_duration*1.1/TA_HOT))
+
+#define max(x,y) ((x)>(y) ? (x) : (y))
+
+#define CHANNELS_PER_HOT_CELL	(max((unsigned int)(args.ta_duration*1.1/TA_HOT), args.channels))
 
 
 
@@ -115,6 +118,8 @@ typedef struct _lp_state_type{
 	bool check_fading; // Is the model set up to periodically recompute the fading of all ongoing calls?
 	bool fading_recheck;
 	bool variable_ta; // Should the call interarrival frequency change depending on the current time?
+
+	int rounds;
 
 	unsigned int *channel_state;
 	struct _channel *channels;

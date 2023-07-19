@@ -353,7 +353,7 @@ unsigned int fetch_internal(){
         !is_in_lp_locked_set(lp_idx) &&
     #endif
  #endif
-        ( !pdes_config.distributed_fetch || (!w.enabled || (ts-local_gvt) > cur_window || haveLock(lp_idx) || is_lp_on_my_numa_node(lp_idx)) ) &&
+        ( !pdes_config.distributed_fetch || (!w.enabled || (ts-local_gvt) > cur_window || haveLock(lp_idx) || is_lp_on_my_numa_node(lp_idx) || skipped_lps > 17) ) &&
         (
             (pdes_config.enforce_locality && haveLock(lp_idx)) ||
             tryLock(lp_idx)
