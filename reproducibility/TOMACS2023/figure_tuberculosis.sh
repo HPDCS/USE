@@ -2,9 +2,9 @@
 
 
 source autoconf.sh
-LP_list="256 1024 4096"						#number of lps
+LP_list="1024"						#number of lps
 TEST_list="tuberculosis"					#test list
-RUN_list="1 2 3 4 5"				#run number list
+RUN_list="0 1 2 3 4 5 6 7 8 9 10 11"				#run number list
 
 
 MAX_RETRY="10"
@@ -14,7 +14,7 @@ NUMA_LIST="0 1"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-TEST_DURATION="240"
+TEST_DURATION="60"
 
 
 CURRENT_BINDING_SIZE="2" 
@@ -36,15 +36,16 @@ do
 		memory_options="--numa-rebalance --distributed-fetch"
 		locality_options="--enforce-locality --enable-custom-alloc --enable-mbind --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window"
 
-		if [ $numa = "1" && $enfl = "0" ]; then
+		if [ $numa == "1" ] && [ $enfl == "0" ]; then
 			echo skip this case
-			continue;
+			continue
 		fi
+                
 
-		if [ $enfl = "1" ]; then
+		if [ $enfl == "1" ]; then
 			cmd="$cmd ${locality_options}"
 
-			if [ $numa = "1" ]; then
+			if [ $numa == "1" ]; then
 				cmd="$cmd ${locality_options} ${memory_options}"
 			fi
 		fi
@@ -53,9 +54,9 @@ do
 		do
 			for lp in $LP_list
 				do
-					for threads in $THREAD_list
+					for threads in "$MAX_THREADS"
 					do
-						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period"
+						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period  --observe-period=1000 --ckpt-autoperiod-bound=50 --el-th-trigger=0.035"
 						ecmd="$cmd ${runtime_options}"
 						echo $ecmd
 							
@@ -84,9 +85,53 @@ do
 							echo $ecmd >> $FILE
 						done  
 					done
-				done
-		done
+			done
+		 done
+	         
+      done
+done
+done
+
+
+
+for test in $TEST_list 
+do
+
+	cmd="./${BIN_PATH}/test_$test "
+
+	for run in $RUN_list
+	do
+		for lp in $LP_list
+			do
+					runtime_options="-w ${TEST_DURATION} --ncores=1 --nprocesses=$lp --ckpt-autonomic-period   --observe-period=1000"
+					ecmd="$cmd ${runtime_options}"
+					echo $ecmd
+						
+					EX="./$ecmd"
+							
+					FILE="${FOLDER}/${test}-enfl_0-numa_0-threads_1-lp_${lp}-run_${run}"; 
+
+					touch ${FILE}
+					
+					N=0 
+					while [[ $(grep -c "Simulation ended" $FILE) -eq 0 ]]
+					do
+						echo $BEGIN
+						echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
+						echo $FILE
+						#1> $FILE 2>&1 time $EX
+						{ timeout $((TEST_DURATION*2)) $EX; } &> $FILE
+						if test $N -ge $MAX_RETRY ; then 
+							echo "" >> $FILE
+							echo $ecmd >> $FILE
+							echo break; 
+							break; 
+						fi
+						N=$(( N+1 ))
+						echo "" >> $FILE
+						echo $ecmd >> $FILE
+					done  
+
+			done
 	done
-done
-done
 done
