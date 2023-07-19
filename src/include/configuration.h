@@ -38,6 +38,8 @@ typedef struct _simulation_configuration {
 	enum ongvt_mode ongvt_mode;
 
 	unsigned char distributed_fetch;
+	char   df_bound;
+	
 	unsigned char numa_rebalance;
 	unsigned char enable_mbind;
 	unsigned char enable_custom_alloc;

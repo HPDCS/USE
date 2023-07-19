@@ -21,7 +21,7 @@
 
 
 
-#define MEASUREMENT_PHASE_THRESHOLD_MS 1000//500
+#define MEASUREMENT_PHASE_THRESHOLD_MS (pdes_config.observe_period) //1000//500
 
 
 

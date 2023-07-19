@@ -30,6 +30,9 @@ simulation_configuration pdes_config;
 #define ENABLE_MBIND_KEY            265
 #define ENABLE_CUSTOM_ALLOC_KEY     266
 
+#define DISTRIBUTED_FETCH_KEY       763
+#define DISTRIBUTED_FETCH_BOUND_KEY 764
+
 #define ONGVT_PERIOD_KEY            267
 #define ONGVT_MODE_KEY              268
 
@@ -51,6 +54,8 @@ static struct argp_option options[] = {
   {"ckpt-autonomic-period",  CKPT_AUTONOMIC_PERIOD_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Enable autonomic checkpointing period"   , 0 },
   
   {"distributed-fetch",   DISTRIBUTED_FETCH_KEY    , 0         ,  OPTION_ARG_OPTIONAL,  "Enable distributed fetch"   , 0 },
+  {"df-bound",            DISTRIBUTED_FETCH_BOUND_KEY, "#LPS"  ,  0                  ,  "Distributed fetch bound"   , 0 },
+ 
   {"numa-rebalance"   ,   NUMA_REBALANCE_KEY       , 0         ,  OPTION_ARG_OPTIONAL,  "Enable numa load-balancing"   , 0 },
   {"enable-mbind"       , ENABLE_MBIND_KEY         , 0         ,  OPTION_ARG_OPTIONAL,  "Enable mbind"   , 0 },
   {"enable-custom-alloc", ENABLE_CUSTOM_ALLOC_KEY  , 0         ,  OPTION_ARG_OPTIONAL,  "Enable custom alloc"   , 0 },
@@ -111,7 +116,12 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     case DISTRIBUTED_FETCH_KEY:
       pdes_config.distributed_fetch = 1;
+      pdes_config.df_bound = -1;
       break;
+    case DISTRIBUTED_FETCH_BOUND_KEY:
+      pdes_config.df_bound = atoi(arg);
+      break;
+
     case NUMA_REBALANCE_KEY:
       pdes_config.numa_rebalance = 1;
       break;
@@ -242,8 +252,11 @@ void print_config(void){
     if(pdes_config.enforce_locality){
       printf("\t\t|- Starting window %f\n", pdes_config.el_window_size);
       printf("\t\t|- Dynamic  window %u\n", pdes_config.el_dynamic_window);
+      printf("\t\t|- Througput drift for window trigger %f\n", pdes_config.el_th_trigger);
     }
     printf("\t- DISTRIBUTED FETCH %u\n", pdes_config.distributed_fetch);
+      printf("\t\t|- fetch bound %d\n", pdes_config.df_bound);
+    
     printf("\t- MALLOC-BASED RECOVERABLE ALLOC %u\n", !pdes_config.enable_custom_alloc);
     printf("\t- NUMA REBALANCE %u\n",    pdes_config.numa_rebalance);
     printf("\t- MBIND %u\n",    pdes_config.enable_mbind);
