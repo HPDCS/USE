@@ -13,6 +13,7 @@ simulation_configuration pdes_config;
 #define N_PROCESSES_KEY             'p'
 #define WALLCLOCK_TIMEOUT_KEY       'w' 
 
+#define OBS_PERIOD_KEY              256
 
 #define ENFORCE_LOCALITY_KEY        256
 #define EL_DYN_WINDOW_KEY           257
@@ -43,7 +44,8 @@ static struct argp_option options[] = {
   {"ncores",              N_CORES_KEY              , "CORES"   ,  0                  ,  "Number of threads to be used"               , 0 },
   {"nprocesses",          N_PROCESSES_KEY          , "LPS"     ,  0                  ,  "Number of simulation objects"               , 0 },
   {"wall-timeout",        WALLCLOCK_TIMEOUT_KEY    , "SECONDS" ,  0                  ,  "End the simulation after SECONDS elapsed"   , 0 },
-
+  {"observe-period",      OBS_PERIOD_KEY           , "MS"      ,  0                  ,  "Period in ms to check througput"    , 0 },
+  
   {"ckpt-period",         CKPT_PERIOD_KEY          , "#EVENTS" ,  0                  ,  "Number of events to be forward-executed before taking a full-snapshot"   , 0 },
   {"ckpt-fossil-period",  CKPT_FOSSIL_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before collection committed snapshot"   , 0 },
   {"ckpt-autonomic-period",  CKPT_AUTONOMIC_PERIOD_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Enable autonomic checkpointing period"   , 0 },
@@ -83,7 +85,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case WALLCLOCK_TIMEOUT_KEY:
       pdes_config.timeout = atoi(arg);
       break;
-  
+    case OBS_PERIOD_KEY:
+      pdes_config.observe_period = atoi(arg);
+      break;
+
+
     case CKPT_PERIOD_KEY:
       pdes_config.ckpt_period = atoi(arg);
       break;
@@ -197,7 +203,8 @@ void configuration_init(void){
   pdes_config.ckpt_collection_period = 100;
   pdes_config.ckpt_autonomic_period = 0;
   pdes_config.serial = false;
-  
+  pdes_config.observe_period = 500;
+
   pdes_config.timeout = 0;
   
   pdes_config.ongvt_period = 0;
@@ -224,6 +231,7 @@ void print_config(void){
 #endif
     printf("\t- DYMELOR enabled.\n");
     printf("\t- CACHELINESIZE %u\n", CACHE_LINE_SIZE);
+    printf("\t- OBSERVATION PERIOD %u\n", pdes_config.observe_period);
     printf("\t- CHECKPOINT\n");
     printf("\t\t|- period %u\n", pdes_config.ckpt_period);
     printf("\t\t|- autonomic %u\n", pdes_config.ckpt_autonomic_period);

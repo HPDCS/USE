@@ -25,6 +25,7 @@ typedef struct _simulation_configuration {
 	unsigned int ncores;
 	unsigned int nprocesses;
 	int timeout;
+	int observe_period;
 	
 	unsigned char serial;
 
