@@ -13,7 +13,7 @@
 #define INIT_WINDOW_STEP 0.04
 #define DECREASE_PERC 0.2
 #define INCREASE_PERC 0.5
-#define THROUGHPUT_DRIFT 0.035 //0.025
+#define THROUGHPUT_DRIFT (pdes_config.el_th_trigger)	//0.035 //0.025
 
 #define THROUGHPUT_UPPER_BOUND 0.925
 #define GRANULARITY_UPPER_BOUND 1.4

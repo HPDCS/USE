@@ -50,6 +50,7 @@ typedef struct _simulation_configuration {
 	unsigned char el_locked_pipe_size;
 	unsigned char el_evicted_pipe_size;
 	double el_window_size;  /// sets the static window size when using pipes
+	double el_th_trigger;  /// sets the static window size when using pipes
 	
 
 #ifdef HAVE_PREEMPTION

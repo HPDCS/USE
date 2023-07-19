@@ -72,6 +72,7 @@ static struct argp_option options[] = {
   {"el-window-size",      EL_WINDOW_SIZE_KEY       , "VTIME"   ,  0                  ,  "Sets the window size to be used with pipes"    , 0 },
   {"el-locked-size",      EL_LOCKED_PIPE_SIZE_KEY  , "COUNT"   ,  0                  ,  "Sets the locked pipe size"    , 0 },
   {"el-evicted-size",     EL_EVICTED_PIPE_SIZE_KEY , "COUNT"   ,  0                  ,  "Sets the evicted pipe size"    , 0 },
+  {"el-th-trigger",       EL_TH_THRESHOLD_KEY      , "PERC"    ,  0                  ,  "Threshold to trigger a window resize"    , 0 },
   
   {"verbose",            'v'                       ,  0        ,  0                  ,  "Provide verbose output"                     , 0 },
   { 0, 0, 0, 0, 0, 0} 
@@ -145,7 +146,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       pdes_config.el_locked_pipe_size = 1;
       pdes_config.el_evicted_pipe_size = 1;
       pdes_config.el_window_size = 0;
+      pdes_config.el_th_trigger = 0.025;
       break;
+    
     case EL_DYN_WINDOW_KEY:
       pdes_config.el_dynamic_window = 1;
       break;
@@ -157,6 +160,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
     case EL_EVICTED_PIPE_SIZE_KEY:
       pdes_config.el_evicted_pipe_size = atoi(arg);
+      break;
+    case EL_TH_THRESHOLD_KEY:
+      pdes_config.el_th_trigger = strtod(arg, NULL);
       break;
 
     case ARGP_KEY_END:
