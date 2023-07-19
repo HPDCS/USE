@@ -15,26 +15,29 @@ simulation_configuration pdes_config;
 
 #define OBS_PERIOD_KEY              256
 
-#define ENFORCE_LOCALITY_KEY        256
-#define EL_DYN_WINDOW_KEY           257
-#define EL_WINDOW_SIZE_KEY          258
-#define EL_LOCKED_PIPE_SIZE_KEY     259
-#define EL_EVICTED_PIPE_SIZE_KEY    260
 
-#define CKPT_PERIOD_KEY             361
-#define CKPT_FOSSIL_PERIOD_KEY      362
-#define CKPT_AUTONOMIC_PERIOD_KEY   363
+#define ENFORCE_LOCALITY_KEY        356
+#define EL_DYN_WINDOW_KEY           357
+#define EL_WINDOW_SIZE_KEY          358
+#define EL_LOCKED_PIPE_SIZE_KEY     359
+#define EL_EVICTED_PIPE_SIZE_KEY    360
+#define EL_TH_THRESHOLD_KEY         362
 
-#define DISTRIBUTED_FETCH_KEY       263
-#define NUMA_REBALANCE_KEY          264
-#define ENABLE_MBIND_KEY            265
-#define ENABLE_CUSTOM_ALLOC_KEY     266
+#define CKPT_PERIOD_KEY             461
+#define CKPT_FOSSIL_PERIOD_KEY      462
+#define CKPT_AUTONOMIC_PERIOD_KEY   463
+#define CKPT_AUTOPERIOD_BOUND_KEY   464
+
+#define NUMA_REBALANCE_KEY          564
+#define ENABLE_MBIND_KEY            565
+#define ENABLE_CUSTOM_ALLOC_KEY     566
+
+#define ONGVT_PERIOD_KEY            667
+#define ONGVT_MODE_KEY              668
 
 #define DISTRIBUTED_FETCH_KEY       763
 #define DISTRIBUTED_FETCH_BOUND_KEY 764
 
-#define ONGVT_PERIOD_KEY            267
-#define ONGVT_MODE_KEY              268
 
 const char *argp_program_version = "USE 1.0";
 const char *argp_program_bug_address = "<romolo.marotta@gmail.com>";
