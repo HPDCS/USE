@@ -144,7 +144,7 @@ static inline int window_resizing(window *w, double throughput) {
 	if(w->old_throughput != 0){
 
           if( (fabs(th_ratio-1)) < THROUGHPUT_DRIFT) {return res;}
-	  else if (throughput < old_throughput && (ROLLBACK_UPPER_BOUND >= 0.0 && curr_prob_rolls > ROLLBACK_UPPER_BOUND)){
+	  else if (throughput < old_throughput && (ROLLBACK_UPPER_BOUND < 0.0 || curr_prob_rolls > ROLLBACK_UPPER_BOUND)){
             printf("changing direction %f %f\n", throughput, old_throughput);
             w->direction = w->direction * (-1);
             w->phase=1;
