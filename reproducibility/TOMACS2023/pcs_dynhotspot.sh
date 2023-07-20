@@ -6,7 +6,7 @@ MIN="420"
 
 FOLDER="results/pcs-hs-dyn-hot-0.4"
 
-mkdir $FOLDER
+mkdir -p $FOLDER
 
 for r in $RUN; do
 for lp in $LPS; do

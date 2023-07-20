@@ -4,7 +4,7 @@
 source autoconf.sh
 LP_list="1024"						#number of lps
 TEST_list="tuberculosis"					#test list
-RUN_list="0 1 2 3 4 5 6 7 8 9 10 11"				#run number list
+RUN_list="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35"				#run number list
 
 
 MAX_RETRY="10"
@@ -46,7 +46,7 @@ do
 			cmd="$cmd ${locality_options}"
 
 			if [ $numa == "1" ]; then
-				cmd="$cmd ${locality_options} ${memory_options}"
+				cmd="$cmd ${memory_options}"
 			fi
 		fi
 
