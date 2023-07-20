@@ -22,6 +22,7 @@ simulation_configuration pdes_config;
 #define EL_LOCKED_PIPE_SIZE_KEY     359
 #define EL_EVICTED_PIPE_SIZE_KEY    360
 #define EL_TH_THRESHOLD_KEY         362
+#define EL_WAIT_ROLLBACK_TH_KEY     363
 
 #define CKPT_PERIOD_KEY             461
 #define CKPT_FOSSIL_PERIOD_KEY      462
@@ -73,6 +74,7 @@ static struct argp_option options[] = {
   {"el-locked-size",      EL_LOCKED_PIPE_SIZE_KEY  , "COUNT"   ,  0                  ,  "Sets the locked pipe size"    , 0 },
   {"el-evicted-size",     EL_EVICTED_PIPE_SIZE_KEY , "COUNT"   ,  0                  ,  "Sets the evicted pipe size"    , 0 },
   {"el-th-trigger",       EL_TH_THRESHOLD_KEY      , "PERC"    ,  0                  ,  "Threshold to trigger a window resize"    , 0 },
+  {"el-roll-th-trigger",  EL_WAIT_ROLLBACK_TH_KEY  , "PERC"    ,  0                  ,  "Rollback Threshold to trigger a window resize"    , 0 },
   
   {"verbose",            'v'                       ,  0        ,  0                  ,  "Provide verbose output"                     , 0 },
   { 0, 0, 0, 0, 0, 0} 
@@ -164,6 +166,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case EL_TH_THRESHOLD_KEY:
       pdes_config.el_th_trigger = strtod(arg, NULL);
       break;
+    case EL_WAIT_ROLLBACK_TH_KEY:
+      pdes_config.el_roll_th_trigger = strtod(arg, NULL);
+      break;
 
     case ARGP_KEY_END:
       if(pdes_config.ckpt_period < 1 || pdes_config.ckpt_collection_period < 1){
@@ -237,6 +242,7 @@ void configuration_init(void){
   pdes_config.ongvt_mode = 0;
 
   pdes_config.enforce_locality = 0;
+  pdes_config.el_roll_th_trigger = -1:
 
   pdes_config.distributed_fetch = 0;
   pdes_config.numa_rebalance = 0;
@@ -270,6 +276,7 @@ void print_config(void){
       printf("\t\t|- Starting window %f\n", pdes_config.el_window_size);
       printf("\t\t|- Dynamic  window %u\n", pdes_config.el_dynamic_window);
       printf("\t\t|- Througput drift for window trigger %f\n", pdes_config.el_th_trigger);
+      printf("\t\t|- Rollback threshold for window trigger %f\n", pdes_config.el_roll_th_trigger);
     }
     printf("\t- DISTRIBUTED FETCH %u\n", pdes_config.distributed_fetch);
       printf("\t\t|- fetch bound %d\n", pdes_config.df_bound);

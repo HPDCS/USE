@@ -51,7 +51,7 @@ typedef struct _simulation_configuration {
 	unsigned char el_evicted_pipe_size;
 	double el_window_size;  /// sets the static window size when using pipes
 	double el_th_trigger;  /// sets the static window size when using pipes
-	
+	double el_roll_th_trigger;
 
 #ifdef HAVE_PREEMPTION
 	bool disable_preemption;	/// If compiled for preemptive Time Warp, it can be disabled at runtime
