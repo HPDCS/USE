@@ -242,7 +242,7 @@ void configuration_init(void){
   pdes_config.ongvt_mode = 0;
 
   pdes_config.enforce_locality = 0;
-  pdes_config.el_roll_th_trigger = -1:
+  pdes_config.el_roll_th_trigger = -1;
 
   pdes_config.distributed_fetch = 0;
   pdes_config.numa_rebalance = 0;
