@@ -3,7 +3,7 @@
 from common import *
 import common
 import os
-
+from sklearn.cluster import KMeans
 
 def parse_filename(filename):
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     seconds = common.seconds
     lp_list = common.lp_list
-
+    max_treads = common.max_treads
 
     bp_dict = {}
     tests= [sys.argv[2]]
@@ -37,9 +37,10 @@ if __name__ == "__main__":
     new_dataset = {}
 
     for f in common.datafiles:
+        #print(f)
         if os.path.isfile(sys.argv[1]+f):
             dataset[f] = get_samples_from_file(sys.argv[1]+f, seconds)
-    
+    #print("ECCCoOOOOOOOOOOME")
     x_value = []
     for i in range(seconds*2):
         x_value += [0.5*i]
@@ -101,8 +102,29 @@ if __name__ == "__main__":
 
     for k in final:
         final[k] = sorted(final[k])
-        final[k] = final[k][1:-1]
-        #print("final k: " + str(k))
+        if '-0-0-seq-' in k:
+        #if True:
+          final[k] = final[k][1:-1]
+        else:
+          test = [[x] for x in final[k]]
+          kmeans = KMeans(n_clusters=2, random_state=0).fit(test)
+          fmap = {0:[], 1:[]}
+          _tmp=0
+          for x in kmeans.predict(test):
+            #print(x, test[_tmp][0],k)
+            fmap[x] += [test[_tmp][0]]
+            _tmp += 1
+            amap = {}
+          
+          for x in fmap:
+            amap[x] = sum(fmap[x])/len(fmap[x])
+          if amap[0] > amap[1]:
+            final[k] = fmap[0]
+          else:
+            final[k] = fmap[1]
+            #print(fmap)
+
+        #print("final k: ",str(k),final[k])
         bp_dict[k] = {
         'med': numpy.median(final[k])           ,
         'mean': numpy.average(final[k])           ,        
@@ -111,10 +133,11 @@ if __name__ == "__main__":
         'whislo': min(final[k]),
         'whishi': max(final[k])
         }
+
     for k in final:
         final[k] = (numpy.average(final[k]),numpy.std(final[k]))
     
-    print("FINAL AFTER" + str(final) + "len : " + str(len(final)))
+    #print("FINAL AFTER" + str(final) + "len : " + str(len(final)))
 
 
     #for k in final:
@@ -155,12 +178,15 @@ if __name__ == "__main__":
                 #if str(tmp) not in k: continue
                 if f"-{lp}" not in k: continue
 
-                print("LP COUNT " + str(lp) + " key " + str(k))
-                
-                name = k.replace('tuberculosis-', '').replace('-40-', '-').replace(f'-{lp}', '')
+                #print("LP COUNT " + str(lp) + " key " + str(k))
+                name = k
+                print(name, max_treads)
+
+                name = k.replace('tuberculosis-', '').replace(f'-{max_treads}-', '-').replace(f'-{lp}', '')
                 name = name.replace('0-0', 'el0')
                 name = name.replace('1-0', 'el1')
                 name = name.replace('1-1', 'el2')
+                print(name)
                 
                 #name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
                 #name = name.replace('pcs_hs_lo_re_df', 'el2') 
@@ -192,9 +218,9 @@ if __name__ == "__main__":
                 #if str(tmp) not in k: continue
                 if f"-{lp}" not in k: continue
 
-                print("LP COUNT 2 " + str(lp) + " key " + str(k))
+                #print("LP COUNT 2 " + str(lp) + " key " + str(k))
                 
-                name = k.replace('tuberculosis-', '').replace('-40-', '-').replace(f'-{lp}', '')
+                name = k.replace('tuberculosis-', '').replace(f'-{max_treads}-', '-').replace(f'-{lp}', '')
                 name = name.replace('0-0', 'el0')
                 name = name.replace('1-0', 'el1')
                 name = name.replace('1-1', 'el2')
@@ -207,7 +233,7 @@ if __name__ == "__main__":
                 #name = name.replace('pcs_lo', 'el1') 
                 #name = name.replace('pcs', 'el0') 
 
-                print("NAME: " + str(name))
+                #print("NAME: " + str(name))
                 
                 if 'seq' in name: continue
 
@@ -219,7 +245,7 @@ if __name__ == "__main__":
                     name = 'baseline'
 
 
-                print("FINAL NAME : " + name)
+                #print("FINAL NAME : " + name)
 
                 x += [name]
                 y += [final[k][0]]
