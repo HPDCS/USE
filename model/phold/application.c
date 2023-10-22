@@ -6,69 +6,40 @@
 
 #include "application.h"
 
-//#include <timer.h>
-
-//lp_state_type LPS[1024] __attribute__((aligned (64)));
-
-#define LA (50)
 
 void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *state) {
 
 	simtime_t timestamp, delta;
 	unsigned int 	i, j = 123;
-	//event_content_type new_event;
 	unsigned long long loops, tmp; 
-	//lp_state_type *state_ptr = &(LPS[me]); //(lp_state_type*)state;
 	lp_state_type *state_ptr = (lp_state_type*)state;
 	
 	(void) me;
 	(void) event_content;
 	(void) size;
 	
-	//timer tm_ex;
-	
 
 	if(state_ptr != NULL)
 		state_ptr->lvt = now;
 		
-	//printf("EVENT INIT: %d\n", INIT);	
-	//printf("EVENT TYPE: %d\n", event_type);
-
-
 	switch (event_type) {
 
 		case INIT:
-			// Initialize LP's state
-			//state_ptr = (lp_state_type *)malloc(sizeof(lp_state_type));
-
-			//if(states[me] == NULL)
-			//	state_ptr = states[me];
-
-			//Allocate a pointer of 64 bytes aligned to 64 bytes (cache line size)
-		//	err = posix_memalign((void **)(&state_ptr), 64, 64);
-		//	if(err < 0) {
-		//		printf("memalign failed: (%s)\n", strerror(errno));
-		//		exit(-1);
-		//	}
-		//
-        //    if(state_ptr == NULL){
-		//		printf("LP state allocation failed: (%s)\n", strerror(errno));
-		//		exit(-1);
-        //    }
             
+            /* allocate state for the target LP */
             state_ptr = malloc(sizeof(lp_state_type));
 			if(state_ptr == NULL) {
 				printf("malloc failed\n");
 				exit(-1);
 			}
 
-
-			// Explicitly tell ROOT-Sim this is our LP's state
+			// Explicitly tell this is our LP's state
             SetState(state_ptr);
 			
 			state_ptr->events = 0;
 
 			if(me == 0) {
+				/* this print is ok because init is never rolled back */ 
 				printf("Running a traditional loop-based PHOLD benchmark with counter set to %lld, %d total events per LP, lookahead %f\n", LOOP_COUNT_US*CLOCKS_PER_US, COMPLETE_EVENTS, LOOKAHEAD);
 			}
 			
@@ -81,30 +52,15 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 		case EXTERNAL_LOOP:
 		case LOOP:
-			//timer_start(tm_ex);
-
-			//loops = LOOP_COUNT * 29;// * (1 - VARIANCE) + 2 * (LOOP_COUNT * 29) * VARIANCE * Random();
 			tmp = CLOCK_READ();
-                        loops = tmp;
-                        while( (tmp-loops) < (LOOP_COUNT_US*CLOCKS_PER_US) ){
-                            tmp = CLOCK_READ();
-                        }
-			if((tmp - loops) < (LOOP_COUNT_US*CLOCKS_PER_US)) printf("error looping less than required\n");
-			//else printf("che passed %llu %llu %llu %llu\n", tmp, loops, tmp-loops, LOOP_COUNT*CLOCKS_PER_US);
-			//for(i = 0; i < loops ; i++) {
-			//		j = i*i;
-			//}
-			//printf("timer: %d\n", timer_value_micro(tm_ex));
+            loops = tmp;
+            while( (tmp-loops) < (LOOP_COUNT_US*CLOCKS_PER_US) )
+                tmp = CLOCK_READ();
 
 			state_ptr->events++;
 
 			delta = LOOKAHEAD + Expent(TAU);
 			timestamp = now + delta;
-#if DEBUG == 1
-			if(timestamp < now){
-				printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
-			}
-#endif
 
 			if(event_type == LOOP)
 				ScheduleNewEvent(me, timestamp, LOOP, NULL, 0);
@@ -114,11 +70,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 				for(j=0;j<FAN_OUT;j++){
 						delta = LOOKAHEAD + Expent(TAU);
 						timestamp = now + delta;
-#if DEBUG == 1
-						if(timestamp < now){
-							printf("ERROR: new ts %f smaller than old ts %f\n", timestamp, now);	
-						}
-#endif
 						ScheduleNewEvent(FindReceiver(TOPOLOGY_MESH), timestamp, EXTERNAL_LOOP, NULL, 0);
 				}
 			}
@@ -140,12 +91,6 @@ void ProcessEvent(int me, simtime_t now, int event_type, event_content_type *eve
 
 bool OnGVT(unsigned int me, lp_state_type *snapshot) {
 	(void) me;
-	//printf("TOTALE: %u\n", snapshot->events);//to_removeS
-
-	if(snapshot->events < COMPLETE_EVENTS) {
-//	if(snapshot->lvt < COMPLETE_TIME) {
-        return false;
-    }
-	return true;
+	return snapshot->events >= COMPLETE_EVENTS;
 }
 
