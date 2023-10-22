@@ -16,8 +16,7 @@ double ran;
 void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_type *event_content, unsigned int size, void *ptr) {
 	unsigned int w;
 	(void)size;
-	//printf("%d executing %d at %f\n", me, event_type, now);
-
+	
 	event_content_type new_event_content;
 
 	new_event_content.cell = -1;
@@ -123,8 +122,6 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				new_event_content.channel = allocation(state);
 				new_event_content.from = me;
 				new_event_content.sent_at = now;
-
-//				printf("(%d) allocation %d at %f\n", me, new_event_content.channel, now);
 
 				// Determine call duration
 				switch (DURATION_DISTRIBUTION) {
@@ -256,19 +253,11 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			break;
 
 
-				case FADING_RECHECK:
+			case FADING_RECHECK:
 
-/*
-			if(state->check_fading)
-				state->check_fading = false;
-			else
-				state->check_fading = true;
-*/
-
-			fading_recheck(state);
-
-			timestamp = now + (simtime_t) (FADING_RECHECK_FREQUENCY );
-			ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
+				fading_recheck(state);
+				timestamp = now + (simtime_t) (FADING_RECHECK_FREQUENCY );
+				ScheduleNewEvent(me, timestamp, FADING_RECHECK, NULL, 0);
 
 			break;
 
