@@ -31,3 +31,32 @@ The remaining two are API for interacting with the simulation engine.
 
 * OnGVT:
     All models must implement this function. It receives a read-only state of the targeted simulation object. Its main goal is inspecting the simulation state and communicate to the platform (by returning true) if the simulation can end according to targeted simulation object. The simulation ends when all simulation objects can end.
+
+
+How to compile a model
+----------------------
+
+1. Put your code in 'model/<model_name>' folder
+2. Update the Makefile for compiling:
+  1. add your sources:
+     ```
+        <model_name>_SOURCES=model/<model_name>/application.c
+     ```
+  2. add target objects:
+     ```
+        <model_name>_OBJ=$(<model_name>_SOURCES:.c=.o)
+     ```
+  3. add rule for compiling your model as an object
+     ```
+        _<model_name>: $(<model_name>_OBJ)
+       @ld -r -g $(<model_name>_OBJ) -o model/__application.o
+     ```
+  4. add rule for compiling your model as executable
+     ```
+        <model_name>: TARGET=<model_name> 
+        <model_name>: clean _<model_name> executable
+     ```
+  5. compile
+     ```
+      make <model_name>
+     ```

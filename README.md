@@ -24,14 +24,15 @@ implementing the object state-layout.
 
 1. USE-IT is written in C standard.
 2. USE-IT targets x86 platforms.
-3. The build system is [Make](http://cmake.org), and we require version 2.8 or higher.
+3. The build system is [Make](https://www.gnu.org/software/make/), and we require version 2.8 or higher.
 
 ## Startup Instructions
 
 1. Clone the repository to your local machine.
-2. Make your model (see model/ReadMe.md for further information).
+2. cd USE ; make config
+3. Make your model (see model/ReadMe.md for further information).
 4. Adds rules about your model in Makefile, following the existing models.
-3. Run your model as 'executable number_of_threads number_of_LPs'.
+5. Run your model as 'executable number_of_threads number_of_LPs'.
 
 ## Configuration
 
@@ -74,7 +75,7 @@ PRINT_SCREEN:
 if set to 1 enables colored prints.
 
 NUMA: 
-defining this macro the NUMA capabilities are enable: each LP is binded to a NUMA node is is managed by threads executing on this node.
+defining this macro the NUMA capabilities are enabled: each LP is binded to a NUMA node is is managed by threads executing on this node.
 
 PARALLEL_ALLOCATOR: 
 defining this macro the a substet of the NUMA capabilities are enable: each LP is binded to a NUMA node, but any thread can execute it.

@@ -327,6 +327,12 @@ NOSQL_OBJ=$(NOSQL_SOURCES:.c=.o)
 ROBOT_EXPLORE_OBJ=$(ROBOT_EXPLORE_SOURCES:.c=.o)
 
 
+######################################
+# RULES FOR COMPILING MODELS
+######################################
+
+
+
 all: phold # pcs pcs-prealloc traffic tcar phold robot_explore hash
 
 pcs: TARGET=pcs 
