@@ -20,12 +20,6 @@ datafiles = {}
 runs =  [str(x) for x in range(12)]
 max_treads='40'
 
-for line in open("thread.conf"):
-    if "MAX_THREADS" in line:
-        line = line.split("=")[-1].split("#")[0].replace('"', '').strip().split(' ')
-        #print(line)
-        max_treads = str(max([int(x) for x in line]))
-
 enfl_list=['0', '1']
 numa_list=['0', '1']
 
@@ -140,8 +134,8 @@ def get_samples_from_file(filename, seconds):
 
     #print("overall:",overall_samples)
     #print("filter:",len(samples))
-    iterations = 0
-    sigma = 2
+    iterations = 5
+    sigma = 2.5
 
     for i in range(iterations):
         if len(samples) == 0:

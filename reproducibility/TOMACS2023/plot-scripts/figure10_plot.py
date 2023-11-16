@@ -1,8 +1,8 @@
 #!/bin/python3
 
-from common import *
+from commonF10 import *
 import os
-import common
+import commonF10 as common
 
 
 if __name__ == "__main__":
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     lp_list = common.lp_list
     
     tests= [sys.argv[2]]
-    ti_list=[]
+    ti_list=[0]
     for i in range(5)[1:]:
         ti_list += [i*seconds/4]
 
@@ -24,7 +24,9 @@ if __name__ == "__main__":
     #        print(f"file {sys.argv[1]+'/'+f} not found...still trying")
     
     for run in common.runs:
+        #print(run)
         for test in tests:
+            #print(test)
             count = -1
             fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
             tit = f"{test}"
@@ -41,6 +43,7 @@ if __name__ == "__main__":
 
             fig.suptitle(tit)
             for nlp in lp_list:
+                #print(nlp)
                 count+=1
                 isFirst=True
                 if len(lp_list) == 1: cur_ax = axs
@@ -49,6 +52,7 @@ if __name__ == "__main__":
                 cur_ax.set_ylabel("Throughput ($10^6$ evts per sec)")
                 cur_ax.title.set_text(" ".join(["#simulation objects:"+nlp]))
                 cur_ax.set_xticks(ti_list)
+                cur_ax.set_ylim([0,0.75])
                 #cur_ax.set_ylim([0,0.75])
                 custom_lines = []
                 custom_label = []
@@ -57,15 +61,16 @@ if __name__ == "__main__":
 
                 min_th = 100000
                 for f in dataset:
-                    if f.split('-')[2] != nlp: continue
-                    if f[-2:] != "-"+run : continue
+                    fn = f.replace(".dat", "")
+                    if fn.split('-')[2] != nlp: continue
+                    if fn[-2:] != "-"+run : continue
                     if 'hs' not in test:
                         if 'hs' in f: continue
                     else:
                         if 'hs' not in f: continue
                     
                     if "pcs_hs-" not in f and "pcs-" not in f: continue
-
+                    #print(f)
                     last_samples = dataset[f][0]
                     offset = -len(last_samples)/10
                     last_samples = last_samples[int(offset):]
@@ -78,9 +83,10 @@ if __name__ == "__main__":
                     #print(min_th)
                     
                 for f in dataset:
+                    fn = f.replace(".dat", "")
                     if 'seq' in f: continue
                     if f.split('-')[2] != nlp: continue
-                    if f[-2:] != "-"+run : continue
+                    if fn[-2:] != "-"+run : continue
                     if 'hs' not in test:
                         if 'hs' in f: continue
                     else:
@@ -102,6 +108,7 @@ if __name__ == "__main__":
                         xavg += [numpy.average(x_value[i*steps:i*steps+steps])]
                     #print(len(dataplot), len(y_filtered), len(maxs), len(mins))
                     #cur_ax.plot(x_value[1:], dataplot[1:], color=colors[enfl], dashes=enfl_to_dash[enfl])
+                    cur_ax.set_ylim([0,max(maxs)*1.1])
                     cur_ax.plot(x_value, y_filtered, color=colors[enfl], dashes=enfl_to_dash[enfl])
                     #cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
 
@@ -114,4 +121,4 @@ if __name__ == "__main__":
                         custom_label += ['cache + NUMA opt.']
                 cur_ax.legend(custom_lines, custom_label,  ncol = 1) #, bbox_to_anchor=(1.12, -0.15))
                     
-            plt.savefig(f'figures/{sys.argv[1][:-1].replace("/", "-")}-{test}-{seconds}-{run}.pdf')
+            plt.savefig(f'figures/figure10b-{sys.argv[1][:-1].replace("/", "-")}-{test}-{seconds}-{run}.pdf')

@@ -41,7 +41,9 @@ matplotlib.use('Agg')
 import numpy as np
 import seaborn as sns
 import matplotlib.pylab as plt
+from matplotlib.colors import LinearSegmentedColormap
 cmap = sns.cm.rocket_r
+cmap_name = 'my_list'
 
 def ratio(a,b):
     return a/b
@@ -62,31 +64,32 @@ metric_function={
 }
 ta = "0.24"
 lp = "4096"
-q_list = [{
-"lp":lp,
-"ta":ta,
-"w" :"0.1"
-},
-{
-"lp":lp,
-"ta":ta,
-"w" :"0.2"
-},
-{
-"lp":lp,
-"ta":ta,
-"w" :"0.4"
-},
-{
-"lp":lp,
-"ta":ta,
-"w" :"0.8"
-},
-{
-"lp":lp,
-"ta":ta,
-"w" :"1.6"
-},
+q_list = [
+#{
+#"lp":lp,
+#"ta":ta,
+#"w" :"0.1"
+#},
+#{
+#"lp":lp,
+#"ta":ta,
+#"w" :"0.2"
+#},
+#{
+#"lp":lp,
+#"ta":ta,
+#"w" :"0.4"
+#},
+#{
+#"lp":lp,
+#"ta":ta,
+#"w" :"0.8"
+#},
+#{
+#"lp":lp,
+#"ta":ta,
+#"w" :"1.6"
+#},
 {
 "lp":lp,
 "ta":ta,
@@ -114,13 +117,14 @@ for query in q_list:
     for metric in metric_list:
         axs[count].set_title(metric_title[metric]) 
         base_query=query.copy()
-        base_query["w"]="0.1"
+        base_query["w"]="3.2"
 
         metric_idx = columns[metric]
+        #print([v[metric_idx] for k,v in baseline.items() if checkTest(k, base_query)])
         baseline_value = [v[metric_idx] for k,v in baseline.items() if checkTest(k, base_query)][0]
         filtereDataset  = {k:v[metric_idx] for k,v in dataset.items()  if checkTest(k, query)}
         
-        ebs_list = [1,2,4,8,16]
+        ebs_list = [1,2,4,8]
         cbs_list = ebs_list[::-1]
 
         dataplot= []
@@ -140,20 +144,22 @@ for query in q_list:
                     dat_sil = {k:v[columns["sil_evt"]] for k,v in dataset.items()  if checkTest(k, query)}[k]
                     dat_abo = {k:v[columns["abo_evt"]] for k,v in dataset.items()  if checkTest(k, query)}[k]
                     dat_value = (dat_abo)/float(dat_tot-dat_sil)
-                    #print(baseline_value, dat_value)
-                    row+=[ dat_value ]
+                    row+=[ dat_value/baseline_value ]
                 else:
                     row+=[metric_function[metric](filtereDataset[k],baseline_value)]    
 
             
             dataplot+=[row]
 
+        colors = [(0,(1, 1.0, 1)), (1,(0.2, 0.45, 0.25))]  # R -> G -> B
+        cmap = LinearSegmentedColormap.from_list(cmap_name, colors, N=1000)
+            
         if metric != "tot_rol":
             sns.heatmap(dataplot, ax=axs[count], square=True, linewidth=0.5, \
-                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".2f", cmap=cmap) 
+                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".2f", cmap=cmap, vmin=1.0) 
         else:
             sns.heatmap(dataplot, ax=axs[count], square=True, linewidth=0.5, \
-                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".2f", cmap=cmap)
+                    xticklabels=ebs_list, yticklabels=cbs_list, annot=True, fmt=".0f", cmap=cmap)
             
 
         axs[count].set_xlabel("Evicted pipe size")

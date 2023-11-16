@@ -158,7 +158,7 @@ for metric in metric_list:
         
     #print(final_y)
     cnt=0
-    print(newdata_y[0])
+    #print(newdata_y[0])
     cur_ax.plot(newdata_x[0], [v[0] for v in newdata_y[0]], color=gran_to_col['1'], dashes=enfl_to_dash[str(0)], label="USE")
     #cur_ax.plot(newdata_x[1], [v[0] for v in newdata_y[1]], color=gran_to_col['1'], dashes=enfl_to_dash[str(1)], label="USE +opt")
     cur_ax.plot(newdata_x[0], [v[1] for v in newdata_y[0]], color=gran_to_col['5'], dashes=enfl_to_dash[str(0)], label="USE")

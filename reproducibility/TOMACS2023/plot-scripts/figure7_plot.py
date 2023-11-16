@@ -131,7 +131,7 @@ for metric in metric_list:
                 x_value += [float(query["threads"])]
                 i = 2
                 j = 2
-                k = "phold-enfl_"+enfl+"-threads_"+query["threads"]+"-lp_"+query["lp"]+"-maxlp_1000000-look_0-ck_per_20-fan_1-loop_"+query["loop"]
+                k = "phold-enfl_"+enfl+"-threads_"+query["threads"]+"-lp_"+query["lp"]+"-maxlp_1000000-look_0-fan_1-loop_"+query["loop"]
                 dataplot+=[metric_function[metric](filtereDataset[k],baseline_value)] #baseline_value[k.replace("enfl_1", "enfl_0")])]    
                 cur_ax.plot(x_value, dataplot, color=gran_to_col[g], dashes=enfl_to_dash[enfl])
             if isFirst:
