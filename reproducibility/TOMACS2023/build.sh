@@ -24,5 +24,5 @@ rm use-release -r
 echo --Preparing directories for binaries
 mkdir use-release
 cd use-release
-cmake ../../.. -DCMAKE_BUILD_TYPE=Debug && make
+cmake ../../.. -DCMAKE_BUILD_TYPE=$1 && make
 cd ..
