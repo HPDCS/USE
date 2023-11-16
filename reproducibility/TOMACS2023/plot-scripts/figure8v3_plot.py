@@ -1,185 +1,201 @@
-#!/bin/python3
+inputFile = "data/figure7.csv"
 
-from common import *
-import common
-import os
-
-
-if __name__ == "__main__":
-    configure_globals(sys.argv[2])
-
-    seconds = common.seconds
-    lp_list = common.lp_list
-
-    bp_dict = {}
-    tests= [sys.argv[2]]
-    
-    dataset = {}
-    
-
-    for f in common.datafiles:
-        if os.path.isfile(sys.argv[1]+'/'+f):
-            dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
-    
-
-    x_value = []
-    for i in range(seconds*2):
-        x_value += [0.5*i]
-    final = {}
+dataset={}
+baseline={}
+columns={}
 
 
-    for test in tests:
-        for nlp in lp_list:
-            isFirst=True
-            for f in dataset:
-                if f.split('-')[2] != nlp: continue
-                #if f[-2:] != "-"+run : continue
-                if 'hs' not in test:
-                    if 'hs' in f: continue
-                else:
-                    if 'hs' not in f: continue
-                
-                enfl=datafiles[f]
-                res,tot_evt = dataset[f]
-                dataset[f] = res
-                dataplot = []
-                for i in range(len(dataset[f])):
-                    #if dataset[f][i][1]<1000*seconds/2: continue
-                    if len(dataplot) == 0:
-                        dataplot += [dataset[f][i][0]*dataset[f][i][1]]
-                    else:
-                        dataplot += [dataset[f][i][0]*(dataset[f][i][1]-dataset[f][i-1][1])]
-                        
-                avg = sum(dataplot)/seconds/1000
-                if(avg < 0):
-                    print(f,dataplot)
-                    exit()
-                #dataplot= dataplot[int(len(dataplot)/2):]
-                key = '-'.join(f.split('-')[:-1])
-                if key not in final:
-                    final[key] = []
-                final[key] += [avg]
+def checkTest(test, q):
+    for k in q:
+        for pair in test.split("-"):
+            if k==pair.split("_")[0] and k+"_"+q[k] != pair:
+                return False
+    return True
 
-    for k in final:
-        final[k] = sorted(final[k])
-        final[k] = final[k][1:-1]
-        bp_dict[k] = {
-        'med': numpy.median(final[k])           ,
-        'mean': numpy.average(final[k])           ,        
-        'q1':  numpy.percentile(final[k], quantiles[0]),
-        'q3':  numpy.percentile(final[k], quantiles[1]),
-        'whislo': min(final[k]),
-        'whishi': max(final[k])
-        }
-    for k in final:
-        final[k] = (numpy.average(final[k]),numpy.std(final[k]))
-    
+def filterData(l, idxs):
+    return [ l[i] for i in idxs]
 
 
+f = open(inputFile)
+header=""
+count=0
+for line in f:
+    line = line.strip()
+    if count == 0:
+        header = line
+        count+=1
+        continue
+    test=line.split(",")[0]
+    if "enfl_0-" in test:
+        baseline[test] = [float(x) for x in line.split(",")[1:]]
+        dataset[test] = [float(x) for x in line.split(",")[1:]]
+    else:
+        dataset[test] = [float(x) for x in line.split(",")[1:]]
 
+count = 0
+for k in header.split(",")[1:]:
+    columns[k] = count
+    count+=1
 
+#print(columns)
 
+import matplotlib
+matplotlib.use('Agg')
+import numpy as np
+import matplotlib.pylab as plt
+from matplotlib.lines import Line2D
 
+def ratio(a,b):
+    #return a/b
+    return (a/20.0)/1000000.0
 
+def inverse_ratio(b,a):
+    return a/b
 
-    for test in tests:
-        fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
-        tit = f"{test}"
-        if test == 'pcs':
-            tit = 'PCS'
-        else:
-            tit = 'PCS with 20%/ 80% hot/ordinary cells'
+metric_list = ["com_evt"]
 
-        if '0.48' in sys.argv[1]:
-            tit += ' - '+ta2rho['0.48']
-        if '0.24' in sys.argv[1]:
-            tit += ' - '+ta2rho['0.24']
-        if '0.12' in sys.argv[1]:
-            tit += ' - '+ta2rho['0.12']
+metric_title={
+    "com_evt" : "Throughput (Mevts per sec)",
+    "avg_nod" : "Overall Speedup",
+    "tot_rol" : "Abort probability",
+    "evt_gra" : "Event Processing Speedup"
+}
+metric_function={
+    "com_evt" : ratio,
+    "tot_evt" : ratio,
+    "avg_nod" : ratio,
+    "evt_gra" : inverse_ratio
+}
 
-        fig.suptitle(tit)
+gran_list=[1, 5, 10, 25, 50, 100, 200, 400]
+gran_to_col={
+    "1"  :"darkcyan",
+    "5"  :"goldenrod",
+    "10" :"silver",
+    "25" :"chocolate",
+    "50" :"darkblue",
+    "100":"indigo",
+    "200":"darkgreen",
+    "400":"darkred",
+}
 
-        count = -1
-        maxval = 0
-        minval = 100000
-        for lp in lp_list:
-            count+=1
-            if len(lp_list) == 1: cur_ax = axs
-            else: cur_ax = axs[count] 
-            #cur_ax.set_ylabel("Speedup w.r.t USE")
-            cur_ax.set_ylabel("Throughput ($10^6$ evts per sec)")
-            cur_ax.title.set_text(" ".join(["#simulation objects:"+lp]))
+enfl_to_dash={
+    "0":[1, 0],
+    "1":[1, 1],
+}
 
-            baseline = 0
-            x = []
-            y = []
-            cur_bp = []
-            for k in final:
-                if f"-{lp}-" not in k: continue
-                if 'hs' in test and 'hs' not in k: continue
-                if 'hs' not in test and 'hs' in k: continue
-                #print(k)
-                name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
-                name = name.replace('pcs_hs_lo_re_df', 'el2') 
-                name = name.replace('pcs_hs_lo', 'el1') 
-                name = name.replace('pcs_hs', 'el0') 
-                name = name.replace('pcs_lo_re_df', 'el2') 
-                name = name.replace('pcs_lo', 'el1') 
-                name = name.replace('pcs', 'el0')
-                #print(name) 
-                if name == 'seq-1' : 
-                    #print(k)
-                    baseline = final[k][0] 
-                    y += [baseline]
-                    #print(baseline)
-                    bp_dict[k]['label'] = 'sequential'
-                    cur_bp += [bp_dict[k].copy()]
-                if name == 'seq_hs-1' : 
-                    #print(k)
-                    baseline = final[k][0] 
-                    y += [baseline]
-                    #print(baseline)
-                    bp_dict[k]['label'] = 'sequential'
-                    cur_bp += [bp_dict[k].copy()]
-            for k in final:
-                if f"-{lp}-" not in k: continue
-                if 'hs' in test and 'hs' not in k: continue
-                if 'hs' not in test and 'hs' in k: continue
-                name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
-                name = name.replace('pcs_hs_lo_re_df', 'el2') 
-                name = name.replace('pcs_hs_lo', 'el1') 
-                name = name.replace('pcs_hs', 'el0') 
-                name = name.replace('pcs_lo_re_df', 'el2') 
-                name = name.replace('pcs_lo', 'el1') 
-                name = name.replace('pcs', 'el0') 
-                if name == 'seq-1': continue
-                if name == 'seq_hs-1': continue
-                if name == 'el1':
-                    name = 'cache\nopt.'
-                elif name == 'el2':
-                    name = 'cache\n+ NUMA opt.'
-                elif name == 'el0':
-                    name = 'baseline'
-                x += [name]
-                y += [final[k][0]]
-                bp_dict[k]['label'] = name
-                cur_bp += [bp_dict[k].copy()]
-                if maxval < y[-1]: maxval = y[-1]
-                if minval > y[-1]: minval = y[-1]
-            #print("BASELINE", baseline, lp)
-            for d in cur_bp:
-                #print(d)
-                for v in d:
-                    #print(v, d[v])
-                    if v != 'label':
-                        d[v] = d[v] #/baseline
+threads_list =  [1, 6, 12, 24, 36, 48]
+for line in open("thread.conf"):
+    if "THREAD_list" in line:
+        line = line.split("=")[-1].split("#")[0].replace('"', '').strip().split(' ')
+        #print(line)
+        threads_list = [int(x) for x in line]
 
-            cur_ax.bxp(cur_bp, showfliers=False, showmeans=True)
-            #cur_ax.set_ylim(ran)
-            cur_ax.yaxis.grid()
-            #cur_ax.yaxis.set_ticks(np.arange(ran[0], ran[1], 0.05))
-            #cur_ax.set_ylabel("Speedup w.r.t USE")
+q_list = []
+for t in threads_list:
+    q_list += [{"lp":"1024","threads":str(t)}]
 
+fig, axs = plt.subplots(1,len(metric_list), figsize = (5*len(metric_list),3))
+tit = " ".join(["#simulation objects:1024"])
+fig.suptitle(tit)
+
+count = -1
+for metric in metric_list:
+    count+=1
+    if len(metric_list) == 1: cur_ax = axs
+    else: cur_ax = axs[count] 
+    cur_ax.set_xlabel("Granularity ("+r"$\mu$"+"s)")
+    cur_ax.set_ylabel(metric_title[metric])
+    metric_idx = columns[metric]
+    custom_lines = []
+    custom_label = []
+    isFirst = True
+    newdata_x = [[], []]
+    newdata_y = [[], []]
+    dataset_per_th = {}
+    for g in gran_list:
+        g = str(g)
+        for enfl in ["0", "1"]:
+            dataplot= []
+            x_value= []
+            for query in q_list:
+                query["enfl"]=enfl
+                query["loop"]=g
+                base_query=query.copy()
+                base_query["enfl"]="0"
+                base_query["threads"]="1"
+                filtereDataset  = {k:v[metric_idx] for k,v in dataset.items()  if checkTest(k, query)}
+                dir = {k:v[metric_idx] for k,v in baseline.items() if checkTest(k, base_query)}
+                baseline_value  = [v[metric_idx] for k,v in baseline.items() if checkTest(k, base_query)][0]
+                x_value += [float(query["threads"])]
+                i = 2
+                j = 2
+                k = "phold-enfl_"+enfl+"-threads_"+query["threads"]+"-lp_"+query["lp"]+"-maxlp_1000000-look_0-fan_1-loop_"+query["loop"]
+                dataplot+=[metric_function[metric](filtereDataset[k],baseline_value)] #baseline_value[k.replace("enfl_1", "enfl_0")])]   
+            #print(g,dataplot)
+            newdata_x[int(enfl)] += [int(g)]
+            newdata_y[int(enfl)] += [[dataplot[0],dataplot[1],dataplot[3],dataplot[-1]]]
+            #newdata_y[int(enfl)] += [dataplot]
+            if isFirst and False:
+                custom_lines += [Line2D([0], [0], color='black', dashes=enfl_to_dash[enfl])]
+                if enfl == '0':
+                    custom_label += ["USE"]
+                if enfl == '1':
+                    custom_label += ["cache+NUMA opt."]
+            
+        if isFirst: 
+            isFirst = False
+    #print(newdata_x, newdata_y) 
+    #print(newdata_x[0], newdata_y[0]) 
+
+    final_y = []
+
+    for i in range(len(newdata_y[0])):
+        #for j in range(len(newdata_y[0][i])):
+        #  pass
+        #print(newdata_x[0][i], newdata_y[0][i][1]/newdata_y[0][i][0])
+        pass #print()
         
-        plt.savefig(f'figures/{sys.argv[1][:-1].replace("/", "-")}-{test}-half.pdf')
+    #print(final_y)
+    cnt=0
+    print(newdata_y[0])
+    cur_ax.plot(newdata_x[0], [v[0] for v in newdata_y[0]], color=gran_to_col['1'], dashes=enfl_to_dash[str(0)], label="USE")
+    #cur_ax.plot(newdata_x[1], [v[0] for v in newdata_y[1]], color=gran_to_col['1'], dashes=enfl_to_dash[str(1)], label="USE +opt")
+    cur_ax.plot(newdata_x[0], [v[1] for v in newdata_y[0]], color=gran_to_col['5'], dashes=enfl_to_dash[str(0)], label="USE")
+    cur_ax.plot(newdata_x[1], [v[1] for v in newdata_y[1]], color=gran_to_col['5'], dashes=enfl_to_dash[str(1)], label="USE +opt")
+    cur_ax.plot(newdata_x[0], [v[2] for v in newdata_y[0]], color=gran_to_col['25'], dashes=enfl_to_dash[str(0)], label="USE")
+    cur_ax.plot(newdata_x[1], [v[2] for v in newdata_y[1]], color=gran_to_col['25'], dashes=enfl_to_dash[str(1)], label="USE +opt")
+    cur_ax.plot(newdata_x[0], [v[3] for v in newdata_y[0]], color=gran_to_col['50'], dashes=enfl_to_dash[str(0)], label="USE")
+    cur_ax.plot(newdata_x[1], [v[3] for v in newdata_y[1]], color=gran_to_col['50'], dashes=enfl_to_dash[str(1)], label="USE +opt")
+                            
+    #print(newdata_x[0][-1],newdata_y[1][-1][-1])
+    #cur_ax.plot(newdata_x[0][-1],newdata_y[1][-1][-1], marker='o', color='r') 
+    #cur_ax.plot(newdata_x[0][6],newdata_y[1][6][-1], marker='o', color='green') 
+    #cur_ax.plot(newdata_x[0][3],newdata_y[1][3][-1], marker='o', color='blue') 
+    #cur_ax.plot(newdata_x[0][4],newdata_y[1][4][-1], marker='o', color='purple') 
 
+
+    for g in [3,5,6,7]:
+        for t in [-1, -2, -3]:
+            cur_ax.annotate("x{:.1f}".format(newdata_y[1][g][t]/newdata_y[0][g][0]),(newdata_x[0][g],newdata_y[1][g][t]), size=8) 
+    
+    custom_lines += [Line2D([0], [0], color='black', dashes=enfl_to_dash[str(0)])]
+    custom_lines += [Line2D([0], [0], color='black', dashes=enfl_to_dash[str(1)])]
+    custom_label += ["USE"]
+    custom_label += ["OPT"]
+    custom_lines += [Line2D([0], [0], color=gran_to_col['1'], dashes=enfl_to_dash[str(0)])]
+    custom_label += ["1 threads"]
+    custom_lines += [Line2D([0], [0], color=gran_to_col['5'], dashes=enfl_to_dash[str(0)])]
+    custom_label += ["5 threads"]
+    custom_lines += [Line2D([0], [0], color=gran_to_col['25'], dashes=enfl_to_dash[str(0)])]
+    custom_label += ["20 threads"]
+    custom_lines += [Line2D([0], [0], color=gran_to_col['50'], dashes=enfl_to_dash[str(0)])]
+    custom_label += ["40 threads"]
+    #cur_ax.legend(custom_lines, custom_label,loc="upper right",  ncol = 1, bbox_to_anchor=(1.4, 1.05))
+    cur_ax.legend(custom_lines, custom_label) #,loc="upper right",  ncol = 1, bbox_to_anchor=(1.4, 1.05))
+    cur_ax.set_xlim(-10,440)
+    
+plt.savefig('figures/figure8.pdf', bbox_inches='tight')
+cur_ax.set_yscale("log", base=2)
+
+plt.savefig('figures/figure8-log.pdf', bbox_inches='tight')
