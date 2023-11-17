@@ -13,11 +13,9 @@ TA_DURATION_list="120"
 TA_list="0.48 0.24 0.16 0.12"
 
 LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"		#lookahead
-WINDOW_list="0.1 0.2 0.4 0.8 1.6 3.2 6.4 12.8"
+WINDOW_list="0.1 0.2 0.4 0.8 1.6 3.2" # 6.4 12.8"
 CURRENT_BINDING_SIZE="2" # 2 4 8"
 EVICTED_BINDING_SIZE="2" # 2 4 8"
-
-CKP_PER_list="20" #"10 50 100"
 
 MAX_RETRY="10"
 TEST_DURATION="30"
@@ -29,14 +27,6 @@ FOLDER="results/pcs_win_explore" #/results_phold_$(date +%Y%m%d)-$(date +%H%M)"
 
 mkdir -p ${FOLDER}
 
-#for max_lp in $MAX_SKIPPED_LP_list
-#do
-#for ck in $CKP_PER_list
-#do
-#for pub in $PUB_list
-#do
-#for epb in $EPB_list
-#do
 for cbs in $CURRENT_BINDING_SIZE
 do
 for ebs in $EVICTED_BINDING_SIZE
@@ -92,16 +82,17 @@ do
 							do
 								runtime_options="-w ${TEST_DURATION} --ncores=$th --nprocesses=$lp --ckpt-autonomic-period"
 								cmd="$cmd ${runtime_options}"
-								echo $cmd
 
 								EX1="./$cmd"
 								
 								
-								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}.dat"
-								
+								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}"
+								CMDFILE="$FILE1.sh"
+								FILE1="$FILE1.dat"
+
+								echo $EX1 > $CMDFILE
+
 								touch ${FILE1}
-								#echo $FILE1
-								#$EX1 > $FILE1
 								
 								N=0
 								while [[ $(grep -c "Simulation ended" $FILE1) -eq 0 ]]
@@ -129,6 +120,3 @@ done
 done
 done
 done
-#done
-#done
-#done

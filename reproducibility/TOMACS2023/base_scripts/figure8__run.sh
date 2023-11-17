@@ -40,6 +40,8 @@ for time in $time_list; do
 		for r in $run_list; do
 			runtime_options="--ncores=$THREADS --nprocesses=$lp -w $time --enable-custom-alloc"
 			filename=$FOLDER/$exe-$THREADS-$lp-$time-$r
+			cmdfile="$filename.sh"
+			filename="$filename.dat"
 			EX1="./use-release/test/test_pcs ${runtime_options} ${model_configuration}"
 			if [[ $exe != "pcs" ]]; then
 				EX1="$EX1 ${locality_options}"
@@ -48,6 +50,7 @@ for time in $time_list; do
 				EX1="$EX1 ${memory_options}"
 			fi
 			N=0 
+			echo $EX1 > $cmdfile
 			while [[ $(grep -c "Simulation ended" $filename) -eq 0 ]]
 			do
 				echo $BEGIN
@@ -73,8 +76,11 @@ for time in $time_list; do
 		for r in $run_list; do
 			runtime_options="--ncores=1 --nprocesses=$lp -w $time"
 			filename=$FOLDER/seq-1-$lp-$time-$r
+			cmdfile="$filename.sh"
+			filename="$filename.dat"
 			EX1="./use-release/test/test_pcs ${runtime_options} ${model_configuration}"
 			N=0 
+			echo $EX1 > $cmdfile
 			while [[ $(grep -c "Simulation ended" $filename) -eq 0 ]]
 			do
 				echo $BEGIN

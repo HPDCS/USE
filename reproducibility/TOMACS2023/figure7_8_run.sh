@@ -11,8 +11,6 @@ FAN_OUT_list="1" # 50"				#fan out list
 LOOKAHEAD_list="0" # 0.01" #"0 0.1 0.01"		#lookahead list
 LOOP_COUNT_list="1 5 10 25 50 100 200 400" 				#loop_count #50 100 150 250 400 600" 400=60micsec
 
-CKP_PER_list="20" #"10 50 100"
-
 PUB_list="0.33"
 EPB_list="3"
 
@@ -36,8 +34,6 @@ mkdir -p results/results_phold
 for enfl in $ENF_LOCALITY_list
 do
 for max_lp in $MAX_SKIPPED_LP_list
-do
-for ck in $CKP_PER_list
 do
 for pub in $PUB_list
 do
@@ -75,8 +71,10 @@ do
 							
 						EX="./$ecmd"
 								
-						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-ck_per_${ck}-fan_${fan_out}-loop_${loop_count}-run_${run}"; 
-
+						FILE="${FOLDER}/${test}-enfl_${enfl}-threads_${threads}-lp_${lp}-maxlp_${max_lp}-look_${lookahead}-fan_${fan_out}-loop_${loop_count}-run_${run}";
+						CMDFILE="$FILE.sh"
+						echo $ecmd > $CMDFILE
+						FILE="$FILE.dat"
 						touch ${FILE}
 
 						N=0 
@@ -101,7 +99,6 @@ do
 				done
 		done
 	done
-done
 done
 done
 done

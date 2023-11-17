@@ -40,8 +40,11 @@ for time in $time_list; do
 		for r in $run_list; do
 			runtime_options="--ncores=$THREADS --nprocesses=$lp -w $time  --enable-custom-alloc"
 			filename=$FOLDER/$exe-$THREADS-$lp-$time-$r
+            cmdfile="$filename.sh"
+            filename="$filename.dat"
 			EX1="./use-release/test/test_pcs ${runtime_options} ${model_configuration}"
-			if [[ $exe != "pcs_hs" ]]; then
+			echo $EX1 > $cmdfile
+            if [[ $exe != "pcs_hs" ]]; then
 				EX1="$EX1 ${locality_options}"
 			fi
 			if [[ $exe == "pcs_hs_lo_re_df" ]]; then
@@ -74,6 +77,9 @@ for time in $time_list; do
 			runtime_options="--ncores=1 --nprocesses=$lp -w $time"
 			filename=$FOLDER/seq_hs-1-$lp-$time-$r
 			EX1="./use-release/test/test_pcs ${runtime_options} ${model_configuration}"
+            cmdfile="$filename.sh"
+            filename="$filename.dat"
+			echo $EX1 > $cmdfile
 			N=0 
 			while [[ $(grep -c "Simulation ended" $filename) -eq 0 ]]
 			do

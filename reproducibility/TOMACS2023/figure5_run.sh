@@ -13,11 +13,10 @@ TA_DURATION_list="120"
 TA_list="0.24"
 
 LOOKAHEAD_list="0" 
-WINDOW_list="0.1 0.2 0.4 0.8 1.6 3.2"
-CURRENT_BINDING_SIZE="1 2 4 8 16"
-EVICTED_BINDING_SIZE="1 2 4 8 16"
-
-CKP_PER_list="20"
+WINDOW_list="3.2" #"0.1 0.2 0.4 0.8 1.6 3.2"
+BASELINE="3.2"
+CURRENT_BINDING_SIZE="1 2 4 8" # 16"
+EVICTED_BINDING_SIZE="1 2 4 8" # 16"
 
 MAX_RETRY="10"
 TEST_DURATION="30"
@@ -29,14 +28,6 @@ FOLDER="results/pcs_static_win"
 
 mkdir -p ${FOLDER}
 
-#for max_lp in $MAX_SKIPPED_LP_list
-#do
-#for ck in $CKP_PER_list
-#do
-#for pub in $PUB_list
-#do
-#for epb in $EPB_list
-#do
 for cbs in $CURRENT_BINDING_SIZE
 do
 for ebs in $EVICTED_BINDING_SIZE
@@ -57,40 +48,31 @@ do
 					model_options="--ta=$tav --duration=$tad --handoff-rate=$tac"
 					memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
 					locality_options="--enforce-locality --el-locked-size=$cbs --el-evicted-size=$ebs --el-window-size=$w"
-					
-					#cmd="make $test"
-					#cmd="$cmd ENFORCE_LOCALITY=$df"
-					#cmd="$cmd ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0"
-					#cmd="$cmd CURRENT_BINDING_SIZE=$cbs"
-					#cmd="$cmd EVICTED_BINDING_SIZE=$ebs"
-					#cmd="$cmd START_WINDOW=$w"
 
 					cmd="$cmd ${model_options}"
 
 					if [ $df = "1" ]; then
-						#cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
 						cmd="$cmd ${memory_options} ${locality_options}"
 					fi
 
-					#cmd="$cmd TA_CHANGE=$tac TA_DURATION=$tad TA=$tav"
-					#echo $cmd
-					#$cmd
 
 					if [ $df = "0" ]; then
-						if [ "$w" = "0.1" ]; then
+						if [ "$w" = "$BASELINE" ]; then
                                                    echo OK
-						   
 						else
 						   echo skip null test
 						   continue
 						fi
-                        if [ "$ebs" = "1" ]; then echo OK
-                        else echo skip null test; continue
-                        fi
-                        if [ "$cbs" = "1" ]; then echo OK
-                        else echo skip null test; continue
-                        fi
+
+						if [ "$ebs" = "1" ]; then echo OK
+        	                		else echo skip null test; continue
+                	        		fi
+
+						if [ "$cbs" = "1" ]; then echo OK
+                       				else echo skip null test; continue
+                        			fi
 					fi
+
 					for run in $RUN_list
 					do
 						for lp in $LP_list
@@ -102,14 +84,15 @@ do
 								echo $cmd
 
 								EX1="./$cmd"
-								
-								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}.dat"
-								
+
+								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}"
+								CMDFILE="$FILE1.sh"
+								FILE1="$FILE1.dat"
+								echo $cmd > $CMDFILE
+
 								touch ${FILE1}
-								#echo $FILE1
-								#$EX1 > $FILE1
-								
-								N=0 
+
+								N=0
 								while [[ $(grep -c "Simulation ended" $FILE1) -eq 0 ]]
 								do
 									echo $BEGIN
@@ -123,7 +106,7 @@ do
 									N=$(( N+1 ))
 									echo "" >> $FILE1
 									echo $cmd >> $FILE1
-								done  				
+								done
 							done
 						done
 					done
@@ -135,6 +118,3 @@ done
 done
 done
 done
-#done
-#done
-#done
