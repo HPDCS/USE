@@ -8,8 +8,8 @@ RUN_list="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
 
 
 MAX_RETRY="10"
-ENF_LOCALITY_list=""
-NUMA_LIST=""
+ENF_LOCALITY_list="0 1"
+NUMA_LIST="0 1"
 
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
@@ -92,6 +92,7 @@ do
 done
 done
 
+#exit
 
 
 for test in $TEST_list 
