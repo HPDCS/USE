@@ -43,14 +43,14 @@ for time in $time_list; do
             cmdfile="$filename.sh"
             filename="$filename.dat"
 			EX1="./use-release/test/test_pcs ${runtime_options} ${model_configuration}"
-			echo $EX1 > $cmdfile
-            if [[ $exe != "pcs_hs" ]]; then
+			if [[ $exe != "pcs_hs" ]]; then
 				EX1="$EX1 ${locality_options}"
 			fi
 			if [[ $exe == "pcs_hs_lo_re_df" ]]; then
 				EX1="$EX1 ${memory_options}"
 			fi
-			N=0 
+			echo $EX1 > $cmdfile
+            N=0 
 			while [[ $(grep -c "Simulation ended" $filename) -eq 0 ]]
 			do
 				echo $BEGIN
