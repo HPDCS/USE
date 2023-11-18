@@ -84,7 +84,6 @@ def configure_globals(test):
 
 def get_samples_from_file(filename, seconds):
     f = open(filename)
-
     expected = int(seconds)*2
 
     samples = []
@@ -94,54 +93,48 @@ def get_samples_from_file(filename, seconds):
     cnt = 0
     if "_lo" not in filename and "-enfl_" not in filename:
         cnt += 1
-
-    overall_samples = 0
+    skew_samples = []
 
     for line in f.readlines():
         if 'Committed events..............................' in line:
             tot_evt =  int(line.split(' ')[-2])
 
         line = line.strip()
-        #print("LINE " + str(line))
         if 'thref' in line:
             if cnt == 0:
                 cnt+=1
                 continue
-            #print(line)
             ts   = int(line.split(' ')[-5])
-            line = line.split('thref')[0].split(' ')[-3:-1]
-            #print(line)
-            line = line[-1]
-            overall_samples += 1
-            
+            #print(line.split('thref')[0])
+            line = line.split('thref')[0].strip().split(' ')[-1]
             if ts == 0:
                 continue
             if ts > max_ts:
                 max_ts = ts
             if 'nan' in line:
-                if len(samples) > 0:
-                  line = samples[-1][0]
-                else: continue
-            elif 'inf' in line:
-                #continue
-                if len(samples) > 0:
-                  line = samples[-1][0]
-                else: continue
-            elif float(line) == 0.0:
-                if len(samples) == 0: continue
-                line = samples[-1][0]
-            #print(float(line),ts)
-            line = float(line)
-            if len(samples) > 0  and (line < samples[-1][0]/50.0 or line > samples[-1][0]*40.0):
-               line = samples[-1][0]
-            samples += [(line,ts)]
+                continue
+            if 'inf' in line:
+                continue
+            if float(line) == 0.0:
+                continue
+            samples += [(float(line),ts)]
+
+        if 'NUMA skew:' in line:
+          ts = int(line.split(':')[-1])
+          val1= float(line.split(':')[-2].split(' ')[0])
+          val0= float(line.split(':')[2].split(' ')[0])
+          val = abs(val0-val1)
+          skew_samples += [(val, ts)]
         else:
             continue
 
     #print("overall:",overall_samples)
     #print("filter:",len(samples))
-    iterations = 5
-    sigma = 2.5
+    start_ts = samples[0][1]
+    samples = [(skew_samples[0][0], start_ts)] + skew_samples
+    #print(skew_samples)
+    iterations = 0
+    sigma = 3
 
     for i in range(iterations):
         if len(samples) == 0:

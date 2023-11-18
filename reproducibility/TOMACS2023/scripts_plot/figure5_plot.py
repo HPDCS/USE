@@ -165,4 +165,4 @@ for query in q_list:
         axs[count].set_xlabel("Evicted pipe size")
         axs[count].set_ylabel("Pipe size")
         count+=1
-    plt.savefig("figures/figure5-"+"-".join([k+"_"+v for k,v in query.items()])+'.pdf', bbox_inches='tight')
+    plt.savefig("figures_reproduced/figure5-"+"-".join([k+"_"+v for k,v in query.items()])+'.pdf', bbox_inches='tight')

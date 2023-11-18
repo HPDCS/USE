@@ -18,7 +18,9 @@ if __name__ == "__main__":
     
 
     for f in common.datafiles:
+        #lprint(f)
         if os.path.isfile(sys.argv[1]+'/'+f):
+            #print(f)
             dataset[f] = get_samples_from_file(sys.argv[1]+'/'+f, seconds)
     
 
@@ -185,6 +187,7 @@ if __name__ == "__main__":
         if "-0.24-" in figname: subfig = "9b"
         if "-0.12-" in figname: subfig = "9c"
         if "pcs_hs" in figname: subfig = "10a"
+        if "pcs_hs_dyn" in figname: subfig = "11a"
 
-        plt.savefig(f'figures/figure{subfig}-{figname}')
+        plt.savefig(f'figures_reproduced/figure{subfig}-{figname}')
 

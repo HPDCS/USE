@@ -1,8 +1,8 @@
 #!/bin/python3
 
-from commonF10 import *
+from commonF11c import *
 import os
-import commonF10 as common
+import commonF11c as common
 
 
 if __name__ == "__main__":
@@ -24,9 +24,7 @@ if __name__ == "__main__":
     #        print(f"file {sys.argv[1]+'/'+f} not found...still trying")
     
     for run in common.runs:
-        #print(run)
         for test in tests:
-            #print(test)
             count = -1
             fig, axs = plt.subplots(1,len(lp_list), figsize = (5*len(lp_list),4), sharey=True)
             tit = f"{test}"
@@ -43,34 +41,31 @@ if __name__ == "__main__":
 
             fig.suptitle(tit)
             for nlp in lp_list:
-                #print(nlp)
                 count+=1
                 isFirst=True
                 if len(lp_list) == 1: cur_ax = axs
                 else: cur_ax = axs[count] 
-                cur_ax.set_xlabel("Seconds")
-                cur_ax.set_ylabel("Throughput ($10^6$ evts per sec)")
+                cur_ax.set_xlabel("Wall-clock time (Seconds)")
+                cur_ax.set_ylabel("Skew")
                 cur_ax.title.set_text(" ".join(["#simulation objects:"+nlp]))
                 cur_ax.set_xticks(ti_list)
-                cur_ax.set_ylim([0,0.75])
-                #cur_ax.set_ylim([0,0.75])
+                cur_ax.set_ylim([0,1.0])
                 custom_lines = []
                 custom_label = []
                 custom_lines = []
                 custom_label = []
-
+                
                 min_th = 100000
                 for f in dataset:
-                    fn = f.replace(".dat", "")
-                    if fn.split('-')[2] != nlp: continue
-                    if fn[-2:] != "-"+run : continue
+                    if f.split('-')[2] != nlp: continue
+                    if f[-2:] != "-"+run : continue
                     if 'hs' not in test:
                         if 'hs' in f: continue
                     else:
                         if 'hs' not in f: continue
                     
                     if "pcs_hs-" not in f and "pcs-" not in f: continue
-                    #print(f)
+
                     last_samples = dataset[f][0]
                     offset = -len(last_samples)/10
                     last_samples = last_samples[int(offset):]
@@ -81,8 +76,10 @@ if __name__ == "__main__":
 
                     min_th = sum(last_list)/(last_samples[-1][1]-last_samples[0][1])
                     #print(min_th)
+                    print(f)
                     
                 for f in dataset:
+
                     fn = f.replace(".dat", "")
                     if 'seq' in f: continue
                     if f.split('-')[2] != nlp: continue
@@ -96,8 +93,7 @@ if __name__ == "__main__":
                     x_value = [x[1]/1000 for x in dataset[f][0]]
                     #dataplot= [x[0]/min_th for x in dataset[f][0]]
                     dataplot= [x[0] for x in dataset[f][0]]
-
-                    y_filtered = savgol_filter(dataplot, 10, 3)
+                    y_filtered = dataplot #savgol_filter(dataplot, 5, 3)
                     mins = []
                     maxs = []
                     xavg = []
@@ -108,7 +104,6 @@ if __name__ == "__main__":
                         xavg += [numpy.average(x_value[i*steps:i*steps+steps])]
                     #print(len(dataplot), len(y_filtered), len(maxs), len(mins))
                     #cur_ax.plot(x_value[1:], dataplot[1:], color=colors[enfl], dashes=enfl_to_dash[enfl])
-                    cur_ax.set_ylim([0,max(maxs)*1.1])
                     cur_ax.plot(x_value, y_filtered, color=colors[enfl], dashes=enfl_to_dash[enfl])
                     #cur_ax.fill_between(x=xavg,y1=mins,y2=maxs, color=colors[enfl], alpha=0.3)
 
@@ -120,7 +115,5 @@ if __name__ == "__main__":
                     elif enfl == '2':    
                         custom_label += ['cache + NUMA opt.']
                 cur_ax.legend(custom_lines, custom_label,  ncol = 1) #, bbox_to_anchor=(1.12, -0.15))
-            
-            fig = 'figure10b'
-            if "pcs_hs_dyn" in test: fig = "figure11b"
-            plt.savefig(f'figures_reproduced/{fig}-{sys.argv[1][:-1].replace("/", "-")}-{test}-{seconds}-{run}.pdf')
+                    
+            plt.savefig(f'figures_reproduced/figure11c-{sys.argv[1][:-1].replace("/", "-")}-{test}-{seconds}-skew-{run}.pdf')

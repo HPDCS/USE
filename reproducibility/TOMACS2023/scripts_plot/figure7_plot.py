@@ -149,7 +149,7 @@ for metric in metric_list:
     cur_ax.legend(custom_lines, custom_label,loc="upper right",  ncol = 1, bbox_to_anchor=(1.6, 1.05))
 
     
-plt.savefig('figures/figure7.pdf', bbox_inches='tight')
+plt.savefig('figures_reproduced/figure7.pdf', bbox_inches='tight')
 cur_ax.set_yscale("log", base=2)
 
-plt.savefig('figures/figure7-log.pdf', bbox_inches='tight')
+plt.savefig('figures_reproduced/figure7-log.pdf', bbox_inches='tight')

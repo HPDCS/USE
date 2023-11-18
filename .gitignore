@@ -9,7 +9,7 @@ docs/
 __pycache__/
 thread.conf
 data/
-figures/
+figures_reproduced/
 results*
 include-gen
 cache-db

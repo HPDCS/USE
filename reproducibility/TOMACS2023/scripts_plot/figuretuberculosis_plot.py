@@ -96,15 +96,12 @@ if __name__ == "__main__":
                 final[key] += [avg]
 
 
-    #forma: enfl-numa-lps:[run1, run2, run3, run4, run5]
-    #print("FINAL " + str(final))
-
-
     for k in final:
         final[k] = sorted(final[k])
-        if '-0-0-seq-' in k:
-        #if True:
-          final[k] = final[k][1:-1]
+        #if '-0-0-seq-' in k:
+        if True:
+          pass
+          #final[k] = final[k][1:-1]
         else:
           test = [[x] for x in final[k]]
           kmeans = KMeans(n_clusters=2, random_state=0).fit(test)
@@ -180,13 +177,11 @@ if __name__ == "__main__":
 
                 #print("LP COUNT " + str(lp) + " key " + str(k))
                 name = k
-                print(name, max_treads)
-
+                
                 name = k.replace('tuberculosis-', '').replace(f'-{max_treads}-', '-').replace(f'-{lp}', '')
                 name = name.replace('0-0', 'el0')
                 name = name.replace('1-0', 'el1')
                 name = name.replace('1-1', 'el2')
-                print(name)
                 
                 #name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
                 #name = name.replace('pcs_hs_lo_re_df', 'el2') 
@@ -268,5 +263,5 @@ if __name__ == "__main__":
             #cur_ax.set_ylabel("Speedup w.r.t USE")
 
         
-        plt.savefig(f'figures/{sys.argv[1][:-1].replace("/", "-")}-{test}-9 .pdf')
+        plt.savefig(f'figures_reproduced/figure12-{sys.argv[1][:-1].replace("/", "-")}-{test}-9 .pdf')
 

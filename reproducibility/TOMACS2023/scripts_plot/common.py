@@ -40,7 +40,7 @@ def configure_globals(test):
         seconds = 60
         lp_list=['1024']
         for lp in lp_list:
-            for r in range(12):
+            for r in range(36):
                 datafiles[f"{test}-enfl_0-numa_0-threads_1-lp_{lp}-run_{r}"] = '1'
 
 
@@ -50,7 +50,7 @@ def configure_globals(test):
                 if enf == 0 and n == 1: 
                     continue
                 for lp in lp_list:
-                    for r in range(12):
+                    for r in range(36):
                         datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_treads}-lp_{lp}-run_{r}"] = '0'
 
 
@@ -108,6 +108,7 @@ def get_samples_from_file(filename, seconds):
                 cnt+=1
                 continue
             #print(line)
+            #print(filename)
             ts   = int(line.split(' ')[-5])
             line = line.split('thref')[0].split(' ')[-3:-1]
             #print(line)
@@ -140,8 +141,8 @@ def get_samples_from_file(filename, seconds):
 
     #print("overall:",overall_samples)
     #print("filter:",len(samples))
-    iterations = 0
-    sigma = 2
+    iterations = 2
+    sigma = 2.5
 
     for i in range(iterations):
         if len(samples) == 0:

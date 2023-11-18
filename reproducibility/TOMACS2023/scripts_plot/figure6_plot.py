@@ -175,11 +175,12 @@ for metric in metric_list:
                     dataplot+=[metric_function[metric](filtereDataset[k],baseline_value)]
         axs[count].plot(x_value, dataplot, label=ta2rho[ta])
         axs[count].xaxis.set_ticks(np.arange(0, max(x_value)+1, 2.0))
-    if metric == "com_evt":
-        axs[count].legend(loc='upper right')
-    elif metric == "tot_rol":
-        axs[count].legend(loc='lower right')
-    else:
-        axs[count].legend(loc='lower right')
+    #if metric == "com_evt":
+    #    axs[count].legend(loc='upper right')
+    #elif metric == "tot_rol":
+    #    axs[count].legend(loc='lower right')
+    #else:
+    #    axs[count].legend(loc='lower right')
+    axs[count].legend()
         
-plt.savefig('figures/figure6.pdf')
+plt.savefig('figures_reproduced/figure6.pdf')
