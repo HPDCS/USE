@@ -32,6 +32,7 @@ simulation_configuration pdes_config;
 #define NUMA_REBALANCE_KEY          564
 #define ENABLE_MBIND_KEY            565
 #define ENABLE_CUSTOM_ALLOC_KEY     566
+#define SEGMENT_SCALE_KEY           567
 
 #define ONGVT_PERIOD_KEY            667
 #define ONGVT_MODE_KEY              668
@@ -64,6 +65,7 @@ static struct argp_option options[] = {
   {"numa-rebalance"   ,   NUMA_REBALANCE_KEY       , 0         ,  OPTION_ARG_OPTIONAL,  "Enable numa load-balancing"   , 0 },
   {"enable-mbind"       , ENABLE_MBIND_KEY         , 0         ,  OPTION_ARG_OPTIONAL,  "Enable mbind"   , 0 },
   {"enable-custom-alloc", ENABLE_CUSTOM_ALLOC_KEY  , 0         ,  OPTION_ARG_OPTIONAL,  "Enable custom alloc"   , 0 },
+  {"segment-size-shift",  SEGMENT_SCALE_KEY        , "#SHIFTS" ,  0                  ,  "Segment size = (2**30)B >> #SHIFTS"   , 0 },
 
   {"ongvt-mode",          ONGVT_MODE_KEY           , "MODE-ID" ,  0                  ,  "0=Opportunistic (default) 1=Event-based period 2=millisecond-based period "   , 0 },
   {"ongvt-period",        ONGVT_PERIOD_KEY         , "PERIOD LEN" ,  0               ,  "Number of events/milliseconds to be executed before onGVT must be invoked"   , 0 },
@@ -139,9 +141,15 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case ENABLE_MBIND_KEY:
       pdes_config.enable_mbind = 1;
       break;
+
     case ENABLE_CUSTOM_ALLOC_KEY:
       pdes_config.enable_custom_alloc = 1;
       break;
+
+    case SEGMENT_SCALE_KEY:
+      pdes_config.segment_shift = atoi(arg);
+      break;
+      
 
     case ENFORCE_LOCALITY_KEY:
       pdes_config.enforce_locality = 1;
@@ -247,7 +255,9 @@ void configuration_init(void){
   pdes_config.distributed_fetch = 0;
   pdes_config.numa_rebalance = 0;
   pdes_config.enable_mbind = 0;
+
   pdes_config.enable_custom_alloc = 0;
+  pdes_config.segment_shift = 4;
 }
 
 void print_config(void){
