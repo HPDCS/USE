@@ -97,4 +97,14 @@ extern bool ctrl_del_banana;
 extern __thread unsigned int diff_lp;
 #endif
 
+
+static inline int am_i_committer(){
+	int enough_cpu = N_CPU >= 16;
+    return 
+      pdes_config.enable_committer_threads && 
+      enough_cpu && 
+      (tid == (N_CPU-1) || tid == (N_CPU/2 -1));
+}
+
+
 #endif

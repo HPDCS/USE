@@ -15,6 +15,8 @@ simulation_configuration pdes_config;
 
 #define OBS_PERIOD_KEY              256
 
+#define DISABLE_COMMITTER_KEY        257
+
 
 #define ENFORCE_LOCALITY_KEY        356
 #define EL_DYN_WINDOW_KEY           357
@@ -53,6 +55,7 @@ static struct argp_option options[] = {
   {"nprocesses",          N_PROCESSES_KEY          , "LPS"     ,  0                  ,  "Number of simulation objects"               , 0 },
   {"wall-timeout",        WALLCLOCK_TIMEOUT_KEY    , "SECONDS" ,  0                  ,  "End the simulation after SECONDS elapsed"   , 0 },
   {"observe-period",      OBS_PERIOD_KEY           , "MS"      ,  0                  ,  "Period in ms to check througput"    , 0 },
+  {"disable-committer-threads",  DISABLE_COMMITTER_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Disable committer threads"   , 0 },
   
   {"ckpt-period",         CKPT_PERIOD_KEY          , "#EVENTS" ,  0                  ,  "Number of events to be forward-executed before taking a full-snapshot"   , 0 },
   {"ckpt-fossil-period",  CKPT_FOSSIL_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before collection committed snapshot"   , 0 },
@@ -102,7 +105,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case OBS_PERIOD_KEY:
       pdes_config.observe_period = atoi(arg);
       break;
-
+    case DISABLE_COMMITTER_KEY:
+      pdes_config.enable_committer_threads = 0;
+      break;
 
     case CKPT_PERIOD_KEY:
       pdes_config.ckpt_period = atoi(arg);
@@ -258,6 +263,7 @@ void configuration_init(void){
 
   pdes_config.enable_custom_alloc = 0;
   pdes_config.segment_shift = 4;
+  pdes_config.enable_committer_threads = 1;
 }
 
 void print_config(void){
@@ -292,6 +298,9 @@ void print_config(void){
       printf("\t\t|- fetch bound %d\n", pdes_config.df_bound);
     
     printf("\t- MALLOC-BASED RECOVERABLE ALLOC %u\n", !pdes_config.enable_custom_alloc);
+    if(!pdes_config.enable_custom_alloc)
+      printf("\t\t|- SEGMENT SHIFT  %u\n", !pdes_config.segment_shift);
+    printf("\t- ENABLED_COMMITTER THREADS %u\n", pdes_config.enable_committer_threads);
     printf("\t- NUMA REBALANCE %u\n",    pdes_config.numa_rebalance);
     printf("\t- MBIND %u\n",    pdes_config.enable_mbind);
 

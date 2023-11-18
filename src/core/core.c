@@ -668,7 +668,7 @@ void thread_loop(unsigned int thread_id) {
 	  #endif
 	
 		__event_from = 0;
-		if(tid != 19 && tid !=39){
+		if(!am_i_committer()){
 			if(pdes_config.enforce_locality && check_window() && local_fetch() != 0){} 
 			else if(fetch_internal() == 0) {
 			  #if REPORT == 1

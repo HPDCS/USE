@@ -45,6 +45,7 @@ typedef struct _simulation_configuration {
 	unsigned char enable_mbind;
 	unsigned char enable_custom_alloc;
 	unsigned char segment_shift;
+	unsigned char enable_committer_threads;
 
 	unsigned char enforce_locality;  /// enables pipes usage for increasing cache exploitation
 	unsigned char el_dynamic_window;  /// enables pipes usage for increasing cache exploitation
