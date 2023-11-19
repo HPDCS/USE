@@ -149,7 +149,7 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 	return 0;
 }
 
-void turn_on_hs(int node){
+void turn_on_hs(unsigned int node){
 	unsigned int i,j=0;
 
 	for (i=0; i < n_prc_tot; i++) {
@@ -166,7 +166,7 @@ void turn_on_hs(int node){
 }
 
 void build_unbalance(){
-	unsigned int i,j=0;
+	unsigned int i=0;
 
 	for (i=0; i < n_prc_tot; i++) {
 		args.hot_spot_ids[i] = 0;
