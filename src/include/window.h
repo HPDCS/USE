@@ -146,7 +146,7 @@ static inline int window_resizing(window *w, double throughput) {
 	  w->direction = 1.0;
 	  w->old_throughput = throughput;
 	  w->phase = 0;
-	  printf("starting windows size search %f %f phase:%d\n", 0.0, w->size, throughput, w->phase);
+	  printf("starting windows size search w_size:%f th:%f phase:%d\n", w->size, throughput, w->phase);
 	  return res;
 	}
 
