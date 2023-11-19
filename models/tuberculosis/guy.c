@@ -382,6 +382,7 @@ void guy_on_leave(guy_t *guy, simtime_t now, region_t *region){
 
 
 	guy_t *removed;
+	(void)removed; // why this?
 	bool guy_dies = false;
 	simtime_t ts_dest = now+Expent(1.0);
 	//if (current_lp == 790) printf("count_all %d count infected %d count sick %d\n", region->count_all, region->count_infected, region->count_sick);

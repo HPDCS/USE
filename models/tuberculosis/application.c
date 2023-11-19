@@ -150,11 +150,11 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 			region->healthy = 0;
 			region->guys_infected = 0;
 			/// parameters initialization
-			/*region->num_healthy		= args.num_healthy ;//* (pdes_config.nprocesses/1024);
-			region->num_sick		= args.num_sick    ;//* (pdes_config.nprocesses/1024);
-			region->num_infected	= args.num_infected        ;//* (pdes_config.nprocesses/1024);
-			region->num_treatment	= args.num_treatment       ;//* (pdes_config.nprocesses/1024);
-			region->num_treated		= args.num_treated ;//* (pdes_config.nprocesses/1024);*/
+			//region->num_healthy		= args.num_healthy ;//* (pdes_config.nprocesses/1024);
+			//region->num_sick		= args.num_sick    ;//* (pdes_config.nprocesses/1024);
+			//region->num_infected	= args.num_infected        ;//* (pdes_config.nprocesses/1024);
+			//region->num_treatment	= args.num_treatment       ;//* (pdes_config.nprocesses/1024);
+			//region->num_treated		= args.num_treated ;//* (pdes_config.nprocesses/1024); 
 			region->end_sim			= args.end_sim;
 
 			/// lists head/tail initialization
@@ -190,7 +190,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type,
 				printf("- Infected guys: %u\n", args.num_infected);
 				printf("- Treatment guys: %u\n", args.num_treatment);
 				printf("- Treated guys: %u\n", args.num_treated);
-				printf("- End simulation time: %u\n", args.end_sim);
+				printf("- End simulation time: %f\n", args.end_sim);
 			}
 			ScheduleNewEvent(me, now + 1.25 + Random()/2, MIDNIGHT, NULL, 0);
 			break;

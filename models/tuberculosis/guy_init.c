@@ -22,14 +22,13 @@ struct _init_t{
 };
 
 void guy_init(region_t *region){
-
 	unsigned int num_healthy = args.num_healthy;
 	unsigned int num_infected = args.num_infected;
 	unsigned int num_sick = args.num_sick;
 	unsigned int num_treatment = args.num_treatment;
 	unsigned int num_treated = args.num_treated;
 
-
+	(void)region;
 	init_t total = {num_healthy/scale_factor, num_infected/scale_factor, num_sick/scale_factor, num_treatment/scale_factor, num_treated/scale_factor};
 	init_t to_send = {0};
 

@@ -41,6 +41,7 @@ double scan_list(guy_t *node, int n, double avg, int bound, int err) {
 
 	long sum = 0, c = 0; 
 	double variance = 0.0; 
+	(void)n;(void)err;
 
 	while (node != NULL) {
 		sum = sum + pow((c-avg), 2);
