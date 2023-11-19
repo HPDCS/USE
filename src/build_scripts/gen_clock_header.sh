@@ -1,9 +1,9 @@
 #!/bin/bash
 
 gcc compute_clock.c -o compute_clock
-echo -ne "wainting compute clock..."
+#echo -ne "wainting compute clock..."
 clocks=$(./compute_clock 5 | grep us | cut -d':' -f2)
-echo "DONE"
+#echo "DONE"
 
 out="clock_constant.h"
 
