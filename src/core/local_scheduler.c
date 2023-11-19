@@ -68,7 +68,7 @@ void flush_locked_pipe(){
     unsigned int lp_to_evict;
     simtime_t next_ts;
 
-    for(int i=0;i<thread_locked_binding->size;i++){
+    for(unsigned int i=0;i<thread_locked_binding->size;i++){
         entry_to_be_evicted = thread_locked_binding->entries[i]; 
         lp_to_evict = entry_to_be_evicted.lp; 
         if(lp_to_evict == UNDEFINED_LP) continue;
@@ -100,7 +100,9 @@ int local_fetch(){
     res = 0;
     min_lp = UNDEFINED_LP;
     from_get_next_and_valid = false;
-
+    #if DEBUG != 1
+    (void)from_get_next_and_valid;
+    #endif
     // update local pipe
     for(i=0;i<thread_locked_binding->size;i++){
          unsigned int lp = thread_locked_binding->entries[i].lp; 

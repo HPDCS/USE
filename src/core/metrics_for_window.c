@@ -20,7 +20,7 @@ unsigned long long start_simul_time = 0;
 unsigned long long th_below_threashold_cnt = 0;
 
 static double old2_thr, old_thr, thr_ref;
-static double old2_pro, old_pro, pro_ref;
+static double pro_ref;
 static simtime_t prev_granularity, prev_granularity_ref, granularity_ref;
 static unsigned int prev_comm_evts, prev_comm_evts_ref, prev_first_time_exec_evts, prev_comm_evts_window, prev_first_time_exec_evts_ref;
 
@@ -43,13 +43,14 @@ extern unsigned int rounds_before_unbalance_check; /// number of window manageme
 int get_mem_usage() {
     FILE *statFP;
     int oldNumbers[7];
+    int values = 0;
 //    int newNumbers[7];
 //    int diffNumbers[7];
     char cpu[10];  // Not used
 
     statFP = fopen("/proc/self/statm", "r");
 
-    fscanf(statFP,
+    values = fscanf(statFP,
             "%s %d %d %d %d %d %d %d",
             cpu,
             &oldNumbers[0], 
@@ -59,7 +60,9 @@ int get_mem_usage() {
             &oldNumbers[4],
             &oldNumbers[5],
             &oldNumbers[6]);
-
+    if(values < 8) {
+    	printf("Error: read less that 8 values");
+    }
     fclose(statFP);
 
     return oldNumbers[1];

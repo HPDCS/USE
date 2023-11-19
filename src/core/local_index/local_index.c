@@ -21,8 +21,7 @@ void local_clean_prefix(LP_state *lp_ptr){
     nb_stack_t *actual_idx_ptr   = local_idx_ptr->actual_index;
     nb_stack_node_t *prev  = actual_idx_ptr[0].top;
     msg_t *pre_evt;
-    msg_t *cur_evt;
-
+    
     do{
         if(prev == NULL) return;
 
@@ -39,8 +38,7 @@ void local_clean_prefix(LP_state *lp_ptr){
                     actual_idx_ptr[i].top = prev->lnext[i];
                 }
             }
-            cur_evt = prev->payload;
-            SL_LOG("clean from LP %p ts %p %f lvl:%d\n", lp_ptr, prev, cur_evt->timestamp, prev->lvl);
+            SL_LOG("clean from LP %p ts %p %f lvl:%d\n", lp_ptr, prev, prev->payload->timestamp, prev->lvl);
             for(int i=0;i<LOCAL_INDEX_LEVELS;i++){
                 SL_LOG("%p\n", actual_idx_ptr[i].top);
             }
@@ -58,7 +56,6 @@ void local_remove_minimum(LP_state *lp_ptr){
     local_index_t *local_idx_ptr = &lp_ptr->local_index;
     nb_stack_t *actual_idx_ptr   = local_idx_ptr->actual_index;
     nb_stack_node_t *tmp;
-    msg_t *cur_evt;
 
     if(actual_idx_ptr[0].top != NULL){
         tmp = actual_idx_ptr->top;
@@ -68,8 +65,7 @@ void local_remove_minimum(LP_state *lp_ptr){
                 actual_idx_ptr[i].top = tmp->lnext[i];
             }
         }
-        cur_evt = tmp->payload;
-        SL_LOG("removed from LP %p ts %p %f\n", lp_ptr, tmp, cur_evt->timestamp);
+        SL_LOG("removed from LP %p ts %p %f\n", lp_ptr, tmp, tmp->payload->timestamp);
         node_free((nbc_bucket_node*)tmp);
     }
 }
@@ -78,11 +74,8 @@ void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
     long rdn;
     char lvl = -1;
     nb_stack_t *actual_idx_ptr   = lp_ptr->local_index.actual_index;
-    nb_stack_node_t *cur;
     msg_t *cur_evt;
 
-    nb_stack_node_t *prev;
-    msg_t *pre_evt;
     msg_t *evt;
 
     //local_clean_prefix(lp_ptr);
@@ -100,9 +93,7 @@ void local_ordered_insert(LP_state *lp_ptr, nb_stack_node_t *node){
     node->lvl = lvl != 0;
 
     evt  = node->payload;
-    cur  = actual_idx_ptr[0].top;
-    prev = cur;
-
+    
     nb_stack_node_t *curs[LOCAL_INDEX_LEVELS];
     nb_stack_node_t *pres[LOCAL_INDEX_LEVELS];
     SL_LOG("\nScanning LP %p for inserting %p %f lvl:%d\n", lp_ptr, node, evt->timestamp, node->lvl);

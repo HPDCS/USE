@@ -225,7 +225,7 @@ unsigned int fetch_internal(){
     msg_t *event, *local_next_evt, * bound_ptr;
     bool validity, in_past, read_new_min = true, from_get_next_and_valid;
 
-    unsigned int skipped_lps = 0;
+    int skipped_lps = 0;
     
     unsigned int skipped_events = 0;
     
@@ -264,7 +264,7 @@ unsigned int fetch_internal(){
     
         if( 
             //skipped_lps==pdes_config.nprocesses/pdes_config.ncores || 
-            skipped_lps >= pdes_config.nprocesses || 
+            ((unsigned int) skipped_lps) >= pdes_config.nprocesses || 
             skipped_events > (pdes_config.ncores*100) ||  
         (
                 !(

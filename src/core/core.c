@@ -457,7 +457,6 @@ void init_simulation(unsigned int thread_id){
     clock_timer init_timer;
     clock_timer_start(init_timer);
 	tid = thread_id;
-	int i = 0;
 	
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
@@ -545,7 +544,7 @@ void init_simulation(unsigned int thread_id){
 	}
 
 
-	if(tid == 0 && do_sleep != 0){
+	if(tid == 0){
 	    int ret;
 		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
 	            fprintf(stderr, "%s\n", strerror(errno));
@@ -687,7 +686,7 @@ void thread_loop(unsigned int thread_id) {
 			}
 		}
 		else{
-			int res = fetch_internal();
+			fetch_internal();
 			goto end_loop;
 		}
 
@@ -961,7 +960,7 @@ end_loop:
 		printf("Last window for %d is %f\n", tid, get_current_window());
 	if(tid == 0 && pdes_config.ckpt_autonomic_period){
 		unsigned int acc = 0;
-		for(int i = 0; i<pdes_config.nprocesses;i++)
+		for(unsigned int i = 0; i<pdes_config.nprocesses;i++)
 			acc += LPS[i]->ckpt_period;
 		printf("AVG last ckpt period: %u\n", acc/pdes_config.nprocesses);
 	}	

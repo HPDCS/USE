@@ -26,6 +26,7 @@ void queue_deliver_msgs(void);
 //void queue_destroy(void);
 
 void queue_clean(void);
+void queue_init_per_thread(void);
 
 extern void unsafe_set_init();
 
