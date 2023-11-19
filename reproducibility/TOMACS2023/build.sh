@@ -13,15 +13,16 @@ if [ "$#" != 1 ]; then
 fi
 
 
+echo "###############################################"
+echo "      BUILDING $1"
+echo "###############################################"
 
-echo --Building $1
-
-echo --Removing any previous folder
+echo -- Removing any previous folder
 rm ../../src/include-gen -r
 rm ../../src/build_scripts/cache.db
 rm use-release -r
 
-echo --Preparing directories for binaries
+echo -- Preparing directories for binaries cmd:"cmake ../../.. -DCMAKE_BUILD_TYPE=$1 && make"
 mkdir use-release
 cd use-release
 cmake ../../.. -DCMAKE_BUILD_TYPE=$1 && make

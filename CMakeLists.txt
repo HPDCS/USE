@@ -3,8 +3,6 @@
 cmake_minimum_required(VERSION 3.10)
 project("USE" LANGUAGES C DESCRIPTION "Ultimate Share-Everything Parallel Discrete Event Simulator")
 
-
-
 set(PROJECT_VERSION 2.0.0)
 
 #set(CMAKE_C_STANDARD 11)
@@ -17,12 +15,10 @@ if(N EQUAL 0)
   set(N 2)
 endif()
 
-
 exec_program(
 getconf ARGS LEVEL1_DCACHE_LINESIZE
 OUTPUT_VARIABLE CACHE_LINE_SIZE
 )
-
 
 find_package(Threads REQUIRED)
 find_package (Python COMPONENTS Interpreter)
@@ -39,7 +35,6 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
   APPEND_COVERAGE_COMPILER_FLAGS()
 ENDIF()
 
-
 #hardware-related macros
 add_compile_options(
 -DCACHE_LINE_SIZE=${CACHE_LINE_SIZE} 
@@ -48,9 +43,15 @@ add_compile_options(
 )
 
 
-
 add_subdirectory(src)
 add_subdirectory(test)
+
+get_property(test_targets DIRECTORY test PROPERTY BUILDSYSTEM_TARGETS)
+foreach(test_tgt ${test_targets})
+message("TARGET ${test_tgt}")
+#  add_dependencies(${test_tgt} clock_constant)
+endforeach()
+
 #add_subdirectory(docs)
 
 
