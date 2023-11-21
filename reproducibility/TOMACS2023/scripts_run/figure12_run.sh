@@ -56,7 +56,7 @@ do
 				do
 					for threads in "$MAX_THREADS"
 					do
-						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period  --observe-period=1000 --ckpt-autoperiod-bound=50 --el-th-trigger=0.035"
+						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period  --observe-period=1000 --ckpt-autoperiod-bound=50 --el-th-trigger=0.035 --disable-committer-threads --segment-size-shift=1"
 						ecmd="$cmd ${runtime_options}"
 						echo $ecmd
 							
