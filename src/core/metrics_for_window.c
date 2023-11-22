@@ -17,6 +17,7 @@ double stability_samples[NUM_THROUGHPUT_SAMPLES];
 unsigned long long stability_counter = 0;
 unsigned long long th_counter = 0;
 unsigned long long start_simul_time = 0;
+unsigned long long th_below_threashold_cnt = 0;
 
 static double old2_thr, old_thr, thr_ref;
 static double old2_pro, old_pro, pro_ref;

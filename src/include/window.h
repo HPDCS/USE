@@ -43,6 +43,9 @@ typedef struct window {
 } window;
 
 
+extern unsigned long long th_below_threashold_cnt;
+
+
 /* init window parameters*/
 static inline void init_window(window *w) {
 
@@ -77,12 +80,18 @@ static inline bool reset_window(window *w, double thr_ratio, double avg_granular
 	//check reset condition
 	if (//curr_prob_rolls > ROLLBACK_UPPER_BOUND &&
 	 ((thr_ratio < THROUGHPUT_UPPER_BOUND) || !(avg_granularity_ratio < GRANULARITY_UPPER_BOUND)) ) {
-		w->size  = 0.0; //reset
-		w->step  = nbcalqueue->hashtable->bucket_width * pdes_config.nprocesses/2;
-    w->phase = 0;
-		return true;
+	 	th_below_threashold_cnt++;
+	  if(th_below_threashold_cnt > pdes_config.th_below_threashold_cnt){
+			w->size  = 0.0; //reset
+			w->step  = nbcalqueue->hashtable->bucket_width * pdes_config.nprocesses/2;
+	    w->phase = 0;
+	    th_below_threashold_cnt = 0;
+			return true;
+		}	
+		else
+			return false;
 	}
-
+	th_below_threashold_cnt = 0;
 	return false;
 }
 

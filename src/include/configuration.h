@@ -54,6 +54,7 @@ typedef struct _simulation_configuration {
 	double el_window_size;  /// sets the static window size when using pipes
 	double el_th_trigger;  /// sets the static window size when using pipes
 	double el_roll_th_trigger;
+	unsigned char th_below_threashold_cnt;
 
 #ifdef HAVE_PREEMPTION
 	bool disable_preemption;	/// If compiled for preemptive Time Warp, it can be disabled at runtime
