@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     seconds = common.seconds
     lp_list = common.lp_list
-
+    max_threads = common.max_threads
     bp_dict = {}
     tests= [sys.argv[2]]
     
@@ -121,7 +121,7 @@ if __name__ == "__main__":
                 if 'hs' in test and 'hs' not in k: continue
                 if 'hs' not in test and 'hs' in k: continue
                 #print(k)
-                name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
+                name = k.replace(f'-{seconds}', '').replace(f'-{max_threads}-', '-').replace(f'-{lp}', '')
                 name = name.replace('pcs_hs_lo_re_df', 'el2') 
                 name = name.replace('pcs_hs_lo', 'el1') 
                 name = name.replace('pcs_hs', 'el0') 
@@ -146,7 +146,7 @@ if __name__ == "__main__":
                 if f"-{lp}-" not in k: continue
                 if 'hs' in test and 'hs' not in k: continue
                 if 'hs' not in test and 'hs' in k: continue
-                name = k.replace(f'-{seconds}', '').replace('-40-', '-').replace(f'-{lp}', '')
+                name = k.replace(f'-{seconds}', '').replace(f'-{max_threads}-', '-').replace(f'-{lp}', '')
                 name = name.replace('pcs_hs_lo_re_df', 'el2') 
                 name = name.replace('pcs_hs_lo', 'el1') 
                 name = name.replace('pcs_hs', 'el0') 

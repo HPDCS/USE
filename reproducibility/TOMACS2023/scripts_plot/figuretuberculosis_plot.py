@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     seconds = common.seconds
     lp_list = common.lp_list
-    max_treads = common.max_treads
+    max_threads = common.max_threads
 
     bp_dict = {}
     tests= [sys.argv[2]]
@@ -178,7 +178,7 @@ if __name__ == "__main__":
                 #print("LP COUNT " + str(lp) + " key " + str(k))
                 name = k
                 
-                name = k.replace('tuberculosis-', '').replace(f'-{max_treads}-', '-').replace(f'-{lp}', '')
+                name = k.replace('tuberculosis-', '').replace(f'-{max_threads}-', '-').replace(f'-{lp}', '')
                 name = name.replace('0-0', 'el0')
                 name = name.replace('1-0', 'el1')
                 name = name.replace('1-1', 'el2')
@@ -215,7 +215,7 @@ if __name__ == "__main__":
 
                 #print("LP COUNT 2 " + str(lp) + " key " + str(k))
                 
-                name = k.replace('tuberculosis-', '').replace(f'-{max_treads}-', '-').replace(f'-{lp}', '')
+                name = k.replace('tuberculosis-', '').replace(f'-{max_threads}-', '-').replace(f'-{lp}', '')
                 name = name.replace('0-0', 'el0')
                 name = name.replace('1-0', 'el1')
                 name = name.replace('1-1', 'el2')
