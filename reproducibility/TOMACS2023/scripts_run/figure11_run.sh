@@ -27,7 +27,7 @@ echo $cur > $f.sh
 ./$cur > $f.dat
 
 
-cmd="$cmd --enforce-locality --el-dyn-window --el-locked-size=2 --el-evicted-size=2 --observe-period=500 --el-th-trigger=0.025"
+cmd="$cmd --enforce-locality --el-dyn-window --el-locked-size=2 --el-evicted-size=2 --observe-period=500 --el-th-trigger=0.025 --el-th-trigger-counts=5"
 cur="$cmd --ncores=${MAX_THREADS}"
 f="$res/pcs_hs_lo-${MAX_THREADS}-$lp-$MIN-$r"
 echo $cur > $f.sh

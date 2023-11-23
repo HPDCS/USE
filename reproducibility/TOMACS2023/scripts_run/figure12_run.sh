@@ -4,7 +4,7 @@
 source autoconf.sh
 LP_list="1024"						#number of lps
 TEST_list="tuberculosis"					#test list
-RUN_list="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35"				#run number list
+RUN_list="0 1 2 3 4 5 6 7 8 9 10 11 12 13" # 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50"				#run number list
 
 
 MAX_RETRY="10"
@@ -14,11 +14,11 @@ NUMA_LIST="0 1"
 BEGIN="BEGIN TEST:.............$(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 CURRT="CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
 
-TEST_DURATION="60"
+TEST_DURATION="120"
 
 
-CURRENT_BINDING_SIZE="2" 
-EVICTED_BINDING_SIZE="2" 
+CURRENT_BINDING_SIZE="1" 
+EVICTED_BINDING_SIZE="3" 
 
 FOLDER="results/results_tuberculosis"
 mkdir -p results
@@ -33,8 +33,8 @@ do
 	do
 
 		cmd="./${BIN_PATH}/test_$test "
-		memory_options="--numa-rebalance --distributed-fetch"
-		locality_options="--enforce-locality --enable-custom-alloc --enable-mbind --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window"
+		memory_options="--numa-rebalance --distributed-fetch --df-bound=20"
+		locality_options="--enforce-locality --enable-custom-alloc --enable-mbind --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window --el-th-trigger=0.035 --el-th-trigger-counts=5"
 
 		if [ $numa == "1" ] && [ $enfl == "0" ]; then
 			echo skip this case
@@ -56,7 +56,8 @@ do
 				do
 					for threads in "$MAX_THREADS"
 					do
-						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period  --observe-period=1000 --ckpt-autoperiod-bound=50 --el-th-trigger=0.035 --disable-committer-threads --segment-size-shift=1"
+						#runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period  --observe-period=500 --ckpt-autoperiod-bound=50 --disable-committer-threads --segment-size-shift=1"
+						runtime_options="-w ${TEST_DURATION} --ncores=${threads} --nprocesses=$lp --ckpt-autonomic-period  --observe-period=500 --ckpt-autoperiod-bound=50 --ckpt-fossil-period=1000"
 						ecmd="$cmd ${runtime_options}"
 						echo $ecmd
 							
@@ -92,7 +93,7 @@ do
 done
 done
 
-#exit
+exit
 
 
 for test in $TEST_list 

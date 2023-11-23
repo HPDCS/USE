@@ -47,7 +47,7 @@ do
 					cmd="./${BIN_PATH}/test_$test "
 					model_options="--ta=$tav --duration=$tad --handoff-rate=$tac"
 					memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
-					locality_options="--enforce-locality --el-locked-size=$cbs --el-evicted-size=$ebs --el-window-size=$w"
+					locality_options="--enforce-locality --el-locked-size=$cbs --el-evicted-size=$ebs --el-window-size=$w --el-th-trigger-counts=5"
 
 					cmd="$cmd ${model_options}"
 

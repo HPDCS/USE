@@ -6,7 +6,7 @@ THREADS=$2
 
 model_configuration="--ta=${TA} --duration=120 --handoff-rate=300 --ch=1000 --ckpt-autonomic-period"
 memory_options="--numa-rebalance --distributed-fetch"
-locality_options="--enable-custom-alloc --enable-mbind --enforce-locality --el-locked-size=2 --el-evicted-size=2 --el-dyn-window" 
+locality_options="--enable-custom-alloc --enable-mbind --enforce-locality --el-locked-size=2 --el-evicted-size=2 --el-dyn-window --el-th-trigger-counts=5" 
 
 
 FOLDER="results/pcs-hs-$TA"
