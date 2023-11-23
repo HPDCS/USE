@@ -252,7 +252,7 @@ void aggregate_metrics_for_window_management(window *win) {
     #if VERBOSE == 1
 			  printf("thr_ref %f granularity_ref %f\n", thr_ref, granularity_ref);
     #endif
-			  printf("thr_ratio %f \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f proll %f\n", thr_ratio, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt, curr_prob_rolls);
+			  printf("thr_ratio %f-%d \t granularity_ratio %f th %f thref %f gr %f ts %llu gvt %f proll %f\n", thr_ratio, th_below_threashold_cnt, granularity_ratio, thr_window, thr_ref, granularity, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000, local_gvt, curr_prob_rolls);
 			  if(thr_window == 0.0) goto end;
 			  if(isnan(thr_window)) goto end;
 			  if(isinf(thr_window)) goto end;
