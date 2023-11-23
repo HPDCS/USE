@@ -18,13 +18,13 @@ quantiles = [25, 75]
 #quantiles = [50.0-12.5, 50.0+12.5]
 datafiles = {}
 runs =  [str(x) for x in range(12)]
-max_treads='40'
+max_threads='10'
 
 for line in open("thread.conf"):
     if "MAX_THREADS" in line:
         line = line.split("=")[-1].split("#")[0].replace('"', '').strip().split(' ')
         #print(line)
-        max_treads = str(max([int(x) for x in line]))
+        max_threads = str(max([int(x) for x in line]))
 
 enfl_list=['0', '1']
 numa_list=['0', '1']
@@ -51,7 +51,7 @@ def configure_globals(test):
                     continue
                 for lp in lp_list:
                     for r in range(36):
-                        datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_treads}-lp_{lp}-run_{r}"] = '0'
+                        datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_threads}-lp_{lp}-run_{r}"] = '0'
 
 
     if test != 'tuberculosis':
@@ -72,9 +72,9 @@ def configure_globals(test):
             for lp in lp_list:
                 for r in runs:
                     for conf in ['', 'lo', 'lo_re_df']:
-                        datafiles[f"{ftest}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{r}.dat"] = conversion[conf]
+                        datafiles[f"{ftest}{'_' if conf != '' else ''}{conf}-{max_threads}-{lp}-{seconds}-{r}.dat"] = conversion[conf]
                         if conf == 'lo_re_df':
-                            datafiles[f"{ftest}{'_' if conf != '' else ''}{conf}-{max_treads}-{lp}-{seconds}-{str(int(r))}.dat"] = conversion[conf]
+                            datafiles[f"{ftest}{'_' if conf != '' else ''}{conf}-{max_threads}-{lp}-{seconds}-{str(int(r))}.dat"] = conversion[conf]
                     if test == 'pcs':
                         datafiles[f"seq-1-{lp}-{seconds}-{str(int(r))}.dat"] = '3'
                     else:
