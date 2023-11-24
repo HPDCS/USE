@@ -43,7 +43,7 @@ do
 			do
 				for df in $ENFORCE_LOCALITY_list
 				do
-					cmd="./${BIN_PATH}/test_$test "
+					cmd="${BIN_PATH}/test_$test "
 					model_options="--ta=$tav --duration=$tad --handoff-rate=$tac"
 					memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
 					locality_options="--enforce-locality --el-locked-size=$cbs --el-evicted-size=$ebs --el-window-size=$w --el-th-trigger-counts=5"
@@ -51,24 +51,12 @@ do
 					cmd="$cmd ${model_options}"
 
 					if [ $df = "1" ]; then
-						#cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
 						cmd="$cmd ${memory_options} ${locality_options}"
 					fi
-
-					#cmd="make $test"
-					#cmd="$cmd ENFORCE_LOCALITY=$df ENABLE_DYNAMIC_SIZING_FOR_LOC_ENF=0  CURRENT_BINDING_SIZE=$cbs EVICTED_BINDING_SIZE=$ebs START_WINDOW=$w"
-					#if [ $df = "1" ]; then
-					#	cmd="$cmd PARALLEL_ALLOCATOR=1 MBIND=1 NUMA_REBALANCE=1 DISTRIBUTED_FETCH=1"
-					#fi
-					#cmd="$cmd TA_CHANGE=$tac TA_DURATION=$tad TA=$tav"
-
-					#echo $cmd
-					#$cmd
 
 					if [ $df = "0" ]; then
 						if [ "$w" = "0.1" ]; then
                                                    echo OK
-						   
 						else
 						   echo skip null test
 						   continue
@@ -81,10 +69,8 @@ do
 							for th in $MAX_THREADS
 							do
 								runtime_options="-w ${TEST_DURATION} --ncores=$th --nprocesses=$lp --ckpt-autonomic-period"
-								cmd="$cmd ${runtime_options}"
 
-								EX1="./$cmd"
-								
+								EX1="./$cmd ${runtime_options}"
 								
 								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}"
 								CMDFILE="$FILE1.sh"
@@ -107,7 +93,7 @@ do
 									fi
 									N=$(( N+1 ))
 									echo "" >> $FILE1
-									echo $cmd >> $FILE1
+									echo $EX1 >> $FILE1
 								done
 							done
 						done

@@ -33,8 +33,8 @@ do
 	do
 
 		cmd="./${BIN_PATH}/test_$test "
-		memory_options="--numa-rebalance --distributed-fetch --df-bound=20"
-		locality_options="--enforce-locality --enable-custom-alloc --enable-mbind --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window --el-th-trigger=0.035 --el-th-trigger-counts=5"
+		memory_options=" --enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch --df-bound=20"
+		locality_options="--enforce-locality --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window --el-th-trigger=0.035 --el-th-trigger-counts=5"
 
 		if [ $numa == "1" ] && [ $enfl == "0" ]; then
 			echo skip this case

@@ -44,7 +44,7 @@ do
 			do
 				for df in $ENFORCE_LOCALITY_list
 				do
-					cmd="./${BIN_PATH}/test_$test "
+					cmd="${BIN_PATH}/test_$test "
 					model_options="--ta=$tav --duration=$tad --handoff-rate=$tac"
 					memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
 					locality_options="--enforce-locality --el-locked-size=$cbs --el-evicted-size=$ebs --el-window-size=$w --el-th-trigger-counts=5"
@@ -80,15 +80,13 @@ do
 							for th in $MAX_THREADS
 							do
 								runtime_options="-w ${TEST_DURATION} --ncores=$th --nprocesses=$lp --ckpt-autonomic-period"
-								cmd="$cmd ${runtime_options}"
-								echo $cmd
-
-								EX1="./$cmd"
+								EX1="./$cmd ${runtime_options}"
+								echo $EX1
 
 								FILE1="${FOLDER}/${test}_el_${df}-w_${w}-cbs_${cbs}-ebs_${ebs}-ta_${tav}-tad_${tad}-tac_${tac}_th_${th}-lp_${lp}-run_${run}"
 								CMDFILE="$FILE1.sh"
 								FILE1="$FILE1.dat"
-								echo $cmd > $CMDFILE
+								echo $EX1 > $CMDFILE
 
 								touch ${FILE1}
 
@@ -105,7 +103,7 @@ do
 									fi
 									N=$(( N+1 ))
 									echo "" >> $FILE1
-									echo $cmd >> $FILE1
+									echo $EX1 >> $FILE1
 								done
 							done
 						done

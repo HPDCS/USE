@@ -48,7 +48,7 @@ do
 	for test in $TEST_list 
 	do
 
-		cmd="./${BIN_PATH}/test_$test "
+		cmd="${BIN_PATH}/test_$test "
 		model_options="--fan-out=${fan_out} --event-us=${loop_count}"
 		memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
 		locality_options="--enforce-locality --el-locked-size=${CURRENT_BINDING_SIZE} --el-evicted-size=${EVICTED_BINDING_SIZE} --el-dyn-window --el-th-trigger-counts=5"
