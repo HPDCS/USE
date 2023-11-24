@@ -63,15 +63,15 @@ error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 		default:
 			break;
 	}
-	double scale = 1024, mult = 0.33;
+	double scale = 1024, mult = 1;
 	if(!horror_trick && pdes_config.nprocesses > 2){
 		horror_trick = 1;
 		if(pdes_config.nprocesses >= scale){
-	                args.num_healthy 		*= mult;//*(pdes_config.nprocesses/scale);
-        	        args.num_sick 			*= mult;//*(pdes_config.nprocesses/scale);
-                	args.num_infected 	*= mult;//*(pdes_config.nprocesses/scale);
-                	args.num_treatment 	*= mult;//*(pdes_config.nprocesses/scale);
-                	args.num_treated 		*= mult;//*(pdes_config.nprocesses/scale);
+	                args.num_healthy 		*= mult;// *(pdes_config.nprocesses/scale);
+        	        args.num_sick 			*= mult;// *(pdes_config.nprocesses/scale);
+                	args.num_infected 	*= mult;// *(pdes_config.nprocesses/scale);
+                	args.num_treatment 	*= mult;// *(pdes_config.nprocesses/scale);
+                	args.num_treated 		*= mult;// *(pdes_config.nprocesses/scale);
 		}
 	}
 	return 0;
