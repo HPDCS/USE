@@ -29,17 +29,23 @@ fi
 
 if [[ "$1" == "09a" || "$1" == "all" ]]; then
 atleast=1
-./scripts_run/figure09a_run.sh
+./scripts_run/figure09a_run.sh 256
+./scripts_run/figure09a_run.sh 1024
+./scripts_run/figure09a_run.sh 4096
 fi
 
 if [[ "$1" == "09b" || "$1" == "all" ]]; then
 atleast=1
-./scripts_run/figure09b_run.sh
+./scripts_run/figure09b_run.sh 256
+./scripts_run/figure09b_run.sh 1024
+./scripts_run/figure09b_run.sh 4096
 fi
 
 if [[ "$1" == "09c" || "$1" == "all" ]]; then
 atleast=1
-./scripts_run/figure09c_run.sh
+./scripts_run/figure09c_run.sh 256
+./scripts_run/figure09c_run.sh 1024
+./scripts_run/figure09c_run.sh 4096
 fi
 
 if [[ "$1" == "10" || "$1" == "all" ]]; then
