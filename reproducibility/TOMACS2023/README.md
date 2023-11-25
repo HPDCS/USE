@@ -22,7 +22,7 @@ Requirements for running the tests
 
 * x86_64 hardware
 * Unix system with gcc toolchain
-  * bash, gcc toolchain, make, libnuma-dev or numactl-devel
+* bash, gcc toolchain, make, libnuma-dev or numactl-devel
 
 Requirements for generating figures
 -----------------------------------

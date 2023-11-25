@@ -24,72 +24,46 @@ implementing the object state-layout.
 
 1. USE-IT is written in C standard.
 2. USE-IT targets x86 platforms.
-3. The build system is [Make](http://cmake.org), and we require version 2.8 or higher.
-
-## Startup Instructions
-
-1. Clone the repository to your local machine.
-2. Make your model (see model/ReadMe.md for further information).
-4. Adds rules about your model in Makefile, following the existing models.
-3. Run your model as 'executable number_of_threads number_of_LPs'.
-
 
 ## Dependecies
 
 * git, cmake, lcov, libnuma-dev
 
-## Configuration
+## Build USE and its models
 
-USE-IT is deployed with a basic configuration.
-It is possible to modify the simulator configuration by passing the following macro to the makefile:
-
-
-OPTIMISTIC_LEVEL:
-defines the level of speculation used by the simulator, according the following values:
-	0: it works in a conservative way.
-	1: it is speculative on different LPs.
-	2: it is fully speculative.
-
-LOOKAHEAD:
-defines the lookahead used by the simulation respect the the time unit.
-note: if you want to use a lookahead, your model has to take it in account.
-
-DEBUG:
-if set to 1 enables debug features.
-
-REPORT:
-if set to 1 produce a full report at the end of the simulation.
-
-LIST_NODE_PER_ALLOC:
-defines the number of nodes (used by the sub-memory system) allocated in a single time.
-
-CKP_PERIOD:
-defines the check point interval, namely the number of events processed between two consecutive checkpoint.
-
-CLEAN_CKP_INTERVAL:
-defines the number of events processed before to perform a housekeeping clean of checkpoints.
-
-PRUNE_PERIOD:
-defines the number of events processed before to perform a housekeeping clean of the priority queue nodes.
-
-ONGVT_PERIOD:
-defines the number of events processed by an LP before to perform an OnGVT call.
-
-PRINT_SCREEN:
-if set to 1 enables colored prints.
-
-NUMA: 
-defining this macro the NUMA capabilities are enable: each LP is binded to a NUMA node is is managed by threads executing on this node.
-
-PARALLEL_ALLOCATOR: 
-defining this macro the a substet of the NUMA capabilities are enable: each LP is binded to a NUMA node, but any thread can execute it.
-
-DISTRIBUTED_FETCH: 
-if set to 1 defining this macro each thread is enabled to manage a partition of the whole LP set.
-
-example:
-make phold LOOKAHEAD=0.1 REPORT=1 DEBUG=0 CKP_PERIOD=10 PRINT_SCREEN=0
+1. Create a directory ```<dir>``` for binaries
+2. ```cd <dir>```
+3. ```cmake <path to USE folder> -CMAKE_BUILD_TYPE=<Release|Debug>``` 
+4. ```make -j<num_cores>``` 
 
 
+## Run a model
+
+Step 4 builds an executable ```test_<model>``` for each model in ```<dir>/test/test_<model>``` folder.
+To run a model with 10 cores and 1024 lps:
+
+5. ```<dir>/test/test_<model> -c 10 -p 1024```
+
+6. ```<dir>/test/test_<model> -?``` to inspect both USE and model options.
 
 
+## Publications and Reproducibility
+
+This repository is associated to several publications.
+
+
+The main one is the following:
+
+1. M. Ianni, R. Marotta, D. Cingolani, A. Pellegrini, and F. Quaglia, **The Ultimate Share-Everything PDES System**, SIGSIM-PADS '18. https://doi.org/10.1145/3200921.3200931
+
+
+Other publications:
+
+2. M. Ianni, R. Marotta, A. Pellegrini and F. Quaglia, **Towards a fully non-blocking share-everything PDES platform**, DS-RT '17. https://ieeexplore.ieee.org/abstract/document/8167663
+3. M. Ianni, R. Marotta, D. Cingolani, A. Pellegrini and F. Quaglia, **Optimizing Simulation On Shared-Memory Platforms: The Smart Cities Case**, WSC '18. https://ieeexplore.ieee.org/abstract/document/8632301
+4. E. Silvestri, C. Milia, R. Marotta, A. Pellegrini, and F. Quaglia, **Exploiting Inter-Processor-Interrupts for Virtual-Time Coordination in Speculative Parallel Discrete Event Simulation** SIGSIM-PADS '20. https://doi.org/10.1145/3384441.3395985
+5. S. Conoci, M. Ianni, R. Marotta, and A. Pellegrini, **Autonomic Power Management in Speculative Simulation Runtime Environments**, SIGSIM-PADS '20. https://doi.org/10.1145/3384441.3395980
+6. F. Montesano, R. Marotta, and F. Quaglia, **Spatial/Temporal Locality-based Load-sharing in Speculative Discrete Event Simulation on Multi-core Machines**, SIGSIM-PADS '22. https://doi.org/10.1145/3518997.3531026
+7. R. Marotta, F. Montesano, and F. Quaglia, **Effective Access to the Committed Global State in Speculative Parallel Discrete Event Simulation on Multi-core Machines** SIGSIM-PADS '23. https://doi.org/10.1145/3573900.3591117
+8. R. Marotta, F. Montesano, A. Pellegrini and F. Quaglia, **Incremental Checkpointing of Large State Simulation Models with Write-Intensive Events via Memory Update Correlation on Buddy Pages**, DS-RT '23. https://ieeexplore.ieee.org/document/10305756
+  
