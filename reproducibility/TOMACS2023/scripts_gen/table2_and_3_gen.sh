@@ -1,3 +1,7 @@
+#!/bin/bash
+
+source scripts_gen/common_gen.sh
+
 echo -n "generating data for table 2 and 3..."
 python3 scripts_table/process_use_locality_folder_for_tables.py $resfolder/pcs-0.48/ >  data/table2.csv
 python3 scripts_table/process_use_locality_folder_for_tables.py $resfolder/pcs-0.24/ >> data/table2.csv
