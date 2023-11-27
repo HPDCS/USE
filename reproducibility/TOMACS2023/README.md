@@ -11,9 +11,9 @@ Submitted to ACM TOMACS 2023 Special Issue on PADS 2022
 
 ## Authors & Contacts
 
-Federica Montesano <federica.montesano@alumni.uniroma2.eu>
-Romolo Marotta <romolo.marotta@gmail.com>
-Francesco Quaglia <francesco.quaglia@uniroma2.it>
+* Federica Montesano <federica.montesano@alumni.uniroma2.eu>
+* Romolo Marotta <romolo.marotta@gmail.com>
+* Francesco Quaglia <francesco.quaglia@uniroma2.it>
 
 ## Requirements
 
@@ -41,8 +41,33 @@ The hardware configuration used by the authors is:
 4. Run a small simulation ```./use-release/test/test_phold -c 2 -p 1024```
 
 ## Structure of the artifact
-TODO
 
+```
+USE/
+ |-- ci/                 /* scripts related to software documentation/testing   */
+ |-- hijacker/           /* a module for automated production of reverse events */
+ |-- script/             /* scripts for hijacker                                */
+ |-- models/             /* several simulation models                           */
+ |-- src/                /* source code of USE                                  */
+ |-- test/               /* unit tests                                          */
+ |-- utility-scripts/    /* scripts for analyzing USE source code                       */
+ |-- reproducibility/TOMACS2023/    /* contains scripts for RCR activities              */
+        |-- figures_original   /* contains figures and tables of the submitted article  */
+        |-- scripts_gen        /* contains bash scripts for generating figures   */
+        |-- scripts_plot       /* contains python scripts for generating figures */
+        |-- scripts_run        /* bash scripts for launching experiments  */
+        |-- scripts_table      /* bash scripts for generating tables  */
+        |-- autoconf.sh        /* script for generating thread counts for experiments  */
+        |-- build.sh           /* script for compiling USE and model binaries  */
+        |-- run_exp.sh         /* script for launching a given experiments  */
+        |-- process_exp.sh     /* script for   */
+        |-- report.tex         /* latex file for generating a RCR report  */
+        |-- README.md          /* this readme  */
+ |-- AUTHORS.md         /* USE authors          */
+ |-- LICENSE            /* USE license          */
+ |-- README.md          /* USE usage guidelines */
+
+```
 ## License
 
 The software is released with the GPL 3 license.
