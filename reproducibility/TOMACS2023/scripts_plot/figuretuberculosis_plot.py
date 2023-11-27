@@ -24,7 +24,8 @@ def parse_filename(filename):
 
 
 if __name__ == "__main__":
-    configure_globals(sys.argv[2])
+    full=sys.argv[3]=="full"
+    configure_globals(sys.argv[2], full)
 
     seconds = common.seconds
     lp_list = common.lp_list
@@ -39,6 +40,9 @@ if __name__ == "__main__":
     for f in common.datafiles:
         #print(f)
         if os.path.isfile(sys.argv[1]+f):
+            if "bck" not in sys.argv[1]:
+                seconds = 120
+
             dataset[f] = get_samples_from_file(sys.argv[1]+f, seconds)
     #print("ECCCoOOOOOOOOOOME")
     x_value = []
@@ -76,14 +80,17 @@ if __name__ == "__main__":
                 for i in range(len(new_dataset[f])):
                     #if dataset[f][i][1]<1000*seconds/2: continue
                     #print("dataset: " + str(new_dataset[f][i][0]) + "---- " + str(new_dataset[f][i][1]))
-                    if len(dataplot) == 0:
+                    if i == 0:
+                        #continue
                         dataplot += [new_dataset[f][i][0]*new_dataset[f][i][1]]
                     else:
                         dataplot += [new_dataset[f][i][0]*(new_dataset[f][i][1]-new_dataset[f][i-1][1])]
 
-                #print("dataplot: " + str(dataplot))
-                        
-                avg = sum(dataplot)/seconds/1000
+                if full:
+                    avg = sum(dataplot)/(seconds)/1000
+                else:        
+                    avg = sum(dataplot)/(seconds/2)/1000
+
                 if(avg < 0):
                     print(f,dataplot)
                     exit()
@@ -100,8 +107,8 @@ if __name__ == "__main__":
         final[k] = sorted(final[k])
         #if '-0-0-seq-' in k:
         if True:
-          pass
-          #final[k] = final[k][1:-1]
+          #pass
+          final[k] = final[k][1:-1]
         else:
           test = [[x] for x in final[k]]
           kmeans = KMeans(n_clusters=2, random_state=0).fit(test)
@@ -135,7 +142,6 @@ if __name__ == "__main__":
         final[k] = (numpy.average(final[k]),numpy.std(final[k]))
     
     #print("FINAL AFTER" + str(final) + "len : " + str(len(final)))
-
 
     #for k in final:
     #    if '4096' not in k: continue

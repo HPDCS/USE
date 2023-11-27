@@ -1,5 +1,5 @@
 echo -n "generating data for table 4 and 5..."
-python3 scripts_table/process_use_locality_folder_for_tables.py results/results_tuberculosis/ > data/table4.csv
+python3 scripts_table/process_use_locality_folder_for_tables.py $resfolder/results_tuberculosis/ > data/table4.csv
 echo "Done!"
 
 

@@ -28,19 +28,23 @@ for line in open("thread.conf"):
 
 enfl_list=['0', '1']
 numa_list=['0', '1']
+all_samples = True
 
-def configure_globals(test):
+def configure_globals(test, full):
     global seconds
     global lp_list
     global datafiles
     global runs
     global ran
+    global all_samples
+
+    all_samples = full
 
     if test == 'tuberculosis':
         seconds = 60
         lp_list=['1024']
         for lp in lp_list:
-            for r in range(36):
+            for r in range(12):
                 datafiles[f"{test}-enfl_0-numa_0-threads_1-lp_{lp}-run_{r}"] = '1'
 
 
@@ -50,7 +54,7 @@ def configure_globals(test):
                 if enf == 0 and n == 1: 
                     continue
                 for lp in lp_list:
-                    for r in range(36):
+                    for r in range(12):
                         datafiles[f"{test}-enfl_{enf}-numa_{n}-threads_{max_threads}-lp_{lp}-run_{r}"] = '0'
 
 
@@ -84,7 +88,6 @@ def configure_globals(test):
 
 def get_samples_from_file(filename, seconds):
     f = open(filename)
-
     expected = int(seconds)*2
 
     samples = []
@@ -144,34 +147,52 @@ def get_samples_from_file(filename, seconds):
     iterations = 2
     sigma = 2.5
 
+    final_sample = []
+    expected_max = seconds*1000 - 500
+
+    constant = max_ts - expected_max
+
+    for i in range(len(samples)):
+        ts = samples[i][1]-constant
+        if not all_samples and ts < seconds*1000/2: continue
+        if not all_samples: ts-=(seconds/2)*1000
+        if len(final_sample) == 0:
+            final_sample += [(samples[i][0], ts)]
+        else:
+            final_sample += [(samples[i][0], ts)]
+        #print("final sample " + str(final_sample))
+        if final_sample[-1][1] < 0:
+            print("ERROR @",filename, constant, final_sample[-1], samples, final_sample)
+            exit()
+
     for i in range(iterations):
-        if len(samples) == 0:
+        if len(final_sample) == 0:
             print("PROBLEMATIC run:",filename)
             return [1]*expected
-        avg = numpy.average([x[0] for x in samples])
-        std = numpy.std([x[0] for x in samples])
+        values = [x[0] for x in final_sample]
+        avg = numpy.average(values)
+        std = numpy.std(values)
 
-        samples = [x for x in samples if x[0] > (avg-sigma*std) ]
-        samples = [x for x in samples if x[0] < (avg+sigma*std) ]
+        final_sample = [x for x in final_sample if x[0] >= (avg-sigma*std) ]
+        final_sample = [x for x in final_sample if x[0] <= (avg+sigma*std) ]
+
+    max_sampl = max([x[0] for x in final_sample])
+    #final_sample = [x for x in final_sample if x[0] >= (max_sampl*0.60) ]
+    
+
+    #for i in range(iterations):
+    #    if len(final_sample) == 0:
+    #        print("PROBLEMATIC run:",filename)
+    #        return [1]*expected
+    #    values = [x[0] for x in final_sample]
+    #    avg = numpy.average(values)
+    #    std = numpy.std(values)
+    #    
+    #    final_sample = [x for x in final_sample if x[0] >= (avg-sigma*std) ]
+    #    final_sample = [x for x in final_sample if x[0] <= (avg+sigma*std) ]
 
     #for s in samples:
     # print(s)
-
-    expected_max = seconds*1000 - 500
-    constant = max_ts - expected_max
-
-    final_sample = []
-
-    for i in range(len(samples)):
-        #if samples[i][1]-constant < seconds*1000/2: continue
-        if len(final_sample) == 0:
-            final_sample += [(samples[i][0], samples[i][1]-constant)]
-        else:
-            final_sample += [(samples[i][0], samples[i][1]-constant)]
-        #print("final sample " + str(final_sample))
-        if final_sample[-1][1] < 0:
-            print("ERROR @",filename, constant, final_sample[-1], samples)
-            exit()
             
     return final_sample,tot_evt
 

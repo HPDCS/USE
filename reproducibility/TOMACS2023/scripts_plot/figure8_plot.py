@@ -184,13 +184,13 @@ for metric in metric_list:
     custom_label += ["USE"]
     custom_label += ["OPT"]
     custom_lines += [Line2D([0], [0], color=gran_to_col['1'], dashes=enfl_to_dash[str(0)])]
-    custom_label += ["1 threads"]
+    custom_label += [f"{threads_list[0]} threads"]
     custom_lines += [Line2D([0], [0], color=gran_to_col['5'], dashes=enfl_to_dash[str(0)])]
-    custom_label += ["5 threads"]
+    custom_label += [f"{threads_list[1]} threads"]
     custom_lines += [Line2D([0], [0], color=gran_to_col['25'], dashes=enfl_to_dash[str(0)])]
-    custom_label += ["20 threads"]
+    custom_label += [f"{threads_list[3]} threads"]
     custom_lines += [Line2D([0], [0], color=gran_to_col['50'], dashes=enfl_to_dash[str(0)])]
-    custom_label += ["40 threads"]
+    custom_label += [f"{threads_list[-1]} threads"]
     #cur_ax.legend(custom_lines, custom_label,loc="upper right",  ncol = 1, bbox_to_anchor=(1.4, 1.05))
     cur_ax.legend(custom_lines, custom_label) #,loc="upper right",  ncol = 1, bbox_to_anchor=(1.4, 1.05))
     cur_ax.set_xlim(-10,440)

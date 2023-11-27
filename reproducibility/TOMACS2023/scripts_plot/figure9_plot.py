@@ -6,7 +6,8 @@ import os
 
 
 if __name__ == "__main__":
-    configure_globals(sys.argv[2])
+    full=sys.argv[3]=="full"
+    configure_globals(sys.argv[2], full)
 
     seconds = common.seconds
     lp_list = common.lp_list
@@ -47,12 +48,18 @@ if __name__ == "__main__":
                 dataplot = []
                 for i in range(len(dataset[f])):
                     #if dataset[f][i][1]<1000*seconds/2: continue
-                    if len(dataplot) == 0:
+                    
+                    #if len(dataplot) == 0:
+                    #    dataplot += [dataset[f][i][0]*dataset[f][i][1]]
+                    if i == 0:
                         dataplot += [dataset[f][i][0]*dataset[f][i][1]]
+                        #continue
                     else:
                         dataplot += [dataset[f][i][0]*(dataset[f][i][1]-dataset[f][i-1][1])]
-                        
-                avg = sum(dataplot)/seconds/1000
+                if full:
+                    avg = sum(dataplot)/(seconds)/1000
+                else:        
+                    avg = sum(dataplot)/(seconds/2)/1000
                 if(avg < 0):
                     print(f,dataplot)
                     exit()
