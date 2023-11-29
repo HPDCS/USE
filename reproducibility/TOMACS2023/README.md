@@ -28,8 +28,8 @@ The hardware configuration used by the authors is:
 
 ## Dependencies
 
-* For running tests: ```bash, gcc toolchain, make, libnuma-dev or numactl-devel```
-* For processing data: ```bash, Python3, matplotlib and seaborn```
+* For running tests: ```bash, gcc, cmake, make, libnuma-dev or numactl-devel```
+* For processing data: ```bash, Python3, pip3, matplotlib, numpy, scipy, seaborn, scikit-learn```
 * For generating RCR report: ```pdflatex```
 
 
