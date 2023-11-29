@@ -93,7 +93,6 @@ do
 done
 done
 
-exit
 
 
 for test in $TEST_list 
