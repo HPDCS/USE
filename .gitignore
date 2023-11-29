@@ -10,7 +10,7 @@ __pycache__/
 thread.conf
 data/
 figures_reproduced/
-results*
+results*/
 include-gen
 cache-db
 debug-*
