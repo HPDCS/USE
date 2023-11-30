@@ -1,7 +1,29 @@
 #!/bin/bash
 
-mkdir -p use-release
+if [ "$#" != 1 ]; then
+    echo "Passed $# parameter(s) instead of 1"
+    echo "usage: ./build <Debug|Release>"
+    exit
+  else
+  if [[ "$1" != "Debug" && "$1" != "Release" ]]; then
+    echo "parameter is $1"
+    echo "usage: ./build <Debug|Release>"
+    exit
+  fi
+fi
+
+
+echo "###############################################"
+echo "      BUILDING $1"
+echo "###############################################"
+
+echo -- Removing any previous folder
+rm ../../src/include-gen -r
+rm ../../src/build_scripts/cache.db
+rm use-release -r
+
+echo -- Preparing directories for binaries cmd:"cmake ../../.. -DCMAKE_BUILD_TYPE=$1 && make"
+mkdir use-release
 cd use-release
-rm -r *
-cmake ../../.. -DCMAKE_BUILD_TYPE=Release && make
+cmake ../../.. -DCMAKE_BUILD_TYPE=$1 && make
 cd ..

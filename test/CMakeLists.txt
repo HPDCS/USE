@@ -9,7 +9,6 @@ endfunction()
 
 function(test_model name)
     add_library(${name} STATIC ${ARGN})
-    #add_dependencies(${name} ${PROJECT_SOURCE_DIR}/src/include-gen/clock_constant.h)
     target_include_directories(${name} PRIVATE ../src/include ../src/include-gen ${name})
     
     add_executable(test_${name} integration/empty.c)
@@ -40,6 +39,10 @@ test_model(phold ../models/phold/application.c)
 test_model(phold_count ../models/phold_count/application.c)
 test_model(pcs ../models/pcs/application.c ../models/pcs/functions_app.c)
 test_model(tuberculosis ../models/tuberculosis/application.c ../models/tuberculosis/guy.c ../models/tuberculosis/guy_init.c ../models/tuberculosis/guy_list.c ../models/tuberculosis/parameters.c)
+
+add_dependencies(phold clock_constant)
+add_dependencies(phold_count clock_constant)
+
 
 
 configure_test(test phold_count --nprocesses=256 --num-events=500 --ongvt-mode=1 --ongvt-period=50)

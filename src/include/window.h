@@ -13,12 +13,15 @@
 #define INIT_WINDOW_STEP 0.04
 #define DECREASE_PERC 0.2
 #define INCREASE_PERC 0.5
-#define THROUGHPUT_DRIFT 0.025
+#define THROUGHPUT_DRIFT (pdes_config.el_th_trigger)	//0.035 //0.025
 
 #define THROUGHPUT_UPPER_BOUND 0.925
 #define GRANULARITY_UPPER_BOUND 1.4
+#define ROLLBACK_UPPER_BOUND (pdes_config.el_roll_th_trigger)
 
-#define MEASUREMENT_PHASE_THRESHOLD_MS 500
+
+
+#define MEASUREMENT_PHASE_THRESHOLD_MS (pdes_config.observe_period) //1000//500
 
 
 
@@ -40,6 +43,9 @@ typedef struct window {
 } window;
 
 
+extern unsigned long long th_below_threashold_cnt;
+
+
 /* init window parameters*/
 static inline void init_window(window *w) {
 
@@ -54,7 +60,7 @@ static inline void init_window(window *w) {
 
 }
 
-
+extern double curr_prob_rolls;
 
 /*The function sets the window size to zero if the reset condition is met
 @param: w The window
@@ -72,13 +78,20 @@ static inline bool reset_window(window *w, double thr_ratio, double avg_granular
 #endif
 
 	//check reset condition
-	if ( (thr_ratio < THROUGHPUT_UPPER_BOUND) ||  !(avg_granularity_ratio < GRANULARITY_UPPER_BOUND) )  {
-		w->size  = 0.0; //reset
-		w->step  = nbcalqueue->hashtable->bucket_width * pdes_config.nprocesses/2;
-                w->phase = 0;
-		return true;
+	if (//curr_prob_rolls > ROLLBACK_UPPER_BOUND &&
+	 ((thr_ratio < THROUGHPUT_UPPER_BOUND) || !(avg_granularity_ratio < GRANULARITY_UPPER_BOUND)) ) {
+	 	th_below_threashold_cnt++;
+	  if(th_below_threashold_cnt > pdes_config.th_below_threashold_cnt){
+			w->size  = 0.0; //reset
+			w->step  = nbcalqueue->hashtable->bucket_width * pdes_config.nprocesses/2;
+	    w->phase = 0;
+	    th_below_threashold_cnt = 0;
+			return true;
+		}	
+		else
+			return false;
 	}
-
+	th_below_threashold_cnt = 0;
 	return false;
 }
 
@@ -108,8 +121,10 @@ static inline int window_resizing(window *w, double throughput) {
 	double old_throughput = w->old_throughput;
 	double th_ratio = throughput/old_throughput;
 	simtime_t old_wsize = w->size;
+	
 	if(throughput==0.0) return res;
-        if(w->enabled && w->phase >= 1) return res;
+       if(w->enabled && w->phase >= 1) return res;
+	
 	#if VERBOSE == 1
 		printf("NEW THROUGHPUT %f - OLD THROUGHPUT %f \n", throughput, w->old_throughput);
 	#endif
@@ -131,14 +146,14 @@ static inline int window_resizing(window *w, double throughput) {
 	  w->direction = 1.0;
 	  w->old_throughput = throughput;
 	  w->phase = 0;
-	  printf("starting windows size search %f %f phase:%d\n", 0.0, w->size, w->phase);
+	  printf("starting windows size search w_size:%f th:%f phase:%d\n", w->size, throughput, w->phase);
 	  return res;
 	}
 
 	if(w->old_throughput != 0){
 
           if( (fabs(th_ratio-1)) < THROUGHPUT_DRIFT) {return res;}
-	  else if (throughput < old_throughput){
+	  else if (throughput < old_throughput && (ROLLBACK_UPPER_BOUND < 0.0 || curr_prob_rolls > ROLLBACK_UPPER_BOUND)){
             printf("changing direction %f %f\n", throughput, old_throughput);
             w->direction = w->direction * (-1);
             w->phase=1;
@@ -151,7 +166,7 @@ static inline int window_resizing(window *w, double throughput) {
       #if VERBOSE == 1
         printf("window size after resizing %f %f %f\n", w->size, throughput, old_throughput);
       #endif
-	printf("cur %f th_drift %.2f%% %.2f%% new %f %d\n", old_wsize , (th_ratio-1)*100.0, (fabs(th_ratio-1))*100.0, w->size, w->phase);
+	printf("cur %f th_drift %.2f%% %.2f%% new %f %d th:%f p_roll:%f\n", old_wsize , (th_ratio-1)*100.0, (fabs(th_ratio-1))*100.0, w->size, w->phase, throughput, curr_prob_rolls);
 
 	return res;
 

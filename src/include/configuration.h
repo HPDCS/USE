@@ -25,6 +25,7 @@ typedef struct _simulation_configuration {
 	unsigned int ncores;
 	unsigned int nprocesses;
 	int timeout;
+	int observe_period;
 	
 	unsigned char serial;
 
@@ -32,21 +33,28 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_period;
 	unsigned int ckpt_collection_period;
 	unsigned int ckpt_autonomic_period;
+	unsigned int ckpt_autoperiod_bound;
 
 	unsigned int ongvt_period;
 	enum ongvt_mode ongvt_mode;
 
 	unsigned char distributed_fetch;
+	char   df_bound;
+	
 	unsigned char numa_rebalance;
 	unsigned char enable_mbind;
 	unsigned char enable_custom_alloc;
+	unsigned char segment_shift;
+	unsigned char enable_committer_threads;
 
 	unsigned char enforce_locality;  /// enables pipes usage for increasing cache exploitation
 	unsigned char el_dynamic_window;  /// enables pipes usage for increasing cache exploitation
 	unsigned char el_locked_pipe_size;
 	unsigned char el_evicted_pipe_size;
 	double el_window_size;  /// sets the static window size when using pipes
-	
+	double el_th_trigger;  /// sets the static window size when using pipes
+	double el_roll_th_trigger;
+	unsigned char th_below_threashold_cnt;
 
 #ifdef HAVE_PREEMPTION
 	bool disable_preemption;	/// If compiled for preemptive Time Warp, it can be disabled at runtime

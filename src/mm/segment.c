@@ -59,7 +59,7 @@ void *get_base_pointer(GID_t gid){
 }
 
 void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
-	int i,j,h=0;
+	unsigned long long i,j,h=0;
 	void *the_address;
 	void *mmapped[NUM_MMAP];
   
@@ -109,7 +109,7 @@ void migrate_segment(unsigned int id, int numa_node){
 	void** lp_pages = pages[id];
 	nodes  = rsalloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(int));
 	status = rsalloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(int));
-	for(int i=0;i<PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;i++)
+	for(unsigned long long i=0;i<PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;i++)
 		nodes[i] = numa_node;
 	move_pages(0, PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE, lp_pages, nodes, status, MPOL_MF_MOVE);
 	rsfree(nodes);

@@ -40,7 +40,7 @@ state_swapping_struct * volatile state_swap_ptr;
 __thread simtime_t commit_horizon_to_save;
 __thread state_swapping_struct *private_swapping_struct;
 __thread volatile unsigned int from_signal = 0;
-volatile pthread_t ipi_tid; 
+pthread_t ipi_tid; 
 volatile unsigned int end_ipi = 0;
 
 
@@ -54,6 +54,7 @@ volatile unsigned int end_ipi = 0;
 
 __thread unsigned int signal_received = 0;
 void handle_csr_context(int sig){
+	(void)sig;
     signal_received+=1;
     from_signal = 1;
     csr_routine();
@@ -116,7 +117,7 @@ void destroy_thread_csr_state(void){
  */
  
 void handle_signal(int sig) {
-
+  (void)sig;
   #if CSR_CONTEXT == 0
 	__sync_bool_compare_and_swap(&state_swap_ptr->state_swap_flag, 0, 1);
   #else 
@@ -149,7 +150,10 @@ void* signal_state_swapping(void *args) {
 	CPU_ZERO(&mask);
 	CPU_SET(20, &mask);
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
-    
+    if(err){
+    	printf("Error: cannot set addinit of thread\n");
+    	exit(1);
+    }
 	//signal(SIGALRM, handle_signal);
 	//alarm(PERIOD_SIGNAL_S);
     
@@ -439,7 +443,7 @@ begin:
 
 	  #if CSR_CONTEXT == 0
 		/// scan of the lp bitmap to check if some lp has missed the output collection
-		for (cur_lp = 0; cur_lp < cur_state_swap_ptr->lp_bitmap->actual_len; cur_lp++) {
+		for (unsigned int cur_lp = 0; cur_lp < cur_state_swap_ptr->lp_bitmap->actual_len; cur_lp++) {
 			if (!get_bit(cur_state_swap_ptr->lp_bitmap, cur_lp) && tryLock(cur_lp)) {
                 assert(haveLock(cur_lp));
 

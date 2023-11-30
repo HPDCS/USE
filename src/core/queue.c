@@ -34,7 +34,7 @@ void queue_init(void) {
     nbcalqueue = nb_calqueue_init(pdes_config.ncores,PUB,EPB);
 }
 
-void queue_init_per_thread(){
+void queue_init_per_thread(void){
     unsigned int i = 0;
     _thr_pool = aligned_alloc(CACHE_LINE_SIZE, sizeof(__temp_thread_pool)+sizeof(msg_t)*THR_POOL_SIZE);
     if(!_thr_pool) {

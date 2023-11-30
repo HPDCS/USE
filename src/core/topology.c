@@ -32,12 +32,12 @@ unsigned int GetDirectionCount(int topology) {
 unsigned int GetNeighbourFromDirection(int topology, int direction) {
 	// receiver is not unsigned, because we exploit -1 as a border case in the bidring topology.
 	int receiver;
- 	double u;
 
  	// These must be unsigned. They are not checked for negative (wrong) values,
  	// but they would overflow, and are caught by a different check.
  	unsigned int edge;
- 	unsigned int x, y, nx, ny;
+ 	unsigned int x = 0, y = 0, nx = 0, ny = 0;
+
 
 	switch(topology) {
 
@@ -202,6 +202,7 @@ unsigned int GetNeighbourFromDirection(int topology, int direction) {
 
 			break;
 		default:
+			receiver =-1;
 			rootsim_error(true, "Wrong topology code specified: %d. Aborting...\n", topology);
 	}
 
@@ -218,7 +219,7 @@ unsigned int FindReceiver(int topology) {
  	// These must be unsigned. They are not checked for negative (wrong) values,
  	// but they would overflow, and are caught by a different check.
  	unsigned int edge;
- 	unsigned int x, y, nx, ny;
+ 	unsigned int x = 0, y = 0, nx = 0, ny = 0;
 
 	switch(topology) {
 
@@ -426,6 +427,7 @@ unsigned int FindReceiver(int topology) {
 			break;
 
 		default:
+			receiver =-1;
 			rootsim_error(true, "Wrong topology code specified: %d. Aborting...\n", topology);
 	}
 

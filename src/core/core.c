@@ -124,6 +124,7 @@ void * do_sleep(){
 }
 
 
+unsigned int GetNumaNode(unsigned int lp){return LPS[lp]->numa_node;}
 
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
@@ -456,7 +457,6 @@ void init_simulation(unsigned int thread_id){
     clock_timer init_timer;
     clock_timer_start(init_timer);
 	tid = thread_id;
-	int i = 0;
 	
 #if REVERSIBLE == 1
 	reverse_init(REVWIN_SIZE);
@@ -544,7 +544,7 @@ void init_simulation(unsigned int thread_id){
 	}
 
 
-	if(tid == 0 && do_sleep != 0){
+	if(tid == 0){
 	    int ret;
 		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
 	            fprintf(stderr, "%s\n", strerror(errno));
@@ -587,6 +587,7 @@ stat64_t execute_time;
 
 		statistics_post_lp_data(LP, STAT_EVENT, 1);
 		statistics_post_lp_data(LP, STAT_CLOCK_EVENT, execute_time);
+		statistics_post_th_data(tid, STAT_EVENT, 1);
 
 		if(LPS[current_lp]->state == LP_STATE_SILENT_EXEC){
 			statistics_post_lp_data(LP, STAT_CLOCK_SILENT, execute_time);
@@ -666,21 +667,27 @@ void thread_loop(unsigned int thread_id) {
 	  #endif
 	
 		__event_from = 0;
-		if(pdes_config.enforce_locality && check_window() && local_fetch() != 0){} 
-		else if(fetch_internal() == 0) {
-		  #if REPORT == 1
-			statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
-			statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
-		  #endif
+		if(!am_i_committer()){
+			if(pdes_config.enforce_locality && check_window() && local_fetch() != 0){} 
+			else if(fetch_internal() == 0) {
+			  #if REPORT == 1
+				statistics_post_th_data(tid, STAT_EVENT_FETCHED_UNSUCC, 1);
+				statistics_post_th_data(tid, STAT_CLOCK_FETCH_UNSUCC, (double)clock_timer_value(fetch_timer));
+			  #endif
 
-		  #if SWAPPING_STATE != 1
-			if(pdes_config.ongvt_mode != MS_PERIODIC_ONGVT){
-				if(++empty_fetch > 500){
-					round_check_OnGVT();
+			  #if SWAPPING_STATE != 1
+				if(pdes_config.ongvt_mode != MS_PERIODIC_ONGVT){
+					if(++empty_fetch > 500){
+						round_check_OnGVT();
+					}
 				}
+			  #endif
+			  	goto end_loop;
 			}
-		  #endif
-		  	goto end_loop;
+		}
+		else{
+			fetch_internal();
+			goto end_loop;
 		}
 
 		empty_fetch = 0;
@@ -761,7 +768,8 @@ void thread_loop(unsigned int thread_id) {
 				current_msg->timestamp, 			current_msg->tie_breaker, 				current_msg);
 #endif
 			rollback(current_lp, current_lvt, current_msg->tie_breaker);
-			
+			statistics_post_th_data(tid, STAT_ROLLBACK, 1);
+
 			LPS[current_lp]->state = old_state;
 
 			//statistics_post_lp_data(current_lp, STAT_ROLLBACK, 1);
@@ -952,7 +960,7 @@ end_loop:
 		printf("Last window for %d is %f\n", tid, get_current_window());
 	if(tid == 0 && pdes_config.ckpt_autonomic_period){
 		unsigned int acc = 0;
-		for(int i = 0; i<pdes_config.nprocesses;i++)
+		for(unsigned int i = 0; i<pdes_config.nprocesses;i++)
 			acc += LPS[i]->ckpt_period;
 		printf("AVG last ckpt period: %u\n", acc/pdes_config.nprocesses);
 	}	

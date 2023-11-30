@@ -104,24 +104,26 @@ include_directories(core)
 include_directories(asm)
 
 
-
-add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h
+add_custom_target(
+        clock_constant
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/
         COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/build_scripts && ./gen_clock_header.sh && mv clock_constant.h ../include-gen
 )
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${PROJECT_SOURCE_DIR}/src/include-gen/clock_constant.h)
 
-add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/build_scripts/cache.db
+add_custom_target(
+        cache_db
         COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/build_scripts && ./get_cache_data.sh
 )
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${PROJECT_SOURCE_DIR}/src/build_scripts/cache.db)
 
-add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/hpipe.h
+add_custom_target(
+        hpipe
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/include-gen/
         COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/build_scripts && python3 build_cache_map.py cache.db > hpipe.h && mv hpipe.h ../include-gen
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/build_scripts/cache.db
+        DEPENDS cache_db
 )
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${PROJECT_SOURCE_DIR}/src/include-gen/hpipe.h)
 
 if(CSR_CONTEXT)
 add_custom_command(
@@ -154,21 +156,14 @@ endif()
 
 
 
-if(CSR_CONTEXT)
-add_library(use-core      STATIC 
-${src-core} 
-${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h 
-${CMAKE_CURRENT_SOURCE_DIR}/include-gen/hpipe.h
-trap-based-user-context
-)
-else()
-add_library(use-core      STATIC 
-${src-core} 
-${CMAKE_CURRENT_SOURCE_DIR}/include-gen/clock_constant.h 
-${CMAKE_CURRENT_SOURCE_DIR}/include-gen/hpipe.h
-)
-endif()
 
+add_library(use-core      STATIC ${src-core} )
+
+add_dependencies(use-core clock_constant hpipe)
+
+if(CSR_CONTEXT)
+add_dependencies(use-core trap-based-user-context)
+endif()
 
 add_library(use-mm        STATIC ${src-mm})
 #add_library(use-reverse   STATIC ${src-reverse})

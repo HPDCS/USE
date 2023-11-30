@@ -14,6 +14,7 @@ static inline void autockpt_update_interval(unsigned int lp){
 	if(ires > 1){
 		//printf("LP %u : CHECKPOINT pre %u new %u\n", lp, LPS[lp]->ckpt_period, ires);
 		LPS[lp]->ckpt_period = ires;
+		if(LPS[lp]->ckpt_period > pdes_config.ckpt_autoperiod_bound) LPS[lp]->ckpt_period = pdes_config.ckpt_autoperiod_bound;
 	}
 }
 

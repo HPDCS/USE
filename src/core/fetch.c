@@ -225,7 +225,7 @@ unsigned int fetch_internal(){
     msg_t *event, *local_next_evt, * bound_ptr;
     bool validity, in_past, read_new_min = true, from_get_next_and_valid;
 
-    unsigned int skipped_lps = 0;
+    int skipped_lps = 0;
     
     unsigned int skipped_events = 0;
     
@@ -264,13 +264,13 @@ unsigned int fetch_internal(){
     
         if( 
             //skipped_lps==pdes_config.nprocesses/pdes_config.ncores || 
-            skipped_lps >= pdes_config.nprocesses || 
+            ((unsigned int) skipped_lps) >= pdes_config.nprocesses || 
             skipped_events > (pdes_config.ncores*100) ||  
         (
-				!(
-					 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
-				) 
-				&& !sim_error)
+                !(
+                     (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
+                ) 
+                && !sim_error)
         ){  return 0; } //DEBUG
 
 
@@ -338,14 +338,14 @@ unsigned int fetch_internal(){
         diff_lp--;
  #endif     
         //read_new_min = false;
-	
+    
 
-	cur_window = get_current_window();
-//	printf("timestamp - lvt_ts %f --- timestamp - local_gvt  %f --- cur window %f \n", ts-lvt_ts, ts-local_gvt, cur_window);
+    cur_window = get_current_window();
+//  printf("timestamp - lvt_ts %f --- timestamp - local_gvt  %f --- cur window %f \n", ts-lvt_ts, ts-local_gvt, cur_window);
        
-	//if ( w.enabled && ts-local_gvt < cur_window && haveLock(lp_idx) && !is_lp_on_my_numa_node(lp_idx)) flush_locked_pipe();
+    //if ( w.enabled && ts-local_gvt < cur_window && haveLock(lp_idx) && !is_lp_on_my_numa_node(lp_idx)) flush_locked_pipe();
 
-       	if(
+        if(!am_i_committer() &&
  #if OPTIMISTIC_MODE != FULL_SPECULATIVE
     #if OPTIMISTIC_MODE == ONE_EVT_PER_LP
         !is_in_lp_unsafe_set(lp_idx) &&
@@ -353,17 +353,26 @@ unsigned int fetch_internal(){
         !is_in_lp_locked_set(lp_idx) &&
     #endif
  #endif
-        ( !pdes_config.distributed_fetch || (!w.enabled || (ts-local_gvt) > cur_window || haveLock(lp_idx) || is_lp_on_my_numa_node(lp_idx)) ) &&
+        ( !pdes_config.distributed_fetch 
+            || ( 
+                !w.enabled 
+                || (ts-local_gvt) > cur_window 
+                || haveLock(lp_idx) 
+                || is_lp_on_my_numa_node(lp_idx) 
+                || (pdes_config.df_bound > 0 && skipped_lps > pdes_config.df_bound) 
+               ) 
+        ) &&
+        
         (
             (pdes_config.enforce_locality && haveLock(lp_idx)) ||
             tryLock(lp_idx)
         )
         ) {
             
-	    #if DEBUG == 1
-	      assertf(lp_idx == UNDEFINED_LP, "locking an undefined LP%s", "\n");
-	      assertf(!haveLock(lp_idx), "locked lp without own its lock %s", "\n");
- 	    #endif
+        #if DEBUG == 1
+          assertf(lp_idx == UNDEFINED_LP, "locking an undefined LP%s", "\n");
+          assertf(!haveLock(lp_idx), "locked lp without own its lock %s", "\n");
+        #endif
             validity = is_valid(event);
             
             if(bound_ptr != lp_ptr->bound){

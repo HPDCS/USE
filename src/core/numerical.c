@@ -337,6 +337,7 @@ static void load_seed(void) {
 	char conf_file[512];
 	FILE *fp;
 	int read_bytes=0;
+	int read_values=0;
 
 	// Get the path to the configuration file
 	sprintf(conf_file, "%s/.rootsim/numerical.conf", getenv("HOME"));
@@ -378,8 +379,9 @@ static void load_seed(void) {
 
 
 	// Load the initial seed
-	fscanf(fp, "%llu", (unsigned long long *)&master_seed);
-
+	read_values = fscanf(fp, "%llu", (unsigned long long *)&master_seed);
+	if(read_values != 1)
+		rootsim_error(true, "Unable to load numerical distribution configuration: %s. Aborting...", conf_file);
 
 	rewind(fp);
 	srandom(master_seed);

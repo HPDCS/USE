@@ -25,6 +25,18 @@ enum _flags_t{
 	flags_count
 };
 
+typedef struct model_parameters{
+	unsigned num_healthy;
+  unsigned num_infected;
+  unsigned num_sick;
+  unsigned num_treatment;
+  unsigned num_treated;
+  simtime_t end_sim;
+}
+model_parameters;
+
+extern model_parameters args;
+
 
 
 // notice that we use absolute times for guys fields so that we don't need to refresh all those memory location
@@ -47,15 +59,22 @@ typedef struct _region_t{
 	unsigned guys_infected;
 
   /* init parameters */
-	unsigned num_healthy;
+	/*unsigned num_healthy;
     unsigned num_infected;
 	unsigned num_sick;
 	unsigned num_treatment;
-	unsigned num_treated;
+	unsigned num_treated;*/
+
+	simtime_t end_sim;
 
   /* head/tail of guy's lists */
 	guy_t *head_infected, *head_sick, *head_treatment, *head_treated;
 	guy_t *tail_infected, *tail_sick, *tail_treatment, *tail_treated;
+
+	unsigned int id;
+	int count_all, count_infected, count_sick, count_treatment, count_treated;
+	double avg_infected, avg_sick, avg_treatment, avg_treated;
+	double variance_sick, variance_infected, variance_treatment, variance_treated;
 	
 	simtime_t now;
 	void *sick,*infected,*treated,*treatment;

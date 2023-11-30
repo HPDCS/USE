@@ -364,7 +364,7 @@ void print_max_chunk_in_area(unsigned int lp){
     for(int j=0; j< 14;j++){
         max = 0;
         if(recoverable_state[lp]->areas[j].self_pointer == NULL) continue;
-        for(i=0; i<recoverable_state[lp]->areas[j].num_chunks & (-3);i++){
+        for(i=0; i < (recoverable_state[lp]->areas[j].num_chunks & (-3)) ;i++){
             if(CHECK_USE_BIT(&recoverable_state[lp]->areas[j], i) && i > max)
                     max = i;
         }

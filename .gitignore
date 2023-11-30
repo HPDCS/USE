@@ -9,8 +9,8 @@ docs/
 __pycache__/
 thread.conf
 data/
-figures/
-results*
+figures_reproduced/
+results*/
 include-gen
 cache-db
 debug-*

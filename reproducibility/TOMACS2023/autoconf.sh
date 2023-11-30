@@ -1,5 +1,9 @@
 #!/bin/bash
 
+
+if [ -f thread.conf ]; then
+	source thread.conf
+else
 MAX_THREADS=$( cat /proc/cpuinfo | grep processor | wc -l)     #maximum number of threads, which is typically equal to the number of (logical) cores.
 QUARTER=$(($MAX_THREADS/4))
 
@@ -14,5 +18,6 @@ for i in ${THREAD_list}; do
 	echo -ne "$i " >> thread.conf
 done
 echo "\"" >> thread.conf
+fi
 
 BIN_PATH="use-release/test"
