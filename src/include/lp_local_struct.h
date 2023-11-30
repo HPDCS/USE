@@ -11,6 +11,7 @@
 #include <hpipe.h>
 #include <metrics_for_window.h>
 
+#include <thr_alloc.h>
 
 extern __thread simtime_t MAX_LOCAL_DISTANCE_FROM_GVT;
 
@@ -45,7 +46,7 @@ extern pipe_t *evicted_pipe_pointers[HPIPE_INDEX1_LEN];
 /* init the structure */
 static pipe_t* init_struct(size_t size){
     size_t i;
-    pipe_t *pipe = malloc(sizeof(pipe_t)+size*sizeof(pipe_entry_t));
+    pipe_t *pipe = thr_alloc(sizeof(pipe_t)+size*sizeof(pipe_entry_t));
     pipe->size           =  size;
     pipe->next_to_insert =  0;
 

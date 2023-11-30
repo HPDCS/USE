@@ -36,6 +36,8 @@
 #include <configuration.h>
 #include <segment.h>
 
+#include <lpm_alloc.h>
+
 #define BUDDY_GRANULARITY (PAGE_SIZE)
 
 /// Macro to find the maximum among two values
@@ -76,8 +78,7 @@ static inline int parent(int idx) {
 
 void ***pages;
 
-extern void *__real_malloc(size_t);
-extern void __real_free(void *);
+
 
 /** allocate a new buddy structure
  * @param num_of_fragments number of fragments of the memory to be managed
@@ -93,7 +94,7 @@ static struct _buddy *buddy_new(unsigned int num_of_fragments) {
     }
 
     // Alloacte an array to represent a complete binary tree
-    self = rsalloc(sizeof(struct _buddy) + 2 * num_of_fragments * sizeof(size_t));
+    self = lpm_alloc(sizeof(struct _buddy) + 2 * num_of_fragments * sizeof(size_t));
 	bzero(self, sizeof(struct _buddy) + 2 * num_of_fragments * sizeof(size_t));
     self->size = num_of_fragments;
     node_size = num_of_fragments * 2;
@@ -111,7 +112,7 @@ static struct _buddy *buddy_new(unsigned int num_of_fragments) {
 }
 
 static void buddy_destroy(struct _buddy *self) {
-    rsfree(self);
+    lpm_free(self);
 }
 
 /* choose the child with smaller longest value which is still larger
@@ -254,8 +255,8 @@ void allocator_fini(void) {
 //    segment_allocator_fini(i);
 	}
 
-	rsfree(mem_areas);
-	rsfree(buddies);
+	lpm_free(mem_areas);
+	lpm_free(buddies);
 
 }
 
@@ -279,9 +280,9 @@ bool allocator_init_for_lp(unsigned int lp){
 bool allocator_init(void) {
     if(pdes_config.serial) return true;
 	// These are a vector of pointers which are later initialized
-	buddies = rsalloc(sizeof(struct _buddy *) * pdes_config.nprocesses);
-	mem_areas = rsalloc(sizeof(void *) * pdes_config.nprocesses);
-    pages = rsalloc(sizeof(void *) * pdes_config.nprocesses);
+	buddies = lpm_alloc(sizeof(struct _buddy *) * pdes_config.nprocesses);
+	mem_areas = lpm_alloc(sizeof(void *) * pdes_config.nprocesses);
+    pages = lpm_alloc(sizeof(void *) * pdes_config.nprocesses);
 
 	return true;
 }

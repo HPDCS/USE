@@ -31,14 +31,8 @@
 #include <errno.h>
 #include <numaif.h>
 
-
-extern  void *rsalloc(size_t);
-extern  void rsfree(void *);
-extern  void *rsrealloc(void *, size_t);
-extern  void *rscalloc(size_t, size_t);
-
-
-
+#include <lpm_alloc.h>
+#include <thr_alloc.h>
 
 #define LID_t unsigned int
 #define GID_t unsigned int
@@ -65,7 +59,7 @@ void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
   
 	/// Addresses are determined in the same way across all kernel instances
 	the_address = init_address + PER_LP_PREALLOCATED_MEMORY * gid_to_int(gid);
-	*pages = rsalloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(void*));
+	*pages = lpm_alloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(void*));
 
 	for(i = 0; i < NUM_MMAP; i++) {
 		mmapped[i] = mmap(the_address, MAX_MMAP, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS /*|MAP_FIXED*/, 0, 0);
@@ -107,13 +101,13 @@ void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
 void migrate_segment(unsigned int id, int numa_node){
 	int *nodes, *status;
 	void** lp_pages = pages[id];
-	nodes  = rsalloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(int));
-	status = rsalloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(int));
+	nodes  = thr_alloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(int));
+	status = thr_alloc(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE*sizeof(int));
 	for(unsigned long long i=0;i<PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;i++)
 		nodes[i] = numa_node;
 	move_pages(0, PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE, lp_pages, nodes, status, MPOL_MF_MOVE);
-	rsfree(nodes);
-	rsfree(status);
+	thr_free(nodes);
+	thr_free(status);
 }
 
 

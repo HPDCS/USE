@@ -44,6 +44,8 @@
 #include "timer.h"
 #include <state_swapping.h>
 
+#include <glo_alloc.h>
+
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0
 #define LOG_RESIZE 0
@@ -473,7 +475,6 @@ static bool insert_std(table* hashtable, nbc_bucket_node** new_node, int flag)
 			if(D_EQUAL(new_node_timestamp, left_node->timestamp ) && left_node->counter == new_node_counter)
 			{
 				node_free(new_node_pointer);//<--------NEW
-				//free(new_node_pointer);
 				*new_node = left_node;
 				return true;
 			}
@@ -567,13 +568,8 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 	
 	if(new_size != 0 && new_size <= MAXIMUM_SIZE)
 	{
-		res = posix_memalign((void**)&new_h, CACHE_LINE_SIZE, sizeof(table));
-		if(res != 0)
-			error("No enough memory to new table structure\n");
-
-		//new_h = malloc(sizeof(table));
-		//if(new_h == NULL)
-		//	error("No enough memory to new table structure\n");
+		res = glo_memalign_alloc((void**)&new_h, CACHE_LINE_SIZE, sizeof(table));
+		if(res != 0)  error("No enough memory to new table structure\n");
 
 		new_h->bucket_width  = -1.0;
 		new_h->size 		 = new_size;
@@ -581,11 +577,10 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		new_h->counter.count = 0;
 		new_h->current 		 = (((unsigned long long)-1)-1) << 32;
 
-		//array =  calloc(new_size, sizeof(nbc_bucket_node));
 		array =  alloc_array_nodes(&malloc_status, new_size);
 		if(array == NULL)
 		{
-			free(new_h);
+			glo_free(new_h);
 			error("No enough memory to allocate new table array %u\n", new_size);
 		}
 
@@ -602,9 +597,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		if(!BOOL_CAS(&(h->new_table), NULL,	new_h))
 		{
 			free_array_nodes(&malloc_status, new_h->array);
-			free(new_h);
-			//free(new_h->array);
-			//free(new_h);
+			glo_free(new_h);
 		}
 #if DEBUG == 1
 	#if LOG_RESIZE == 1
@@ -1008,9 +1001,9 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
 	unsigned int res_mem_posix = 0;		//<-----NEW
 
 	threads = threshold;
-	prune_array = calloc(threshold*threshold, sizeof(unsigned int));
+	prune_array = glo_calloc(threshold*threshold, sizeof(unsigned int));
 
-	nb_calqueue* res = calloc(1, sizeof(nb_calqueue));
+	nb_calqueue* res = glo_calloc(1, sizeof(nb_calqueue));
 	if(res == NULL)
 		error("No enough memory to allocate queue\n");
 		
@@ -1022,24 +1015,21 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
 	res->elem_per_bucket = elem_per_bucket;
 	res->pub_per_epb = perc_used_bucket * elem_per_bucket;
 
-	//res->hashtable = malloc(sizeof(table));
-	//if(res->hashtable == NULL)
-	res_mem_posix = posix_memalign((void**)&res->hashtable, CACHE_LINE_SIZE, sizeof(table));//<-----NEW
+	res_mem_posix = glo_memalign_alloc((void**)&res->hashtable, CACHE_LINE_SIZE, sizeof(table));//<-----NEW
 	if(res_mem_posix != 0)				//<-----NEW
 	{
-		free(res);
+		glo_free(res);
 		error("No enough memory to allocate queue\n");
 	}
 	res->hashtable->bucket_width = 1.0;
 	res->hashtable->new_table = NULL;
 	res->hashtable->size = MINIMUM_SIZE;
 
-	//res->hashtable->array = calloc(MINIMUM_SIZE, sizeof(nbc_bucket_node) );
 	res->hashtable->array =  alloc_array_nodes(&malloc_status, MINIMUM_SIZE);//<-----NEW
 	if(res->hashtable->array == NULL)
 	{
-		free(res->hashtable);
-		free(res);
+		glo_free(res->hashtable);
+		glo_free(res);
 		error("No enough memory to allocate queue\n");
 	}
 
@@ -1147,7 +1137,7 @@ void nbc_prune(void)
     
 		table *h = (table*) my_tmp->payload;
 		free_array_nodes(&malloc_status, h->array); //<-------NEW
-		free(h);
+		glo_free(h);
 		node_free(my_tmp); //<-------NEW
 	}
 	

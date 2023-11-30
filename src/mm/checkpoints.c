@@ -38,6 +38,8 @@
 #include <statistics.h>
 #include <autockpt.h>
 
+#include <glo_alloc.h>
+
 
 /**
 * This function creates a full log of the current simulation states and returns a pointer to it.
@@ -67,7 +69,7 @@
 * @author Roberto Vitali
 *
 * @param lid The logical process' local identifier
-* @return A pointer to a malloc()'d memory area which contains the full log of the current simulation state,
+* @return A pointer to a malloc'd memory area which contains the full log of the current simulation state,
 *         along with the relative meta-data which can be used to perform a restore operation.
 *
 * @todo must be declared static. This will entail changing the logic in gvt.c to save a state before rebuilding.
@@ -86,7 +88,7 @@ void *log_full(int lid) {
 	recoverable_state[lid]->is_incremental = false;
 	size = get_log_size(recoverable_state[lid]);
 
-	ckpt = rsalloc(size);
+	ckpt = glo_alloc(size);
 
 	if(ckpt == NULL) {
 		rootsim_error(true, "(%d) Unable to acquire memory for checkpointing the current state (memory exhausted?)");
@@ -209,7 +211,7 @@ void *log_full(int lid) {
 * @author Alessandro Pellegrini
 *
 * @param lid The logical process' local identifier
-* @return A pointer to a malloc()'d memory area which contains the log of the current simulation state,
+* @return A pointer to a malloc'd memory area which contains the log of the current simulation state,
 *         along with the relative meta-data which can be used to perform a restore operation.
 */
 void *log_state(int lid) {
@@ -434,7 +436,7 @@ void log_restore(int lid, state_t *state_queue_node) {
 */
 void log_delete(void *ckpt){
 	if(ckpt != NULL) {
-		rsfree(ckpt);
+		glo_free(ckpt);
 	}
 }
 

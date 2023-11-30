@@ -28,6 +28,8 @@ __thread bool safe;
 __thread __temp_thread_pool *_thr_pool;
 
 
+#include <thr_alloc.h>
+#include <glo_alloc.h>
 
 
 void queue_init(void) {
@@ -36,7 +38,7 @@ void queue_init(void) {
 
 void queue_init_per_thread(void){
     unsigned int i = 0;
-    _thr_pool = aligned_alloc(CACHE_LINE_SIZE, sizeof(__temp_thread_pool)+sizeof(msg_t)*THR_POOL_SIZE);
+    _thr_pool = thr_aligned_alloc(CACHE_LINE_SIZE, sizeof(__temp_thread_pool)+sizeof(msg_t)*THR_POOL_SIZE);
     if(!_thr_pool) {
         printf("Cannot allocate memory for _thr_pool\n");
         abort();
@@ -59,15 +61,15 @@ void queue_init_per_thread(void){
 
 void unsafe_set_init(){
 	
-	if( ( lp_unsafe_set=malloc(LP_ULL_MASK_SIZE)) == NULL ){
+	if( ( lp_unsafe_set=thr_alloc(LP_ULL_MASK_SIZE)) == NULL ){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
 		abort();	
 	}
-    if( ( lp_unsafe_set_debug=malloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
+    if( ( lp_unsafe_set_debug=thr_alloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
         printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
         abort();    
     }
-    if( ( lp_locked_set=malloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
+    if( ( lp_locked_set=thr_alloc(pdes_config.nprocesses*sizeof(unsigned long long))) == NULL ){
         printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
         abort();    
     }
@@ -81,7 +83,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
     __temp_thread_pool *tmp;
     unsigned int i;
     if(_thr_pool->_thr_pool_count == _thr_pool->_thr_pool_size) {
-        tmp = aligned_alloc(CACHE_LINE_SIZE, sizeof(__temp_thread_pool)+sizeof(msg_t)*_thr_pool->_thr_pool_size*2);
+        tmp = thr_aligned_alloc(CACHE_LINE_SIZE, sizeof(__temp_thread_pool)+sizeof(msg_t)*_thr_pool->_thr_pool_size*2);
         if(!tmp){
             printf("queue overflow for thread %u at time %f: inserting event %d over %d\n", tid, current_lvt, _thr_pool->_thr_pool_count, THR_POOL_SIZE);
             abort();
@@ -92,7 +94,7 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
         for(i=0;i<_thr_pool->_thr_pool_size;i++)
             tmp->messages[i] = _thr_pool->messages[i];
         
-        free(_thr_pool);
+        thr_free(_thr_pool);
         _thr_pool = tmp;
     }
     if(event_size > MAX_DATA_SIZE) {

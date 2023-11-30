@@ -15,6 +15,8 @@
 #include <atomic.h>
 #include <assert.h>
 
+#include <glo_alloc.h>
+
 
 /**
  * @brief A generic bitmap
@@ -44,7 +46,7 @@ static inline bitmap* allocate_bitmap(unsigned int len){
     bytes       += actual_len<len;
     actual_len   = bytes * CHAR_BIT;
 
-    tmp = (bitmap*) aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int));
+    tmp = (bitmap*) glo_aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int));
     
     bzero(tmp, bytes+2*sizeof(unsigned int));
     
@@ -59,7 +61,7 @@ static inline bitmap* allocate_bitmap(unsigned int len){
  */ 
 static inline void release_bitmap(bitmap* ptr){
     if(ptr == NULL ) abort();
-    free(ptr);
+    glo_free(ptr);
 }
 
 /**

@@ -29,6 +29,9 @@
 #include <allocator.h>
 #include <segment.h>
 
+#include <lpm_alloc.h>
+#include <lps_alloc.h>
+
 /**
 * This function inizializes the dymelor subsystem
 *
@@ -126,7 +129,7 @@ void malloc_state_init(bool recoverable, malloc_state *state) {
 	state->timestamp = -1;
 	state->is_incremental = false;
 
-	state->areas = (malloc_area*)rsalloc(state->max_num_areas * sizeof(malloc_area));
+	state->areas = (malloc_area*)lpm_alloc(state->max_num_areas * sizeof(malloc_area));
 	if(state->areas == NULL)
 		rootsim_error(true, "Unable to allocate memory at %s:%d\n", __FILE__, __LINE__);
 
@@ -208,7 +211,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 	bool is_recoverable;
 	int j;
 	if(pdes_config.serial) {
-		return rsalloc(size);
+		return lps_alloc(size);
 	}
 	size = compute_size(size);
 
@@ -282,7 +285,7 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 		if(pdes_config.enable_custom_alloc)
 			m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
 		else{
-			m_area->self_pointer = rsalloc(area_size);
+			m_area->self_pointer = lps_alloc(area_size);
 			bzero(m_area->self_pointer, area_size);
 		}
 
@@ -385,7 +388,7 @@ void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
 	size_t chunk_size;
 
 	if(pdes_config.serial) {
-		rsfree(ptr);
+		lps_free(ptr);
 		return;
 	}
 
@@ -406,7 +409,7 @@ void do_free(unsigned int lid, malloc_state *mem_pool, void *ptr) {
 	idx = (int)((char *)ptr - (char *)m_area->area) / chunk_size;
 
 	if(!CHECK_USE_BIT(m_area, idx)) {
-		fprintf(stderr, "%s:%d: double free() corruption or address not malloc'd\n", __FILE__, __LINE__);
+		fprintf(stderr, "%s:%d: double free corruption or address not malloc'd\n", __FILE__, __LINE__);
 		abort();
 	}
 	RESET_USE_BIT(m_area, idx);
@@ -470,10 +473,10 @@ __thread void* freezed_state_ptr[4];
  
 void alloc_memory_for_freezed_state(void){
     int i=0;
-    freezed_state_ptr[i++]   = rsalloc(                   PER_LP_PREALLOCATED_MEMORY);
-    freezed_state_ptr[i++]   = rsalloc(                   sizeof(malloc_state));
-    freezed_state_ptr[i++]   = rsalloc(                   MAX_NUM_AREAS*sizeof(malloc_area));
-    freezed_state_ptr[i++]   = rsalloc(                   sizeof(struct _buddy));
+    freezed_state_ptr[i++]   = lps_alloc(                   PER_LP_PREALLOCATED_MEMORY);
+    freezed_state_ptr[i++]   = lpm_alloc(                   sizeof(malloc_state));
+    freezed_state_ptr[i++]   = lpm_alloc(                   MAX_NUM_AREAS*sizeof(malloc_area));
+    freezed_state_ptr[i++]   = lpm_alloc(                   sizeof(struct _buddy));
 }
 
 void** log_freezed_state(unsigned int lp){

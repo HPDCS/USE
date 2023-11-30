@@ -571,7 +571,6 @@ void prune_local_queue_with_ts_old(simtime_t ts){
             list_node_clean_by_content(current); 
             current->state = -1;
             current->data_size = tid+1;
-            //free(list_container_of(current));
             list_insert_tail_by_content(freed_local_evts, current);
             //list_place_after_given_node_by_content(tid, freed_local_evts, current, ((rootsim_list*)freed_local_evts)->head);
         }

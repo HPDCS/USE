@@ -4,6 +4,7 @@
 #include "garbagecollector.h"
 #include <hpdcs_utils.h>
 
+#include <glo_alloc.h>
 
 
 __thread unsigned int ind = 0;
@@ -40,9 +41,7 @@ void* alloc_array_nodes(hpdcs_gc_status *status, unsigned int num_item)
 {
 	linked_gc_node *res, *tmp;
 	unsigned long long res_tmp;
-	//TODO: verify why work only with calloc and not with malloc
-	res = malloc( num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE); 
-	//res = calloc( 1,num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE);
+	res = glo_alloc( num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE); 
 	
 	
 	if(res == NULL)
@@ -130,10 +129,10 @@ void* mm_node_malloc(hpdcs_gc_status *status)
 #endif
 		
 #if USE_POSIX_MEMALIGN == 0 
-		res = malloc( rolled*(status->block_size + HEADER_SIZE) +CACHE_LINE_SIZE);
+		res = glo_alloc( rolled*(status->block_size + HEADER_SIZE) +CACHE_LINE_SIZE);
 		if(res == NULL)
 #else
-		res_pos_mem = posix_memalign((void**) &res, CACHE_LINE_SIZE, rolled*(status->block_size + CACHE_LINE_SIZE) );
+		res_pos_mem = glo_memalign_alloc((void**) &res, CACHE_LINE_SIZE, rolled*(status->block_size + CACHE_LINE_SIZE) );
 		if(res_pos_mem != 0)
 #endif		
 		{

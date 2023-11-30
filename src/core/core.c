@@ -47,6 +47,17 @@
 #include "clock_constant.h"
 #include "state_swapping.h"
 
+
+
+#include <glo_alloc.h>
+#include <lpm_alloc.h>
+
+
+
+
+
+
+
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
 
@@ -244,9 +255,9 @@ void LPs_metada_init() {
 	unsigned int i;
 	int lp_lock_ret;
 	
-	LPS = malloc(sizeof(void*) * pdes_config.nprocesses);
-	sim_ended = malloc(LP_ULL_MASK_SIZE);
-	lp_lock_ret =  posix_memalign((void **)&lp_lock, CACHE_LINE_SIZE, pdes_config.nprocesses * CACHE_LINE_SIZE); //  malloc(lps_num * CACHE_LINE_SIZE);
+	LPS         = glo_alloc(sizeof(void*) * pdes_config.nprocesses);
+	sim_ended   = glo_alloc(LP_ULL_MASK_SIZE);
+	lp_lock_ret = glo_memalign_alloc((void **)&lp_lock, CACHE_LINE_SIZE, pdes_config.nprocesses * CACHE_LINE_SIZE); 
 			
 	if(LPS == NULL || sim_ended == NULL || lp_lock_ret == 1){
 		printf("Out of memory in %s:%d\n", __FILE__, __LINE__);
@@ -256,7 +267,7 @@ void LPs_metada_init() {
 	for (i = 0; i < pdes_config.nprocesses; i++) {
 		lp_lock[i*(CACHE_LINE_SIZE/4)] = 0;
 		sim_ended[i/64] = 0;
-		LPS[i] = malloc(sizeof(LP_state));
+		LPS[i] = lpm_alloc(sizeof(LP_state));
 		LPS[i]->lid 					= i;
 		LPS[i]->seed 					= i+1; //TODO;
 		LPS[i]->state 					= LP_STATE_READY;
@@ -306,10 +317,10 @@ void numa_init(){
 
 
 
-	numa_state = malloc(num_numa_nodes * sizeof(numa_struct *));
+	numa_state = glo_alloc(num_numa_nodes * sizeof(numa_struct *));
 
 	for (unsigned int i=0; i < num_numa_nodes; i++) {
-		numa_state[i] = malloc(sizeof(numa_struct));
+		numa_state[i] = glo_alloc(sizeof(numa_struct));
 		alloc_numa_state(numa_state[i]);
 		numa_state[i]->numa_id = i;
 	}

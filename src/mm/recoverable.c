@@ -37,6 +37,9 @@
 #include "state_swapping.h"
 
 
+#include <glo_alloc.h>
+#include <lps_alloc.h>
+
 /// Recoverable memory state for LPs
 malloc_state **recoverable_state;
 
@@ -52,11 +55,11 @@ void recoverable_init(void) {
 	
 	register unsigned int i;
 	
-	recoverable_state = rsalloc(sizeof(malloc_state *) * pdes_config.nprocesses);
+	recoverable_state = glo_alloc(sizeof(malloc_state *) * pdes_config.nprocesses);
 
 	for(i = 0; i < pdes_config.nprocesses; i++){
 
-		recoverable_state[i] = rsalloc(sizeof(malloc_state));
+		recoverable_state[i] = glo_alloc(sizeof(malloc_state));
 		if(recoverable_state[i] == NULL)
 			rootsim_error(true, "Unable to allocate memory on malloc init");
 
@@ -65,28 +68,7 @@ void recoverable_init(void) {
 }
 
 
-//void recoverable_fini(void) {
-//	unsigned int i, j;
-//	malloc_area *current_area;
-//
-//	for(i = 0; i < pdes_config.nprocesses; i++) {
-//		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
-//			current_area = &(recoverable_state[i]->areas[j]);
-//			if (current_area != NULL) {
-//				if (current_area->self_pointer != NULL) {
-//					if(pdes_config.enable_custom_alloc)
-//					  	pool_release_memory(i, current_area->self_pointer);
-//					else
-//						rsfree(current_area->self_pointer);
-//				}
-//			}
-//		}
-//		rsfree(recoverable_state[i]->areas);
-//		rsfree(recoverable_state[i]);
-//	}
-//	rsfree(recoverable_state);
-//}
-
+/* TODO  finalization*/
 
 
 /**
@@ -115,7 +97,7 @@ size_t get_log_size(malloc_state *logged_state){
 
 
 /**
-* This is the wrapper of the real stdlib malloc(). Whenever the application level software
+* This is the wrapper of the real stdlib malloc. Whenever the application level software
 * calls malloc, the call is redirected to this piece of code which uses the memory preallocated
 * by the DyMeLoR subsystem for serving the request. If the memory in the malloc_area is exhausted,
 * a new one is created, relying on the stdlib malloc.
@@ -138,7 +120,7 @@ void *__wrap_malloc(size_t size) {
 }
 
 /**
-* This is the wrapper of the real stdlib free(). Whenever the application level software
+* This is the wrapper of the real stdlib free. Whenever the application level software
 * calls free, the call is redirected to this piece of code which will set the chunk in the
 * corresponding malloc_area as not allocated.
 *
@@ -162,7 +144,7 @@ void __wrap_free(void *ptr) {
 
 
 /**
-* This is the wrapper of the real stdlib realloc(). Whenever the application level software
+* This is the wrapper of the real stdlib realloc. Whenever the application level software
 * calls realloc, the call is redirected to this piece of code which rely on wrap_malloc
 *
 * @author Roberto Vitali
@@ -209,7 +191,7 @@ void *__wrap_realloc(void *ptr, size_t size){
 
 
 /**
-* This is the wrapper of the real stdlib calloc(). Whenever the application level software
+* This is the wrapper of the real stdlib calloc. Whenever the application level software
 * calls calloc, the call is redirected to this piece of code which relies on wrap_malloc
 *
 * @author Roberto Vitali
@@ -256,7 +238,7 @@ void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
 				if(pdes_config.enable_custom_alloc)
 					pool_release_memory(lid, m_area->self_pointer);
 				else
-					rsfree(m_area->self_pointer);
+					lps_free(m_area->self_pointer);
 				
 				m_area->use_bitmap = NULL;
 				m_area->dirty_bitmap = NULL;

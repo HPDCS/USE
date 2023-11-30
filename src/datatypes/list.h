@@ -33,7 +33,7 @@
 #include <assert.h>
 #include <atomic.h>
 #include <limits.h>
-
+#include <glo_alloc.h>
 
 // The basic implementation of the list is such that each node of any list is allocated in
 // a separate memory region which is associated with a LP.
@@ -86,10 +86,7 @@ struct rootsim_list {
  */
 #define new_list(lid, type)	(type *)({ \
 				void *__lmptr; \
-				if((lid) == GENERIC_LIST) \
-					__lmptr = (void *)rsalloc(sizeof(struct rootsim_list)); \
-				else \
-					__lmptr = (void *)umalloc((lid), sizeof(struct rootsim_list));\
+				__lmptr = (void *)glo_alloc(sizeof(struct rootsim_list)); \
 				bzero(__lmptr, sizeof(struct rootsim_list));\
 				__lmptr;\
 			})

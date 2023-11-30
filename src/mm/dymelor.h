@@ -65,7 +65,7 @@
 
 #define NUM_AREAS (log2(MAX_CHUNK_SIZE) - log2(MIN_CHUNK_SIZE) + 1)			// Number of initial malloc_areas available (will be increased at runtime if needed)
 #define MAX_NUM_AREAS (NUM_AREAS * 32) 	// Maximum number of allocatable malloc_areas. If MAX_NUM_AREAS
-				// malloc_areas are filled at runtime, subsequent malloc() requests
+				// malloc_areas are filled at runtime, subsequent malloc requests
 				// by the application level software will fail.
 #define MAX_LIMIT_NUM_AREAS MAX_NUM_AREAS
 #define MIN_NUM_CHUNKS 2048	// Minimum number of chunks per malloc_area
@@ -234,18 +234,6 @@ extern void __wrap_free(void *);
 extern void *__wrap_realloc(void *, size_t);
 extern void *__wrap_calloc(size_t, size_t);
 extern void clean_buffers_on_gvt(unsigned int, simtime_t);
-
-// Unrecoverable Memory API
-extern void *umalloc(unsigned int, size_t);
-extern void ufree(unsigned int, void *);
-extern void *urealloc(unsigned int, void *, size_t);
-extern void *ucalloc(unsigned int, size_t nmemb, size_t size);
-
-/* Simulation Platform Memory APIs */
-extern  void *rsalloc(size_t);
-extern  void rsfree(void *);
-extern  void *rsrealloc(void *, size_t);
-extern  void *rscalloc(size_t, size_t);
 
 
 extern void ecs_init(void);

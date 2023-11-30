@@ -30,10 +30,6 @@ void queue_init_per_thread(void);
 
 extern void unsafe_set_init();
 
-//void getMinLP(unsigned int lp);
-//unsigned int getMinFree();
-//void commit();
-
 extern bool is_valid(msg_t * event);
 
 extern nb_calqueue* nbcalqueue;

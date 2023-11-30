@@ -6,6 +6,10 @@
 #include <simtypes.h>
 
 
+#include <glo_alloc.h>
+#include <thr_alloc.h>
+#include <lpm_alloc.h>
+
 extern double delta_count;
 extern unsigned int reverse_execution_threshold_main;
 
@@ -14,7 +18,7 @@ struct stats_t *lp_stats;
 struct stats_t *system_stats;
 
 void statistics_init() {
-	if(posix_memalign((void**)&thread_stats, 64, pdes_config.ncores * sizeof(struct stats_t)) < 0) {
+	if(thr_memalign_alloc((void**)&thread_stats, 64, pdes_config.ncores * sizeof(struct stats_t)) < 0) {
 		printf("memalign failed\n"); // LCOV_EXCL_LINE
 	}
 	if(thread_stats == NULL) {
@@ -22,7 +26,7 @@ void statistics_init() {
 		abort();																								 // LCOV_EXCL_LINE
 	}
 
-	if(posix_memalign((void**)&lp_stats, 64, pdes_config.nprocesses * sizeof(struct stats_t)) < 0) {
+	if(lpm_memalign_alloc((void**)&lp_stats, 64, pdes_config.nprocesses * sizeof(struct stats_t)) < 0) {
 		printf("memalign failed\n"); // LCOV_EXCL_LINE
 	}
 	if(lp_stats == NULL) {
@@ -30,7 +34,7 @@ void statistics_init() {
 		abort();																						 // LCOV_EXCL_LINE
 	}
 
-	if(posix_memalign((void**)&system_stats, 64, sizeof(struct stats_t)) < 0) {
+	if(glo_memalign_alloc((void**)&system_stats, 64, sizeof(struct stats_t)) < 0) {
 		printf("memalign failed\n"); // LCOV_EXCL_LINE
 	}
 	if(lp_stats == NULL) {
@@ -44,9 +48,9 @@ void statistics_init() {
 }
 
 void statistics_fini() {
-	free(thread_stats);
-	free(lp_stats);
-	free(system_stats);
+	thr_free(thread_stats);
+	lpm_free(lp_stats);
+	glo_free(system_stats);
 }
 
 static void statistics_post_data(struct stats_t *stats, int idx, int type, stat64_t value) {

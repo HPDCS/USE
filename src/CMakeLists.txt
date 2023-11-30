@@ -83,7 +83,6 @@ set(src-mm
         mm/recoverable.c
         mm/checkpoints.c
         mm/state.c
-        mm/platform.c
 )
 
 set(src-reverse
@@ -97,6 +96,7 @@ set(src-reverse
 include_directories(include)
 include_directories(include-gen)
 include_directories(mm)
+include_directories(mm/allocators)
 include_directories(reverse)
 include_directories(statistics)
 include_directories(datatypes)
@@ -158,7 +158,6 @@ endif()
 
 
 add_library(use-core      STATIC ${src-core} )
-
 add_dependencies(use-core clock_constant hpipe)
 
 if(CSR_CONTEXT)
@@ -169,6 +168,10 @@ add_library(use-mm        STATIC ${src-mm})
 #add_library(use-reverse   STATIC ${src-reverse})
 add_library(use-datatypes   STATIC ${src-datatypes})
 
+add_custom_target(libuse-core-mocked.a
+  DEPENDS ${name} use-core use-datatypes
+  COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc --wrap aligned_alloc --wrap posix_memalign -o libuse-core-mocked.a --whole-archive ${CMAKE_BINARY_DIR}/src/libuse-core.a ${CMAKE_BINARY_DIR}/src/libuse-datatypes.a
+)
 
 
 if(CSR_CONTEXT)

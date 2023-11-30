@@ -16,6 +16,9 @@
 #include <clock_constant.h>
 #include <gvt.h>
 
+#include <glo_alloc.h>
+#include <thr_alloc.h>
+
 #define USE_SYSCALL 0
 #define DISABLE_EFFECTIVE_CSR 1
 
@@ -69,7 +72,7 @@ void init_thread_csr_state(void){
 	void *alternate_stack;
 	int res;
 	alloc_memory_for_freezed_state();
-	alternate_stack = malloc(STACK_SIZE);
+	alternate_stack = thr_alloc(STACK_SIZE);
 	printf("TID:%d %d %p\n", tid, gettid(), private_swapping_struct);
     if (alternate_stack == NULL) {
 	  printf("Cannot allcate memory for csr context\n"); 
@@ -245,7 +248,7 @@ void print_state_swapping_struct_metrics(void){
  */
 state_swapping_struct *alloc_state_swapping_struct() {
 
-	state_swapping_struct *sw_struct = (state_swapping_struct *) malloc(sizeof(state_swapping_struct));
+	state_swapping_struct *sw_struct = (state_swapping_struct *) glo_alloc(sizeof(state_swapping_struct));
 
 	sw_struct->lp_bitmap = allocate_bitmap(pdes_config.nprocesses);
 	init_state_swapping_struct(sw_struct);

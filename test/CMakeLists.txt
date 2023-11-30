@@ -1,6 +1,6 @@
 function(test_program name)
     add_executable(test_${name} ${ARGN})
-    target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src)
+    target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src/mm/allocators ../src)
     add_test(NAME test_${name} COMMAND test_${name})
     target_link_libraries(test_${name} use-datatypes m) 
     set_tests_properties(test_${name} PROPERTIES TIMEOUT 120)
@@ -18,9 +18,10 @@ function(test_model name)
         COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o lib${name}-mm.a --whole-archive lib${name}.a ${CMAKE_BINARY_DIR}/src/libuse-mm.a
     )
 
-    add_dependencies(test_${name} ${name} use-mm use-core use-datatypes lib${name}-mm.a)
+
+    add_dependencies(test_${name} ${name} use-mm libuse-core-mocked.a lib${name}-mm.a)
     
-    target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a use-core use-datatypes m numa pthread) 
+    target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a  ${CMAKE_BINARY_DIR}/src/libuse-core-mocked.a m numa pthread) 
 
 endfunction()
 
@@ -31,9 +32,9 @@ function(configure_test prefix name)
     set_tests_properties(${prefix}_${name}_par PROPERTIES TIMEOUT 120)
 endfunction()
 
-test_program(bitmap datatypes/bitmap.c)
-test_program(list datatypes/list.c)
-test_program(numerical core/numerical.c)
+test_program(bitmap datatypes/bitmap.c platform.c)
+test_program(list datatypes/list.c  platform.c)
+test_program(numerical core/numerical.c  platform.c)
 
 test_model(phold ../models/phold/application.c)
 test_model(phold_count ../models/phold_count/application.c)

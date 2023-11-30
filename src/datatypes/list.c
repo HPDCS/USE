@@ -32,25 +32,7 @@
 #include <events.h>
 #include <hpdcs_utils.h>
 
-
-void *umalloc(unsigned int lid, size_t s) {
-	if(pdes_config.serial)
-		return rsalloc(s);
-	(void)lid;
-	return rsalloc(s);
-}
-
-
-void ufree(unsigned int lid, void *ptr) {
-	
-	if(pdes_config.serial) {
-		rsfree(ptr);
-		return;
-	}
-	(void)lid;
-	rsfree(ptr);
-}
-
+#include <glo_alloc.h>
 
 /**
 * This function inserts a new element at the beginning of the list.
@@ -78,19 +60,12 @@ void ufree(unsigned int lid, void *ptr) {
 char *__list_insert_head(unsigned int lid, void *li, unsigned int size, void *data) {
 
 	rootsim_list *l = (rootsim_list *)li;
-
 	assert(l);
-
 	size_t size_before = l->size;
-
 	struct rootsim_list_node *new_n;
-
+	(void)lid;
 	// Create the new node and populate the entry
-	if(lid == GENERIC_LIST)
-		new_n = rsalloc(sizeof(struct rootsim_list_node) + size);
-	else
-		new_n = umalloc(lid, sizeof(struct rootsim_list_node) + size);
-
+	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
 	memcpy(&new_n->data, data, size);
 
@@ -143,12 +118,10 @@ char *__list_insert_head(unsigned int lid, void *li, unsigned int size, void *da
 char *__list_insert_tail(unsigned int lid, void *li, unsigned int size, void *data) {
 
 	struct rootsim_list_node *new_n;
-
+	(void)lid;
+	
 	// Create the new node and populate the entry
-	if(lid == GENERIC_LIST)
-		new_n = rsalloc(sizeof(struct rootsim_list_node) + size);
-	else
-		new_n = umalloc(lid, sizeof(struct rootsim_list_node) + size);
+	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
 	memcpy(&new_n->data, data, size);
 
@@ -315,6 +288,7 @@ char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, 
 
 	assert(l);
 	size_t size_before = l->size;
+	(void)lid;
 	(void)size_before;
 	char *content = NULL;
 	struct rootsim_list_node *n = l->head;
@@ -341,22 +315,14 @@ char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, 
 				n->prev->next = n->next;
 			}
 
-			if(lid == GENERIC_LIST)
-				content = rsalloc(size);
-			else
-				content = umalloc(lid, size);
-
+			content = glo_alloc(size);
 			memcpy(content, &n->data, size);
 			n->next = (void *)0xDEADBEEF;
 			n->prev = (void *)0xDEADBEEF;
 			bzero(n->data, size);
 
-			if(lid == GENERIC_LIST)
-				rsfree(n);
-			else
-				ufree(lid, n);
-
-			l->size--;
+			glo_free(n);
+						l->size--;
 			assert(l->size == (size_before - 1));
 			return content;
 		}
@@ -394,10 +360,7 @@ bool __list_delete(unsigned int lid, void *li, unsigned int size, double key, si
 	void *content;
 	if((content =__list_extract(lid, li, size, key, key_position)) != NULL) {
 		bzero(&content, size);
-		if(lid == GENERIC_LIST)
-			rsfree(content);
-		else
-			ufree(lid, content);
+		glo_free(content);
 		return true;
 	}
 	return false;
@@ -436,6 +399,7 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 	assert(l);
 	size_t size_before = l->size;
 	(void)size_before;
+	(void)lid;
 
 	struct rootsim_list_node *n = list_container_of(ptr);
 	char *content = NULL;
@@ -463,11 +427,7 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 	}
 
 	if(copy) {
-		if(lid == GENERIC_LIST)
-			content = rsalloc(size);
-		else
-			content = umalloc(lid, size);
-
+		content = glo_alloc(size);
 		memcpy(content, &n->data, size);
 	}
 	n->next = (void *)0xBEEFC0DE;
@@ -475,11 +435,8 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 	//bzero(n->data, size);
 	memset(n->data, 0xe9, size);
 
-	if(lid == GENERIC_LIST)
-		rsfree(n);
-	else
-		ufree(lid, n);
-
+	glo_free(n);
+	
 	l->size--;
 	assert(l->size == (size_before - 1));
 
@@ -560,6 +517,7 @@ void list_pop(unsigned int lid, void *li) {
 	assert(l);
 	size_t size_before = l->size;
 	(void)size_before;
+	(void)lid;
 
 	struct rootsim_list_node *n = l->head;
 	struct rootsim_list_node *n_next;
@@ -573,10 +531,7 @@ void list_pop(unsigned int lid, void *li) {
 		n->next = (void *)0xDEFEC8ED;
 		n->prev = (void *)0xDEFEC8ED;
 
-		if(lid == GENERIC_LIST)
-			rsfree(n);
-		else
-			ufree(lid, n);
+		glo_free(n);
 
 		n = n_next;
 		l->size--;
@@ -595,6 +550,7 @@ unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_pos
 
 	assert(l);
 	size_t size_before = l->size;
+	(void)lid;
 
 	// Attempting to truncate an empty list?
 	if(size_before == 0) {
@@ -613,12 +569,7 @@ unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_pos
                 n_adjacent = n->next;
                 n->next = (void *)0xBAADF00D;
                 n->prev = (void *)0xBAADF00D;
-
-		if(lid == GENERIC_LIST)
-			rsfree(n);
-		else
-			ufree(lid, n);
-
+		glo_free(n);
 		n = n_adjacent;
 	}
 	l->head = n;
@@ -635,11 +586,8 @@ unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_pos
 
 void *list_allocate_node(unsigned int lid, size_t size) {
 	struct rootsim_list_node *new_n;
-
-	if(lid == GENERIC_LIST)
-		new_n = rsalloc(sizeof(struct rootsim_list_node) + size);
-	else
-		new_n = umalloc(lid, sizeof(struct rootsim_list_node) + size);
+	(void)lid;
+	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
 	return new_n;
 }
@@ -657,10 +605,8 @@ void *list_allocate_node_buffer(unsigned int lid, size_t size) {
 
 
 void list_deallocate_node_buffer(unsigned int lid, void *ptr) {
-	if(lid == GENERIC_LIST)
-		rsfree(list_container_of(ptr));
-	else
-		ufree(lid, list_container_of(ptr));
+	(void)lid;
+	glo_free(list_container_of(ptr));
 }
 
 
@@ -824,7 +770,7 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 		//while((++i)*CACHE_LINE_SIZE < node_size);
 		//node_size = (i)*CACHE_LINE_SIZE;
 		
-		if(posix_memalign((void**)&memory_nodes, CACHE_LINE_SIZE, (/*node_size*/node_size_msg_t)*LIST_NODE_PER_ALLOC) != 0){
+		if(glo_memalign_alloc((void**)&memory_nodes, CACHE_LINE_SIZE, (/*node_size*/node_size_msg_t)*LIST_NODE_PER_ALLOC) != 0){
 			printf("List nodes allocation failed\n");
 			abort();
 		}

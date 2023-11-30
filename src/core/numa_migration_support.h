@@ -12,6 +12,8 @@
 #include <window.h>
 #include <local_scheduler.h>
 
+#include <thr_alloc.h>
+
 
 extern void migrate_segment(unsigned int id, int numa_node);
 extern long long start_simul_time;
@@ -365,7 +367,7 @@ void rebind_lp_to_numa_nodes(lps_to_migrate *lps_to_migrate_array, numa_struct *
  */
 static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	numa_struct *max_load_numa_node, *min_load_numa_node;
-	lps_to_migrate *lps_to_migrate_array = malloc(sizeof(lps_to_migrate) * pdes_config.nprocesses); //TODO: size of allocation
+	lps_to_migrate *lps_to_migrate_array = thr_alloc(sizeof(lps_to_migrate) * pdes_config.nprocesses); //TODO: size of allocation
 	double scale = 0.0;
 
 	/// set the unbalance index of every numa node
@@ -380,7 +382,7 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	simtime_t load_skew = max_load_numa_node->unbalance_index - min_load_numa_node->unbalance_index;
   #if VERBOSE == 0
         int p_len = 10+num_numa_nodes*(2+6)+1;
-        char *print=malloc(p_len);
+        char print[256];
         int cur = 10;
         strcpy(print, "NUMA skew:");
 	//printf("NUMA skew:");
@@ -391,7 +393,6 @@ static inline void plan_and_do_lp_migration(numa_struct **numa_state) {
 	}
         print[p_len] = '\0';
 	printf("%s ts:%llu\n", print, (CLOCK_READ()-start_simul_time)/CLOCKS_PER_US/1000);
-        free(print);
   #endif
 	if(load_skew/scale < BALANCE_OVERFLOW) 
 		goto out;
@@ -407,7 +408,7 @@ out:
 		numa_state[i]->unbalance_index = 0;
 	rounds_before_unbalance_check = 0;
 	clock_timer_value(time_interval_for_numa_rebalance);
-	free(lps_to_migrate_array);
+	thr_free(lps_to_migrate_array);
 
 }
 

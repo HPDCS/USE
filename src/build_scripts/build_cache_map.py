@@ -99,7 +99,8 @@ for k in res:
 
 len1 = len(fin)
 print("#define HPIPE_INDEX2_LEN "+str(len2+1))
-print("#define HPIPE_INDEX1_LEN "+str(len1)+"\n")
+print("#define HPIPE_INDEX1_LEN "+str(len1))
+print("extern int *hpipe_index1[HPIPE_INDEX1_LEN];\n")
 
 for k in fin:
   print("int hpipe_index2_cpu"+str(k)+'[HPIPE_INDEX2_LEN]='+str([k]+fin[k]).replace('[', '{').replace(']', '}')+';')
