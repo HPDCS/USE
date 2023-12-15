@@ -3,6 +3,7 @@
 #ifndef __COMMON_ALLOCATORS__
 #define __COMMON_ALLOCATORS__
 
+#include <mm_nvram.h>
 
 extern void *__real_malloc(size_t);
 extern void __real_free(void *);

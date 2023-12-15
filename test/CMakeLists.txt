@@ -1,6 +1,6 @@
 function(test_program name)
     add_executable(test_${name} ${ARGN})
-    target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src/mm/allocators ../src)
+    target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src/mm/allocators ../src ../mm-nvram/include ../mm-nvram/memkind-install/include )
     add_test(NAME test_${name} COMMAND test_${name})
     target_link_libraries(test_${name} use-datatypes m) 
     set_tests_properties(test_${name} PROPERTIES TIMEOUT 120)

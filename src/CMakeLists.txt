@@ -102,6 +102,9 @@ include_directories(statistics)
 include_directories(datatypes)
 include_directories(core)
 include_directories(asm)
+include_directories(../mm-nvram/include)
+include_directories(../mm-nvram/memkind-install/include)
+
 
 
 add_custom_target(

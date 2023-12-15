@@ -10,6 +10,8 @@ set(PROJECT_VERSION 2.0.0)
 #set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 include(ProcessorCount)
+add_subdirectory(mm-nvram)
+
 ProcessorCount(N)
 if(N EQUAL 0)
   set(N 2)
