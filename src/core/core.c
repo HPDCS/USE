@@ -30,7 +30,6 @@
 #include <utmpx.h>
 #include <gvt.h>
 
-#include <configuration.h>
 
 #include <numa_migration_support.h>
 #include "metrics_for_lp_migration.h"

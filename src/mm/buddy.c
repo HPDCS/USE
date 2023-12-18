@@ -33,7 +33,6 @@
 #include "mm.h"
 #include <hpdcs_utils.h>
 #include <ROOT-Sim.h>
-#include <configuration.h>
 #include <segment.h>
 #include <platform.h>
 

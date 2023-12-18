@@ -10,7 +10,7 @@
 #include <limits.h>
 #include <nb_calqueue.h>
 #include <numa.h>
-#include <configuration.h>
+
 
 
 #define UNDEFINED_WT (512)

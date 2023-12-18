@@ -69,7 +69,6 @@ set(src-os
 
 set(src-core
         core/core.c
-        core/configuration.c
         core/nb_calqueue.c
         core/x86.c
         core/queue.c
@@ -82,6 +81,7 @@ set(src-core
         core/state_swapping.c
         core/virtual_timer.c
         core/gvt.c
+        configuration/configuration.c
         numerical/numerical.c
         statistics/statistics.c
         mm/garbagecollector.c)

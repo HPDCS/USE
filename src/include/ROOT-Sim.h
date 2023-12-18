@@ -38,7 +38,7 @@
 #include <string.h>
 #include <float.h>
 #include <stdbool.h>
-#include <configuration.h>
+#include <configuration/configuration.h>
 
 #define n_prc_tot (pdes_config.nprocesses)
 
