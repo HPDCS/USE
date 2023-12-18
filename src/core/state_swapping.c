@@ -4,14 +4,14 @@
        
 #include "core.h"
 #include <clock_constant.h>
-#include <bitmap.h>
 #include <unistd.h>
-#include <lp/lp.h>
 #include <signal.h>
 #include <pthread.h>
 #include "queue.h"
 #include "state_swapping.h"
 
+#include <lp/lp.h>
+#include <datatypes/bitmap.h>
 #include <utils/compiler.h>
 
 #include <clock_constant.h>

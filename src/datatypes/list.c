@@ -32,10 +32,12 @@
 
 #include <core.h>
 
-#include <list.h>
 #include <events.h>
 
 #include <glo_alloc.h>
+
+#include "list.h"
+
 
 void *alloc_list(unsigned int lid){
   void *__lmptr;

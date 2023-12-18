@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <statistics.h>
+
 
 #include <utils/prints.h>
 #include <utils/timer.h>
@@ -11,6 +11,7 @@
 #include "lookahead.h"
 
 #include <scheduler/local/local_index/local_index.h>
+#include <statistics/statistics.h>
 
 //event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;

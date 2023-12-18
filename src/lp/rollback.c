@@ -32,14 +32,15 @@
 #include <string.h>
 
 #include <core.h>
-#include <list.h>
 #include <state.h>
-#include <lp/mm/allocator/dymelor.h>
-#include <statistics.h>
 #include <queue.h>
-#include <utils/prints.h>
 #include <state_swapping.h>
-#include "mm/checkpoints/autockpt.h"
+
+#include <statistics/statistics.h>
+#include <datatypes/list.h>
+#include <lp/mm/allocator/dymelor.h>
+#include <lp/mm/checkpoints/autockpt.h>
+#include <utils/prints.h>
 
 
 

@@ -32,12 +32,12 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <math.h>
-#include <statistics.h>
 
 #include "nb_calqueue.h"
 #include "core.h"
 #include "queue.h"
 
+#include <statistics/statistics.h>
 #include <utils/prints.h>
 #include <utils/compiler.h>
 #include <state_swapping.h>

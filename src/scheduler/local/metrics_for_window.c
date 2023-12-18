@@ -1,10 +1,13 @@
-#include <core.h>
+#include <math.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include <statistics.h>
-#include <scheduler/local/window.h>
+
+#include <core.h>
 #include <clock_constant.h>
-#include <math.h>
+
+#include <statistics/statistics.h>
+#include <scheduler/local/window.h>
+
 
 window w;
 

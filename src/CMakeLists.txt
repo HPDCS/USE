@@ -111,13 +111,8 @@ set(src-api
 # Build the core library
 include_directories(include)
 include_directories(include-gen)
-include_directories(mm)
 include_directories(allocators)
-include_directories(reverse)
-include_directories(statistics)
-include_directories(datatypes)
 include_directories(core)
-include_directories(asm)
 include_directories(../mm-nvram/include)
 include_directories(../mm-nvram/memkind-install/include)
 

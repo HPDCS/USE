@@ -13,8 +13,7 @@
 #include <numerical/numerical.h>
 #include <state.h>
 
-#include <reverse.h>
-#include <statistics.h>
+#include <statistics/statistics.h>
 
 #include <lp/lp.h>
 #include <lp/mm/checkpoints/autockpt.h>

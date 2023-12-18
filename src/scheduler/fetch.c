@@ -39,6 +39,7 @@
 #include <gvt.h>
 #include <utils/prints.h>
 #include <utils/compiler.h>
+#include <statistics/statistics.h>
 
 
 #include <scheduler/nb_calqueue.h>

@@ -4,11 +4,10 @@
 
 
 #include <core.h>
-#include <lp/lp.h>
 #include <clock_constant.h>
 
-#include <bitmap.h>
-
+#include <lp/lp.h>
+#include <datatypes/bitmap.h>
 #include <scheduler/local/window.h>
 #include <scheduler/local/local_scheduler.h>
 

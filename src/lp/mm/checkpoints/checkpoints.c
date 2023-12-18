@@ -29,18 +29,18 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-#include <lp/mm/allocator/dymelor.h>
 #include <core.h>
-//#include <scheduler/scheduler.h>
-//#include <scheduler/process.h>
 #include <state.h>
-#include <statistics.h>
-#include "autockpt.h"
 
 #include <glo_alloc.h>
 #include <lps_alloc.h>
 
+#include <lp/mm/allocator/dymelor.h>
+#include <statistics/statistics.h>
 #include <utils/timer.h>
+
+#include "autockpt.h"
+
 
 /**
 * This function returns the whole size of a state. It can be used as the total size to pack a log

@@ -8,8 +8,8 @@
 #include <argp.h> 
 
 #include <core.h>
-#include <reverse.h>
-#include <statistics.h>
+
+#include <statistics/statistics.h>
 #include <utils/timer.h>
 
 

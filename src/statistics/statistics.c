@@ -1,14 +1,16 @@
 #include <stdio.h>
 
-#include <statistics.h>
 #include <core.h>
-#include <lp/lp.h>
-
-#include <utils/prints.h>
 
 #include <glo_alloc.h>
 #include <thr_alloc.h>
 #include <lpm_alloc.h>
+
+#include <lp/lp.h>
+#include <utils/prints.h>
+
+#include "statistics.h"
+
 
 extern double delta_count;
 extern unsigned int reverse_execution_threshold_main;

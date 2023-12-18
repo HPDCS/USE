@@ -4,9 +4,10 @@
 
 #include <float.h>
 #include <atomic.h>
-#include <list.h>
 #include <events.h>
 #include <state.h>
+
+#include <datatypes/list.h>
 #include <numerical/numerical.h>
 #include <scheduler/local/local_index/local_index_types.h>
 
