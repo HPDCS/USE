@@ -29,7 +29,6 @@
 #define _STATE_MGNT_H_
 
 
-#include <ROOT-Sim.h>
 #include <events.h>
 #include <list.h>
 #include <numerical/numerical.h>

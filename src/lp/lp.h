@@ -11,8 +11,6 @@
 #include <local_index/local_index_types.h>
 
 
-/// Infinite timestamp: this is the highest timestamp in a simulation run
-#define INFTY DBL_MAX
 
 #define current_LP_lvt bound->timestamp //used to retrieve the current LVT TODO: usare questo metodo o inserire il campo nella struttura?
 

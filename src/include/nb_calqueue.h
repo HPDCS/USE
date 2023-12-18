@@ -30,6 +30,7 @@
 
 #include <float.h>
 #include <math.h>
+#include <utils/float.h>
 #include <gc/garbagecollector.h>
 
 #include "atomic.h"
@@ -37,19 +38,6 @@
 #include "lookahead.h"
 #include "events.h"
 
-#define INFTY DBL_MAX
-
-//#define LESS(a,b) 		( (a) < (b) && !D_EQUAL((a), (b)) )
-//#define LEQ(a,b)		( (a) < (b) ||  D_EQUAL((a), (b)) )
-//#define D_EQUAL(a,b) 	(fabs((a) - (b)) < DBL_EPSILON)
-//#define GEQ(a,b) 		( (a) > (b) ||  D_EQUAL((a), (b)) )
-//#define GREATER(a,b) 	( (a) > (b) &&  !D_EQUAL((a), (b)) )
-
-#define LESS(a,b)            ( (a) <  (b)  )
-#define LEQ(a,b)             ( (a) <= (b) )
-#define D_EQUAL(a,b)         ( (a) == (b) )
-#define GEQ(a,b)             ( (a) >= (b) )
-#define GREATER(a,b)         ( (a) >  (b) )
 
 
 #define SAMPLE_SIZE 25
