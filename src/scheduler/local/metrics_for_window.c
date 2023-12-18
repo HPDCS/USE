@@ -2,7 +2,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <statistics.h>
-#include <window.h>
+#include <scheduler/local/window.h>
 #include <clock_constant.h>
 #include <math.h>
 

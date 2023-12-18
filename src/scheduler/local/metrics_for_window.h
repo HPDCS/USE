@@ -1,8 +1,7 @@
 #ifndef __METRICS_FOR_WINDOW_H
 #define __METRICS_FOR_WINDOW_H
 
-#include <window.h>
-
+#include <scheduler/local/window.h>
 
 extern window w;
 extern void init_metrics_for_window();

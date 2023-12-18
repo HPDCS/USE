@@ -10,7 +10,7 @@
 #include "core.h"
 #include "lookahead.h"
 
-#include "local_index/local_index.h"
+#include <scheduler/local/local_index/local_index.h>
 
 //event pool used by simulation as scheduler
 nb_calqueue* nbcalqueue;

@@ -23,7 +23,6 @@
 
 #include "core.h"
 #include "queue.h"
-#include "nb_calqueue.h"
 #include "lookahead.h"
 
 #include <utils/prints.h>
@@ -37,9 +36,11 @@
 #include "metrics_for_lp_migration.h"
 #include <gvt.h>
 
-#include "local_index/local_index.h"
-#include "local_scheduler.h"
-#include "metrics_for_window.h"
+#include <scheduler/nb_calqueue.h>
+#include <scheduler/local/local_index/local_index.h>
+#include <scheduler/local/local_scheduler.h>
+#include <scheduler/local/metrics_for_window.h>
+
 #include "clock_constant.h"
 #include "state_swapping.h"
 

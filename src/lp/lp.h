@@ -8,7 +8,7 @@
 #include <events.h>
 #include <state.h>
 #include <numerical/numerical.h>
-#include <local_index/local_index_types.h>
+#include <scheduler/local/local_index/local_index_types.h>
 
 
 

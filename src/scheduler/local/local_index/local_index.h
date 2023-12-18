@@ -2,7 +2,6 @@
 #define __STACK_
 
 #include <lp/lp.h>
-#include <nb_calqueue.h>
 #include <queue.h>
 
 extern nb_stack_node_t* nb_popAll(volatile nb_stack_t *s);

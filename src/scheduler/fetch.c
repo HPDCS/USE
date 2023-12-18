@@ -33,17 +33,17 @@
 #include <pthread.h>
 #include <math.h>
 
-#include "nb_calqueue.h"
-#include "core.h"
-#include "queue.h"
+#include <core.h>
+#include <queue.h>
 
-#include <metrics_for_window.h>
 #include <gvt.h>
 #include <utils/prints.h>
 #include <utils/compiler.h>
 
 
-#include "local_index/local_index.h"
+#include <scheduler/nb_calqueue.h>
+#include <scheduler/local/metrics_for_window.h>
+#include <scheduler/local/local_index/local_index.h>
 
 #define LOG_DEQUEUE 0
 #define LOG_ENQUEUE 0

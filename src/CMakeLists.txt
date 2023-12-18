@@ -74,19 +74,19 @@ set(src-os
 
 set(src-core
         core/core.c
-        core/nb_calqueue.c
         core/x86.c
         core/queue.c
-        core/fetch.c
         core/main.c
-        core/local_scheduler.c
-        core/local_index/local_index.c
-        core/metrics_for_window.c
         core/metrics_for_lp_migration.c
         core/state_swapping.c
         core/virtual_timer.c
         core/gvt.c
         configuration/configuration.c
+        scheduler/fetch.c
+        scheduler/nb_calqueue.c
+        scheduler/local/local_scheduler.c
+        scheduler/local/metrics_for_window.c
+        scheduler/local/local_index/local_index.c
         numerical/numerical.c
         statistics/statistics.c
         gc/garbagecollector.c)

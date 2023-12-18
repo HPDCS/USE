@@ -1,13 +1,16 @@
 #ifndef __NUMA_MIGRATION_SUPPORT_H__
 #define __NUMA_MIGRATION_SUPPORT_H__
 
+
+
 #include <core.h>
 #include <lp/lp.h>
 #include <clock_constant.h>
 
 #include <bitmap.h>
-#include <window.h>
-#include <local_scheduler.h>
+
+#include <scheduler/local/window.h>
+#include <scheduler/local/local_scheduler.h>
 
 #include <thr_alloc.h>
 

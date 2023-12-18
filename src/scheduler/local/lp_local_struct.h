@@ -4,12 +4,13 @@
 #include <events.h>
 #include <core.h>
 #include <queue.h>
-#include <local_index/local_index.h>
 #include <stdbool.h>
 #include <lp/lp.h>
 #include <utils/prints.h>
 #include <hpipe.h>
-#include <metrics_for_window.h>
+
+#include <scheduler/local/metrics_for_window.h>
+#include <scheduler/local/local_index/local_index.h>
 
 #include <thr_alloc.h>
 

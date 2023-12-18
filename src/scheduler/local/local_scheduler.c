@@ -1,6 +1,7 @@
-#include <lp_local_struct.h>
-#include <fetch.h>
 #include <pthread.h>
+
+#include <scheduler/fetch.h>
+#include <scheduler/local/lp_local_struct.h>
 
 #define MAX_EVENTS_FROM_LOCAL_SCHEDULER 100
 

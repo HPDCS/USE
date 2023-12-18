@@ -8,7 +8,6 @@
 #include <lp/lp.h>
 #include <statistics.h>
 #include <limits.h>
-#include <nb_calqueue.h>
 #include <numa.h>
 
 

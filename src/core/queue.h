@@ -2,11 +2,10 @@
 #define __QUEUE_H
 
 #include <stdbool.h>
-#include "nb_calqueue.h"
-
+#include <scheduler/nb_calqueue.h>
 #include <lp/lp_lock.h>
+#include <events.h>
 
-typedef struct __msg_t msg_t;
 
 typedef struct __temp_thread_pool {
 	unsigned int _thr_pool_count;
