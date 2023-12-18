@@ -35,22 +35,32 @@
 
 void *umalloc(unsigned int lid, size_t s) {
 	if(pdes_config.serial)
-		return rsalloc(s);
+		return malloc(s);
 	(void)lid;
-	return rsalloc(s);
+	return malloc(s);
 }
 
 
 void ufree(unsigned int lid, void *ptr) {
 	
 	if(pdes_config.serial) {
-		rsfree(ptr);
+		free(ptr);
 		return;
 	}
 	(void)lid;
-	rsfree(ptr);
+	free(ptr);
 }
 
+
+void *alloc_list(unsigned int lid){
+  void *__lmptr;
+  if((lid) == GENERIC_LIST) 
+    __lmptr = (void *)malloc(sizeof(struct rootsim_list));
+  else
+    __lmptr = (void *)umalloc((lid), sizeof(struct rootsim_list));
+  bzero(__lmptr, sizeof(struct rootsim_list));
+  return __lmptr;
+}
 
 /**
 * This function inserts a new element at the beginning of the list.
@@ -87,7 +97,7 @@ char *__list_insert_head(unsigned int lid, void *li, unsigned int size, void *da
 
 	// Create the new node and populate the entry
 	if(lid == GENERIC_LIST)
-		new_n = rsalloc(sizeof(struct rootsim_list_node) + size);
+		new_n = malloc(sizeof(struct rootsim_list_node) + size);
 	else
 		new_n = umalloc(lid, sizeof(struct rootsim_list_node) + size);
 
@@ -146,7 +156,7 @@ char *__list_insert_tail(unsigned int lid, void *li, unsigned int size, void *da
 
 	// Create the new node and populate the entry
 	if(lid == GENERIC_LIST)
-		new_n = rsalloc(sizeof(struct rootsim_list_node) + size);
+		new_n = malloc(sizeof(struct rootsim_list_node) + size);
 	else
 		new_n = umalloc(lid, sizeof(struct rootsim_list_node) + size);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
@@ -342,7 +352,7 @@ char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, 
 			}
 
 			if(lid == GENERIC_LIST)
-				content = rsalloc(size);
+				content = malloc(size);
 			else
 				content = umalloc(lid, size);
 
@@ -352,7 +362,7 @@ char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, 
 			bzero(n->data, size);
 
 			if(lid == GENERIC_LIST)
-				rsfree(n);
+				free(n);
 			else
 				ufree(lid, n);
 
@@ -395,7 +405,7 @@ bool __list_delete(unsigned int lid, void *li, unsigned int size, double key, si
 	if((content =__list_extract(lid, li, size, key, key_position)) != NULL) {
 		bzero(&content, size);
 		if(lid == GENERIC_LIST)
-			rsfree(content);
+			free(content);
 		else
 			ufree(lid, content);
 		return true;
@@ -464,7 +474,7 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 
 	if(copy) {
 		if(lid == GENERIC_LIST)
-			content = rsalloc(size);
+			content = malloc(size);
 		else
 			content = umalloc(lid, size);
 
@@ -476,7 +486,7 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 	memset(n->data, 0xe9, size);
 
 	if(lid == GENERIC_LIST)
-		rsfree(n);
+		free(n);
 	else
 		ufree(lid, n);
 
@@ -574,7 +584,7 @@ void list_pop(unsigned int lid, void *li) {
 		n->prev = (void *)0xDEFEC8ED;
 
 		if(lid == GENERIC_LIST)
-			rsfree(n);
+			free(n);
 		else
 			ufree(lid, n);
 
@@ -615,7 +625,7 @@ unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_pos
                 n->prev = (void *)0xBAADF00D;
 
 		if(lid == GENERIC_LIST)
-			rsfree(n);
+			free(n);
 		else
 			ufree(lid, n);
 
@@ -637,7 +647,7 @@ void *list_allocate_node(unsigned int lid, size_t size) {
 	struct rootsim_list_node *new_n;
 
 	if(lid == GENERIC_LIST)
-		new_n = rsalloc(sizeof(struct rootsim_list_node) + size);
+		new_n = malloc(sizeof(struct rootsim_list_node) + size);
 	else
 		new_n = umalloc(lid, sizeof(struct rootsim_list_node) + size);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
@@ -658,7 +668,7 @@ void *list_allocate_node_buffer(unsigned int lid, size_t size) {
 
 void list_deallocate_node_buffer(unsigned int lid, void *ptr) {
 	if(lid == GENERIC_LIST)
-		rsfree(list_container_of(ptr));
+		free(list_container_of(ptr));
 	else
 		ufree(lid, list_container_of(ptr));
 }

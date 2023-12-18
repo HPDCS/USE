@@ -91,4 +91,7 @@ typedef struct _LP_state {
 } LP_state;
 
 
+void LPs_metada_init(void);
+
+
 #endif

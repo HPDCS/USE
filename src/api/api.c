@@ -1,4 +1,4 @@
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <queue.h>
 #include <core.h>
 

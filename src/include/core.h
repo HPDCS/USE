@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <float.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <statistics.h>
 #include <limits.h>
 #include <nb_calqueue.h>

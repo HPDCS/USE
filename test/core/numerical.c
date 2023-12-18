@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include <datatypes/bitmap.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <ROOT-Sim.h>
 
 

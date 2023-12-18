@@ -3,7 +3,7 @@
 
 #include <events.h>
 #include <core.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <stdbool.h>
 #include "timer.h"
 #include <math.h>

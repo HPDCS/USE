@@ -6,7 +6,7 @@
 #include <clock_constant.h>
 #include <bitmap.h>
 #include <unistd.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <signal.h>
 #include <pthread.h>
 #include "queue.h"

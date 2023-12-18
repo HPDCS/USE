@@ -1,7 +1,7 @@
 #ifndef __STACK_
 #define __STACK_
 
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <nb_calqueue.h>
 #include <queue.h>
 #include <hpdcs_utils.h>

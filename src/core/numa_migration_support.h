@@ -2,7 +2,7 @@
 #define __NUMA_MIGRATION_SUPPORT_H__
 
 #include <core.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <timer.h>
 #include <clock_constant.h>
 #include <allocator.h>

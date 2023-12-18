@@ -55,6 +55,11 @@ set(src-utils
   utils/error.c
 )
 
+set(src-lp
+  lp/lp.c
+  lp/lp_lock.c
+)
+
 set(src-os
   os/filesystem.c
   os/numa.c
@@ -77,7 +82,6 @@ set(src-core
         core/metrics_for_lp_migration.c
         core/state_swapping.c
         core/virtual_timer.c
-        core/lp_lock.c
         core/gvt.c
         statistics/statistics.c
         mm/garbagecollector.c)
@@ -93,7 +97,6 @@ set(src-mm
         mm/recoverable.c
         mm/checkpoints.c
         mm/state.c
-        mm/platform.c
 )
 
 set(src-reverse
@@ -185,7 +188,10 @@ add_library(use-datatypes STATIC ${src-datatypes})
 add_library(use-utils     STATIC ${src-utils})
 add_library(use-os        STATIC ${src-os})
 add_library(use-api       STATIC ${src-api})
-#add_library(use-reverse   STATIC ${src-reverse})
+add_library(use-lp        STATIC ${src-lp})
+#add_library(use-reverse  STATIC ${src-reverse})
+
+
 
 
 if(CSR_CONTEXT)

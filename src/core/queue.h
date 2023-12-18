@@ -5,7 +5,7 @@
 #include "nb_calqueue.h"
 #include "hpdcs_utils.h"
 
-#include <lp_lock.h>
+#include <lp/lp_lock.h>
 
 typedef struct __msg_t msg_t;
 

@@ -1,6 +1,8 @@
 #ifndef __LP_LOCK__
 #define __LP_LOCK__
 
+#include <lp/lp.h>
+
 extern volatile unsigned int *lp_lock;
 
 

@@ -25,14 +25,9 @@ static char messages[5][256] = {
 
 simulation_configuration pdes_config;
 size_t node_size_msg_t;
+bool sim_error = false;
 
 // LCOV_EXCL_START
-
-void *rsalloc(size_t size) { return malloc(size); }
-void rsfree(void *ptr) { free(ptr);}
-extern void *umalloc(int lid, size_t size);
-
-
 
 
 static int list_test(void)
