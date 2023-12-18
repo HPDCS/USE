@@ -6,7 +6,6 @@
 #include <lookahead.h>
 
 #include "application.h"
-#include "hpdcs_utils.h"
 
 //#include <timer.h>
 

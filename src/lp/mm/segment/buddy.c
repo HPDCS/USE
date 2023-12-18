@@ -30,12 +30,12 @@
 #include <errno.h>
 
 #include <lp/mm/allocator/dymelor.h>
-#include <hpdcs_utils.h>
 
 #include "segment.h"
 #include "buddy.h"
 
 #include <lpm_alloc.h>
+
 
 #define BUDDY_GRANULARITY (PAGE_SIZE)
 

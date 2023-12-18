@@ -11,14 +11,13 @@
 
 #include <ROOT-Sim.h>
 #include <numerical/numerical.h>
-#include <timer.h>
 #include <state.h>
 
 #include <reverse.h>
 #include <statistics.h>
-#include <lp/mm/checkpoints/autockpt.h>
 
 #include <lp/lp.h>
+#include <lp/mm/checkpoints/autockpt.h>
 #include <lp/mm/allocator/dymelor.h>
 #include <lp/mm/segment/buddy.h>
 
@@ -26,8 +25,10 @@
 #include "queue.h"
 #include "nb_calqueue.h"
 #include "lookahead.h"
-#include <hpdcs_utils.h>
+
 #include <utils/prints.h>
+#include <utils/timer.h>
+
 #include <utmpx.h>
 #include <gvt.h>
 

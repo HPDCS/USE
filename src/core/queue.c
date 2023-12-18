@@ -2,15 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <statistics.h>
-#include <timer.h>
-
 
 #include <utils/prints.h>
+#include <utils/timer.h>
 
 #include "queue.h"
 #include "core.h"
 #include "lookahead.h"
-#include "hpdcs_utils.h"
 
 #include "local_index/local_index.h"
 

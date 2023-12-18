@@ -12,7 +12,8 @@
 #include "queue.h"
 #include "state_swapping.h"
 
-#include <timer.h>
+#include <utils/compiler.h>
+
 #include <clock_constant.h>
 #include <gvt.h>
 

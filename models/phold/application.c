@@ -3,6 +3,7 @@
 #include <ROOT-Sim.h>
 #include <errno.h>
 #include <lookahead.h>
+#include <clock_constant.h>
 
 #include "application.h"
 

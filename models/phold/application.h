@@ -1,8 +1,6 @@
 #include <ROOT-Sim.h>
 #include <math.h>
 #include <stdlib.h>
-#include <clock_constant.h>
-#include <timer.h>
 
 // Event types
 #define LOOP			8

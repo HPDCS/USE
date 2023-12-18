@@ -3,7 +3,6 @@
 #include <string.h>       // Provides for memset, ...
 #include <configuration/configuration.h>
 #include <utils/prints.h>
-#include <hpdcs_utils.h>
 #include <argp.h>         // Provides GNU argp() argument parser
 
 

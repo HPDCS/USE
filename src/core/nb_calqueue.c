@@ -33,15 +33,13 @@
 #include <pthread.h>
 #include <math.h>
 #include <statistics.h>
-#include <timer.h>
 
-//#include "atomic.h"
 #include "nb_calqueue.h"
-#include "hpdcs_utils.h"
 #include "core.h"
 #include "queue.h"
+
 #include <utils/prints.h>
-#include "timer.h"
+#include <utils/compiler.h>
 #include <state_swapping.h>
 
 #include <glo_alloc.h>

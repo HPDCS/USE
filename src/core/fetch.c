@@ -34,14 +34,13 @@
 #include <math.h>
 
 #include "nb_calqueue.h"
-#include "hpdcs_utils.h"
 #include "core.h"
 #include "queue.h"
-#include <utils/prints.h>
-#include "timer.h"
 
 #include <metrics_for_window.h>
 #include <gvt.h>
+#include <utils/prints.h>
+#include <utils/compiler.h>
 
 
 #include "local_index/local_index.h"

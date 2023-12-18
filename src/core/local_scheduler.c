@@ -1,5 +1,4 @@
 #include <lp_local_struct.h>
-#include <hpdcs_utils.h>
 #include <fetch.h>
 #include <pthread.h>
 

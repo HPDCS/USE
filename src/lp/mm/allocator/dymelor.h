@@ -37,7 +37,6 @@
 
 #include <core.h>
 #include <state.h>
-#include <timer.h>
 
 
 

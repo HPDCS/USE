@@ -30,7 +30,6 @@
 #include <fcntl.h>
 
 #include <lp/mm/allocator/dymelor.h>
-#include <timer.h>
 #include <core.h>
 //#include <scheduler/scheduler.h>
 //#include <scheduler/process.h>
@@ -40,6 +39,8 @@
 
 #include <glo_alloc.h>
 #include <lps_alloc.h>
+
+#include <utils/timer.h>
 
 /**
 * This function returns the whole size of a state. It can be used as the total size to pack a log

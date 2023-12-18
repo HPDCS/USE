@@ -1,5 +1,5 @@
 #include <lp/lp.h>
-#include <hpdcs_utils.h>
+#include <utils/compiler.h>
 
 __thread simtime_t local_gvt = 0; /// Current gvt read by an individual thread
 volatile simtime_t gvt = 0; /// Current global gvt

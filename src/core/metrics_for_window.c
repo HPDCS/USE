@@ -1,4 +1,3 @@
-#include <timer.h>
 #include <core.h>
 #include <pthread.h>
 #include <stdbool.h>

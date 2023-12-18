@@ -28,11 +28,12 @@
 
 #include <utils/prints.h>
 #include <utils/float.h>
+#include <utils/compiler.h>
+
 #include <core.h>
 
 #include <list.h>
 #include <events.h>
-#include <hpdcs_utils.h>
 
 #include <glo_alloc.h>
 

@@ -8,10 +8,10 @@
 #include <argp.h> 
 
 #include <core.h>
-#include <timer.h>
-#include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
+#include <utils/timer.h>
+
 
 __thread struct drand48_data seedT;
 

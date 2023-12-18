@@ -3,7 +3,6 @@
 
 #include <core.h>
 #include <lp/lp.h>
-#include <timer.h>
 #include <clock_constant.h>
 
 #include <bitmap.h>

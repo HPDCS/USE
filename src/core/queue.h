@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include "nb_calqueue.h"
-#include "hpdcs_utils.h"
 
 #include <lp/lp_lock.h>
 

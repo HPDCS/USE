@@ -40,6 +40,7 @@
 #include <stdbool.h>
 #include <configuration/configuration.h>
 #include <utils/prints.h>
+#include <utils/timer.h>
 
 #define n_prc_tot (pdes_config.nprocesses)
 

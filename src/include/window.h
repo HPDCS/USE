@@ -5,9 +5,9 @@
 #include <core.h>
 #include <lp/lp.h>
 #include <stdbool.h>
-#include "timer.h"
 #include <math.h>
-#include "queue.h"
+#include <utils/timer.h>
+#include <queue.h>
 
 
 #define INIT_WINDOW_STEP 0.04

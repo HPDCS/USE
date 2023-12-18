@@ -13,9 +13,6 @@
 
 
 
-#define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
-
-#define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 #define end_sim(lp)			( __sync_fetch_and_or(&sim_ended[lp/64], (1ULL << (lp%64))) )
 #define is_end_sim(lp) 		(( sim_ended[lp/64] & (1ULL << (lp%64)) ) >> (lp%64))

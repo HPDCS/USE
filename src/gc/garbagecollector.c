@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "garbagecollector.h"
-#include <hpdcs_utils.h>
 
+
+#include <utils/compiler.h>
 #include <glo_alloc.h>
 
 
