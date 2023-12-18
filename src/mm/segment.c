@@ -30,13 +30,7 @@
 #include <numaif.h>
 #include <errno.h>
 #include <numaif.h>
-
-
-extern  void *rsalloc(size_t);
-extern  void rsfree(void *);
-extern  void *rsrealloc(void *, size_t);
-extern  void *rscalloc(size_t, size_t);
-
+#include <platform.h>
 
 
 

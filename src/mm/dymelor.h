@@ -235,21 +235,6 @@ extern void *__wrap_realloc(void *, size_t);
 extern void *__wrap_calloc(size_t, size_t);
 extern void clean_buffers_on_gvt(unsigned int, simtime_t);
 
-// Unrecoverable Memory API
-extern void *umalloc(unsigned int, size_t);
-extern void ufree(unsigned int, void *);
-extern void *urealloc(unsigned int, void *, size_t);
-extern void *ucalloc(unsigned int, size_t nmemb, size_t size);
-
-/* Simulation Platform Memory APIs */
-extern  void *rsalloc(size_t);
-extern  void rsfree(void *);
-extern  void *rsrealloc(void *, size_t);
-extern  void *rscalloc(size_t, size_t);
-
-
-extern void ecs_init(void);
-
 extern malloc_state **recoverable_state;
 
 // This is used to help ensure that the platform is not using malloc.

@@ -35,6 +35,7 @@
 #include <ROOT-Sim.h>
 #include <configuration.h>
 #include <segment.h>
+#include <platform.h>
 
 #define BUDDY_GRANULARITY (PAGE_SIZE)
 
@@ -75,9 +76,6 @@ static inline int parent(int idx) {
 
 
 void ***pages;
-
-extern void *__real_malloc(size_t);
-extern void __real_free(void *);
 
 /** allocate a new buddy structure
  * @param num_of_fragments number of fragments of the memory to be managed

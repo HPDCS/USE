@@ -36,6 +36,8 @@
 #include "dymelor.h"
 #include "state_swapping.h"
 
+#include <platform.h>
+
 
 /// Recoverable memory state for LPs
 malloc_state **recoverable_state;

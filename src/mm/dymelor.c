@@ -28,6 +28,8 @@
 #include <mm.h>
 #include <allocator.h>
 #include <segment.h>
+#include <platform.h>
+
 
 /**
 * This function inizializes the dymelor subsystem
