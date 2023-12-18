@@ -54,6 +54,14 @@ endif()
 set(src-utils
   utils/error.c
 )
+
+set(src-os
+  os/filesystem.c
+  os/numa.c
+  os/thread.c
+)
+
+
 set(src-core
         core/core.c
         core/configuration.c
@@ -175,6 +183,7 @@ endif()
 add_library(use-mm        STATIC ${src-mm})
 add_library(use-datatypes STATIC ${src-datatypes})
 add_library(use-utils     STATIC ${src-utils})
+add_library(use-os        STATIC ${src-os})
 add_library(use-api       STATIC ${src-api})
 #add_library(use-reverse   STATIC ${src-reverse})
 

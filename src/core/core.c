@@ -1,18 +1,12 @@
-#define _GNU_SOURCE
+#include <os/numa.h>
+#include <os/thread.h>
 
 #include <unistd.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sched.h>
-#include <pthread.h>
-//#include <string.h>
-//#include <immintrin.h> //hardware transactional support
-#include <stdarg.h>
+
 #include <dirent.h>
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <limits.h>
 
 #include <ROOT-Sim.h>
@@ -47,11 +41,9 @@
 #include "clock_constant.h"
 #include "state_swapping.h"
 
+
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
-
-#define MAX_PATHLEN			512
-
 
 
 unsigned int start_periodic_check_ongvt = 0;
@@ -113,6 +105,8 @@ unsigned int rounds_before_unbalance_check; /// number of window management roun
 clock_timer numa_rebalance_timer; /// timer to check for periodic numa rebalancing
 size_t node_size_msg_t;
 size_t node_size_state_t;
+unsigned int cores_on_numa[N_CPU];
+
 
 void * do_sleep(){
 	if(pdes_config.timeout != 0)
@@ -121,85 +115,6 @@ void * do_sleep(){
 	if(pdes_config.timeout != 0)
 		stop_timer = true;
 	pthread_exit(NULL);
-}
-
-
-/**
-* This is an helper-function to allow the statistics subsystem create a new directory
-*
-* @author Alessandro Pellegrini
-*
-* @param path The path of the new directory to create
-*/
-void _mkdir(const char *path) {
-
-	char opath[MAX_PATHLEN];
-	char *p;
-	size_t len;
-
-	strncpy(opath, path, MAX_PATHLEN-1);
-	len = strlen(opath);
-	if (opath[len - 1] == '/')
-		opath[len - 1] = '\0';
-
-	// Path plus 1 is a hack to allow also absolute path
-	for (p = opath + 1; *p; p++) {
-		if (*p == '/') {
-			*p = '\0';
-			if (access(opath, F_OK))
-				if (mkdir(opath, S_IRWXU))
-					if (errno != EEXIST) {
-						rootsim_error(true, "Could not create output directory", opath);
-					}
-			*p = '/';
-		}
-	}
-
-	// Path does not terminate with a slash
-	if (access(opath, F_OK)) {
-		if (mkdir(opath, S_IRWXU)) {
-			if (errno != EEXIST) {
-				if (errno != EEXIST) {
-					rootsim_error(true, "Could not create output directory", opath);
-				}
-			}
-		}
-	}
-}
-
-unsigned int get_current_numa_node(){
-	if(numa_available() != -1){
-		return numa_node_of_cpu(sched_getcpu());
-	}
-	return 1;
-}
-
-
-unsigned int cores_on_numa[N_CPU];
-
-void set_affinity(unsigned int tid){
-	unsigned int cpu_per_node;
-	cpu_set_t mask;
-	cpu_per_node = N_CPU/num_numa_nodes;
-	
-	
-	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
-	
-
-	CPU_ZERO(&mask);
-	CPU_SET(cores_on_numa[current_cpu], &mask);
-
-	current_cpu = cores_on_numa[current_cpu];
-	
-	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
-	if(err < 0) {
-		printf("Unable to set CPU affinity: %s\n", strerror(errno));
-		exit(-1);
-	}
-	
-	current_numa_node = get_current_numa_node();
-	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, cores_on_numa[current_cpu], current_numa_node);
-	
 }
 
 void nodes_init(){
@@ -268,60 +183,14 @@ void LPs_metada_init() {
 	
 }
 
-void numa_init(){
-	//TODO: make it as macro if possible
-	if(numa_available() != -1){
-		printf("NUMA machine with %u nodes.\n", (unsigned int)  numa_num_configured_nodes());
-		numa_available_bool = true;
-		num_numa_nodes = numa_num_configured_nodes();
-	}
-	else{
-		printf("UMA machine.\n");
-		numa_available_bool = false;
-		num_numa_nodes = 1;
-	}	
 
-
-
+void pin_lps_on_numa_nodes_init() {
 	numa_state = malloc(num_numa_nodes * sizeof(numa_struct *));
-
 	for (unsigned int i=0; i < num_numa_nodes; i++) {
 		numa_state[i] = malloc(sizeof(numa_struct));
 		alloc_numa_state(numa_state[i]);
 		numa_state[i]->numa_id = i;
 	}
-
-
-	
-	/// bitmask for each numa node
-	struct bitmask *numa_mask[num_numa_nodes];
-
-	if (num_numa_nodes > 1) {
-
-	    for (unsigned int i=0; i < num_numa_nodes; i++) {
-	            numa_mask[i] = numa_allocate_cpumask();
-	            numa_node_to_cpus(i, numa_mask[i]);
-	    }
-	}
-
-	/// set a global array in which are set the cpus on the same numa node
-	/// indexed from 0 to cpu_per_node and from cpu_per_node to N_CPU-1
-	int insert_idx = 0;
-	for (unsigned int j=0; j < num_numa_nodes; j++) {
-		for (int k=0; k < N_CPU; k++) {
-			if (num_numa_nodes ==1 || numa_bitmask_isbitset(numa_mask[j], k)) {
-				cores_on_numa[insert_idx] = k; 
-				insert_idx++;
-			}
-		}
-	}
-
-
-
-}
-
-
-void pin_lps_on_numa_nodes_init() {
 
 	unsigned cur_lp = 0;
 	for(unsigned int j=0;j<num_numa_nodes;j++){
