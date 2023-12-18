@@ -7,7 +7,7 @@
 #include <list.h>
 #include <events.h>
 #include <state.h>
-#include <numerical.h>
+#include <numerical/numerical.h>
 #include <local_index/local_index_types.h>
 
 
@@ -89,6 +89,9 @@ typedef struct _LP_state {
 	unsigned int consecutive_rollbacks_count;
 
 } LP_state;
+
+
+void LPs_metada_init(void);
 
 
 #endif

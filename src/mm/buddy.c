@@ -33,9 +33,9 @@
 #include "mm.h"
 #include <hpdcs_utils.h>
 #include <ROOT-Sim.h>
-#include <configuration.h>
 #include <segment.h>
 
+#include <platform.h>
 #include <lpm_alloc.h>
 
 #define BUDDY_GRANULARITY (PAGE_SIZE)
@@ -77,8 +77,6 @@ static inline int parent(int idx) {
 
 
 void ***pages;
-
-
 
 /** allocate a new buddy structure
  * @param num_of_fragments number of fragments of the memory to be managed

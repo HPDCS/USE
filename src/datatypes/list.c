@@ -34,6 +34,14 @@
 
 #include <glo_alloc.h>
 
+void *alloc_list(unsigned int lid){
+  void *__lmptr;
+  (void)lid;
+  __lmptr = (void *)glo_alloc(sizeof(struct rootsim_list));
+  bzero(__lmptr, sizeof(struct rootsim_list));
+  return __lmptr;
+}
+
 /**
 * This function inserts a new element at the beginning of the list.
 * It is not safe (and not easily readable) to call this function directly. Rather,
@@ -322,7 +330,8 @@ char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, 
 			bzero(n->data, size);
 
 			glo_free(n);
-						l->size--;
+			l->size--;
+
 			assert(l->size == (size_before - 1));
 			return content;
 		}

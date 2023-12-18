@@ -25,10 +25,9 @@ static char messages[5][256] = {
 
 simulation_configuration pdes_config;
 size_t node_size_msg_t;
+bool sim_error = false;
 
 // LCOV_EXCL_START
-
-
 
 static int list_test(void)
 {

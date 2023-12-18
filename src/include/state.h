@@ -32,7 +32,7 @@
 #include <ROOT-Sim.h>
 #include <events.h>
 #include <list.h>
-#include <numerical.h>
+#include <numerical/numerical.h>
 
 
 #define lvt(lid) (LPS[lid]->bound != NULL ? LPS[lid]->bound->timestamp : 0.0)

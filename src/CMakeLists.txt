@@ -51,24 +51,38 @@ if (CMAKE_BUILD_TYPE STREQUAL  "Debug")
     )
 endif()
 
+set(src-utils
+  utils/error.c
+)
+
+set(src-lp
+  lp/lp.c
+  lp/lp_lock.c
+)
+
+set(src-os
+  os/filesystem.c
+  os/numa.c
+  os/thread.c
+)
+
+
 set(src-core
         core/core.c
-        core/configuration.c
         core/nb_calqueue.c
         core/x86.c
-        core/topology.c
         core/queue.c
         core/fetch.c
         core/main.c
-        core/numerical.c
         core/local_scheduler.c
         core/local_index/local_index.c
         core/metrics_for_window.c
         core/metrics_for_lp_migration.c
         core/state_swapping.c
         core/virtual_timer.c
-        core/lp_lock.c
         core/gvt.c
+        configuration/configuration.c
+        numerical/numerical.c
         statistics/statistics.c
         mm/garbagecollector.c)
 
@@ -91,8 +105,15 @@ set(src-reverse
 )
 
 
+set(src-api
+        api/api.c
+        api/topology.c
+)
+
+
 
 # Build the core library
+include_directories(.)
 include_directories(include)
 include_directories(include-gen)
 include_directories(mm)
@@ -162,18 +183,26 @@ endif()
 
 add_library(use-core      STATIC ${src-core} )
 add_dependencies(use-core clock_constant hpipe)
-
 if(CSR_CONTEXT)
 add_dependencies(use-core trap-based-user-context)
 endif()
 
 add_library(use-mm        STATIC ${src-mm})
-#add_library(use-reverse   STATIC ${src-reverse})
-add_library(use-datatypes   STATIC ${src-datatypes})
+add_library(use-datatypes STATIC ${src-datatypes})
+add_library(use-utils     STATIC ${src-utils})
+add_library(use-os        STATIC ${src-os})
+add_library(use-api       STATIC ${src-api})
+add_library(use-lp        STATIC ${src-lp})
+#add_library(use-reverse  STATIC ${src-reverse})
+
 
 add_custom_target(libuse-core-mocked.a
-  DEPENDS ${name} use-core use-datatypes
-  COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc --wrap aligned_alloc --wrap posix_memalign -o libuse-core-mocked.a --whole-archive ${CMAKE_BINARY_DIR}/src/libuse-core.a ${CMAKE_BINARY_DIR}/src/libuse-datatypes.a
+  DEPENDS ${name} use-core use-datatypes use-lp
+  COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc --wrap aligned_alloc --wrap posix_memalign 
+  -o libuse-core-mocked.a --whole-archive 
+  ${CMAKE_BINARY_DIR}/src/libuse-core.a 
+  ${CMAKE_BINARY_DIR}/src/libuse-datatypes.a
+  ${CMAKE_BINARY_DIR}/src/libuse-lp.a 
 )
 
 

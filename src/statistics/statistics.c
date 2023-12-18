@@ -3,7 +3,7 @@
 #include <statistics.h>
 #include <core.h>
 #include <hpdcs_utils.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 
 
 #include <glo_alloc.h>

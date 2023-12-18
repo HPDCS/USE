@@ -235,9 +235,6 @@ extern void *__wrap_realloc(void *, size_t);
 extern void *__wrap_calloc(size_t, size_t);
 extern void clean_buffers_on_gvt(unsigned int, simtime_t);
 
-
-extern void ecs_init(void);
-
 extern malloc_state **recoverable_state;
 
 // This is used to help ensure that the platform is not using malloc.

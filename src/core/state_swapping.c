@@ -6,7 +6,7 @@
 #include <clock_constant.h>
 #include <bitmap.h>
 #include <unistd.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <signal.h>
 #include <pthread.h>
 #include "queue.h"
@@ -151,7 +151,7 @@ void* signal_state_swapping(void *args) {
     unsigned long steps = 8;
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
-	CPU_SET(20, &mask);
+	CPU_SET(19, &mask);
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
     if(err){
     	printf("Error: cannot set addinit of thread\n");

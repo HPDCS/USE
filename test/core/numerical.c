@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include <datatypes/bitmap.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <ROOT-Sim.h>
 
 
@@ -95,7 +95,7 @@ void _mkdir(const char *path) {
 	}
 }
 
-#include <numerical.c>
+#include <numerical/numerical.c>
 
 static int numerical_test(void)
 {

@@ -72,6 +72,10 @@ struct rootsim_list {
 };
 
 
+extern void *umalloc(unsigned int lid, size_t s);
+extern void ufree(unsigned int lid, void *ptr);
+void *alloc_list(unsigned int lid);
+
 /// This macro is a slightly-different implementation of the standard offsetof macro
 #define my_offsetof(st, m) ((size_t)( (unsigned char *)&((st)->m ) - (unsigned char *)(st)))
 
@@ -85,9 +89,7 @@ struct rootsim_list {
  *  \endcode
  */
 #define new_list(lid, type)	(type *)({ \
-				void *__lmptr; \
-				__lmptr = (void *)glo_alloc(sizeof(struct rootsim_list)); \
-				bzero(__lmptr, sizeof(struct rootsim_list));\
+				void *__lmptr = alloc_list(lid);\
 				__lmptr;\
 			})
 

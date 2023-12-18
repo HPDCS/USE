@@ -5,12 +5,12 @@
 #include <stdbool.h>
 #include <math.h>
 #include <float.h>
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <statistics.h>
 #include <limits.h>
 #include <nb_calqueue.h>
 #include <numa.h>
-#include <configuration.h>
+
 
 
 #define UNDEFINED_WT (512)

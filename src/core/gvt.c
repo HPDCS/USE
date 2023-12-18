@@ -1,4 +1,4 @@
-#include <simtypes.h>
+#include <lp/lp.h>
 #include <hpdcs_utils.h>
 
 __thread simtime_t local_gvt = 0; /// Current gvt read by an individual thread
