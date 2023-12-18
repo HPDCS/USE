@@ -28,8 +28,6 @@
 #include <mm.h>
 #include <allocator.h>
 #include <segment.h>
-#include <platform.h>
-
 
 #include <lpm_alloc.h>
 #include <lps_alloc.h>

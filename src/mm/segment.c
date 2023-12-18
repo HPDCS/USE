@@ -33,7 +33,6 @@
 
 #include <lpm_alloc.h>
 #include <thr_alloc.h>
-#include <platform.h>
 
 #define LID_t unsigned int
 #define GID_t unsigned int

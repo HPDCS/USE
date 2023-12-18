@@ -35,7 +35,6 @@
 #include <ROOT-Sim.h>
 #include <segment.h>
 
-#include <platform.h>
 #include <lpm_alloc.h>
 
 #define BUDDY_GRANULARITY (PAGE_SIZE)

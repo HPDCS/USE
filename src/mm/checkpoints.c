@@ -37,8 +37,6 @@
 #include <state.h>
 #include <statistics.h>
 #include <autockpt.h>
-#include <platform.h>
-
 
 #include <glo_alloc.h>
 

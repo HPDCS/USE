@@ -36,9 +36,6 @@
 #include "dymelor.h"
 #include "state_swapping.h"
 
-#include <platform.h>
-
-
 #include <glo_alloc.h>
 #include <lps_alloc.h>
 
