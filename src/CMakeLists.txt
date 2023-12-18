@@ -56,7 +56,6 @@ set(src-core
         core/configuration.c
         core/nb_calqueue.c
         core/x86.c
-        core/topology.c
         core/queue.c
         core/fetch.c
         core/main.c
@@ -92,8 +91,15 @@ set(src-reverse
 )
 
 
+set(src-api
+        api/api.c
+        api/topology.c
+)
+
+
 
 # Build the core library
+include_directories(.)
 include_directories(include)
 include_directories(include-gen)
 include_directories(mm)
@@ -158,17 +164,15 @@ endif()
 
 
 add_library(use-core      STATIC ${src-core} )
-
 add_dependencies(use-core clock_constant hpipe)
-
 if(CSR_CONTEXT)
 add_dependencies(use-core trap-based-user-context)
 endif()
 
 add_library(use-mm        STATIC ${src-mm})
+add_library(use-datatypes STATIC ${src-datatypes})
+add_library(use-api       STATIC ${src-api})
 #add_library(use-reverse   STATIC ${src-reverse})
-add_library(use-datatypes   STATIC ${src-datatypes})
-
 
 
 if(CSR_CONTEXT)

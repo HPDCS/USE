@@ -123,9 +123,6 @@ void * do_sleep(){
 	pthread_exit(NULL);
 }
 
-
-unsigned int GetNumaNode(unsigned int lp){return LPS[lp]->numa_node;}
-
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
 	va_list args;
@@ -380,13 +377,6 @@ bool check_termination(void) {
 	}
 	
 	return true;
-}
-
-// can be replaced with a macro?
-void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
-	if(LPS[current_lp]->state != LP_STATE_SILENT_EXEC){
-		queue_insert(receiver, timestamp, event_type, event_content, event_size);
-	}
 }
 
 
