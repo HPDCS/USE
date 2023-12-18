@@ -5,11 +5,12 @@
 #include <stdbool.h>
 #include <math.h>
 #include <float.h>
-#include <lp/lp.h>
 
 #include <limits.h>
 #include <numa.h>
 
+#include <lp/lp.h>
+#include <gvt/gvt.h>
 
 
 
@@ -35,6 +36,8 @@
 
 struct __bucket_node;
 
+extern __thread unsigned int current_lp;
+
 extern simulation_configuration pdes_config;
 extern __thread simtime_t current_lvt;
 extern __thread simtime_t local_gvt;
@@ -52,9 +55,8 @@ extern size_t node_size_msg_t;
 extern size_t node_size_state_t;
 
 extern unsigned int pdes_configuration;
+extern unsigned int start_periodic_check_ongvt;
 
-/* Commit horizon */ //TODO
-extern  simtime_t gvt;
 /* Average time between consecutive events */
 extern simtime_t t_btw_evts;
 extern LP_state **LPS;
@@ -65,7 +67,7 @@ extern unsigned int num_numa_nodes;
 extern bool numa_available_bool;
 extern volatile bool stop_timer;
 extern bool sim_error;
-
+extern unsigned long long *sim_ended;
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);

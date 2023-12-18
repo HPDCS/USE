@@ -10,12 +10,14 @@
 #include "queue.h"
 #include "state_swapping.h"
 
+
+#include <clock_constant.h>
+
+#include <gvt/gvt.h>
 #include <lp/lp.h>
 #include <datatypes/bitmap.h>
 #include <utils/compiler.h>
 
-#include <clock_constant.h>
-#include <gvt.h>
 
 #include <glo_alloc.h>
 #include <thr_alloc.h>

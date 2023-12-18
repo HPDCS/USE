@@ -36,7 +36,7 @@
 #include <core.h>
 #include <queue.h>
 
-#include <gvt.h>
+#include <gvt/gvt.h>
 #include <utils/prints.h>
 #include <utils/compiler.h>
 #include <statistics/statistics.h>

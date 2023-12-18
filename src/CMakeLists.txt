@@ -80,7 +80,7 @@ set(src-core
         core/metrics_for_lp_migration.c
         core/state_swapping.c
         core/virtual_timer.c
-        core/gvt.c
+        gvt/gvt.c
         configuration/configuration.c
         scheduler/fetch.c
         scheduler/nb_calqueue.c
