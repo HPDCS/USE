@@ -44,6 +44,7 @@ add_compile_options(
 -DARCH_X86_64
 )
 
+include_directories(src)
 
 add_subdirectory(src)
 add_subdirectory(test)

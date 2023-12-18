@@ -109,7 +109,6 @@ set(src-api
 
 
 # Build the core library
-include_directories(.)
 include_directories(include)
 include_directories(include-gen)
 include_directories(mm)

@@ -24,17 +24,17 @@
 #define is_lp_on_my_numa_node(lp)	( numa_from_lp(lp) == current_numa_node )	//verifies if the lp is on the same NUMA node of the current thread
 
 #define SIZEOF_ULL					(sizeof(unsigned long long))
-#define LP_BIT_MASK_SIZE			((pdes_config.nprocesses/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL*8)
-#define LP_ULL_MASK_SIZE			((pdes_config.nprocesses/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL)
+#define LP_BIT_MASK_SIZE		((pdes_config.nprocesses/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL*8)
+#define LP_ULL_MASK_SIZE		((pdes_config.nprocesses/(SIZEOF_ULL*8) + 1)*SIZEOF_ULL)
 #define LP_MASK_SIZE				((pdes_config.nprocesses/(SIZEOF_ULL*8) + 1))
 
 
 #define LP_STATE_READY				0x00001
 #define LP_STATE_ROLLBACK			0x00008
-#define LP_STATE_SILENT_EXEC		0x00010
+#define LP_STATE_SILENT_EXEC	0x00010
 #define LP_STATE_ONGVT				0x00100
 
-#define BLOCKED_STATE				0x01000
+#define BLOCKED_STATE				  0x01000
 #define is_blocked_state(state)	(bool)(state & BLOCKED_STATE)
 
 struct __bucket_node;

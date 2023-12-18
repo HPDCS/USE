@@ -185,8 +185,6 @@ typedef struct _malloc_state malloc_state;
 // TODO: Check which one has to be really exposed?!
 
 extern int incremental_granularity;
-extern int force_full[MAX_LPs];
-extern malloc_state *m_state[MAX_LPs];
 extern double checkpoint_cost_per_byte;
 extern double recovery_cost_per_byte;
 extern unsigned long total_checkpoints;
