@@ -7,7 +7,7 @@
 #include <list.h>
 #include <events.h>
 #include <state.h>
-#include <numerical.h>
+#include <numerical/numerical.h>
 #include <local_index/local_index_types.h>
 
 

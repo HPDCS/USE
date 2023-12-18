@@ -32,7 +32,7 @@
 #include <errno.h>
 
 #include <core.h>
-#include <numerical.h>
+#include <numerical/numerical.h>
 #include "dymelor.h"
 #include "state_swapping.h"
 

@@ -36,7 +36,7 @@
 
 #include <dymelor.h>
 #include <core.h>
-#include <numerical.h>
+#include <numerical/numerical.h>
 
 
 static seed_type master_seed;

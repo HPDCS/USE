@@ -10,7 +10,7 @@ endfunction()
 
 function(test_model name)
     add_library(${name} STATIC ${ARGN})
-    target_include_directories(${name} PRIVATE ../src/include ../src/include-gen ${name})
+    target_include_directories(${name} PRIVATE ../src/include ../src/include-gen ${name} ../src)
     
     add_executable(test_${name} integration/empty.c)
         

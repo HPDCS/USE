@@ -11,7 +11,7 @@
 
 #include <ROOT-Sim.h>
 #include <dymelor.h>
-#include <numerical.h>
+#include <numerical/numerical.h>
 #include <timer.h>
 #include <state.h>
 

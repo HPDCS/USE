@@ -75,7 +75,6 @@ set(src-core
         core/queue.c
         core/fetch.c
         core/main.c
-        core/numerical.c
         core/local_scheduler.c
         core/local_index/local_index.c
         core/metrics_for_window.c
@@ -83,6 +82,7 @@ set(src-core
         core/state_swapping.c
         core/virtual_timer.c
         core/gvt.c
+        numerical/numerical.c
         statistics/statistics.c
         mm/garbagecollector.c)
 

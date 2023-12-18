@@ -2,7 +2,7 @@
 #define __CONFIGURATION_H__
 
 #include <stdbool.h>
-#include <numerical.h>
+#include <numerical/numerical.h>
 #include <argp.h>         // Provides GNU argp() argument parser
 
 

@@ -95,7 +95,7 @@ void _mkdir(const char *path) {
 	}
 }
 
-#include <numerical.c>
+#include <numerical/numerical.c>
 
 static int numerical_test(void)
 {
