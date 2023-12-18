@@ -106,9 +106,6 @@ typedef double simtime_t;
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
 
-#define MAX_LPs	4096
-#define UNDEFINED_LP (MAX_LPs + 1)
-
 // Topology library
 #define TOPOLOGY_HEXAGON	1000
 #define TOPOLOGY_SQUARE		1001

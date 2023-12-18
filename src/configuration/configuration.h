@@ -66,4 +66,9 @@ extern simulation_configuration pdes_config;
 extern void parse_options(int argn, char **argv);
 extern void print_config(void);
 
+#define MAX_LPs	     (UINT_MAX)
+#define UNDEFINED_LP (MAX_LPs)
+#define UNDEFINED_WT (pdes_config.ncores+10)
+
+
 #endif

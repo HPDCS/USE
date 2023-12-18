@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+
+#include <configuration/configuration.h>
 #include <lp/lp.h>
 #include <core.h>
 

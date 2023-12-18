@@ -13,8 +13,6 @@
 
 
 
-#define UNDEFINED_WT (512)
-
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
