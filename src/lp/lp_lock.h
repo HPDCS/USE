@@ -2,6 +2,7 @@
 #define __LP_LOCK__
 
 #include <lp/lp.h>
+#include <utils/error.h>
 
 extern volatile unsigned int *lp_lock;
 
