@@ -40,7 +40,7 @@
 #include "hpdcs_utils.h"
 #include "core.h"
 #include "queue.h"
-#include "prints.h"
+#include <utils/prints.h>
 #include "timer.h"
 #include <state_swapping.h>
 

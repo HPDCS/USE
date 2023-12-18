@@ -39,7 +39,7 @@
 #include <statistics.h>
 #include <queue.h>
 #include <hpdcs_utils.h>
-#include <prints.h>
+#include <utils/prints.h>
 #include <state_swapping.h>
 #include "mm/checkpoints/autockpt.h"
 

@@ -7,7 +7,7 @@
 #include <local_index/local_index.h>
 #include <stdbool.h>
 #include <lp/lp.h>
-#include <prints.h>
+#include <utils/prints.h>
 #include <hpipe.h>
 #include <metrics_for_window.h>
 

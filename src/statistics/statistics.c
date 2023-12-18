@@ -5,6 +5,7 @@
 #include <hpdcs_utils.h>
 #include <lp/lp.h>
 
+#include <utils/prints.h>
 
 #include <glo_alloc.h>
 #include <thr_alloc.h>
