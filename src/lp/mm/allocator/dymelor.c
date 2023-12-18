@@ -24,13 +24,36 @@
 * @author Alessandro Pellegrini
 */
 
-#include <dymelor.h>
-#include <mm.h>
-#include <allocator.h>
-#include <segment.h>
+#include "dymelor.h"
+
+#include <lp/mm/segment/segment.h>
+#include <lp/mm/segment/buddy.h>
 
 #include <lpm_alloc.h>
 #include <lps_alloc.h>
+
+/// Maximum number of malloc_areas allocated during the simulation. This variable is used
+/// for correctly restoring an LP's state whenever some areas are deallocated during the simulation.
+//int max_num_areas;
+
+void recoverable_init(void) {
+	
+	register unsigned int i;
+	
+	recoverable_state = glo_alloc(sizeof(malloc_state *) * pdes_config.nprocesses);
+
+	for(i = 0; i < pdes_config.nprocesses; i++){
+
+		recoverable_state[i] = glo_alloc(sizeof(malloc_state));
+		if(recoverable_state[i] == NULL)
+			rootsim_error(true, "Unable to allocate memory on malloc init");
+
+		malloc_state_init(true, recoverable_state[i]);
+	}
+}
+
+/* TODO  finalization*/
+
 
 /**
 * This function inizializes the dymelor subsystem
@@ -42,13 +65,13 @@
 void dymelor_init() {
 	allocator_init();
 	recoverable_init();
-	//unrecoverable_init();
 }
 
 extern struct _buddy **buddies;
 extern void **mem_areas;
 
-
+/// Recoverable memory state for LPs
+malloc_state **recoverable_state;
 /**
 * This function finalizes the dymelor subsystem
 *

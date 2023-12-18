@@ -1,6 +1,11 @@
 #define AUTOCKPT_EMA 0.3
 #define AUTOCKPT_PER 2
 
+#include <lp/lp.h>
+#include <math.h>
+
+extern LP_state **LPS;
+
 static inline void autockpt_update_interval(unsigned int lp){
 	double a = 2.0 * LPS[lp]->ema_take_snapshot_time;
 	double b = LPS[lp]->ema_rollback_probability * LPS[lp]->ema_silent_event_granularity;

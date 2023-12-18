@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include "queue.h"
 #include "state_swapping.h"
-#include <dymelor.h>
+
 #include <timer.h>
 #include <clock_constant.h>
 #include <gvt.h>

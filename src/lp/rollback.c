@@ -34,17 +34,14 @@
 #include <core.h>
 #include <timer.h>
 #include <list.h>
-//#include <scheduler/process.h>
-//#include <scheduler/scheduler.h>
 #include <state.h>
-//#include <communication/communication.h>
-#include <dymelor.h>
+#include <lp/mm/allocator/dymelor.h>
 #include <statistics.h>
 #include <queue.h>
 #include <hpdcs_utils.h>
 #include <prints.h>
 #include <state_swapping.h>
-#include <autockpt.h>
+#include "mm/checkpoints/autockpt.h"
 
 
 

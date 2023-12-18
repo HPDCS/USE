@@ -29,16 +29,38 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-#include <dymelor.h>
+#include <lp/mm/allocator/dymelor.h>
 #include <timer.h>
 #include <core.h>
 //#include <scheduler/scheduler.h>
 //#include <scheduler/process.h>
 #include <state.h>
 #include <statistics.h>
-#include <autockpt.h>
+#include "autockpt.h"
 
 #include <glo_alloc.h>
+#include <lps_alloc.h>
+
+/**
+* This function returns the whole size of a state. It can be used as the total size to pack a log
+*
+* @author Alessandro Pellegrini
+* @author Roberto Vitali
+*
+* @param log The pointer to the log, or to the state
+* @return The whole size of the state (metadata included)
+*
+*/
+size_t get_log_size(malloc_state *logged_state){
+	if (logged_state == NULL)
+		return 0;
+
+	if (is_incremental(logged_state)) {
+		return sizeof(malloc_state) + sizeof(seed_type) + logged_state->dirty_areas * sizeof(malloc_area) + logged_state->dirty_bitmap_size + logged_state->total_inc_size;
+	} else {
+		return sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + logged_state->total_log_size;
+	}
+}
 
 
 /**
@@ -439,4 +461,63 @@ void log_delete(void *ckpt){
 		glo_free(ckpt);
 	}
 }
+
+
+
+void clean_buffers_on_gvt(unsigned int lid, simtime_t time_barrier){
+
+	int i;
+	malloc_state *state;
+	malloc_area *m_area;
+
+	state = recoverable_state[lid];
+
+	// The first NUM_AREAS malloc_areas are placed according to their chunks' sizes. The exceeding malloc_areas can be compacted
+	for(i = NUM_AREAS; i < state->num_areas; i++){
+		m_area = &state->areas[i];
+		
+		if(m_area->alloc_chunks == 0 && m_area->last_access < time_barrier && !CHECK_AREA_LOCK_BIT(m_area)){
+
+			if(m_area->self_pointer != NULL) {
+
+				if(pdes_config.enable_custom_alloc)
+					pool_release_memory(lid, m_area->self_pointer);
+				else
+					lps_free(m_area->self_pointer);
+				
+				m_area->use_bitmap = NULL;
+				m_area->dirty_bitmap = NULL;
+				m_area->self_pointer = NULL;
+				m_area->area = NULL;
+				m_area->state_changed = 0;
+
+				// Set the pointers
+				if(m_area->prev != -1)
+					state->areas[m_area->prev].next = m_area->next;
+				if(m_area->next != -1)
+					state->areas[m_area->next].prev = m_area->prev;
+
+				// Swap, if possible
+				if(i < state->num_areas - 1) {
+					memcpy(m_area, &state->areas[state->num_areas - 1], sizeof(malloc_area));
+					m_area->idx = i;
+					if(m_area->prev != -1)
+						state->areas[m_area->prev].next = m_area->idx;
+					if(m_area->next != -1)
+						state->areas[m_area->next].prev = m_area->idx;
+					
+					// Update the self pointer
+					*(long long *)m_area->self_pointer = (long long)m_area;
+					
+					// The swapped area will now be checked
+					i--;
+				}
+
+				// Decrement the expected number of areas
+				state->num_areas--;
+			}
+		}
+	}
+}
+
 

@@ -34,7 +34,6 @@
 
 #include <ROOT-Sim.h>
 
-#include <dymelor.h>
 #include <core.h>
 #include <numerical/numerical.h>
 

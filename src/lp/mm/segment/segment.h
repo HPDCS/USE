@@ -16,4 +16,10 @@
 #define NUM_MMAP			(((PER_LP_PREALLOCATED_MEMORY) / MAX_MMAP) == 0 ? 1 : ((PER_LP_PREALLOCATED_MEMORY) / MAX_MMAP))  
 
 
+extern void *get_segment(unsigned int i, unsigned int numa_node, void ***pages);
+extern void segment_init(void);
+extern void migrate_segment(unsigned int id, int numa_node);
+extern void *get_base_pointer(unsigned int gid);
+
+
 #endif

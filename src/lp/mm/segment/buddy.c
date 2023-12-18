@@ -29,11 +29,11 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-#include "dymelor.h"
-#include "mm.h"
+#include <lp/mm/allocator/dymelor.h>
 #include <hpdcs_utils.h>
-#include <ROOT-Sim.h>
-#include <segment.h>
+
+#include "segment.h"
+#include "buddy.h"
 
 #include <lpm_alloc.h>
 
@@ -76,6 +76,7 @@ static inline int parent(int idx) {
 
 
 void ***pages;
+
 
 /** allocate a new buddy structure
  * @param num_of_fragments number of fragments of the memory to be managed

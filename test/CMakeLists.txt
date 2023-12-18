@@ -1,6 +1,6 @@
 function(test_program name)
     add_executable(test_${name} ${ARGN})
-    target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics ../src/mm ../src/mm/allocators ../src ../mm-nvram/include ../mm-nvram/memkind-install/include )
+    target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics  ../src/allocators ../src ../mm-nvram/include ../mm-nvram/memkind-install/include )
     add_test(NAME test_${name} COMMAND test_${name})
     add_dependencies(test_${name} use-datatypes use-utils)
     target_link_libraries(test_${name} use-datatypes use-utils m) 
@@ -15,11 +15,11 @@ function(test_model name)
     add_executable(test_${name} integration/empty.c)
         
     add_custom_target(lib${name}-mm.a
-        DEPENDS ${name} use-mm 
-        COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o lib${name}-mm.a --whole-archive lib${name}.a ${CMAKE_BINARY_DIR}/src/libuse-mm.a
+        DEPENDS ${name}
+        COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o lib${name}-mm.a --whole-archive lib${name}.a
     )
 
-    add_dependencies(test_${name} ${name} use-mm libuse-core-mocked.a lib${name}-mm.a)
+    add_dependencies(test_${name} ${name} libuse-core-mocked.a lib${name}-mm.a)
     target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a  ${CMAKE_BINARY_DIR}/src/libuse-core-mocked.a m numa pthread use-utils use-os use-api)
 endfunction()
 

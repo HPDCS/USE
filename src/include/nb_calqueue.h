@@ -30,10 +30,11 @@
 
 #include <float.h>
 #include <math.h>
+#include <gc/garbagecollector.h>
+
 #include "atomic.h"
 #include "core.h"
 #include "lookahead.h"
-#include "garbagecollector.h"
 #include "events.h"
 
 #define INFTY DBL_MAX

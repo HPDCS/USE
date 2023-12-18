@@ -10,16 +10,17 @@
 #include <limits.h>
 
 #include <ROOT-Sim.h>
-#include <dymelor.h>
 #include <numerical/numerical.h>
 #include <timer.h>
 #include <state.h>
 
 #include <reverse.h>
 #include <statistics.h>
-#include <autockpt.h>
-#include <lp/lp.h>
+#include <lp/mm/checkpoints/autockpt.h>
 
+#include <lp/lp.h>
+#include <lp/mm/allocator/dymelor.h>
+#include <lp/mm/segment/buddy.h>
 
 #include "core.h"
 #include "queue.h"

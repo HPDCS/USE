@@ -58,6 +58,11 @@ set(src-utils
 set(src-lp
   lp/lp.c
   lp/lp_lock.c
+  lp/mm/segment/buddy.c
+  lp/mm/segment/segment.c
+  lp/mm/allocator/dymelor.c
+  lp/mm/checkpoints/checkpoints.c
+  lp/rollback.c
 )
 
 set(src-os
@@ -84,19 +89,10 @@ set(src-core
         configuration/configuration.c
         numerical/numerical.c
         statistics/statistics.c
-        mm/garbagecollector.c)
+        gc/garbagecollector.c)
 
 set(src-datatypes
         datatypes/list.c
-)
-
-set(src-mm
-        mm/buddy.c
-        mm/segment.c
-        mm/dymelor.c
-        mm/recoverable.c
-        mm/checkpoints.c
-        mm/state.c
 )
 
 set(src-reverse
@@ -117,7 +113,7 @@ include_directories(.)
 include_directories(include)
 include_directories(include-gen)
 include_directories(mm)
-include_directories(mm/allocators)
+include_directories(allocators)
 include_directories(reverse)
 include_directories(statistics)
 include_directories(datatypes)
@@ -187,7 +183,6 @@ if(CSR_CONTEXT)
 add_dependencies(use-core trap-based-user-context)
 endif()
 
-add_library(use-mm        STATIC ${src-mm})
 add_library(use-datatypes STATIC ${src-datatypes})
 add_library(use-utils     STATIC ${src-utils})
 add_library(use-os        STATIC ${src-os})

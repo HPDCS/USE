@@ -22,14 +22,16 @@
 * @author Alessandro Pellegrini
 * @author Francesco Quaglia
 */
-#include "mm.h"
-#include "segment.h"
 
+#include <sys/mman.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <numaif.h>
 #include <errno.h>
 #include <numaif.h>
+
+#include "segment.h"
+#include <configuration/configuration.h>
+#include <core.h>
 
 #include <lpm_alloc.h>
 #include <thr_alloc.h>
@@ -43,6 +45,9 @@
 #define set_gid(a,b) do{a=b;}while(0)
 #define kid 1
 #define GidToKernel(gid) gid 
+
+extern void ***pages;
+
 
 //TODO: document this magic! This is related to the pml4 index intialized in the ECS kernel module
 static unsigned char *init_address = (unsigned char *)(10LL << 39);
@@ -109,6 +114,8 @@ void migrate_segment(unsigned int id, int numa_node){
 	thr_free(nodes);
 	thr_free(status);
 }
+
+
 
 
 /*
