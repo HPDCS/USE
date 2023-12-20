@@ -36,7 +36,7 @@ void statistics_init() {
 		abort();																						 // LCOV_EXCL_LINE
 	}
 
-	if(glo_memalign_alloc((void**)&system_stats, 64, sizeof(struct stats_t)) < 0) {
+	if(glo_memalign_alloc((void**)&system_stats, 64, sizeof(struct stats_t), MEMKIND_OTHERS) < 0) {
 		printf("memalign failed\n"); // LCOV_EXCL_LINE
 	}
 	if(lp_stats == NULL) {
@@ -52,7 +52,7 @@ void statistics_init() {
 void statistics_fini() {
 	thr_free(thread_stats);
 	lpm_free(lp_stats);
-	glo_free(system_stats);
+	glo_free(system_stats, MEMKIND_OTHERS);
 }
 
 static void statistics_post_data(struct stats_t *stats, int idx, int type, stat64_t value) {

@@ -61,7 +61,7 @@ static __thread double elapsed_time;
  */
 static inline void alloc_numa_state(numa_struct *numa_state) {
 
-	numa_state->numa_binding_bitmap = allocate_bitmap(pdes_config.nprocesses);
+	numa_state->numa_binding_bitmap = allocate_bitmap(pdes_config.nprocesses, MEMKIND_OTHERS);
 	numa_state->unbalance_index = 0.0;
 }
 

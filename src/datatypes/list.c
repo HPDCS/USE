@@ -39,13 +39,30 @@
 #include "list.h"
 
 
-void *alloc_list(unsigned int lid){
+void *alloc_list(unsigned int lid, memkind_const memkind){
   void *__lmptr;
   (void)lid;
-  __lmptr = (void *)glo_alloc(sizeof(struct rootsim_list));
+  __lmptr = (void *)glo_alloc(sizeof(struct rootsim_list), memkind);
   bzero(__lmptr, sizeof(struct rootsim_list));
+  ((rootsim_list*)__lmptr)->memkind = memkind;
   return __lmptr;
 }
+
+
+void *list_allocate_node(unsigned int lid, size_t size, memkind_const memkind) {
+	struct rootsim_list_node *new_n;
+	(void)lid;
+	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size, memkind);
+	bzero(new_n, sizeof(struct rootsim_list_node) + size);
+	return new_n;
+}
+
+void list_deallocate_node_buffer(unsigned int lid, void *ptr, memkind_const memkind) {
+	(void)lid;
+	glo_free(list_container_of(ptr), memkind);
+}
+
+
 
 /**
 * This function inserts a new element at the beginning of the list.
@@ -78,7 +95,7 @@ char *__list_insert_head(unsigned int lid, void *li, unsigned int size, void *da
 	struct rootsim_list_node *new_n;
 	(void)lid;
 	// Create the new node and populate the entry
-	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size);
+	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size, l->memkind);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
 	memcpy(&new_n->data, data, size);
 
@@ -134,7 +151,7 @@ char *__list_insert_tail(unsigned int lid, void *li, unsigned int size, void *da
 	(void)lid;
 	
 	// Create the new node and populate the entry
-	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size);
+	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size, ((rootsim_list*)li)->memkind);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
 	memcpy(&new_n->data, data, size);
 
@@ -182,7 +199,7 @@ void dump_l(struct rootsim_list_node *n, size_t key_position) {
 char *__list_insert(unsigned int lid, void *li, unsigned int size, size_t key_position, void *data) {
 	struct rootsim_list_node *new_n;
 
-	new_n = list_allocate_node(lid, size);
+	new_n = list_allocate_node(lid, size, ((rootsim_list*)li)->memkind);
 	bzero(new_n, sizeof(struct rootsim_list_node) + size);
 	memcpy(&new_n->data, data, size);
 
@@ -328,13 +345,12 @@ char *__list_extract(unsigned int lid, void *li, unsigned int size, double key, 
 				n->prev->next = n->next;
 			}
 
-			content = glo_alloc(size);
+			content = glo_alloc(size, l->memkind);
 			memcpy(content, &n->data, size);
 			n->next = (void *)0xDEADBEEF;
 			n->prev = (void *)0xDEADBEEF;
 			bzero(n->data, size);
-
-			glo_free(n);
+			glo_free(n, l->memkind);
 			l->size--;
 
 			assert(l->size == (size_before - 1));
@@ -374,7 +390,7 @@ bool __list_delete(unsigned int lid, void *li, unsigned int size, double key, si
 	void *content;
 	if((content =__list_extract(lid, li, size, key, key_position)) != NULL) {
 		bzero(&content, size);
-		glo_free(content);
+		glo_free(content, ((rootsim_list*)li)->memkind);
 		return true;
 	}
 	return false;
@@ -441,7 +457,7 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 	}
 
 	if(copy) {
-		content = glo_alloc(size);
+		content = glo_alloc(size, l->memkind);
 		memcpy(content, &n->data, size);
 	}
 	n->next = (void *)0xBEEFC0DE;
@@ -449,7 +465,7 @@ char *__list_extract_by_content(unsigned int lid, void *li, unsigned int size, v
 	//bzero(n->data, size);
 	memset(n->data, 0xe9, size);
 
-	glo_free(n);
+	glo_free(n, l->memkind);
 	
 	l->size--;
 	assert(l->size == (size_before - 1));
@@ -545,7 +561,7 @@ void list_pop(unsigned int lid, void *li) {
 		n->next = (void *)0xDEFEC8ED;
 		n->prev = (void *)0xDEFEC8ED;
 
-		glo_free(n);
+		glo_free(n, l->memkind);
 
 		n = n_next;
 		l->size--;
@@ -583,7 +599,7 @@ unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_pos
                 n_adjacent = n->next;
                 n->next = (void *)0xBAADF00D;
                 n->prev = (void *)0xBAADF00D;
-		glo_free(n);
+		glo_free(n, l->memkind);
 		n = n_adjacent;
 	}
 	l->head = n;
@@ -595,32 +611,6 @@ unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_pos
 	assert(l->size == (size_before - deleted));
     out:
 	return deleted;
-}
-
-
-void *list_allocate_node(unsigned int lid, size_t size) {
-	struct rootsim_list_node *new_n;
-	(void)lid;
-	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size);
-	bzero(new_n, sizeof(struct rootsim_list_node) + size);
-	return new_n;
-}
-
-void *list_allocate_node_buffer(unsigned int lid, size_t size) {
-	char *ptr;
-
-	ptr = list_allocate_node(lid, size);
-
-	if(ptr == NULL)
-		return NULL;
-
-	return (void *)(ptr + sizeof(struct rootsim_list_node));
-}
-
-
-void list_deallocate_node_buffer(unsigned int lid, void *ptr) {
-	(void)lid;
-	glo_free(list_container_of(ptr));
 }
 
 
@@ -784,7 +774,14 @@ void *list_allocate_node_buffer_from_list(unsigned int lid, size_t size, struct 
 		//while((++i)*CACHE_LINE_SIZE < node_size);
 		//node_size = (i)*CACHE_LINE_SIZE;
 		
-		if(glo_memalign_alloc((void**)&memory_nodes, CACHE_LINE_SIZE, (/*node_size*/node_size_msg_t)*LIST_NODE_PER_ALLOC) != 0){
+		if( 
+		    glo_memalign_alloc(
+		    	(void**)&memory_nodes, 
+		    	CACHE_LINE_SIZE, 
+		    	(/*node_size*/node_size_msg_t)*LIST_NODE_PER_ALLOC,
+		    	free_list->memkind)
+		    != 0
+			){
 			printf("List nodes allocation failed\n");
 			abort();
 		}

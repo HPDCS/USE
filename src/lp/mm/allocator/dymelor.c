@@ -40,11 +40,11 @@ void recoverable_init(void) {
 	
 	register unsigned int i;
 	
-	recoverable_state = glo_alloc(sizeof(malloc_state *) * pdes_config.nprocesses);
+	recoverable_state = lpm_alloc(sizeof(malloc_state *) * pdes_config.nprocesses);
 
 	for(i = 0; i < pdes_config.nprocesses; i++){
 
-		recoverable_state[i] = glo_alloc(sizeof(malloc_state));
+		recoverable_state[i] = lpm_alloc(sizeof(malloc_state));
 		if(recoverable_state[i] == NULL)
 			rootsim_error(true, "Unable to allocate memory on malloc init");
 

@@ -24,6 +24,7 @@
 typedef struct __bitmap{
     unsigned int virtual_len; /// request bitmap length
     unsigned int actual_len;  /// multiple of CHAR_BIT
+    memkind_const memkind;
     unsigned char bits[];     /// array of chars storing the bitmap
 } bitmap;
 
@@ -33,7 +34,7 @@ typedef struct __bitmap{
  * @param len: the number of bit contained within the bitmap
  * @return a pointer to a bitmap struct on success, otherwise returns null
  */ 
-static inline bitmap* allocate_bitmap(unsigned int len){
+static inline bitmap* allocate_bitmap(unsigned int len, memkind_const memkind){
     unsigned int bytes      ;
     unsigned int actual_len ;
     bitmap *tmp             ;
@@ -46,12 +47,13 @@ static inline bitmap* allocate_bitmap(unsigned int len){
     bytes       += actual_len<len;
     actual_len   = bytes * CHAR_BIT;
 
-    tmp = (bitmap*) glo_aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int));
+    tmp = (bitmap*) glo_aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int), memkind);
     
     bzero(tmp, bytes+2*sizeof(unsigned int));
     
     tmp->virtual_len = len;
     tmp->actual_len  = actual_len;
+    tmp->memkind = memkind;
     
     return tmp;
 }
@@ -61,7 +63,7 @@ static inline bitmap* allocate_bitmap(unsigned int len){
  */ 
 static inline void release_bitmap(bitmap* ptr){
     if(ptr == NULL ) abort();
-    glo_free(ptr);
+    glo_free(ptr, ptr->memkind);
 }
 
 /**

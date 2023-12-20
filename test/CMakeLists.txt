@@ -19,8 +19,11 @@ function(test_model name)
         COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc -o lib${name}-mm.a --whole-archive lib${name}.a
     )
 
-    add_dependencies(test_${name} ${name} libuse-core-mocked.a lib${name}-mm.a)
-    target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a  ${CMAKE_BINARY_DIR}/src/libuse-core-mocked.a m numa pthread use-utils use-os use-api)
+    #add_dependencies(test_${name} ${name} libuse-core-mocked.a lib${name}-mm.a)
+    #target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a  ${CMAKE_BINARY_DIR}/src/libuse-core-mocked.a m numa pthread use-utils use-os use-api)
+
+    add_dependencies(test_${name} ${name} use-core use-lp use-datatypes lib${name}-mm.a)
+    target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a use-core use-lp use-datatypes m numa pthread use-utils use-os use-api)
 endfunction()
 
 function(configure_test prefix name)

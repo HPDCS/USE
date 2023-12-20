@@ -566,7 +566,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 	
 	if(new_size != 0 && new_size <= MAXIMUM_SIZE)
 	{
-		res = glo_memalign_alloc((void**)&new_h, CACHE_LINE_SIZE, sizeof(table));
+		res = glo_memalign_alloc((void**)&new_h, CACHE_LINE_SIZE, sizeof(table), MEMKIND_EVENTS);
 		if(res != 0)  error("No enough memory to new table structure\n");
 
 		new_h->bucket_width  = -1.0;
@@ -578,7 +578,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		array =  alloc_array_nodes(&malloc_status, new_size);
 		if(array == NULL)
 		{
-			glo_free(new_h);
+			glo_free(new_h, MEMKIND_EVENTS);
 			error("No enough memory to allocate new table array %u\n", new_size);
 		}
 
@@ -595,7 +595,7 @@ static void set_new_table(table* h, unsigned int threshold, double pub, unsigned
 		if(!BOOL_CAS(&(h->new_table), NULL,	new_h))
 		{
 			free_array_nodes(&malloc_status, new_h->array);
-			glo_free(new_h);
+			glo_free(new_h, MEMKIND_EVENTS);
 		}
 #if DEBUG == 1
 	#if LOG_RESIZE == 1
@@ -999,9 +999,9 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
 	unsigned int res_mem_posix = 0;		//<-----NEW
 
 	threads = threshold;
-	prune_array = glo_calloc(threshold*threshold, sizeof(unsigned int));
+	prune_array = glo_calloc(threshold*threshold, sizeof(unsigned int), MEMKIND_EVENTS);
 
-	nb_calqueue* res = glo_calloc(1, sizeof(nb_calqueue));
+	nb_calqueue* res = glo_calloc(1, sizeof(nb_calqueue), MEMKIND_EVENTS);
 	if(res == NULL)
 		error("No enough memory to allocate queue\n");
 		
@@ -1013,10 +1013,10 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
 	res->elem_per_bucket = elem_per_bucket;
 	res->pub_per_epb = perc_used_bucket * elem_per_bucket;
 
-	res_mem_posix = glo_memalign_alloc((void**)&res->hashtable, CACHE_LINE_SIZE, sizeof(table));//<-----NEW
+	res_mem_posix = glo_memalign_alloc((void**)&res->hashtable, CACHE_LINE_SIZE, sizeof(table), MEMKIND_EVENTS);//<-----NEW
 	if(res_mem_posix != 0)				//<-----NEW
 	{
-		glo_free(res);
+		glo_free(res, MEMKIND_EVENTS);
 		error("No enough memory to allocate queue\n");
 	}
 	res->hashtable->bucket_width = 1.0;
@@ -1026,8 +1026,8 @@ nb_calqueue* nb_calqueue_init(unsigned int threshold, double perc_used_bucket, u
 	res->hashtable->array =  alloc_array_nodes(&malloc_status, MINIMUM_SIZE);//<-----NEW
 	if(res->hashtable->array == NULL)
 	{
-		glo_free(res->hashtable);
-		glo_free(res);
+		glo_free(res->hashtable, MEMKIND_EVENTS);
+		glo_free(res, MEMKIND_EVENTS);
 		error("No enough memory to allocate queue\n");
 	}
 
@@ -1135,7 +1135,7 @@ void nbc_prune(void)
     
 		table *h = (table*) my_tmp->payload;
 		free_array_nodes(&malloc_status, h->array); //<-------NEW
-		glo_free(h);
+		glo_free(h, MEMKIND_EVENTS);
 		node_free(my_tmp); //<-------NEW
 	}
 	

@@ -28,7 +28,7 @@ static char messages[5][256] = {
 static int bitmap_test(void)
 {
 	unsigned int i;
-	bitmap *ptr = allocate_bitmap(BITMAP_ENTRIES);
+	bitmap *ptr = allocate_bitmap(BITMAP_ENTRIES, DRAM_MEM);
 	if(ptr->actual_len < ptr->virtual_len){ 
 		return -ACTUAL_LEN_ERROR;
 	}
@@ -40,7 +40,7 @@ static int bitmap_test(void)
 		if(ptr->bits[i]) 
 			return -NON_ZERO_BYTE_AFTER_INIT;
 
-	char *checker = glo_alloc(BITMAP_ENTRIES);
+	char *checker = glo_alloc(BITMAP_ENTRIES, DRAM_MEM);
 
 	i = ITERATIONS;
 	while (i--) {

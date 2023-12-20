@@ -42,7 +42,7 @@ void* alloc_array_nodes(hpdcs_gc_status *status, unsigned int num_item)
 {
 	linked_gc_node *res, *tmp;
 	unsigned long long res_tmp;
-	res = glo_alloc( num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE); 
+	res = glo_alloc( num_item*(status->block_size +HEADER_SIZE) + CACHE_LINE_SIZE, MEMKIND_EVENTS); 
 	
 	
 	if(res == NULL)
@@ -130,10 +130,10 @@ void* mm_node_malloc(hpdcs_gc_status *status)
 #endif
 		
 #if USE_POSIX_MEMALIGN == 0 
-		res = glo_alloc( rolled*(status->block_size + HEADER_SIZE) +CACHE_LINE_SIZE);
+		res = glo_alloc( rolled*(status->block_size + HEADER_SIZE) +CACHE_LINE_SIZE, MEMKIND_EVENTS);
 		if(res == NULL)
 #else
-		res_pos_mem = glo_memalign_alloc((void**) &res, CACHE_LINE_SIZE, rolled*(status->block_size + CACHE_LINE_SIZE) );
+		res_pos_mem = glo_memalign_alloc((void**) &res, CACHE_LINE_SIZE, rolled*(status->block_size + CACHE_LINE_SIZE), MEMKIND_EVENTS );
 		if(res_pos_mem != 0)
 #endif		
 		{

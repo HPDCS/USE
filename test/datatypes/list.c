@@ -32,7 +32,7 @@ bool sim_error = false;
 static int list_test(void)
 {
 	unsigned int i=0;
-	list(int)	queue = new_list(GENERIC_LIST, int);
+	list(int)	queue = new_list(GENERIC_LIST, int, DRAM_MEM);
 
 	if(!list_empty(queue)) return -NOT_EMPTY;
 

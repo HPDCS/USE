@@ -251,9 +251,9 @@ void print_state_swapping_struct_metrics(void){
  */
 state_swapping_struct *alloc_state_swapping_struct() {
 
-	state_swapping_struct *sw_struct = (state_swapping_struct *) glo_alloc(sizeof(state_swapping_struct));
+	state_swapping_struct *sw_struct = (state_swapping_struct *) glo_alloc(sizeof(state_swapping_struct), MEMKIND_OTHERS);
 
-	sw_struct->lp_bitmap = allocate_bitmap(pdes_config.nprocesses);
+	sw_struct->lp_bitmap = allocate_bitmap(pdes_config.nprocesses, MEMKIND_OTHERS);
 	init_state_swapping_struct(sw_struct);
 	sw_struct->counter_lp = pdes_config.nprocesses-1;
 

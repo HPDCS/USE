@@ -138,9 +138,9 @@ void nodes_init(){
 
 
 void pin_lps_on_numa_nodes_init() {
-	numa_state = glo_alloc(num_numa_nodes * sizeof(numa_struct *));
+	numa_state = glo_alloc(num_numa_nodes * sizeof(numa_struct *), MEMKIND_OTHERS);
 	for (unsigned int i=0; i < num_numa_nodes; i++) {
-		numa_state[i] = glo_alloc(sizeof(numa_struct));
+		numa_state[i] = glo_alloc(sizeof(numa_struct), MEMKIND_OTHERS);
 		alloc_numa_state(numa_state[i]);
 		numa_state[i]->numa_id = i;
 	}

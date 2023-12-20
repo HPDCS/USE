@@ -53,9 +53,9 @@ void queue_init_per_thread(void){
         _thr_pool->messages[i].father = 0;
     }
 
-    to_remove_local_evts = new_list(tid, msg_t);
-    to_remove_local_evts_old = new_list(tid, msg_t);
-    freed_local_evts = new_list(tid, msg_t);
+    to_remove_local_evts = new_list(tid, msg_t, MEMKIND_EVENTS);
+    to_remove_local_evts_old = new_list(tid, msg_t, MEMKIND_EVENTS);
+    freed_local_evts = new_list(tid, msg_t, MEMKIND_EVENTS);
 
 
 }

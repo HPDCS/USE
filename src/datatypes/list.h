@@ -66,15 +66,14 @@ typedef struct rootsim_list rootsim_list;
 /// This structure defines a generic list.
 struct rootsim_list {
 	size_t size;
+	size_t memkind;
 	struct rootsim_list_node *head;
 	struct rootsim_list_node *tail;
 	atomic_t counter;
 };
 
 
-extern void *umalloc(unsigned int lid, size_t s);
-extern void ufree(unsigned int lid, void *ptr);
-void *alloc_list(unsigned int lid);
+void *alloc_list(unsigned int lid, memkind_const memkind);
 
 /// This macro is a slightly-different implementation of the standard offsetof macro
 #define my_offsetof(st, m) ((size_t)( (unsigned char *)&((st)->m ) - (unsigned char *)(st)))
@@ -88,8 +87,8 @@ void *alloc_list(unsigned int lid);
  *   list(int) = new_list(int);
  *  \endcode
  */
-#define new_list(lid, type)	(type *)({ \
-				void *__lmptr = alloc_list(lid);\
+#define new_list(lid, type, memkind)	(type *)({ \
+				void *__lmptr = alloc_list(lid, memkind);\
 				__lmptr;\
 			})
 
@@ -257,9 +256,6 @@ extern char *__list_find(void *li, double key, size_t key_position);
 extern unsigned int __list_trunc(unsigned int lid, void *li, double key, size_t key_position, unsigned short int direction);
 extern void list_pop(unsigned int lid, void *li);
 extern char *__list_place(unsigned int lid, void *li, size_t key_position, struct rootsim_list_node *new_n);
-extern void *list_allocate_node(unsigned int lid, size_t size);
-extern void *list_allocate_node_buffer(unsigned int lid, size_t size);
-extern void list_deallocate_node_buffer(unsigned int lid, void *ptr);
 
 
 

@@ -185,14 +185,14 @@ add_library(use-lp        STATIC ${src-lp})
 #add_library(use-reverse  STATIC ${src-reverse})
 
 
-add_custom_target(libuse-core-mocked.a
-  DEPENDS ${name} use-core use-datatypes use-lp
-  COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc --wrap aligned_alloc --wrap posix_memalign 
-  -o libuse-core-mocked.a --whole-archive 
-  ${CMAKE_BINARY_DIR}/src/libuse-core.a 
-  ${CMAKE_BINARY_DIR}/src/libuse-datatypes.a
-  ${CMAKE_BINARY_DIR}/src/libuse-lp.a 
-)
+#add_custom_target(libuse-core-mocked.a
+#  DEPENDS ${name} use-core use-datatypes use-lp
+#  COMMAND ld -r --wrap malloc --wrap free --wrap realloc --wrap calloc --wrap aligned_alloc --wrap posix_memalign 
+#  -o libuse-core-mocked.a --whole-archive 
+#  ${CMAKE_BINARY_DIR}/src/libuse-core.a 
+#  ${CMAKE_BINARY_DIR}/src/libuse-datatypes.a
+#  ${CMAKE_BINARY_DIR}/src/libuse-lp.a 
+#)
 
 
 if(CSR_CONTEXT)

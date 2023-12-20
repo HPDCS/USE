@@ -111,7 +111,7 @@ void *log_full(int lid) {
 	recoverable_state[lid]->is_incremental = false;
 	size = get_log_size(recoverable_state[lid]);
 
-	ckpt = glo_alloc(size);
+	ckpt = glo_alloc(size, MEMKIND_LPCKPT);
 
 	if(ckpt == NULL) {
 		rootsim_error(true, "(%d) Unable to acquire memory for checkpointing the current state (memory exhausted?)");
@@ -459,7 +459,7 @@ void log_restore(int lid, state_t *state_queue_node) {
 */
 void log_delete(void *ckpt){
 	if(ckpt != NULL) {
-		glo_free(ckpt);
+		glo_free(ckpt, MEMKIND_LPCKPT);
 	}
 }
 

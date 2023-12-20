@@ -16,7 +16,36 @@ extern void *__real_aligned_alloc(size_t alignment, size_t size);
 #define WRAP_TO_REA 1
 #define WRAP_TO_MKD 2
 
-#define WRAP WRAP_TO_REA
+
+#ifndef MEMKIND_EVENTS
+#define MEMKIND_EVENTS DRAM_MEM
+#endif
+
+#ifndef MEMKIND_OTHERS
+#define MEMKIND_OTHERS DRAM_MEM
+#endif
+
+#ifndef MEMKIND_THREAD
+#define MEMKIND_THREAD MEMKIND_OTHERS
+#endif
+
+#ifndef MEMKIND_LPSTAT
+#define MEMKIND_LPSTAT DRAM_MEM
+#endif
+
+#ifndef MEMKIND_LPCKPT
+#define MEMKIND_LPCKPT DRAM_MEM
+#endif
+
+#ifndef MEMKIND_LPMETA
+#define MEMKIND_LPMETA DRAM_MEM
+#endif
+
+
+
+
+
+#define WRAP WRAP_TO_MKD
 
 #if WRAP == WRAP_TO_REA
 
@@ -28,11 +57,11 @@ extern void *__real_aligned_alloc(size_t alignment, size_t size);
 
 #elif WRAP == WRAP_TO_MKD
 
-#define MALLOC(x,m)   configurable_malloc(x)
-#define CALLOC(x,y,m) configurable_calloc(x,y)
-#define POSIX_MEMALIGN(x,y,z,m) configurable_posix_memalign(x,y,z)
-#define ALIGNED_ALLOC(x,y,m)    configurable_aligned_alloc(x,y)
-#define FREE(x,m)     configurable_free(x)
+#define MALLOC(x,m)   configurable_malloc(x,m)
+#define CALLOC(x,y,m) configurable_calloc(x,y,m)
+#define POSIX_MEMALIGN(x,y,z,m) configurable_posix_memalign(x,y,z,m)
+#define ALIGNED_ALLOC(x,y,m)    configurable_aligned_alloc(x,y,m)
+#define FREE(x,m)     configurable_free(x,m)
 
 #endif
 
