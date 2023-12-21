@@ -29,6 +29,7 @@ static int bitmap_test(void)
 {
 	unsigned int i;
 	bitmap *ptr = allocate_bitmap(BITMAP_ENTRIES, DRAM_MEM);
+	if(!ptr) printf("ptr is null\n");
 	if(ptr->actual_len < ptr->virtual_len){ 
 		return -ACTUAL_LEN_ERROR;
 	}
@@ -59,8 +60,8 @@ static int bitmap_test(void)
 		if(checker[i] != get_bit(ptr, i))
 			return -UNVALID_GET_BIT;
 
-	free(ptr);
-	free(checker);
+	glo_free(checker, DRAM_MEM);
+	glo_free(ptr, DRAM_MEM);
 
 	return NO_ERROR;
 }
