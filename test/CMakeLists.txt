@@ -3,7 +3,7 @@ function(test_program name)
     target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics  ../src/allocators ../src ../mm-nvram/include ../mm-nvram/memkind-install/include )
     add_test(NAME test_${name} COMMAND test_${name})
     add_dependencies(test_${name} use-datatypes use-utils)
-    target_link_libraries(test_${name} use-datatypes use-utils m) 
+    target_link_libraries(test_${name} use-datatypes use-utils m ${LIB_TO_INCLUDE}) 
     set_tests_properties(test_${name} PROPERTIES TIMEOUT 120)
 endfunction()
 
@@ -23,7 +23,11 @@ function(test_model name)
     #target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a  ${CMAKE_BINARY_DIR}/src/libuse-core-mocked.a m numa pthread use-utils use-os use-api)
 
     add_dependencies(test_${name} ${name} use-core use-lp use-datatypes lib${name}-mm.a)
-    target_link_libraries(test_${name} ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a use-core use-lp use-datatypes m numa pthread use-utils use-os use-api)
+    target_link_libraries(test_${name} 
+    ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a 
+    use-core use-lp use-datatypes 
+    use-utils use-os use-api
+    m numa pthread ${LIB_TO_INCLUDE})
 endfunction()
 
 function(configure_test prefix name)

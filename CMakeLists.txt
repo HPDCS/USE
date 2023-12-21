@@ -11,6 +11,8 @@ set(PROJECT_VERSION 2.0.0)
 
 include(ProcessorCount)
 add_subdirectory(mm-nvram)
+find_library(LIB_TO_INCLUDE memkind mm-nvram/memkind-install/lib/)
+
 
 ProcessorCount(N)
 if(N EQUAL 0)
