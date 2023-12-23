@@ -73,7 +73,7 @@ struct rootsim_list {
 };
 
 
-void *alloc_list(unsigned int lid, memkind_const memkind);
+void *alloc_list(unsigned int lid, xram_memkind_const_t memkind);
 
 /// This macro is a slightly-different implementation of the standard offsetof macro
 #define my_offsetof(st, m) ((size_t)( (unsigned char *)&((st)->m ) - (unsigned char *)(st)))

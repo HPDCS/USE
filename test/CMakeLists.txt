@@ -3,7 +3,7 @@ function(test_program name)
     target_include_directories(test_${name} PRIVATE ../src/reverse ../src/include ../src/datatypes ../src/core ../src/statistics  ../src/allocators ../src ../mm-nvram/include ../mm-nvram/memkind-install/include )
     add_test(NAME test_${name} COMMAND test_${name})
     add_dependencies(test_${name} use-datatypes use-utils)
-    target_link_libraries(test_${name} use-datatypes use-utils m ${LIB_TO_INCLUDE}) 
+    target_link_libraries(test_${name} use-datatypes use-utils m memkind numa hwloc) 
     set_tests_properties(test_${name} PROPERTIES TIMEOUT 120)
 endfunction()
 
@@ -27,7 +27,7 @@ function(test_model name)
     ${CMAKE_BINARY_DIR}/test/lib${name}-mm.a 
     use-core use-lp use-datatypes 
     use-utils use-os use-api
-    m numa pthread ${LIB_TO_INCLUDE})
+    m numa pthread memkind hwloc)
 endfunction()
 
 function(configure_test prefix name)

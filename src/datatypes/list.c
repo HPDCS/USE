@@ -39,7 +39,7 @@
 #include "list.h"
 
 
-void *alloc_list(unsigned int lid, memkind_const memkind){
+void *alloc_list(unsigned int lid, xram_memkind_const_t memkind){
   void *__lmptr;
   (void)lid;
   __lmptr = (void *)glo_alloc(sizeof(struct rootsim_list), memkind);
@@ -49,7 +49,7 @@ void *alloc_list(unsigned int lid, memkind_const memkind){
 }
 
 
-void *list_allocate_node(unsigned int lid, size_t size, memkind_const memkind) {
+void *list_allocate_node(unsigned int lid, size_t size, xram_memkind_const_t memkind) {
 	struct rootsim_list_node *new_n;
 	(void)lid;
 	new_n = glo_alloc(sizeof(struct rootsim_list_node) + size, memkind);
@@ -57,7 +57,7 @@ void *list_allocate_node(unsigned int lid, size_t size, memkind_const memkind) {
 	return new_n;
 }
 
-void list_deallocate_node_buffer(unsigned int lid, void *ptr, memkind_const memkind) {
+void list_deallocate_node_buffer(unsigned int lid, void *ptr, xram_memkind_const_t memkind) {
 	(void)lid;
 	glo_free(list_container_of(ptr), memkind);
 }

@@ -24,7 +24,7 @@
 typedef struct __bitmap{
     unsigned int virtual_len; /// request bitmap length
     unsigned int actual_len;  /// multiple of CHAR_BIT
-    memkind_const memkind;
+    xram_memkind_const_t memkind;
     unsigned char bits[];     /// array of chars storing the bitmap
 } bitmap;
 
@@ -34,7 +34,7 @@ typedef struct __bitmap{
  * @param len: the number of bit contained within the bitmap
  * @return a pointer to a bitmap struct on success, otherwise returns null
  */ 
-static inline bitmap* allocate_bitmap(unsigned int len, memkind_const memkind){
+static inline bitmap* allocate_bitmap(unsigned int len, xram_memkind_const_t memkind){
     unsigned int bytes      ;
     unsigned int actual_len ;
     bitmap *tmp             ;

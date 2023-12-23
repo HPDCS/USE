@@ -4,7 +4,7 @@
 #include <configuration/configuration.h>
 #include <utils/prints.h>
 #include <argp.h>         // Provides GNU argp() argument parser
-
+#include <allocators/common.h>
 
 simulation_configuration pdes_config;
 
@@ -306,6 +306,7 @@ void print_config(void){
     printf("\t- MALLOC-BASED RECOVERABLE ALLOC %u\n", !pdes_config.enable_custom_alloc);
     if(!pdes_config.enable_custom_alloc)
       printf("\t\t|- SEGMENT SHIFT  %u\n", !pdes_config.segment_shift);
+      printf("\t\t|- MEMKIND_EVENTS %u\n", MEMKIND_EVENTS);
     printf("\t- ENABLED_COMMITTER THREADS %u\n", pdes_config.enable_committer_threads);
     printf("\t- NUMA REBALANCE %u\n",    pdes_config.numa_rebalance);
     printf("\t- MBIND %u\n",    pdes_config.enable_mbind);

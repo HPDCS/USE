@@ -10,9 +10,6 @@ set(PROJECT_VERSION 2.0.0)
 #set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 include(ProcessorCount)
-add_subdirectory(mm-nvram)
-find_library(LIB_TO_INCLUDE memkind mm-nvram/memkind-install/lib/)
-
 
 ProcessorCount(N)
 if(N EQUAL 0)
@@ -44,6 +41,7 @@ add_compile_options(
 -DCACHE_LINE_SIZE=${CACHE_LINE_SIZE} 
 -DN_CPU=${N} 
 -DARCH_X86_64
+${CMAKE_CXX_FLAGS}
 )
 
 include_directories(src)
