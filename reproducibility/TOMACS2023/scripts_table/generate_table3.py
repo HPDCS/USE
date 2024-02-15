@@ -25,8 +25,9 @@ for line in f.readlines():
   
   tot = float(line[5])
   rol = float(line[3])+float(line[4])
-  pro = tot/rol
-  
+  pro = 0
+  if rol != 0:
+    pro = tot/rol
 
   res += [(line[0],pro)]
 
