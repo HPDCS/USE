@@ -19,6 +19,8 @@ Submitted to ACM TOMACS 2023 Special Issue on PADS 2022
 
 * x86_64 hardware with up to 2 NUMA nodes
 * Unix system with gcc toolchain
+* The compilation should be performed on the target machine due to compile-time code generation phases
+
 
 The hardware configuration used by the authors is:
 
