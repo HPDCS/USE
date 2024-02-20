@@ -5,8 +5,9 @@ if [ -f thread.conf ]; then
 	source thread.conf
 else
 MAX_THREADS=$( cat /proc/cpuinfo | grep processor | wc -l)     #maximum number of threads, which is typically equal to the number of (logical) cores.
-if [ MAX_THREADS > 40 ]; then #if > 40 cores set max number of threads to 40
+if [ $MAX_THREADS -gt 40 ]; then
 	MAX_THREADS=40
+fi
 QUARTER=$(($MAX_THREADS/4))
 
 
