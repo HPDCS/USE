@@ -15,8 +15,8 @@ int device_fd;
 
 extern void **mem_areas; /// pointers to the lp segment
 
-lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
-model_t iss_costs_model;	 /// runtime tuning of the cost model 
+//lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
+//model_t iss_costs_model;	 /// runtime tuning of the cost model 
 
 __thread int __in_log_full = 0;
 
