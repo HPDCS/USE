@@ -94,8 +94,8 @@ extern model_t iss_costs_model;	 /// runtime tuning of the cost model
 
 /** methods for incremental state saving support */
 void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps);
-void init_tracking_data(tracking_data *);
-void set_tracking_data(tracking_data *data, unsigned long start, unsigned long addr, unsigned long end,
+void init_tracking_data(tracking_data **);
+void set_tracking_data(tracking_data **data, unsigned long start, unsigned long addr, unsigned long end,
 										unsigned int segid, unsigned long len);
 void init_incremental_checkpoint_support_per_lp(unsigned int lp);
 
@@ -105,6 +105,7 @@ partition_log *log_incremental(unsigned int lid, simtime_t ts);
 void log_incremental_restore(partition_log *cur);
 tracking_data *get_fault_info(unsigned int lid);
 void mark_dirty_pages(tracking_data *data);
+
 void init_segment_monitor_support(tracking_data *data);
 
 

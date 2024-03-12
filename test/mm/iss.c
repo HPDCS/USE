@@ -47,8 +47,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp);
 void iss_update_model(unsigned int cur_lp);
 void iss_run_model(unsigned int cur_lp);
 void iss_first_run_model(unsigned int cur_lp);
-void set_tracking_data(tracking_data *data, unsigned long start, unsigned long addr, unsigned long end,
-										unsigned int segid, unsigned long len);
+
 
 int guard_memory(unsigned int lid);
 int unguard_memory(unsigned int lid);

@@ -219,27 +219,27 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 
 /** methods to initialize iss support and set tracking_data struct */ 
 
-void set_tracking_data(tracking_data *data, unsigned long start, unsigned long addr, unsigned long end,
+void set_tracking_data(tracking_data **data, unsigned long start, unsigned long addr, unsigned long end,
 	unsigned int segid, unsigned long len) {
 
-	assert(data->buff_addresses != NULL);
+	assert((*data)->buff_addresses != NULL);
 
-	data->base_address 					= start;
-	data->subsegment_address 			= addr;
-	data->end_address 					= end;
-	data->segment_id 					= segid;
-	data->len_buf 						= len;
+	(*data)->base_address 					= start;
+	(*data)->subsegment_address 			= addr;
+	(*data)->end_address 					= end;
+	(*data)->segment_id 					= segid;
+	(*data)->len_buf 						= len;
 }
 
 
-void init_tracking_data(tracking_data *data) {
+void init_tracking_data(tracking_data **data) {
 
-	data->base_address 			= 0UL;
-	data->subsegment_address 	= 0UL;
-	data->end_address 			= 0UL;
-	data->segment_id 			= 0UL;
-	data->len_buf 				= NUM_PAGES_PER_SEGMENT;
-	data->buff_addresses 		= rsalloc(data->len_buf * sizeof(unsigned long)); 
+	(*data)->base_address 			= 0UL;
+	(*data)->subsegment_address 	= 0UL;
+	(*data)->end_address 			= 0UL;
+	(*data)->segment_id 			= 0UL;
+	(*data)->len_buf 				= NUM_PAGES_PER_SEGMENT;
+	(*data)->buff_addresses 		= rsalloc((*data)->len_buf * sizeof(unsigned long)); 
 }
 
 void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps) {
@@ -273,11 +273,11 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	
 	//INCR: fill tracking_data struct with addresses and then call ioctl(fd, TRACKER_INIT, t_data)
 	unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
-	set_tracking_data(t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
+	set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
 	
 	//INCR: ioctl(fd, TRACKER_INIT, t_data)
-	init_segment_monitor_support(&t_data[lp]);
+	init_segment_monitor_support(t_data[lp]);
 
 	iss_first_run_model(current_lp); 
 
