@@ -46,6 +46,7 @@
 #include "metrics_for_window.h"
 #include "clock_constant.h"
 #include "state_swapping.h"
+#include "incremental_state_saving.h"
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
@@ -55,6 +56,7 @@
 
 
 unsigned int start_periodic_check_ongvt = 0;
+int device_fd;
 
 extern clock_timer simulation_clocks;
 extern timer exec_time;
@@ -478,6 +480,11 @@ void init_simulation(unsigned int thread_id){
 		numerical_init();
 		nodes_init();
 
+		/// init support for incremental state saving
+		if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+			init_incremental_checkpointing_support(pdes_config.ncores, pdes_config.nprocesses);
+		}
+
 		if(pdes_config.enforce_locality){
 			pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
 			init_metrics_for_window();
@@ -501,7 +508,14 @@ void init_simulation(unsigned int thread_id){
 		//if(tid != 0) continue;
 		current_lp = __sync_fetch_and_add(&lp_inizialized, 1);
 		if(current_lp >=  pdes_config.nprocesses) continue;
-		if(!pdes_config.serial) allocator_init_for_lp(current_lp);
+
+		if(!pdes_config.serial) {
+			allocator_init_for_lp(current_lp);
+			if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+				init_incremental_checkpoint_support_per_lp(current_lp);
+			}
+		}
+
 		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
  		current_msg->sender_id 		= -1;//
  		current_msg->receiver_id 	= current_lp;//
