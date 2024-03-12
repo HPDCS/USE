@@ -56,7 +56,6 @@
 
 
 unsigned int start_periodic_check_ongvt = 0;
-int device_fd;
 
 extern clock_timer simulation_clocks;
 extern timer exec_time;
