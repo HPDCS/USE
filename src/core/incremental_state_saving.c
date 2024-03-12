@@ -234,6 +234,7 @@ void set_tracking_data(tracking_data **data, unsigned long start, unsigned long 
 
 void init_tracking_data(tracking_data **data) {
 
+	*data = rsalloc(sizeof(tracking_data));
 	(*data)->base_address 			= 0UL;
 	(*data)->subsegment_address 	= 0UL;
 	(*data)->end_address 			= 0UL;
