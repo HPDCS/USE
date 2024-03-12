@@ -106,7 +106,7 @@ void log_incremental_restore(partition_log *cur);
 tracking_data *get_fault_info(unsigned int lid);
 void mark_dirty_pages(tracking_data *data);
 
-void init_segment_monitor_support(tracking_data **data);
+void init_segment_monitor_support(tracking_data *data);
 
 
 void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg);

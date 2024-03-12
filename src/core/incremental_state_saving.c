@@ -126,12 +126,15 @@ void mark_dirty_pages(tracking_data *data) {
 
 /** methods to use klm through ioctl */
 
-void init_segment_monitor_support(tracking_data **data) {
+void init_segment_monitor_support(tracking_data *data) {
 
 	assert(data != NULL);
 	assert(device_fd != -1);
 
-	ioctl(device_fd, TRACKER_INIT, *data);
+	printf("[init_segment_monitor_support] base_addr %lu subsegment_address %lu segid %ld\n", 
+		data->base_address, data->subsegment_address, data->segment_id);
+
+	ioctl(device_fd, TRACKER_INIT, data);
 }
 
 void open_tracker_device(const char *path, unsigned long mode) {
@@ -279,7 +282,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
 	
 	//INCR: ioctl(fd, TRACKER_INIT, t_data)
-	init_segment_monitor_support(&t_data[lp]);
+	init_segment_monitor_support(t_data[lp]);
 
 	iss_first_run_model(current_lp); 
 
