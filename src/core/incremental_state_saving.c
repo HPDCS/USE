@@ -254,7 +254,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 	}
 
 	/// init model PER-LP (iss_metadata and model)
-	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE))*lps);
+	iss_states = (lp_iss_metadata*)rsalloc( (sizeof(lp_iss_metadata) + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE))*lps);
 	iss_costs_model.mprotect_cost_per_page = 1; //TODO: costo per protect ?
 	iss_costs_model.log_cost_per_page = 100; 
 
