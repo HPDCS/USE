@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <sys/mman.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <ROOT-Sim.h>
 
@@ -131,6 +132,16 @@ void init_segment_monitor_support(tracking_data *data) {
 	assert(device_fd != -1);
 
 	ioctl(device_fd, TRACKER_INIT, data);
+}
+
+void open_tracker_device(const char *path, unsigned long mode) {
+
+	device_fd = open(path, mode);
+    if (device_fd == -1) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        abort();
+    }
+    ioctl(device_fd, TRACKER_SET_SEGSIZE, PER_LP_PREALLOCATED_MEMORY);
 }
 
 
