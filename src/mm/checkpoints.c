@@ -38,6 +38,8 @@
 #include <statistics.h>
 #include <autockpt.h>
 
+#include <incremental_state_saving.h>
+
 
 /**
 * This function creates a full log of the current simulation states and returns a pointer to it.
@@ -72,18 +74,24 @@
 *
 * @todo must be declared static. This will entail changing the logic in gvt.c to save a state before rebuilding.
 */
+
+extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
+
+extern __thread int __in_log_full;
+
 void *log_full(int lid) {
 
 	void *ptr = NULL, *ckpt = NULL;
 	int i, j, k, idx, bitmap_blocks;
 	size_t size, chunk_size;
 	malloc_area *m_area;
+	partition_log *partial_log;
 
 	// Timers for self-tuning of the simulation platform
 	clock_timer checkpoint_timer;
 	clock_timer_start(checkpoint_timer);
 
-	recoverable_state[lid]->is_incremental = false;
+	recoverable_state[lid]->is_incremental = is_next_ckpt_incremental(); /// call routine for determining the type of checkpointing
 	size = get_log_size(recoverable_state[lid]);
 
 	ckpt = rsalloc(size);
@@ -102,6 +110,19 @@ void *log_full(int lid) {
 	// Copy the per-LP Seed State (to make the numerical library rollbackable and PWD)
 	memcpy(ptr, &LPS[lid]->seed, sizeof(seed_type));
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
+
+	if(recoverable_state[lid]->is_incremental){
+		/// partial log
+        //statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
+       	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
+		partial_log = log_incremental(lid, lvt(lid)); //TODO
+		*((void ** )ptr) = partial_log;
+		ptr = (void *) ((char *) ptr + sizeof(void *));
+	}
+    else{
+       	statistics_post_lp_data(lid, STAT_CKPT_FULL, 1.0);
+        statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
+    }
 
 	for(i = 0; i < recoverable_state[lid]->num_areas; i++){
 
@@ -133,37 +154,41 @@ void *log_full(int lid) {
 		memcpy(ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
 		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
 
-		chunk_size = m_area->chunk_size;
-		RESET_BIT_AT(chunk_size, 0);	// ckpt Mode bit
-		RESET_BIT_AT(chunk_size, 1);	// Lock bit
+		/// if log is full
+		if (!recoverable_state[lid]->is_incremental) {
 
-		// Check whether the area should be completely copied (not on a per-chunk basis)
-		// using a threshold-based heuristic
-		if(CHECK_LOG_MODE_BIT(m_area)){
+			chunk_size = m_area->chunk_size;
+			RESET_BIT_AT(chunk_size, 0);	// ckpt Mode bit
+			RESET_BIT_AT(chunk_size, 1);	// Lock bit
 
-			// If the malloc_area is almost (over a threshold) full, copy it entirely
-			memcpy(ptr, m_area->area, m_area->num_chunks * chunk_size);
-			ptr = (void*)((char*)ptr + m_area->num_chunks * chunk_size);
+			// Check whether the area should be completely copied (not on a per-chunk basis)
+			// using a threshold-based heuristic
+			if(CHECK_LOG_MODE_BIT(m_area)){
 
-		} else {
-			// Copy only the allocated chunks
-			for(j = 0; j < bitmap_blocks; j++){
+				// If the malloc_area is almost (over a threshold) full, copy it entirely
+				memcpy(ptr, m_area->area, m_area->num_chunks * chunk_size);
+				ptr = (void*)((char*)ptr + m_area->num_chunks * chunk_size);
 
-				// Check the allocation bitmap on a per-block basis, to enhance scan speed
-				if(m_area->use_bitmap[j] == 0) {
-					// Empty (no-chunks-allocated) block: skip to the next
-					continue;
+			} else {
+				// Copy only the allocated chunks
+				for(j = 0; j < bitmap_blocks; j++){
 
-				} else {
-					// At least one chunk is allocated: per-bit scan of the block is required
-					for(k = 0; k < NUM_CHUNKS_PER_BLOCK; k++){
+					// Check the allocation bitmap on a per-block basis, to enhance scan speed
+					if(m_area->use_bitmap[j] == 0) {
+						// Empty (no-chunks-allocated) block: skip to the next
+						continue;
 
-						if(CHECK_BIT_AT(m_area->use_bitmap[j], k)){
+					} else {
+						// At least one chunk is allocated: per-bit scan of the block is required
+						for(k = 0; k < NUM_CHUNKS_PER_BLOCK; k++){
 
-							idx = j * NUM_CHUNKS_PER_BLOCK + k;
-							memcpy(ptr, (void*)((char*)m_area->area + (idx * chunk_size)), chunk_size);
-							ptr = (void*)((char*)ptr + chunk_size);
+							if(CHECK_BIT_AT(m_area->use_bitmap[j], k)){
 
+								idx = j * NUM_CHUNKS_PER_BLOCK + k;
+								memcpy(ptr, (void*)((char*)m_area->area + (idx * chunk_size)), chunk_size);
+								ptr = (void*)((char*)ptr + chunk_size);
+
+							}
 						}
 					}
 				}
@@ -186,9 +211,13 @@ void *log_full(int lid) {
 	recoverable_state[lid]->dirty_bitmap_size = 0;
 	recoverable_state[lid]->total_inc_size = 0;
 
-	statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
-	statistics_post_lp_data(lid, STAT_CKPT_MEM, (double)size);
-	autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
+	if(recoverable_state[lid]->is_incremental)
+        statistics_post_lp_data(lid, STAT_CKPT_TIME_INCR, (double)clock_timer_value(checkpoint_timer));
+	else
+        statistics_post_lp_data(lid, STAT_CKPT_TIME, (double)clock_timer_value(checkpoint_timer));
+	
+    autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
+
 	return ckpt;
 }
 
@@ -214,7 +243,24 @@ void *log_full(int lid) {
 */
 void *log_state(int lid) {
 	statistics_post_lp_data(lid, STAT_CKPT, 1.0);
-	return log_full(lid);
+	void *ckpt;
+	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+		size_t logsize = iss_states[lid].current_incremental_log_size;
+		//INCR: compute size to protect
+		get_fault_info(lid); /// TODO: mark dirty pages
+		ckpt = log_full(lid);
+		//INCR: todo update model
+		iss_update_model(lid);
+		if(recoverable_state[lid]->is_incremental){
+			guard_memory(lid);
+			iss_log_incremental_reset(lid);
+		} else
+			iss_states[lid].current_incremental_log_size = logsize;
+
+	} else
+		ckpt = log_full(lid);
+	
+	return ckpt;
 }
 
 
@@ -267,6 +313,11 @@ void restore_full(int lid, void *ckpt) {
 	// Restore the per-LP Seed State (to make the numerical library rollbackable and PWD)
 	memcpy(&LPS[lid]->seed, ptr, sizeof(seed_type));
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
+
+	if(recoverable_state[lid]->is_incremental){
+		log_incremental_restore(*(partition_log **)ptr);
+		ptr = (void *)((char *)ptr + sizeof(void*));
+	}
 
 	recoverable_state[lid]->areas = new_area;
 
@@ -324,35 +375,39 @@ void restore_full(int lid, void *ckpt) {
 		RESET_BIT_AT(chunk_size, 0);
 		RESET_BIT_AT(chunk_size, 1);
 
-		// Check how the area has been logged
-		if(CHECK_LOG_MODE_BIT(m_area)){
-			// The area has been entirely logged
-			memcpy(m_area->area, ptr, m_area->num_chunks * chunk_size);
-			ptr = (void*)((char*)ptr + m_area->num_chunks * chunk_size);
+		/// if log was full
+		if (!recoverable_state[lid]->is_incremental) {
 
-		} else {
-			// The area was partially logged.
-			// Logged chunks are the ones associated with a used bit whose value is 1
-			// Their number is in the alloc_chunks counter
-			for(j = 0; j < bitmap_blocks; j++){
+			// Check how the area has been logged
+			if(CHECK_LOG_MODE_BIT(m_area)){
+				// The area has been entirely logged
+				memcpy(m_area->area, ptr, m_area->num_chunks * chunk_size);
+				ptr = (void*)((char*)ptr + m_area->num_chunks * chunk_size);
 
-				bitmap = m_area->use_bitmap[j];
+			} else {
+				// The area was partially logged.
+				// Logged chunks are the ones associated with a used bit whose value is 1
+				// Their number is in the alloc_chunks counter
+				for(j = 0; j < bitmap_blocks; j++){
 
-				// Check the allocation bitmap on a per-block basis, to enhance scan speed
-				if(bitmap == 0){
-					// Empty (no-chunks-allocated) block: skip to the next
-					continue;
+					bitmap = m_area->use_bitmap[j];
 
-				} else {
-					// Scan the bitmap on a per-bit basis
-					for(k = 0; k < NUM_CHUNKS_PER_BLOCK; k++){
+					// Check the allocation bitmap on a per-block basis, to enhance scan speed
+					if(bitmap == 0){
+						// Empty (no-chunks-allocated) block: skip to the next
+						continue;
 
-						if(CHECK_BIT_AT(bitmap, k)){
+					} else {
+						// Scan the bitmap on a per-bit basis
+						for(k = 0; k < NUM_CHUNKS_PER_BLOCK; k++){
 
-							idx = j * NUM_CHUNKS_PER_BLOCK + k;
-							memcpy((void*)((char*)m_area->area + (idx * chunk_size)), ptr, chunk_size);
-							ptr = (void*)((char*)ptr + chunk_size);
+							if(CHECK_BIT_AT(bitmap, k)){
 
+								idx = j * NUM_CHUNKS_PER_BLOCK + k;
+								memcpy((void*)((char*)m_area->area + (idx * chunk_size)), ptr, chunk_size);
+								ptr = (void*)((char*)ptr + chunk_size);
+
+							}
 						}
 					}
 				}
@@ -417,7 +472,17 @@ void restore_full(int lid, void *ckpt) {
 */
 void log_restore(int lid, state_t *state_queue_node) {
 	statistics_post_lp_data(lid, STAT_RECOVERY, 1.0);
-	restore_full(lid, state_queue_node->log);
+	int res_um, res_tm;
+	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+		//INCR: untrack_memory(mem, size)
+		res_um = unguard_memory(lid); //TODO: use actual parameters to define in incremental_state_saving.h
+		
+		restore_full(lid, state_queue_node->log);
+		//todo: reset model
+        iss_log_incremental_reset(lid);
+		//INCR: track_memory(mem, size)
+		res_tm = guard_memory(lid);
+	}
 }
 
 
