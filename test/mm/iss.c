@@ -36,7 +36,7 @@ simulation_configuration pdes_config;
 void rsfree(void *ptr){ free(ptr); }
 void* rsalloc(size_t len){ return malloc(len); }
 extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
-
+extern tracking_data **t_data;
 
 
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
@@ -73,7 +73,6 @@ static int iss_test(void)
 	pdes_config.iss_enabled_mprotection = 1;
 	pdes_config.iss_signal_mprotect 	= 0;
 
-	struct tracking_data *u_data = malloc(sizeof(struct _tracking_data));
 	int fd = open("/dev/tracker", (O_RDONLY | O_NONBLOCK));
 	if (fd == -1) return -NO_FILE;
 
@@ -96,10 +95,7 @@ static int iss_test(void)
 	page_ptr= get_page_ptr_from_idx(current_lp, page_id+1);
 	if(page_ptr != (mem_areas[0]+PAGE_SIZE)) return -INVALID_PAGE_PTR;
 
-	set_tracking_data(t_data, (unsigned long) mem_areas[0], (unsigned long) mem_areas[current_lp],
-		(unsigned long) mem_areas[current_lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
-
-	ioctl(fd, TRACKER_INIT, u_data);
+	ioctl(fd, TRACKER_INIT, t_data[current_lp]);
 
 	memset(mem_areas[current_lp], 0, MAX_MMAP);
 
