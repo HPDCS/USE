@@ -119,8 +119,20 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 			stats[idx].counter_checkpoints += value;
 			break;
 
+		case STAT_CKPT_FULL:
+			stats[idx].counter_checkpoints_full += value;
+			break;
+        
+    case STAT_CKPT_INCR:
+			stats[idx].counter_checkpoints_incr += value;
+			break;
+
 		case STAT_CKPT_MEM:
-			stats[idx].mem_checkpoint += value;
+			stats[idx].mem_checkpoint_full += value;
+			break;
+
+	  case STAT_CKPT_MEM_INCR:
+			stats[idx].mem_checkpoint_incr += value;
 			break;
 
 		case STAT_RECOVERY:
@@ -154,6 +166,10 @@ static void statistics_post_data(struct stats_t *stats, int idx, int type, stat6
 
 		case STAT_CKPT_TIME:
 			stats[idx].clock_checkpoint += value;
+			break;
+
+		case STAT_CKPT_TIME_INCR:
+			stats[idx].clock_checkpoint_incr += value;
 			break;
 
 		case STAT_RECOVERY_TIME:
@@ -240,6 +256,8 @@ void gather_statistics() {
 		system_stats->events_anti          += lp_stats[i].events_anti;
 		
 		system_stats->counter_checkpoints  += lp_stats[i].counter_checkpoints;
+		system_stats->counter_checkpoints_incr  += lp_stats[i].counter_checkpoints_incr;
+		system_stats->counter_checkpoints_full  += lp_stats[i].counter_checkpoints_full;
 		system_stats->counter_recoveries   += lp_stats[i].counter_recoveries;
 		system_stats->counter_rollbacks    += lp_stats[i].counter_rollbacks;
 		system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
@@ -263,9 +281,11 @@ void gather_statistics() {
 		system_stats->clock_silent         += lp_stats[i].clock_silent;
 		system_stats->clock_recovery       += lp_stats[i].clock_recovery;
 		system_stats->clock_checkpoint     += lp_stats[i].clock_checkpoint;
+		system_stats->clock_checkpoint_incr+= lp_stats[i].clock_checkpoint_incr;
 		system_stats->clock_rollback       += lp_stats[i].clock_rollback;
 
-		system_stats->mem_checkpoint       += lp_stats[i].mem_checkpoint;
+		system_stats->mem_checkpoint_full  += lp_stats[i].mem_checkpoint_full;
+		system_stats->mem_checkpoint_incr  += lp_stats[i].mem_checkpoint_incr;
 		system_stats->checkpoint_period    += lp_stats[i].checkpoint_period;
 		
 		system_stats->total_frames         += LPS[i]->num_executed_frames;
@@ -288,6 +308,7 @@ void gather_statistics() {
 	system_stats->clock_rollback     /= system_stats->counter_rollbacks;
 	system_stats->counter_rollbacks_length    += lp_stats[i].counter_rollbacks_length;
 	system_stats->clock_checkpoint   /= system_stats->counter_checkpoints;
+	system_stats->clock_checkpoint_incr   /= system_stats->counter_checkpoints_incr;
 	system_stats->clock_recovery     /= system_stats->counter_recoveries;
 
 	system_stats->clock_safe         /= (system_stats->events_total - system_stats->events_silent);
@@ -300,7 +321,8 @@ void gather_statistics() {
 
 	system_stats->counter_checkpoint_recalc /= pdes_config.nprocesses;
 
-	system_stats->mem_checkpoint /= system_stats->counter_checkpoints;
+	system_stats->mem_checkpoint_full /= system_stats->counter_checkpoints_full;
+	system_stats->mem_checkpoint_incr /= system_stats->counter_checkpoints_incr;
 	system_stats->checkpoint_period /= pdes_config.nprocesses;
 }
 
@@ -359,6 +381,14 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n");
 
 	printf("Save Checkpoint operations......................: %12llu\n", (unsigned long long)stats->counter_checkpoints);
+	printf("    Full Checkpoints............................: %12llu (%4.2f%%)\n", (unsigned long long)stats->counter_checkpoints_full,percentage(stats->counter_checkpoints_full,stats->counter_checkpoints));
+	printf("    Full Checkpoint mem.........................: %12u B  %u pages\n", (unsigned int)stats->mem_checkpoint_full, ((unsigned int)stats->mem_checkpoint_full)/4096 + (((unsigned int)stats->mem_checkpoint_full%4096)!=0 ));
+	printf("    Incremental Checkpoints.....................: %12llu (%4.2f%%)\n", (unsigned long long)stats->counter_checkpoints_incr,percentage(stats->counter_checkpoints_incr,stats->counter_checkpoints));
+	printf("    Incremental Checkpoint mem..................: %12u B  %u pages\n", (unsigned int)stats->mem_checkpoint_incr, ((unsigned int)stats->mem_checkpoint_incr)/4096 + (((unsigned int)stats->mem_checkpoint_full%4096)!=0 ));
+	printf("    Save Full Checkpoint time...................: %12.2f clocks (%4.2f%%)\n",
+		stats->clock_checkpoint, percentage(stats->clock_checkpoint, stats->clock_checkpoint+stats->clock_checkpoint_incr));
+	printf("    Save Incremental Checkpoint time............: %12.2f clocks (%4.2f%%)\n",
+		stats->clock_checkpoint_incr, percentage(stats->clock_checkpoint_incr, stats->clock_checkpoint+stats->clock_checkpoint_incr));
 	printf("Restore Checkpoint operations...................: %12llu\n", (unsigned long long)stats->counter_recoveries);
 	printf("Rollback operations.............................: %12llu\n", (unsigned long long)stats->counter_rollbacks);
 	printf("AVG Rollbacked Events...........................: %12.2f\n", stats->counter_rollbacks_length/stats->counter_rollbacks);
@@ -376,7 +406,6 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("\n");
 
 
-	printf("Checkpoint mem..................................: %12u B\n", (unsigned int)stats->mem_checkpoint);
 	printf("Checkpoint recalculations.......................: %12llu\n", (unsigned long long)stats->counter_checkpoint_recalc);
 	printf("Checkpoint period...............................: %12llu\n", (unsigned long long)stats->checkpoint_period);
 
