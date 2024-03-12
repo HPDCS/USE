@@ -7,15 +7,22 @@
 #include <errno.h>
 #include <argp.h> 
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include <core.h>
 #include <timer.h>
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
 
+#include <incremental_state_saving.h>
+
 __thread struct drand48_data seedT;
 
 unsigned long long tid_ticket = 1;
+int device_fd;
 
 //extern double delta_count;
 extern int reverse_execution_threshold;
@@ -41,6 +48,16 @@ void start_simulation() {
     pthread_t p_tid[pdes_config.ncores-1];
     int ret;
     unsigned int i;
+
+    /// open device file 
+    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && !pdes_config.iss_signal_mprotect) {
+        device_fd = open("/dev/tracker", (O_RDONLY | O_NONBLOCK));
+        if (device_fd == -1) {
+            fprintf(stderr, "%s\n", strerror(errno));
+            abort();
+        }
+        ioctl(device_fd, TRACKER_SET_SEGSIZE, PER_LP_PREALLOCATED_MEMORY);
+    }
 
     //Child threads
     for(i = 0; i < pdes_config.ncores - 1; i++) {
