@@ -80,8 +80,6 @@ static int iss_test(void)
 
 	init_incremental_checkpointing_support(1, 1);
 
-
-	init_incremental_checkpoint_support_per_lp(0);
 	
 	mem_areas[0] = mmap(the_address, MAX_MMAP, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS /*|MAP_FIXED*/, 0, 0);
 	if(!mem_areas[0]) return -CANNOT_MMAP;
@@ -95,7 +93,7 @@ static int iss_test(void)
 	page_ptr= get_page_ptr_from_idx(current_lp, page_id+1);
 	if(page_ptr != (mem_areas[0]+PAGE_SIZE)) return -INVALID_PAGE_PTR;
 
-	ioctl(fd, TRACKER_INIT, t_data[current_lp]);
+	init_incremental_checkpoint_support_per_lp(0);
 
 	memset(mem_areas[current_lp], 0, MAX_MMAP);
 

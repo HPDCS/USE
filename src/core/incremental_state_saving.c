@@ -245,9 +245,11 @@ void init_tracking_data(tracking_data *data) {
 void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps) {
 
 	uint i;
-	t_data = malloc(sizeof(struct _tracking_data) * lps);
+	t_data = malloc(sizeof(tracking_data) * lps);
+	if (t_data != NULL) {
 	for (i = 0; i < lps; i++)
-		init_tracking_data(t_data[i]);
+		init_tracking_data(&t_data[i]);
+	}
 
 	/// init model PER-LP (iss_metadata and model)
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps + 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
@@ -275,7 +277,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
 	
 	//INCR: ioctl(fd, TRACKER_INIT, t_data)
-	init_segment_monitor_support(t_data);
+	init_segment_monitor_support(&t_data[lp]);
 
 	iss_first_run_model(current_lp); 
 
