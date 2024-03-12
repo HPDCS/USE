@@ -27,9 +27,10 @@ void iss_first_run_model(unsigned int cur_lp){
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
+	unsigned int i;
     if(cur_lp == 0) printf("NUM PAGES:%u\n", start);
     iss_states[cur_lp].cur_virtual_ts = 1;
-	for(unsigned int i = 0; i<end; i++){
+	for(i = 0; i<end; i++){
         tree[i].valid[0] = i>=start;
 		tree[i].dirty = 0;
 		tree[i].cost  = 0.0;
