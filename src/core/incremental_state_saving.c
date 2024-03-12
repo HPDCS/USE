@@ -280,6 +280,8 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 	set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
+
+	printf("base_addr %lu subsegment_address %lu segid %lu\n", t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
 	
 	//INCR: ioctl(fd, TRACKER_INIT, t_data)
 	init_segment_monitor_support(t_data[lp]);
