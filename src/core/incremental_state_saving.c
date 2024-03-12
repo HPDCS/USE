@@ -39,7 +39,7 @@ int flush_local_tlb(unsigned long address, size_t size){
 
 int guard_memory(unsigned int lid) {
 
-	unsigned long size;
+	unsigned long size = PAGE_SIZE;
 	if(!pdes_config.iss_enabled_mprotection) return NO_PRTCT_ENABLED;
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	return track_memory((unsigned long) mem_areas[lid], size);
@@ -47,7 +47,7 @@ int guard_memory(unsigned int lid) {
 
 int unguard_memory(unsigned int lid) {
 
-	unsigned long size;
+	unsigned long size = PAGE_SIZE;
 	if(!pdes_config.iss_enabled_mprotection) return NO_PRTCT_ENABLED;
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	return track_memory((unsigned long) mem_areas[lid], size);
@@ -126,12 +126,12 @@ void mark_dirty_pages(tracking_data *data) {
 
 /** methods to use klm through ioctl */
 
-void init_segment_monitor_support(tracking_data *data) {
+void init_segment_monitor_support(tracking_data **data) {
 
 	assert(data != NULL);
 	assert(device_fd != -1);
 
-	ioctl(device_fd, TRACKER_INIT, data);
+	ioctl(device_fd, TRACKER_INIT, *data);
 }
 
 void open_tracker_device(const char *path, unsigned long mode) {
@@ -279,7 +279,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
 	
 	//INCR: ioctl(fd, TRACKER_INIT, t_data)
-	init_segment_monitor_support(t_data[lp]);
+	init_segment_monitor_support(&t_data[lp]);
 
 	iss_first_run_model(current_lp); 
 
