@@ -72,9 +72,6 @@ extern bool numa_available_bool;
 extern volatile bool stop_timer;
 extern bool sim_error;
 
-/* file descriptor of the device file */
-extern int device_fd;
-
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);

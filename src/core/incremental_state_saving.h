@@ -86,6 +86,9 @@ typedef struct __per_lp_iss_metadata{
 
 extern tracking_data **t_data;
 
+/* file descriptor of the device file */
+extern int device_fd;
+
 extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 extern model_t iss_costs_model;	 /// runtime tuning of the cost model 
 
