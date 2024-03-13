@@ -23,7 +23,7 @@
 #define UNPROTECT_MEM 156 //this depends on what the kernel tells you when mounting the vtpmo module
 #define FLUSH_LOCAL_TLB 174 //this depends on what the kernel tells you when mounting the vtpmo module
 
-#define NO_PRTCT_ENABLED -1
+#define NO_PRTCT_ENABLED 1
 
 #define BE_BUFF_SIZE NUM_MMAP
 
@@ -120,9 +120,9 @@ float estimate_cost(size_t size, float probability);
 
 
 /** syscalls wrapper */
-int guard_memory(unsigned int lid);
-int unguard_memory(unsigned int lid);
-int flush(unsigned int lid);
+int guard_memory(unsigned int lid, unsigned long size);
+int unguard_memory(unsigned int lid, unsigned long size);
+int flush(unsigned int lid, unsigned long size);
 
 /** syscalls */
 int track_memory(unsigned long address, size_t size);

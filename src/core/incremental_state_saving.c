@@ -37,26 +37,23 @@ int flush_local_tlb(unsigned long address, size_t size){
 
 /** syscalls' wrappers */
 
-int guard_memory(unsigned int lid) {
+int guard_memory(unsigned int lid, unsigned long size) {
 
-	unsigned long size = PAGE_SIZE;
-	if(!pdes_config.iss_enabled_mprotection) return NO_PRTCT_ENABLED;
+	if(!pdes_config.iss_enabled_mprotection) return -NO_PRTCT_ENABLED;
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	return track_memory((unsigned long) mem_areas[lid], size);
 }
 
-int unguard_memory(unsigned int lid) {
+int unguard_memory(unsigned int lid, unsigned long size) {
 
-	unsigned long size = PAGE_SIZE;
-	if(!pdes_config.iss_enabled_mprotection) return NO_PRTCT_ENABLED;
+	if(!pdes_config.iss_enabled_mprotection) return -NO_PRTCT_ENABLED;
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 	return track_memory((unsigned long) mem_areas[lid], size);
 }
 
-int flush(unsigned int lid) {
+int flush(unsigned int lid, unsigned long size) {
 
-	unsigned long size;
-	if(!pdes_config.iss_enabled_mprotection) return NO_PRTCT_ENABLED;
+	if(!pdes_config.iss_enabled_mprotection) return -NO_PRTCT_ENABLED;
 	return flush_local_tlb((unsigned long) mem_areas[lid], size);
 }
 
