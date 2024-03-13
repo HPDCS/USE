@@ -156,7 +156,9 @@ tracking_data *get_fault_info(unsigned int lid) {
 	local_data->len_buf = (unsigned long) NUM_PAGES_PER_MMAP;
 	if(local_data->buff_addresses == NULL) local_data->buff_addresses = malloc(local_data->len_buf * sizeof(unsigned long));
 	local_data->segment_id = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+
 	ioctl(device_fd, TRACKER_GET, &local_data[lid]);
+	
 	if (t_data != NULL) {
 		len = local_data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);

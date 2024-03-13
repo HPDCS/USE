@@ -14,7 +14,7 @@
 #define INVALID_PAGE_PTR 		 3
 #define WRONG_CKPT_PERIOD 		 4
 #define INVALID_SEGID	 		 5
-#define NO_FILE			 		 6
+#define NO_USER_DATA			 6
 
 static char messages[7][256] = {
 	"none",
@@ -23,7 +23,7 @@ static char messages[7][256] = {
 	"returned an invalid page ptr",
 	"unexpected fullcheckpoint request",
 	"invalid segment id",
-	"device file not opened",
+	"user data from kernel are null",
 };
 
 
@@ -36,7 +36,6 @@ simulation_configuration pdes_config;
 void rsfree(void *ptr){ free(ptr); }
 void* rsalloc(size_t len){ return malloc(len); }
 extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
-extern tracking_data **t_data;
 
 
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
@@ -274,6 +273,20 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[page_id+1].access_count == 5);
 	assert(iss_states[0].partition_tree[page_id+1].valid == 1);
 	assert(*(((char*)mem_areas[0])+PAGE_SIZE) == 2);*/
+
+	tracking_data *data = get_fault_info(current_lp);
+	if (data == NULL) return -NO_USER_DATA;
+	
+	unsigned long len = data->len_buf;
+	unsigned long *buff = malloc(sizeof(unsigned long) * len);
+
+	buff = data->buff_addresses;
+		
+
+	for (int i=0; i < len; i++) {
+		fprintf(stderr, "[i %d] element %lu\n", i, buff[i]);
+	}
+
 
 
 
