@@ -119,10 +119,11 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 	unsigned int page_id, cur_id, tgt_partition_size, cur_partition_size, partition_id;
 	bool was_dirty;
 	unsigned short cur_dirty_ts;
+	
 	for (i=0; i < size; i++) {
 		//todo: do some things to mark dirty pages
-		page_id    	= get_page_idx_from_ptr(current_lp, (void *) &buff[i]);
-		cur_id 		= page_id;
+		page_id = PAGEID(buff[i], (unsigned long) mem_areas[0]);
+		cur_id = page_id;
 		partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
 	    iss_states[current_lp].count_tracked++;
 		tgt_partition_size = 0;
@@ -131,7 +132,7 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 	    was_dirty = 0;
 	    cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
 
-		while(cur_id > 0){
+	    while(cur_id > 0){
 	        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
 				
 			if(tree[cur_id].valid[0]){
@@ -154,7 +155,7 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 		partition_id = get_lowest_page_from_partition_id(partition_id);
 
 		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
-		}
+	}
 
 }
 
