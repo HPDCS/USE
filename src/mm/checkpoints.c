@@ -252,7 +252,7 @@ void *log_state(int lid) {
 		//INCR: todo update model
 		iss_update_model(lid);
 		if(recoverable_state[lid]->is_incremental){
-			guard_memory(lid);
+			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
 			iss_log_incremental_reset(lid);
 		} else
 			iss_states[lid].current_incremental_log_size = logsize;
@@ -475,13 +475,13 @@ void log_restore(int lid, state_t *state_queue_node) {
 	int res_um, res_tm;
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		//INCR: untrack_memory(mem, size)
-		res_um = unguard_memory(lid); //TODO: use actual parameters to define in incremental_state_saving.h
+		res_um = unguard_memory(lid, PER_LP_PREALLOCATED_MEMORY); //TODO: use actual parameters to define in incremental_state_saving.h
 		
 		restore_full(lid, state_queue_node->log);
 		//todo: reset model
         iss_log_incremental_reset(lid);
 		//INCR: track_memory(mem, size)
-		res_tm = guard_memory(lid);
+		res_tm = guard_memory(lid, PER_LP_PREALLOCATED_MEMORY);
 	}
 }
 

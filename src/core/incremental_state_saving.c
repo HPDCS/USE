@@ -254,7 +254,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 	}
 
 	/// init model PER-LP (iss_metadata and model)
-	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
+	iss_states = (lp_iss_metadata*)rsalloc((sizeof(lp_iss_metadata) + 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*lps);
 	iss_costs_model.mprotect_cost_per_page = 1; //TODO: costo per protect ?
 	iss_costs_model.log_cost_per_page = 100; 
 
@@ -271,7 +271,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 
 void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
-	bzero(iss_states+lp, sizeof(lp_iss_metadata));
+	bzero(iss_states+lp, sizeof(lp_iss_metadata) + 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 	
 	//INCR: fill tracking_data struct with addresses and then call ioctl(fd, TRACKER_INIT, t_data)
 	unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
