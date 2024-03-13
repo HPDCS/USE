@@ -284,8 +284,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	printf("base_addr %lu subsegment_address %lu segid %lu\n", t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
 	
 	//INCR: ioctl(fd, TRACKER_INIT, t_data)
-	//init_segment_monitor_support(t_data[lp]); //INSERTION DOES NOT WORK -- RIVEDERE
-	ioctl(device_fd, TRACKER_INIT, t_data[lp]);
+	init_segment_monitor_support(t_data[lp]);
 
 	iss_first_run_model(current_lp); 
 

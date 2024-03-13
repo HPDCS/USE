@@ -72,10 +72,7 @@ static int iss_test(void)
 	pdes_config.iss_enabled_mprotection = 1;
 	pdes_config.iss_signal_mprotect 	= 0;
 
-	int fd = open("/dev/tracker", (O_RDONLY | O_NONBLOCK));
-	if (fd == -1) return -NO_FILE;
-
-	ioctl(fd, TRACKER_SET_SEGSIZE, PER_LP_PREALLOCATED_MEMORY);
+	open_tracker_device("/dev/tracker", (O_RDONLY | O_NONBLOCK));
 
 	init_incremental_checkpointing_support(1, 1);
 
@@ -97,7 +94,7 @@ static int iss_test(void)
 	memset(mem_areas[current_lp], 0, MAX_MMAP);
 
 
-	ioctl(fd, TRACKER_DUMP);
+	ioctl(device_fd, TRACKER_DUMP);
 
 	return NO_ERROR;
 
