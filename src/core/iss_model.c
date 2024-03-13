@@ -52,7 +52,7 @@ void iss_update_model(unsigned int cur_lp){
 //    return;
     //iss_states[cur_lp].cur_virtual_ts = 1;
 
-    if(iss_states[cur_lp].disabled < 2){ //non ricordo che vuol dire 2
+    if(iss_states[cur_lp].disabled < 2){ 
         iss_states[cur_lp].disabled++;
         for(unsigned int i = 0; i<start; i++){
 		//	tree[i].dirty = 0;

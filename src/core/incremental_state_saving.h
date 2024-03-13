@@ -104,7 +104,7 @@ bool is_next_ckpt_incremental();
 partition_log *log_incremental(unsigned int lid, simtime_t ts);
 void log_incremental_restore(partition_log *cur);
 tracking_data *get_fault_info(unsigned int lid);
-void mark_dirty_pages(tracking_data *data);
+void mark_dirty_pages(unsigned long *buff, unsigned long size);
 
 void init_segment_monitor_support(tracking_data *data);
 

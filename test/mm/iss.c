@@ -169,6 +169,9 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[page_id].access_count == 0);
 	assert(iss_states[0].partition_tree[page_id].valid == 1);*/
 
+	tracking_data *data2 = get_fault_info(current_lp);
+	if (data2 == NULL) return -NO_USER_DATA;
+
 	iss_update_model(current_lp);
 
 	*((char*)mem_areas[0]) = 1;

@@ -113,10 +113,48 @@ void log_incremental_restore(partition_log *cur) {
 }
 
 
-void mark_dirty_pages(tracking_data *data) {
+void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 
-	//todo: do some things to mark dirty pages
-	
+	int i;
+	unsigned int page_id, cur_id, tgt_partition_size, cur_partition_size, partition_id;
+	bool was_dirty;
+	unsigned short cur_dirty_ts;
+	for (i=0; i < size; i++) {
+		//todo: do some things to mark dirty pages
+		page_id    	= get_page_idx_from_ptr(current_lp, (void *) &buff[i]);
+		cur_id 		= page_id;
+		partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
+	    iss_states[current_lp].count_tracked++;
+		tgt_partition_size = 0;
+		cur_partition_size = 1;
+		partition_id = page_id;
+	    was_dirty = 0;
+	    cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
+
+		while(cur_id > 0){
+	        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
+				
+			if(tree[cur_id].valid[0]){
+				tgt_partition_size = cur_partition_size;
+				partition_id = cur_id;
+			}
+	        
+	        if(!was_dirty){
+	            tree[cur_id].dirty = cur_dirty_ts;
+	            assert(tree[cur_id].access_count>=0);
+	            tree[cur_id].access_count += 1;
+	            assert(tree[cur_id].access_count>=0);
+	            tree[cur_id].cost = estimate_cost(cur_partition_size, ((float)tree[cur_id].access_count) / ((float)iss_states[current_lp].iss_model_round+1) );
+	        }
+	        
+			cur_partition_size<<=1;
+			cur_id>>=1;
+		}
+
+		partition_id = get_lowest_page_from_partition_id(partition_id);
+
+		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+		}
 
 }
 
@@ -162,7 +200,7 @@ tracking_data *get_fault_info(unsigned int lid) {
 	if (t_data != NULL) {
 		len = local_data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
-		mark_dirty_pages(local_data);
+		mark_dirty_pages(buff, len);
 		return local_data;
 	}
 
