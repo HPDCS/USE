@@ -119,10 +119,12 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 	unsigned int page_id, cur_id, tgt_partition_size, cur_partition_size, partition_id;
 	bool was_dirty;
 	unsigned short cur_dirty_ts;
+	unsigned long long pg_addr;
 	
 	for (i=0; i < size; i++) {
 		//todo: do some things to mark dirty pages
-		page_id = PAGEID(buff[i], (unsigned long) mem_areas[0]);
+		pg_addr = ((unsigned long long)buff[i]) & (~ (PAGE_SIZE-1));
+		page_id = PAGEID(buff[i], (unsigned long) mem_areas[current_lp]);
 		printf("[mark_dirty_pages] page-id %u\n", page_id);
 		cur_id = page_id;
 		partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
