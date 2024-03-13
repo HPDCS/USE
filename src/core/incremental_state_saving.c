@@ -123,6 +123,7 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 	for (i=0; i < size; i++) {
 		//todo: do some things to mark dirty pages
 		page_id = PAGEID(buff[i], (unsigned long) mem_areas[0]);
+		printf("[mark_dirty_pages] page-id %u\n", page_id);
 		cur_id = page_id;
 		partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
 	    iss_states[current_lp].count_tracked++;
