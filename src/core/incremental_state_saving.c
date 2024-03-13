@@ -48,7 +48,7 @@ int unguard_memory(unsigned int lid, unsigned long size) {
 
 	if(!pdes_config.iss_enabled_mprotection) return -NO_PRTCT_ENABLED;
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
-	return track_memory((unsigned long) mem_areas[lid], size);
+	return untrack_memory((unsigned long) mem_areas[lid], size);
 }
 
 int flush(unsigned int lid, unsigned long size) {
@@ -158,7 +158,7 @@ tracking_data *get_fault_info(unsigned int lid) {
 	local_data->segment_id = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 
 	ioctl(device_fd, TRACKER_GET, &local_data[lid]);
-	
+
 	if (t_data != NULL) {
 		len = local_data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
