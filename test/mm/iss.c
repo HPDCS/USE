@@ -96,7 +96,6 @@ static int iss_test(void)
 
 	ioctl(device_fd, TRACKER_DUMP);
 
-	return NO_ERROR;
 
 	while(is_next_ckpt_incremental()) counter++;
 
