@@ -123,7 +123,6 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 	
 	for (i=0; i < size; i++) {
 		//todo: do some things to mark dirty pages
-		pg_addr = ((unsigned long long)buff[i]) & (~ (PAGE_SIZE-1));
 		page_id = PAGEID(buff[i], (unsigned long) mem_areas[current_lp]);
 		printf("[mark_dirty_pages] page-id %u\n", page_id);
 		cur_id = page_id;
