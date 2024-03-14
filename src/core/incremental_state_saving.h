@@ -34,7 +34,7 @@
 #define TRACKER_SET_SEGSIZE		(1U << 5) ///ioctl cmd for setting segment size
 
 #define SEGID(addr, base, size) ({unsigned int id = ((addr-base)/PAGE_SIZE + size)/size - 1; id;})
-#define PAGEID(addr, base) ({unsigned int id = (addr-base)/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE; id;})
+#define PAGEID(addr, base) ({unsigned int id = (unsigned int) ((addr- base)/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE); id;})
 
 
 /* user data struct to pass data back and forth user/kernel space */
