@@ -80,6 +80,34 @@ void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
 	return ((char*)mem_areas[cur_lp]) + (id-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; 
 }
 
+/** methods to initialize iss support and set tracking_data struct */ 
+
+void set_tracking_data(tracking_data **data, unsigned long start, unsigned long addr, unsigned long end,
+	unsigned int segid, unsigned long len) {
+
+	assert((*data)->buff_addresses != NULL);
+
+	(*data)->base_address 					= start;
+	(*data)->subsegment_address 			= addr;
+	(*data)->end_address 					= end;
+	(*data)->segment_id 					= segid;
+	(*data)->len_buf 						= len;
+	if((*data)->buff_addresses == NULL)	(*data)->buff_addresses = rsalloc(len * sizeof(unsigned long));	
+}
+
+
+void init_tracking_data(tracking_data **data) {
+
+	*data = rsalloc(sizeof(tracking_data));
+	(*data)->base_address 			= 0UL;
+	(*data)->subsegment_address 	= 0UL;
+	(*data)->end_address 			= 0UL;
+	(*data)->segment_id 			= 0UL;
+	(*data)->len_buf 				= NUM_PAGES_PER_SEGMENT;
+	(*data)->buff_addresses 		= rsalloc((*data)->len_buf * sizeof(unsigned long)); 
+}
+
+
 
 bool is_next_ckpt_incremental(void) {
 
@@ -138,31 +166,8 @@ void dirty(void* addr, size_t size){
 	unsigned int cur_id 		= page_id;
     iss_states[current_lp].count_tracked++;
 	unsigned int tgt_partition_size = 0;
-	//unsigned int cur_partition_size = 1;
 	unsigned int partition_id = page_id;
-    //bool was_dirty = 0;
-    //unsigned short cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
 
-	/*partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
-	while(cur_id > 0){
-        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
-			
-		if(tree[cur_id].valid[0]){
-			tgt_partition_size = cur_partition_size;
-			partition_id = cur_id;
-		}
-        
-        if(!was_dirty){
-            tree[cur_id].dirty = cur_dirty_ts;
-            assert(tree[cur_id].access_count>=0);
-            tree[cur_id].access_count += 1;
-            assert(tree[cur_id].access_count>=0);
-            tree[cur_id].cost = estimate_cost(cur_partition_size, ((float)tree[cur_id].access_count) / ((float)iss_states[current_lp].iss_model_round+1) );
-        }
-        
-		cur_partition_size<<=1;
-		cur_id>>=1;
-	}*/
 
 	update_tree(cur_id, partition_id, tgt_partition_size);
 
@@ -170,8 +175,7 @@ void dirty(void* addr, size_t size){
 
 	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
 
-	if (pdes_config.iss_signal_mprotect)
-		untrack_memory((unsigned long) get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE);
+	untrack_memory((unsigned long) get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE);
 }
 
 
@@ -181,6 +185,8 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 	(void)arg;
 	dirty(func->si_addr, 1);
 }
+
+
 
 partition_log *log_incremental(unsigned int lid, simtime_t ts) {
 
@@ -199,9 +205,8 @@ void log_incremental_restore(partition_log *cur) {
 void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 
 	int i;
-	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, cur_partition_size, partition_id;
-	//bool was_dirty;
-	//unsigned short cur_dirty_ts;
+	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
+
 	unsigned long long pg_addr;
 
 	for (i=0; i < size; i++) {
@@ -212,37 +217,15 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 		page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
 		printf("[lp %u] [mark_dirty_pages] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, buff[i], pg_addr, segid, page_id);
 		cur_id = page_id;
-		//partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
 	    iss_states[current_lp].count_tracked++;
 		tgt_partition_size = 0;
-		//cur_partition_size = 1;
 		partition_id = page_id;
-	    //was_dirty = 0;
-	    //cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
 
+		///*** add config parameter to enable/disable this
 	    update_tree(cur_id, partition_id, tgt_partition_size);
 
-	    /*while(cur_id > 0){
-	        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
-				
-			if(tree[cur_id].valid[0]){
-				tgt_partition_size = cur_partition_size;
-				partition_id = cur_id;
-			}
-	        
-	        if(!was_dirty){
-	            tree[cur_id].dirty = cur_dirty_ts;
-	            assert(tree[cur_id].access_count>=0);
-	            tree[cur_id].access_count += 1;
-	            assert(tree[cur_id].access_count>=0);
-	            tree[cur_id].cost = estimate_cost(cur_partition_size, ((float)tree[cur_id].access_count) / ((float)iss_states[current_lp].iss_model_round+1) );
-	        }
-	        
-			cur_partition_size<<=1;
-			cur_id>>=1;
-		}*/
-
-		partition_id = get_lowest_page_from_partition_id(partition_id);
+	    /// maybe useless?
+		//partition_id = get_lowest_page_from_partition_id(partition_id);
 
 		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
 	}
@@ -279,12 +262,16 @@ tracking_data *get_fault_info(unsigned int lid) {
 	tracking_data *local_data = t_data[lid];
 	unsigned long len;
 	unsigned long *buff;
-	local_data->base_address = (unsigned long) mem_areas[0];
+	unsigned long segid;
+	/*local_data->base_address = (unsigned long) mem_areas[0];
 	local_data->subsegment_address = (unsigned long) mem_areas[lid];
 	local_data->end_address = (unsigned long) (mem_areas[lid]+MAX_MMAP*NUM_MMAP);
 	local_data->len_buf = (unsigned long) NUM_PAGES_PER_MMAP;
-	if(local_data->buff_addresses == NULL) local_data->buff_addresses = malloc(local_data->len_buf * sizeof(unsigned long));
-	local_data->segment_id = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+	if(local_data->buff_addresses == NULL) local_data->buff_addresses = rsalloc(local_data->len_buf * sizeof(unsigned long));
+	segid = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);*/
+	set_tracking_data(&local_data, (unsigned long) mem_areas[0], (unsigned long) mem_areas[lid],
+		(unsigned long) mem_areas[lid] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
+
 
 	ioctl(device_fd, TRACKER_GET, &local_data[lid]);
 
@@ -302,31 +289,6 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 
 
-/** methods to initialize iss support and set tracking_data struct */ 
-
-void set_tracking_data(tracking_data **data, unsigned long start, unsigned long addr, unsigned long end,
-	unsigned int segid, unsigned long len) {
-
-	assert((*data)->buff_addresses != NULL);
-
-	(*data)->base_address 					= start;
-	(*data)->subsegment_address 			= addr;
-	(*data)->end_address 					= end;
-	(*data)->segment_id 					= segid;
-	(*data)->len_buf 						= len;
-}
-
-
-void init_tracking_data(tracking_data **data) {
-
-	*data = rsalloc(sizeof(tracking_data));
-	(*data)->base_address 			= 0UL;
-	(*data)->subsegment_address 	= 0UL;
-	(*data)->end_address 			= 0UL;
-	(*data)->segment_id 			= 0UL;
-	(*data)->len_buf 				= NUM_PAGES_PER_SEGMENT;
-	(*data)->buff_addresses 		= rsalloc((*data)->len_buf * sizeof(unsigned long)); 
-}
 
 void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps) {
 
