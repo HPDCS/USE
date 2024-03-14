@@ -263,15 +263,13 @@ tracking_data *get_fault_info(unsigned int lid) {
 	unsigned long len;
 	unsigned long *buff;
 	unsigned long segid;
-	/*local_data->base_address = (unsigned long) mem_areas[0];
+	local_data->base_address = (unsigned long) mem_areas[0];
 	local_data->subsegment_address = (unsigned long) mem_areas[lid];
 	local_data->end_address = (unsigned long) (mem_areas[lid]+MAX_MMAP*NUM_MMAP);
 	local_data->len_buf = (unsigned long) NUM_PAGES_PER_MMAP;
 	if(local_data->buff_addresses == NULL) local_data->buff_addresses = rsalloc(local_data->len_buf * sizeof(unsigned long));
-	segid = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);*/
-	set_tracking_data(&local_data, (unsigned long) mem_areas[0], (unsigned long) mem_areas[lid],
-		(unsigned long) mem_areas[lid] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
-
+	segid = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+	
 
 	ioctl(device_fd, TRACKER_GET, &local_data[lid]);
 
