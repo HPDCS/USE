@@ -49,7 +49,7 @@ void start_simulation() {
     unsigned int i;
 
     /// open device file 
-    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && !pdes_config.iss_signal_mprotect) {
+    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
         open_tracker_device("/dev/tracker", (O_RDONLY | O_NONBLOCK));
     }
 
