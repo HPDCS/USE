@@ -16,8 +16,6 @@ int device_fd;
 
 extern void **mem_areas; /// pointers to the lp segment
 
-//lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
-//model_t iss_costs_model;	 /// runtime tuning of the cost model 
 
 __thread int __in_log_full = 0;
 
@@ -99,6 +97,91 @@ bool is_next_ckpt_incremental(void) {
 
 }
 
+
+void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tgt_partition_size) {
+
+    bool was_dirty = 0;
+	unsigned int cur_partition_size = 1;
+    unsigned short cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
+
+	partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
+
+	while(cur_id > 0){
+        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
+			
+		if(tree[cur_id].valid[0]){
+			tgt_partition_size = cur_partition_size;
+			partition_id = cur_id;
+		}
+        
+        if(!was_dirty){
+            tree[cur_id].dirty = cur_dirty_ts;
+            assert(tree[cur_id].access_count>=0);
+            tree[cur_id].access_count += 1;
+            assert(tree[cur_id].access_count>=0);
+            tree[cur_id].cost = estimate_cost(cur_partition_size, ((float)tree[cur_id].access_count) / ((float)iss_states[current_lp].iss_model_round+1) );
+        }
+        
+		cur_partition_size<<=1;
+		cur_id>>=1;
+	}
+
+}
+
+
+/**  only when protect() is used -- maybe use compilation flags */
+
+
+void dirty(void* addr, size_t size){
+	//printf("%u: lp %u %p\n", tid, current_lp, addr);
+	unsigned int page_id    	= get_page_idx_from_ptr(current_lp, addr);
+	unsigned int cur_id 		= page_id;
+    iss_states[current_lp].count_tracked++;
+	unsigned int tgt_partition_size = 0;
+	//unsigned int cur_partition_size = 1;
+	unsigned int partition_id = page_id;
+    //bool was_dirty = 0;
+    //unsigned short cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
+
+	/*partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
+	while(cur_id > 0){
+        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
+			
+		if(tree[cur_id].valid[0]){
+			tgt_partition_size = cur_partition_size;
+			partition_id = cur_id;
+		}
+        
+        if(!was_dirty){
+            tree[cur_id].dirty = cur_dirty_ts;
+            assert(tree[cur_id].access_count>=0);
+            tree[cur_id].access_count += 1;
+            assert(tree[cur_id].access_count>=0);
+            tree[cur_id].cost = estimate_cost(cur_partition_size, ((float)tree[cur_id].access_count) / ((float)iss_states[current_lp].iss_model_round+1) );
+        }
+        
+		cur_partition_size<<=1;
+		cur_id>>=1;
+	}*/
+
+	update_tree(cur_id, partition_id, tgt_partition_size);
+
+	partition_id = get_lowest_page_from_partition_id(partition_id);
+
+	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+
+	if (pdes_config.iss_signal_mprotect)
+		untrack_memory((unsigned long) get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE);
+}
+
+
+void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
+	assert(sig==SIGSEGV);
+    assert(__in_log_full == 0);
+	(void)arg;
+	dirty(func->si_addr, 1);
+}
+
 partition_log *log_incremental(unsigned int lid, simtime_t ts) {
 
 	partition_log *ckpt;
@@ -117,8 +200,8 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 
 	int i;
 	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, cur_partition_size, partition_id;
-	bool was_dirty;
-	unsigned short cur_dirty_ts;
+	//bool was_dirty;
+	//unsigned short cur_dirty_ts;
 	unsigned long long pg_addr;
 
 	for (i=0; i < size; i++) {
@@ -129,15 +212,17 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 		page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
 		printf("[lp %u] [mark_dirty_pages] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, buff[i], pg_addr, segid, page_id);
 		cur_id = page_id;
-		partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
+		//partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
 	    iss_states[current_lp].count_tracked++;
 		tgt_partition_size = 0;
-		cur_partition_size = 1;
+		//cur_partition_size = 1;
 		partition_id = page_id;
-	    was_dirty = 0;
-	    cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
+	    //was_dirty = 0;
+	    //cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
 
-	    while(cur_id > 0){
+	    update_tree(cur_id, partition_id, tgt_partition_size);
+
+	    /*while(cur_id > 0){
 	        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
 				
 			if(tree[cur_id].valid[0]){
@@ -155,7 +240,7 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 	        
 			cur_partition_size<<=1;
 			cur_id>>=1;
-		}
+		}*/
 
 		partition_id = get_lowest_page_from_partition_id(partition_id);
 
@@ -214,54 +299,7 @@ tracking_data *get_fault_info(unsigned int lid) {
 	return local_data;
 }
 
-/**  only when protect() is used -- maybe use compilation flags */
 
-
-void dirty(void* addr, size_t size){
-	//printf("%u: lp %u %p\n", tid, current_lp, addr);
-	unsigned int page_id    	= get_page_idx_from_ptr(current_lp, addr);
-	unsigned int cur_id 		= page_id;
-	partition_node_tree_t *tree = &iss_states[current_lp].partition_tree[0];
-    iss_states[current_lp].count_tracked++;
-	unsigned int tgt_partition_size = 0;
-	unsigned int cur_partition_size = 1;
-	unsigned int partition_id = page_id;
-    bool was_dirty = 0;
-    unsigned short cur_dirty_ts =  iss_states[current_lp].cur_virtual_ts;
-
-	while(cur_id > 0){
-        was_dirty = tree[cur_id].dirty == cur_dirty_ts;
-			
-		if(tree[cur_id].valid[0]){
-			tgt_partition_size = cur_partition_size;
-			partition_id = cur_id;
-		}
-        
-        if(!was_dirty){
-            tree[cur_id].dirty = cur_dirty_ts;
-            assert(tree[cur_id].access_count>=0);
-            tree[cur_id].access_count += 1;
-            assert(tree[cur_id].access_count>=0);
-            tree[cur_id].cost = estimate_cost(cur_partition_size, ((float)tree[cur_id].access_count) / ((float)iss_states[current_lp].iss_model_round+1) );
-        }
-        
-		cur_partition_size<<=1;
-		cur_id>>=1;
-	}
-
-	partition_id = get_lowest_page_from_partition_id(partition_id);
-
-	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
-	untrack_memory((unsigned long) get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE);
-}
-
-
-void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
-	assert(sig==SIGSEGV);
-    assert(__in_log_full == 0);
-	(void)arg;
-	dirty(func->si_addr, 1);
-}
 
 
 /** methods to initialize iss support and set tracking_data struct */ 
@@ -301,6 +339,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 	}
 
 	/// init model PER-LP (iss_metadata and model)
+	//***TODO config parameter to activate/deactivate model
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
 	iss_costs_model.mprotect_cost_per_page = 1; //TODO: costo per protect ?
 	iss_costs_model.log_cost_per_page = 100; 
@@ -320,16 +359,17 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
 	bzero(iss_states+lp, sizeof(lp_iss_metadata));
 	
-	//INCR: fill tracking_data struct with addresses and then call ioctl(fd, TRACKER_INIT, t_data)
+	/// fill tracking_data struct
 	unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 	set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
 
 	printf("base_addr %lu subsegment_address %lu segid %lu\n", t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
 	
-	//INCR: ioctl(fd, TRACKER_INIT, t_data)
+	/// register segment into the hashtable
 	init_segment_monitor_support(t_data[lp]);
 
+	//***TODO config parameter to activate/deactivate model
 	iss_first_run_model(current_lp); 
 
 
