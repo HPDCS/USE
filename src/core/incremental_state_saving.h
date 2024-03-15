@@ -74,7 +74,9 @@ typedef struct __partition_tree_node{
 
 /// This struct keeps all metadata for incremental state saving of a model state
 typedef struct __per_lp_iss_metadata{
-	partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
+  #ifdef BUDDY
+	//partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
+  #endif
 	ssize_t current_incremental_log_size;
 	int iss_counter;
     int iss_model_round;
@@ -82,7 +84,9 @@ typedef struct __per_lp_iss_metadata{
     int disabled;
     unsigned short cur_virtual_ts;
     char current_model;
-	//partition_node_tree_t partition_tree[]; //todo: when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
+  #ifdef BUDDY
+	partition_node_tree_t partition_tree[]; //todo: when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
+  #endif
 }lp_iss_metadata;
 
 extern tracking_data **t_data;

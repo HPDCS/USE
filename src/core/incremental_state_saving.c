@@ -125,7 +125,7 @@ bool is_next_ckpt_incremental(void) {
 
 }
 
-
+#ifdef BUDDY
 void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tgt_partition_size) {
 
     bool was_dirty = 0;
@@ -155,7 +155,7 @@ void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tg
 	}
 
 }
-
+#endif
 
 /**  only when protect() is used -- maybe use compilation flags */
 
@@ -168,8 +168,9 @@ void dirty(void* addr, size_t size){
 	unsigned int tgt_partition_size = 0;
 	unsigned int partition_id = page_id;
 
-
+#ifdef BUDDY
 	update_tree(cur_id, partition_id, tgt_partition_size);
+#endif
 
 	partition_id = get_lowest_page_from_partition_id(partition_id);
 
@@ -222,7 +223,9 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 		partition_id = page_id;
 
 		///*** add config parameter to enable/disable this
+	#ifdef BUDDY
 	    update_tree(cur_id, partition_id, tgt_partition_size);
+	#endif
 
 	    /// maybe useless?
 		//partition_id = get_lowest_page_from_partition_id(partition_id);
@@ -299,8 +302,12 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 	}
 
 	/// init model PER-LP (iss_metadata and model)
-	//***TODO config parameter to activate/deactivate model
+	//***TODO only tree[] must be disabled 
+  #ifdef BUDDY
+	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t)*lps);
+  #else
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
+  #endif
 	iss_costs_model.mprotect_cost_per_page = 1; //TODO: costo per protect ?
 	iss_costs_model.log_cost_per_page = 100; 
 
@@ -317,8 +324,12 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 
 void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
+  #ifdef BUDDY
+	bzero(iss_states+lp, sizeof(lp_iss_metadata) + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t));
+  #else 
 	bzero(iss_states+lp, sizeof(lp_iss_metadata));
-	
+  #endif
+
 	/// fill tracking_data struct
 	unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 	set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
