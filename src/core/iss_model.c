@@ -49,6 +49,7 @@ void iss_update_model(unsigned int cur_lp){
     unsigned int cur_model = iss_states[cur_lp].current_model; 
 	unsigned int cur_round = 0;
   #if BUDDY == 1
+    fprintf(stderr, "ISS UPDATE MODEL\n");
     partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
   #endif
     iss_states[current_lp].iss_model_round++;
