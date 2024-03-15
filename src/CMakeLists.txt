@@ -23,15 +23,15 @@ add_compile_options(
 )
 
 #buddy-page option
-if(BUDDY)
-add_compile_options(
--DBUDDY=1
-)
-else()
-add_compile_options(
--DBUDDY=0
-)
-endif()
+#if(BUDDY)
+#add_compile_options(
+#-DBUDDY=1
+#)
+#else()
+#add_compile_options(
+#-DBUDDY=0
+#)
+#endif()
 
 #reversibility related options
 #option(REVERSIBLE "REVERSIBLE" OFF)
@@ -165,8 +165,6 @@ add_custom_command(
         DEPENDS kallsyms_lookup_name_exporter idt_patcher syscall_table_patcher
 )
 endif()
-
-
 
 
 
