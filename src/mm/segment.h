@@ -6,8 +6,8 @@
 #endif
 
 
-//#define SCALE (pdes_config.segment_shift)
-#define SCALE 4ULL //default is 4 in segment_shift but cannot allocate array with config parameter
+#define SCALE (pdes_config.segment_shift)
+//#define SCALE 4ULL //default is 4 in segment_shift but cannot allocate array with config parameter
 #define NUM_PAGES_PER_SEGMENT ((512ULL * 512ULL)>>SCALE)
 
 #define PER_LP_PREALLOCATED_MEMORY (NUM_PAGES_PER_SEGMENT * PAGE_SIZE ) /// This should be power of 2 multiplied by a page size. This is 1GB per LP.
