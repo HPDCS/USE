@@ -307,6 +307,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 	fprintf(stderr, "BUDDY ACTIVATED\n");
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t)*lps);
   #else
+	fprintf(stderr, "BUDDY DEACTIVATED\n");
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
   #endif
 	iss_costs_model.mprotect_cost_per_page = 1; //TODO: costo per protect ?
