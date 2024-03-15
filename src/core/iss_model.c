@@ -29,7 +29,7 @@ void iss_first_run_model(unsigned int cur_lp){
 	unsigned int i = 0;
     if(cur_lp == 0) printf("NUM PAGES:%u\n", start);
     iss_states[cur_lp].cur_virtual_ts = 1;
-  #ifdef BUDDY
+  #if BUDDY == 1
     partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
     for(i = 0; i<end; i++){
         tree[i].valid[0] = i>=start;
@@ -48,7 +48,7 @@ void iss_update_model(unsigned int cur_lp){
     unsigned int parent= 0;
     unsigned int cur_model = iss_states[cur_lp].current_model; 
 	unsigned int cur_round = 0;
-  #ifdef BUDDY
+  #if BUDDY == 1
     partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
   #endif
     iss_states[current_lp].iss_model_round++;
@@ -59,7 +59,7 @@ void iss_update_model(unsigned int cur_lp){
     if(iss_states[cur_lp].disabled < 2){ 
         iss_states[cur_lp].disabled++;
 
-    #ifdef BUDDY
+    #if BUDDY == 1
         for(unsigned int i = 0; i<start; i++){
 		//	tree[i].dirty = 0;
         	tree[i].valid[cur_model] = 0;
@@ -82,7 +82,7 @@ void iss_update_model(unsigned int cur_lp){
 
         while(start > 1){
             size *= 2;
-  #ifdef BUDDY
+  #if BUDDY == 1
             for(unsigned int i = start; i<end;i+=2){
                 parent = i/2;
                 if(tree[parent].cost < tree[i].cost+tree[i+1].cost){
@@ -108,7 +108,7 @@ void iss_update_model(unsigned int cur_lp){
             int j=0;
             while(start >0){
                 printf("LAYER %u\n", j);
-  #ifdef BUDDY
+  #if BUDDY == 1
                 for(unsigned int i =start; i<end;i+=2){
                     if(tree[i].cost > 0 || tree[i+1].cost > 0 ){
                         printf("\t%u: %f %u %f\n", i, tree[i].cost, tree[i].valid[0], ((float)tree[i].access_count) / ((float)iss_states[current_lp].iss_model_round));
@@ -136,7 +136,7 @@ void iss_log_incremental_reset(unsigned int lp){
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
     unsigned int cur_model = iss_states[lp].current_model; 
-  #ifdef BUDDY
+  #if BUDDY == 1
     partition_node_tree_t *tree = &iss_states[lp].partition_tree[0]; 
   #endif
     iss_states[lp].current_incremental_log_size = 0;
@@ -146,7 +146,7 @@ void iss_log_incremental_reset(unsigned int lp){
     if(iss_states[lp].cur_virtual_ts == 65000){
         iss_states[lp].cur_virtual_ts = 0;
 
-  #ifdef BUDDY
+  #if BUDDY == 1
         for(unsigned int i = 0; i<end; i++){
             tree[i].dirty = 0;
         } 

@@ -125,7 +125,7 @@ bool is_next_ckpt_incremental(void) {
 
 }
 
-#ifdef BUDDY
+#if BUDDY == 1
 void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tgt_partition_size) {
 
     bool was_dirty = 0;
@@ -168,7 +168,7 @@ void dirty(void* addr, size_t size){
 	unsigned int tgt_partition_size = 0;
 	unsigned int partition_id = page_id;
 
-#ifdef BUDDY
+#if BUDDY == 1
 	update_tree(cur_id, partition_id, tgt_partition_size);
 #endif
 
@@ -223,7 +223,7 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 		partition_id = page_id;
 
 		///*** add config parameter to enable/disable this
-	#ifdef BUDDY
+	#if BUDDY == 1
 	    update_tree(cur_id, partition_id, tgt_partition_size);
 	#endif
 
@@ -303,7 +303,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 
 	/// init model PER-LP (iss_metadata and model)
 	//***TODO only tree[] must be disabled 
-  #ifdef BUDDY
+  #if BUDDY == 1
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t)*lps);
   #else
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
@@ -324,7 +324,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 
 void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
-  #ifdef BUDDY
+  #if BUDDY == 1
 	bzero(iss_states+lp, sizeof(lp_iss_metadata) + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t));
   #else 
 	bzero(iss_states+lp, sizeof(lp_iss_metadata));

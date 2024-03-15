@@ -74,7 +74,7 @@ typedef struct __partition_tree_node{
 
 /// This struct keeps all metadata for incremental state saving of a model state
 typedef struct __per_lp_iss_metadata{
-  #ifdef BUDDY
+  #if BUDDY == 1
 	//partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
   #endif
 	ssize_t current_incremental_log_size;
@@ -84,7 +84,7 @@ typedef struct __per_lp_iss_metadata{
     int disabled;
     unsigned short cur_virtual_ts;
     char current_model;
-  #ifdef BUDDY
+  #if BUDDY == 1
 	partition_node_tree_t partition_tree[]; //todo: when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
   #endif
 }lp_iss_metadata;
