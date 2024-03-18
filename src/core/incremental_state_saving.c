@@ -259,15 +259,9 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 	ioctl(device_fd, TRACKER_GET, local_data);
 
-	if (local_data != NULL) {
-		len = local_data->len_buf;
-		buff = rsalloc(sizeof(unsigned long) * len);
-		if (buff != NULL) buff = local_data->buff_addresses;
-		mark_dirty_pages(buff, len);
-		return local_data;
-	}
+	if (local_data != NULL) 
 
-	return local_data;
+		return local_data;
 }
 
 
@@ -377,6 +371,16 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 	assert(iss_states[cur_lp].current_incremental_log_size == 0);
 
 #else
+
+	tracking_data *data = get_fault_info(cur_lp);
+	unsigned long len;
+	unsigned long *buff;
+	if (data != NULL) {
+		len = data->len_buf;
+		buff = rsalloc(sizeof(unsigned long) * len);
+		if (buff != NULL) buff = data->buff_addresses;
+		mark_dirty_pages(buff, len);
+	}
 
 	cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 	cur_log->size = PAGE_SIZE;
