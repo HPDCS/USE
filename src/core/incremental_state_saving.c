@@ -223,6 +223,7 @@ partition_log* mark_dirty_pages(unsigned long addr, unsigned long size, partitio
 		printf("[mark_dirty_pages] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p\n", 
 				cur_log->addr, (unsigned long)cur_log->addr , cur_log, cur_log->log);
 
+		return cur_log;
 	//}
 
 }
