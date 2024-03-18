@@ -216,7 +216,7 @@ partition_log* mark_dirty_pages(unsigned long addr, unsigned long size) {
 		cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 		cur_log->size = PAGE_SIZE;
 		cur_log->next = prev_log;
-		cur_log->addr = (char *) mem_areas[current_lp]+page_id*PAGE_SIZE;
+		cur_log->addr = PAGEPTR(mem_areas[current_lp], page_id);
 		cur_log->log = rsalloc(cur_log->size);
 		prev_log = cur_log; 
 

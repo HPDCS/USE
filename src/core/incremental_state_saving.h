@@ -35,7 +35,7 @@
 
 #define SEGID(addr, base, size) ({unsigned int id = ((addr-base)/PAGE_SIZE + size)/size - 1; id;})
 #define PAGEID(addr, base) ({unsigned int id = (unsigned int) ((addr- base)/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE); id;})
-
+#define PAGEPTR(addr, pageid) ({char *ptr = (char*)addr + (pageid-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; ptr;})
 
 /* user data struct to pass data back and forth user/kernel space */
 typedef struct _tracking_data {
