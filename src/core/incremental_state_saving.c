@@ -228,9 +228,13 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
            	#if BUDDY == 1
            		if (tree[cur_id].dirty == cur_dirty_ts) {
            	#endif
+
 	                first_dirty = cur_id;
 	                first_dirty_size = cur_partition_size;
 	                prev_first_dirty_end = prev_end;
+
+	                printf("[log_incremental] first_dirty %u \n", first_dirty);
+
 	        #if BUDDY == 1
 	            }
 	        #endif
@@ -245,12 +249,15 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 		#else
 			tgt_partition_size = cur_partition_size;
 			tgt_id = cur_id;
+
+			printf("[log_incremental] tgt_partition_size %lu \t tgt_id %u\n", tgt_partition_size, tgt_id);
 		#endif
 
             if(!first_dirty) prev = cur_id;
 			cur_id >>= 1;
 			cur_partition_size <<=1;
             prev_end >>= 1;
+
 		}
 
 		if(tgt_id){
@@ -263,6 +270,9 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
+
+			printf("[log_incremental] CKPT tgt_id %u \t addr %lu \t cur_log %lu\n", 
+				tgt_id,(unsigned long) cur_log->addr, (unsigned long) cur_log);
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
