@@ -254,8 +254,8 @@ static int iss_test(void)
 	guard_memory(current_lp, 2*PAGE_SIZE);
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 2;
 
-	partition_log *log = log_incremental(current_lp, 0.0);
-	printf("log taken %p \t %lu\n", log, (unsigned long) log);
+	//partition_log *log = log_incremental(current_lp, 0.0);
+	//printf("log taken %p \t %lu\n", log, (unsigned long) log);
 
 
 	iss_update_model(current_lp);
