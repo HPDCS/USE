@@ -242,6 +242,9 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			  tgt_partition_size = cur_partition_size;
 			  tgt_id = cur_id;
 			}
+		#else
+			tgt_partition_size = cur_partition_size;
+			tgt_id = cur_id;
 		#endif
 
             if(!first_dirty) prev = cur_id;
