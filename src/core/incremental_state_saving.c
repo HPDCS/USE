@@ -191,9 +191,108 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 
 partition_log *log_incremental(unsigned int lid, simtime_t ts) {
 
-	partition_log *ckpt;
+	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	unsigned int end   = start*2;
+	unsigned int cur_partition_size, tgt_partition_size, cur_id, tgt_id, first_dirty_size = 0, first_dirty = 0;
+    unsigned int cur_start;
+    unsigned int cur_end = end;
+	partition_log *cur_log = NULL, *prev_log = NULL;
+    unsigned int or_size = iss_states[cur_lp].current_incremental_log_size;
+    int prev = 0;
+    unsigned int last_restart = 0;
+    unsigned short cur_dirty_ts = iss_states[cur_lp].cur_virtual_ts;
+	   
+    unsigned int tmp = 0, last_computed = 0;
+    unsigned int prev_end;
+    unsigned int prev_first_dirty_end = end;
 
-	return ckpt;
+#if BUDDY == 1
+	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
+#endif 
+
+	while(start < end){
+		//printf("%u start %u\n", tid, start);
+        assert(last_restart < start);
+        last_restart = start;
+        cur_id = start;
+        first_dirty = tgt_id = 0;
+		tgt_partition_size = cur_partition_size = 1;
+        tmp = 0;
+        last_computed = 0;
+        prev_end = end;
+        
+		while(cur_id > 0){
+
+           if(!first_dirty )  {
+
+           	#if BUDDY == 1
+           		if (tree[cur_id].dirty == cur_dirty_ts) {
+           	#endif
+	                first_dirty = cur_id;
+	                first_dirty_size = cur_partition_size;
+	                prev_first_dirty_end = prev_end;
+	        #if BUDDY == 1
+	            }
+	        #endif
+
+           }
+
+		#if BUDDY == 1
+            if(tree[cur_id].valid[0] && (tree[cur_id].dirty == cur_dirty_ts) ){
+			  tgt_partition_size = cur_partition_size;
+			  tgt_id = cur_id;
+			}
+		#endif
+
+            if(!first_dirty) prev = cur_id;
+			cur_id >>= 1;
+			cur_partition_size <<=1;
+            prev_end >>= 1;
+		}
+
+		if(tgt_id){
+            
+			tgt_id = get_lowest_page_from_partition_id(tgt_id);
+			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
+			cur_log->size = tgt_partition_size*PAGE_SIZE;
+			cur_log->next = prev_log;
+			cur_log->ts = ts;
+			cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id);
+			cur_log->log = rsalloc(cur_log->size);
+			prev_log = cur_log; 
+
+			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			memcpy(cur_log->log, cur_log->addr, cur_log->size);
+			assert(start == tgt_id);
+
+		} else{
+
+            if(first_dirty == 0) break;
+            tmp = first_dirty;
+            tgt_partition_size = (prev == 0);
+            last_computed = first_dirty;
+            if(prev & 1){
+                last_computed +=  1;
+                if(last_computed >= prev_first_dirty_end) break;
+                last_computed = get_lowest_page_from_partition_id(last_computed);
+                assert(start != last_computed);
+                start = last_computed;
+            }
+            else if(prev !=0){
+                tgt_partition_size = 0;
+                first_dirty <<= 1;
+                first_dirty +=  1;
+                first_dirty = get_lowest_page_from_partition_id(first_dirty);
+                assert(start != first_dirty);
+                start = first_dirty;
+            }
+        }
+        start+=tgt_partition_size;
+
+	}
+	assert(iss_states[cur_lp].current_incremental_log_size == 0);
+	return prev_log;
+
 }
 
 
