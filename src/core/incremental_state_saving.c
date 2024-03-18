@@ -189,7 +189,7 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 
 
 
-partition_log *log_incremental(unsigned int lid, simtime_t ts) {
+partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
