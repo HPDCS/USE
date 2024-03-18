@@ -389,8 +389,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
-			cur_log->addr = mark_dirty_pages(buff[i]);
 			cur_log->ts = ts;
+			cur_log->addr = mark_dirty_pages(buff[i]);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 			
