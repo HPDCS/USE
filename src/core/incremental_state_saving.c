@@ -257,18 +257,17 @@ tracking_data *get_fault_info(unsigned int lid) {
 	segid = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 	
 
-	ioctl(device_fd, TRACKER_GET, &t_data[lid]);
+	ioctl(device_fd, TRACKER_GET, local_data);
 
-	if (t_data != NULL) {
-		local_data = t_data[lid];
+	if (local_data != NULL) {
 		len = local_data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
 		if (buff != NULL) buff = local_data->buff_addresses;
 		mark_dirty_pages(buff, len);
-		return t_data[lid];
+		return local_data;
 	}
 
-	return t_data[lid];
+	return local_data;
 }
 
 
