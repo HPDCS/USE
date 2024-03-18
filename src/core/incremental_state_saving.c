@@ -188,20 +188,21 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 }
 
 
-void mark_dirty_pages(unsigned long *buff, unsigned long size) {
+partition_log* mark_dirty_pages(unsigned long addr, unsigned long size) {
 
 	int i;
 	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
 
 	unsigned long long pg_addr;
+	partition_log *cur_log, *prev_log;
 
-	for (i=0; i < size; i++) {
+	//for (i=0; i < size; i++) {
 		//todo: do some things to mark dirty pages
-		pg_addr = ((unsigned long long)buff[i]) & (~ (PAGE_SIZE-1));
+		pg_addr = ((unsigned long long)addr) & (~ (PAGE_SIZE-1));
 		segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
 		subsegid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
 		page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
-		printf("[lp %u] [mark_dirty_pages] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, buff[i], pg_addr, segid, page_id);
+		printf("[lp %u] [mark_dirty_pages] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, page_id);
 		cur_id = page_id;
 	    iss_states[current_lp].count_tracked++;
 		tgt_partition_size = 0;
@@ -211,9 +212,15 @@ void mark_dirty_pages(unsigned long *buff, unsigned long size) {
 	    update_tree(cur_id, partition_id, tgt_partition_size);
 	#endif
 		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
-	
+		
+		cur_log = (partition_log*) rsalloc(sizeof(partition_log));
+		cur_log->size = PAGE_SIZE;
+		cur_log->next = prev_log;
+		cur_log->addr = (char *) mem_areas[current_lp]+subsegid*PAGE_SIZE;
+		cur_log->log = rsalloc(cur_log->size);
+		prev_log = cur_log; 
 
-	}
+	//}
 
 }
 
@@ -375,26 +382,23 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 	tracking_data *data = get_fault_info(cur_lp);
 	unsigned long len;
 	unsigned long *buff;
+	int i;
 	if (data != NULL) {
 		len = data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
 		if (buff != NULL) buff = data->buff_addresses;
-		mark_dirty_pages(buff, len);
+		for (i = 0; i < len; i++) {
+			cur_log = mark_dirty_pages(buff[i], len);
+			if (cur_log != NULL) cur_log->ts = ts;
+
+			printf("[log_incremental] CKPT \t addr %p \t cur_log %p \t log %p\n", 
+				cur_log->addr, cur_log, cur_log->log);
+
+			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			memcpy(cur_log->log, cur_log->addr, cur_log->size);
+		}
 	}
 
-	cur_log = (partition_log*) rsalloc(sizeof(partition_log));
-	cur_log->size = PAGE_SIZE;
-	cur_log->next = prev_log;
-	cur_log->ts = ts;
-	cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id); //todo get_ptr
-	cur_log->log = rsalloc(cur_log->size);
-	prev_log = cur_log; 
-
-	printf("[log_incremental] CKPT \t addr %p \t cur_log %p \t log %p\n", 
-		cur_log->addr, cur_log, cur_log->log);
-
-	iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
-	memcpy(cur_log->log, cur_log->addr, cur_log->size);
 
 
 #endif
