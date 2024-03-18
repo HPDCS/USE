@@ -265,10 +265,10 @@ tracking_data *get_fault_info(unsigned int lid) {
 		buff = rsalloc(sizeof(unsigned long) * len);
 		if (buff != NULL) buff = local_data->buff_addresses;
 		mark_dirty_pages(buff, len);
-		return local_data;
+		return t_data[lid];
 	}
 
-	return local_data;
+	return t_data[lid];
 }
 
 
