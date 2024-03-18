@@ -271,8 +271,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
-			printf("[log_incremental] CKPT tgt_id %u \t addr %lu \t cur_log %lu\n", 
-				tgt_id,(unsigned long) cur_log->addr, (unsigned long) cur_log);
+			printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p\n", 
+				tgt_id, cur_log->addr, cur_log, cur_log->log);
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
