@@ -27,6 +27,7 @@ if(BUDDY)
 add_compile_options(
 -DBUDDY=1
 )
+message(DEBUG, "activated buddy")
 else()
 add_compile_options(
 -DBUDDY=0
