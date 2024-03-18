@@ -302,8 +302,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 	}
 
 	/// init model PER-LP (iss_metadata and model)
-  #if BUDDY == 0
-	fprintf(stderr, "BUDDY ACTIVATED\n");
+  #if BUDDY == 1
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t)*lps);
   #else
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
