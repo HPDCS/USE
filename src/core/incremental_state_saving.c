@@ -220,6 +220,9 @@ partition_log* mark_dirty_pages(unsigned long addr, unsigned long size, partitio
 		cur_log->addr = PAGEPTR(mem_areas[current_lp], page_id);
 		cur_log->log = rsalloc(cur_log->size);
 
+		printf("[mark_dirty_pages] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p\n", 
+				cur_log->addr, (unsigned long)cur_log->addr , cur_log, cur_log->log);
+
 	//}
 
 }
@@ -388,7 +391,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 		buff = rsalloc(sizeof(unsigned long) * len);
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
-			
+
 			cur_log = mark_dirty_pages(buff[i], len, prev_log);
 			if (cur_log != NULL) {
 				cur_log->ts = ts;
