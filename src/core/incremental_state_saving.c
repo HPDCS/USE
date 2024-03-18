@@ -260,7 +260,7 @@ tracking_data *get_fault_info(unsigned int lid) {
 	ioctl(device_fd, TRACKER_GET, &t_data[lid]);
 
 	if (t_data != NULL) {
-		local_data = t_data[lid]
+		local_data = t_data[lid];
 		len = local_data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
 		if (buff != NULL) buff = local_data->buff_addresses;
