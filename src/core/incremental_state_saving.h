@@ -85,7 +85,7 @@ typedef struct __per_lp_iss_metadata{
     unsigned short cur_virtual_ts;
     char current_model;
   #if BUDDY == 1
-	partition_node_tree_t partition_tree[]; //todo: when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
+	partition_node_tree_t partition_tree[]; //when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
   #endif
 }lp_iss_metadata;
 
@@ -108,6 +108,8 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp);
 bool is_next_ckpt_incremental();
 partition_log *log_incremental(unsigned int lid, simtime_t ts);
 void log_incremental_restore(partition_log *cur);
+void log_incremental_destroy_chain(partition_log *cur);
+
 tracking_data *get_fault_info(unsigned int lid);
 void mark_dirty_pages(unsigned long *buff, unsigned long size);
 

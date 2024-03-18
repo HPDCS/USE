@@ -188,6 +188,88 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 }
 
 
+void mark_dirty_pages(unsigned long *buff, unsigned long size) {
+
+	int i;
+	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
+
+	unsigned long long pg_addr;
+
+	for (i=0; i < size; i++) {
+		//todo: do some things to mark dirty pages
+		pg_addr = ((unsigned long long)buff[i]) & (~ (PAGE_SIZE-1));
+		segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
+		subsegid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
+		page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
+		printf("[lp %u] [mark_dirty_pages] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, buff[i], pg_addr, segid, page_id);
+		cur_id = page_id;
+	    iss_states[current_lp].count_tracked++;
+		tgt_partition_size = 0;
+		partition_id = page_id;
+
+	#if BUDDY == 1
+	    update_tree(cur_id, partition_id, tgt_partition_size);
+	#endif
+		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+	
+
+	}
+
+}
+
+
+
+/** methods to use klm through ioctl */
+
+void init_segment_monitor_support(tracking_data *data) {
+
+	assert(data != NULL);
+	assert(device_fd != -1);
+
+	printf("[init_segment_monitor_support] base_addr %lu subsegment_address %lu segid %ld\n", 
+		data->base_address, data->subsegment_address, data->segment_id);
+
+	ioctl(device_fd, TRACKER_INIT, data);
+}
+
+void open_tracker_device(const char *path, unsigned long mode) {
+
+	device_fd = open(path, mode);
+    if (device_fd == -1) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        abort();
+    }
+    ioctl(device_fd, TRACKER_SET_SEGSIZE, PER_LP_PREALLOCATED_MEMORY);
+}
+
+
+tracking_data *get_fault_info(unsigned int lid) {
+
+	tracking_data *local_data = t_data[lid];
+	unsigned long len;
+	unsigned long *buff;
+	unsigned long segid;
+	local_data->base_address = (unsigned long) mem_areas[0];
+	local_data->subsegment_address = (unsigned long) mem_areas[lid];
+	local_data->end_address = (unsigned long) (mem_areas[lid]+MAX_MMAP*NUM_MMAP);
+	local_data->len_buf = (unsigned long) NUM_PAGES_PER_MMAP;
+	if(local_data->buff_addresses == NULL) local_data->buff_addresses = rsalloc(local_data->len_buf * sizeof(unsigned long));
+	segid = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+	
+
+	ioctl(device_fd, TRACKER_GET, &local_data);
+
+	if (t_data != NULL) {
+		len = local_data->len_buf;
+		buff = rsalloc(sizeof(unsigned long) * len);
+		if (buff != NULL) buff = local_data->buff_addresses;
+		mark_dirty_pages(buff, len);
+		return local_data;
+	}
+
+	return local_data;
+}
+
 
 partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
@@ -207,8 +289,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
     unsigned int prev_first_dirty_end = end;
 
 #if BUDDY == 1
+
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
-#endif 
 
 	while(start < end){
 		//printf("%u start %u\n", tid, start);
@@ -223,35 +305,24 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
         
 		while(cur_id > 0){
 
-           if(!first_dirty )  {
-
-           	#if BUDDY == 1
-           		if (tree[cur_id].dirty == cur_dirty_ts) {
-           	#endif
+           if(!first_dirty && (tree[cur_id].dirty == cur_dirty_ts) )  {
 
 	                first_dirty = cur_id;
 	                first_dirty_size = cur_partition_size;
 	                prev_first_dirty_end = prev_end;
 
 	                printf("[log_incremental] first_dirty %u \n", first_dirty);
+	        
+            }
 
-	        #if BUDDY == 1
-	            }
-	        #endif
-
-           }
-
-		#if BUDDY == 1
             if(tree[cur_id].valid[0] && (tree[cur_id].dirty == cur_dirty_ts) ){
 			  tgt_partition_size = cur_partition_size;
 			  tgt_id = cur_id;
 			}
-		#else
-			tgt_partition_size = cur_partition_size;
-			tgt_id = cur_id;
 
 			printf("[log_incremental] tgt_partition_size %lu \t tgt_id %u\n", tgt_partition_size, tgt_id);
-		#endif
+		
+		
 
             if(!first_dirty) prev = cur_id;
 			cur_id >>= 1;
@@ -303,6 +374,25 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
         start+=tgt_partition_size;
 
 	}
+#else
+
+	cur_log = (partition_log*) rsalloc(sizeof(partition_log));
+	cur_log->size = PAGE_SIZE;
+	cur_log->next = prev_log;
+	cur_log->ts = ts;
+	cur_log->addr = get_page_ptr_from_idx(cur_lp, tgt_id); //todo get_ptr
+	cur_log->log = rsalloc(cur_log->size);
+	prev_log = cur_log; 
+
+	printf("[log_incremental] CKPT \t addr %p \t cur_log %p \t log %p\n", 
+		cur_log->addr, cur_log, cur_log->log);
+
+	iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+	memcpy(cur_log->log, cur_log->addr, cur_log->size);
+
+
+#endif
+
 	assert(iss_states[cur_lp].current_incremental_log_size == 0);
 	return prev_log;
 
@@ -311,93 +401,26 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 void log_incremental_restore(partition_log *cur) {
 
-
-}
-
-
-void mark_dirty_pages(unsigned long *buff, unsigned long size) {
-
-	int i;
-	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
-
-	unsigned long long pg_addr;
-
-	for (i=0; i < size; i++) {
-		//todo: do some things to mark dirty pages
-		pg_addr = ((unsigned long long)buff[i]) & (~ (PAGE_SIZE-1));
-		segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
-		subsegid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
-		page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
-		printf("[lp %u] [mark_dirty_pages] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, buff[i], pg_addr, segid, page_id);
-		cur_id = page_id;
-	    iss_states[current_lp].count_tracked++;
-		tgt_partition_size = 0;
-		partition_id = page_id;
-
-		///*** add config parameter to enable/disable this
-	#if BUDDY == 1
-	    update_tree(cur_id, partition_id, tgt_partition_size);
-	#endif
-
-	    /// maybe useless?
-		//partition_id = get_lowest_page_from_partition_id(partition_id);
-
-		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+	while(cur){
+		memcpy(cur->addr, cur->log, cur->size);
+		cur = cur->next;
 	}
 
 }
 
 
-/** methods to use klm through ioctl */
-
-void init_segment_monitor_support(tracking_data *data) {
-
-	assert(data != NULL);
-	assert(device_fd != -1);
-
-	printf("[init_segment_monitor_support] base_addr %lu subsegment_address %lu segid %ld\n", 
-		data->base_address, data->subsegment_address, data->segment_id);
-
-	ioctl(device_fd, TRACKER_INIT, data);
-}
-
-void open_tracker_device(const char *path, unsigned long mode) {
-
-	device_fd = open(path, mode);
-    if (device_fd == -1) {
-        fprintf(stderr, "%s\n", strerror(errno));
-        abort();
-    }
-    ioctl(device_fd, TRACKER_SET_SEGSIZE, PER_LP_PREALLOCATED_MEMORY);
+void log_incremental_destroy_chain(partition_log *cur){
+	partition_log *next = NULL;
+	while(cur){
+		next = cur->next;
+		rsfree(cur->log);
+		rsfree(cur);
+		cur = next;
+	}	
 }
 
 
-tracking_data *get_fault_info(unsigned int lid) {
 
-	tracking_data *local_data = t_data[lid];
-	unsigned long len;
-	unsigned long *buff;
-	unsigned long segid;
-	local_data->base_address = (unsigned long) mem_areas[0];
-	local_data->subsegment_address = (unsigned long) mem_areas[lid];
-	local_data->end_address = (unsigned long) (mem_areas[lid]+MAX_MMAP*NUM_MMAP);
-	local_data->len_buf = (unsigned long) NUM_PAGES_PER_MMAP;
-	if(local_data->buff_addresses == NULL) local_data->buff_addresses = rsalloc(local_data->len_buf * sizeof(unsigned long));
-	segid = SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
-	
-
-	ioctl(device_fd, TRACKER_GET, &local_data[lid]);
-
-	if (t_data != NULL) {
-		len = local_data->len_buf;
-		buff = rsalloc(sizeof(unsigned long) * len);
-		if (buff != NULL) buff = local_data->buff_addresses;
-		mark_dirty_pages(buff, len);
-		return local_data;
-	}
-
-	return local_data;
-}
 
 
 
