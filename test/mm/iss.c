@@ -268,8 +268,8 @@ static int iss_test(void)
 
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 3;
 	assert(*(((char*)mem_areas[0])+PAGE_SIZE) == 3);
-	//log_incremental_restore(log);
-	//log_incremental_destroy_chain(log);
+	log_incremental_restore(log);
+	log_incremental_destroy_chain(log);
 
 	/*assert(iss_states[0].partition_tree[1].access_count == 7);
 	assert(iss_states[0].partition_tree[1].valid == 0);
