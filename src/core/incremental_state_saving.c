@@ -268,6 +268,17 @@ tracking_data *get_fault_info(unsigned int lid) {
 		return local_data;
 }
 
+partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long address) {
+
+	partition_log * cur_log = (partition_log*) rsalloc(sizeof(partition_log));
+	cur_log->size = PAGE_SIZE;
+	cur_log->next = prev_log;
+	cur_log->ts = ts;
+	cur_log->addr = mark_dirty_pages(address);
+
+	return cur_log;
+}
+
 
 partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
@@ -386,13 +397,9 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
 
-			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
-			cur_log->size = PAGE_SIZE;
-			cur_log->next = prev_log;
-			cur_log->ts = ts;
-			cur_log->addr = mark_dirty_pages(buff[i]);
+			cur_log = create_log(ts, prev_log, buff[i]);
 			cur_log->log = rsalloc(cur_log->size);
-			prev_log = cur_log; 
+			prev_log = cur_log;
 			
 			printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p\n", 
 				cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log);
