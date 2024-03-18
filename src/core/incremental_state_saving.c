@@ -216,7 +216,7 @@ partition_log* mark_dirty_pages(unsigned long addr, unsigned long size) {
 		cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 		cur_log->size = PAGE_SIZE;
 		cur_log->next = prev_log;
-		cur_log->addr = (char *) mem_areas[current_lp]+subsegid*PAGE_SIZE;
+		cur_log->addr = (char *) mem_areas[current_lp]+page_id*PAGE_SIZE;
 		cur_log->log = rsalloc(cur_log->size);
 		prev_log = cur_log; 
 
@@ -391,8 +391,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			cur_log = mark_dirty_pages(buff[i], len);
 			if (cur_log != NULL) cur_log->ts = ts;
 
-			printf("[log_incremental] CKPT \t addr %p \t cur_log %p \t log %p\n", 
-				cur_log->addr, cur_log, cur_log->log);
+			printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p\n", 
+				cur_log->addr, (unsigned long)cur_log->addr , cur_log, cur_log->log);
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
