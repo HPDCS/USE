@@ -111,7 +111,7 @@ void log_incremental_restore(partition_log *cur);
 void log_incremental_destroy_chain(partition_log *cur);
 
 tracking_data *get_fault_info(unsigned int lid);
-partition_log* mark_dirty_pages(unsigned long buff, unsigned long size);
+partition_log* mark_dirty_pages(unsigned long buff, unsigned long size, partition_log *prev_log);
 
 void init_segment_monitor_support(tracking_data *data);
 

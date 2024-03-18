@@ -188,16 +188,15 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 }
 
 
-partition_log* mark_dirty_pages(unsigned long addr, unsigned long size) {
+partition_log* mark_dirty_pages(unsigned long addr, unsigned long size, partition_log *prev_log) {
 
 	int i;
 	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
 
 	unsigned long long pg_addr;
-	partition_log *cur_log, *prev_log;
+	partition_log *cur_log;
 
 	//for (i=0; i < size; i++) {
-		//todo: do some things to mark dirty pages
 		pg_addr = ((unsigned long long)addr) & (~ (PAGE_SIZE-1));
 		segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
 		subsegid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
@@ -210,8 +209,10 @@ partition_log* mark_dirty_pages(unsigned long addr, unsigned long size) {
 
 	#if BUDDY == 1
 	    update_tree(cur_id, partition_id, tgt_partition_size);
-	#endif
 		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+	#else
+		iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
+	#endif
 		
 		cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 		cur_log->size = PAGE_SIZE;
@@ -387,14 +388,15 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 		buff = rsalloc(sizeof(unsigned long) * len);
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
-			cur_log = mark_dirty_pages(buff[i], len);
+			
+			cur_log = mark_dirty_pages(buff[i], len, prev_log);
 			if (cur_log != NULL) {
 				cur_log->ts = ts;
 				prev_log = cur_log; 
 			}
 
 			printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p\n", 
-				cur_log->addr, (unsigned long)cur_log->addr , cur_log, cur_log->log);
+				cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log);
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
