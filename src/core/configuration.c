@@ -133,8 +133,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     case ISS_ENABLED_MPROTECTION:
       pdes_config.iss_enabled_mprotection = 1;
-      pdes_config.iss_signal_mprotect     = atoi(arg);
       break;
+
+    case ISS_SIGNAL_MPROTECT:
+      pdes_config.iss_signal_mprotect     = 1;
 
     case CKPT_FORCED_FULL_PERIOD_KEY:
       pdes_config.ckpt_forced_full_period = atoi(arg);
@@ -213,10 +215,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       if(pdes_config.ckpt_period < 1 || pdes_config.ckpt_collection_period < 1 || pdes_config.ckpt_forced_full_period < 1){
         printf("Please set a non-zero checkpoint period\n");
         argp_usage (state);  
-      }
-      if(pdes_config.iss_signal_mprotect && !pdes_config.iss_enabled_mprotection){
-        printf("Please enable iss_enabled_mprotection to use mprotect\n");
-        argp_usage (state);
       }
       if(pdes_config.el_dynamic_window && !pdes_config.enforce_locality){
         printf("Please enable enforce-locality to use dynamic window\n");
