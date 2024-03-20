@@ -72,6 +72,10 @@ static int iss_test(void)
 	pdes_config.iss_enabled_mprotection = 1;
 	pdes_config.iss_signal_mprotect 	= 0;
 
+	#if BUDDY == 1
+		printf("BUDDY SCHEME ENABLED\n");
+	#endif
+
 	open_tracker_device("/dev/tracker", (O_RDONLY | O_NONBLOCK));
 
 	init_incremental_checkpointing_support(1);
