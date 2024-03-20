@@ -157,7 +157,7 @@ void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tg
 }
 #endif
 
-/**  only when protect() is used -- maybe use compilation flags */
+/** signal handler -- with mprotect() and with custom syscall and no page-fault hook */
 
 
 void dirty(void* addr, size_t size){
@@ -188,7 +188,7 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 }
 
 
-char * mark_dirty_pages(unsigned long addr) {
+char * get_page_ptr(unsigned long addr) {
 
 	int i;
 	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
@@ -196,28 +196,26 @@ char * mark_dirty_pages(unsigned long addr) {
 	unsigned long long pg_addr;
 	char *ptr;
 
-	//for (i=0; i < size; i++) {
-		pg_addr = ((unsigned long long)addr) & (~ (PAGE_SIZE-1));
-		segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
-		subsegid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
-		page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
-		printf("[lp %u] [mark_dirty_pages] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, page_id);
-		cur_id = page_id;
-	    iss_states[current_lp].count_tracked++;
-		tgt_partition_size = 0;
-		partition_id = page_id;
+	pg_addr = ((unsigned long long)addr) & (~ (PAGE_SIZE-1));
+	segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
+	subsegid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
+	page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
+	printf("[lp %u] [get_page_ptr] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, page_id);
+	cur_id = page_id;
+    iss_states[current_lp].count_tracked++;
+	tgt_partition_size = 0;
+	partition_id = page_id;
 
-	#if BUDDY == 1
-	    update_tree(cur_id, partition_id, tgt_partition_size);
-		iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
-	#else
-		iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
-	#endif
-		
-		ptr = PAGEPTR(mem_areas[current_lp], page_id);
+#if BUDDY == 1
+    update_tree(cur_id, partition_id, tgt_partition_size); //TODO: check this
+	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+#else
+	iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
+#endif
+	
+	ptr = PAGEPTR(mem_areas[current_lp], page_id);
 
-		return ptr;
-	//}
+	return ptr;
 
 }
 
@@ -264,9 +262,11 @@ tracking_data *get_fault_info(unsigned int lid) {
 	ioctl(device_fd, TRACKER_GET, local_data);
 
 	if (local_data != NULL) 
-
 		return local_data;
 }
+
+
+/** incremental state saving facilities */
 
 partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long address) {
 
@@ -274,7 +274,7 @@ partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long a
 	cur_log->size = PAGE_SIZE;
 	cur_log->next = prev_log;
 	cur_log->ts = ts;
-	cur_log->addr = mark_dirty_pages(address);
+	cur_log->addr = get_page_ptr(address);
 
 	return cur_log;
 }
@@ -282,6 +282,7 @@ partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long a
 
 partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
+#if BUDDY == 1
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
 	unsigned int cur_partition_size, tgt_partition_size, cur_id, tgt_id, first_dirty_size = 0, first_dirty = 0;
@@ -297,7 +298,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
     unsigned int prev_end;
     unsigned int prev_first_dirty_end = end;
 
-#if BUDDY == 1
+
 
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 
@@ -342,6 +343,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 		if(tgt_id){
             
+            //TODO: call get_fault_info and get_page_ptr for ckpt IF SIGNAL==0
 			tgt_id = get_lowest_page_from_partition_id(tgt_id);
 			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 			cur_log->size = tgt_partition_size*PAGE_SIZE;
@@ -358,7 +360,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 			assert(start == tgt_id);
 
-		} else{
+		} else {
 
             if(first_dirty == 0) break;
             tmp = first_dirty;
@@ -387,6 +389,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 #else
 
+	partition_log *cur_log = NULL, *prev_log = NULL;
 	tracking_data *data = get_fault_info(cur_lp);
 	unsigned long len;
 	unsigned long *buff;
@@ -418,7 +421,12 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 }
 
-
+/**
+* This function restores the incremental ckpts
+*
+*
+* @param cur Ptr to a log
+*/
 void log_incremental_restore(partition_log *cur) {
 
 	while(cur){
@@ -429,6 +437,12 @@ void log_incremental_restore(partition_log *cur) {
 }
 
 
+/**
+* This function destroys all the incremental ckpts
+*
+*
+* @param cur Ptr to a log
+*/
 void log_incremental_destroy_chain(partition_log *cur){
 	partition_log *next = NULL;
 	while(cur){
@@ -441,15 +455,22 @@ void log_incremental_destroy_chain(partition_log *cur){
 
 
 
+/** init incremental state saving support */
 
-
-
-
-
-void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps) {
+/**
+* This function initializes the incremental ckpt support globally
+*
+*
+* @param lps The number of LPs
+*/
+void init_incremental_checkpointing_support(unsigned int lps) {
 
 	uint i;
+
+  #if VERBOSE == 1
 	printf("[init_incremental_checkpointing_support] %u \n", lps);
+  #endif
+
 	t_data = malloc(sizeof(tracking_data) * lps);
 	if (t_data != NULL) {
 	for (i = 0; i < lps; i++)
@@ -462,9 +483,10 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
   #else
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
   #endif
-	iss_costs_model.mprotect_cost_per_page = 1; //TODO: costo per protect ?
+	iss_costs_model.mprotect_cost_per_page = 1;
 	iss_costs_model.log_cost_per_page = 100; 
 
+	/// if signaling mechanism is enabled
 	if (pdes_config.iss_signal_mprotect) {
 		struct sigaction action;
 		action.sa_sigaction = sigsev_tracer_for_dirty;
@@ -476,6 +498,12 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 
 }
 
+/**
+* This function initializes the incremental ckpt support for each lp 
+*
+*
+* @param lp The logical process' identifier
+*/
 void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
   #if BUDDY == 1
@@ -488,13 +516,13 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 	set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
-
+  #if VERBOSE == 1
 	printf("base_addr %lu subsegment_address %lu segid %lu\n", t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
-	
+  #endif
+
 	/// register segment into the hashtable
 	init_segment_monitor_support(t_data[lp]);
 
-	//***TODO config parameter to activate/deactivate model
 	iss_first_run_model(current_lp); 
 
 

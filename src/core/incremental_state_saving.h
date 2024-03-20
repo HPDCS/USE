@@ -98,7 +98,7 @@ extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 extern model_t iss_costs_model;	 /// runtime tuning of the cost model 
 
 /** methods for incremental state saving support */
-void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps);
+void init_incremental_checkpointing_support(unsigned int lps);
 void init_tracking_data(tracking_data **);
 void set_tracking_data(tracking_data **data, unsigned long start, unsigned long addr, unsigned long end,
 										unsigned int segid, unsigned long len);
@@ -111,7 +111,7 @@ void log_incremental_restore(partition_log *cur);
 void log_incremental_destroy_chain(partition_log *cur);
 
 tracking_data *get_fault_info(unsigned int lid);
-char* mark_dirty_pages(unsigned long addr);
+char* get_page_ptr(unsigned long addr);
 
 void init_segment_monitor_support(tracking_data *data);
 
