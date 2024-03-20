@@ -472,10 +472,8 @@ void init_simulation(unsigned int thread_id){
 	if(tid == 0){
 		numa_init();
 		LPs_metada_init();
-		printf("LPS METADATA INITIALIZED\n");
 		pin_lps_on_numa_nodes_init();
 		dymelor_init();
-		printf("DYMELOR INITIALIZED\n");
 		statistics_init();
 		queue_init();
 		numerical_init();
