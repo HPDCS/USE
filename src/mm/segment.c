@@ -91,6 +91,7 @@ void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
 	  }
 		// Access the memory in write mode to force the kernel to create the page table entries
 		*((char *)mmapped[i]) = 'x';
+		memset(mmapped[i], 0, MAX_MMAP);
 		
 		for(j=0;j<MAX_MMAP/PAGE_SIZE;j++,h++)
 			(*pages)[h] = (char *)the_address+h*PAGE_SIZE;
