@@ -283,10 +283,13 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 			if(pdes_config.checkpointing == PERIODIC_STATE_SAVING)
                 m_area->self_pointer = (malloc_area *)pool_get_memory(lid, area_size, numa_node);
             else if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+        		printf("DYMELOR DO MALLOC ISS area_size %lu \t area_size-num_chunks*size\n", area_size, area_size-num_chunks*size);
+
                 m_area->self_pointer = (malloc_area *)rsalloc(area_size -num_chunks*size);
                 bzero(m_area->self_pointer, area_size -num_chunks*size);
             }
         }else{
+        	printf("DYMELOR DO MALLOC area_size %lu\n", area_size);
 			m_area->self_pointer = rsalloc(area_size);
 			bzero(m_area->self_pointer, area_size);
 		}
@@ -306,6 +309,8 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 
 		if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
             m_area->area = pool_get_memory(lid, num_chunks*size, numa_node);
+        	printf("DYMELOR DO MALLOC m_area->area size %lu\n", num_chunks*size);
+
         }
         else
             m_area->area = (void *)((char*)m_area->use_bitmap + bitmap_blocks * BLOCK_SIZE * 2);
