@@ -36,9 +36,9 @@ struct _buddy {
 };
 
 
-//#ifdef HAVE_NUMA
+#ifdef HAVE_NUMA
 extern void **mem_areas;
-//#endif
+#endif
 
 // TODO: no need to keep a structure anymore...
 // This is for the segment allocator

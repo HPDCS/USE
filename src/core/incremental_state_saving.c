@@ -14,7 +14,7 @@
 tracking_data **t_data;
 int device_fd;
 
-//extern void **mem_areas; /// pointers to the lp segment
+extern void **mem_areas; /// pointers to the lp segment
 
 
 __thread int __in_log_full = 0;
