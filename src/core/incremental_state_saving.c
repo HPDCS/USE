@@ -410,7 +410,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 		}
-	}
+	} else { printf("[log_incremental] no data\n");}
 
 
 

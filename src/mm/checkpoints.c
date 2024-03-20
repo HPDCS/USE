@@ -289,7 +289,9 @@ void *log_state(int lid) {
 		ckpt = log_full(lid);
 		iss_update_model(lid);
 		if(recoverable_state[lid]->is_incremental){
+			printf("before guard memory\n");
 			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
+			printf("after guard memory\n");
 			iss_log_incremental_reset(lid);
 		} else
 			iss_states[lid].current_incremental_log_size = logsize;
