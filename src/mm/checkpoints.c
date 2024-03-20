@@ -114,6 +114,7 @@ void *log_full(int lid) {
 	((malloc_state*)ckpt)->timestamp = current_lvt;
 
 	partial_size += sizeof(malloc_state);
+	printf("AFTER MALLOC STATE partial_size %lu\n", partial_size);
 
 	// Copy the per-LP Seed State (to make the numerical library rollbackable and PWD)
 	memcpy(ptr, &LPS[lid]->seed, sizeof(seed_type));
@@ -121,14 +122,19 @@ void *log_full(int lid) {
 
 	partial_size += sizeof(seed_type);
 
+	printf("AFTER SEED partial_size %lu\n", partial_size);
+
+
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
         statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
        	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
-		partial_log = log_incremental(lid, lvt(lid)); //TODO
+		partial_log = log_incremental(lid, lvt(lid));
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 		partial_size += sizeof(void *);
+		printf("AFTER LOG INCREMENTAL partial_size %lu\n", partial_size);
+
 	}
     else{
        	statistics_post_lp_data(lid, STAT_CKPT_FULL, 1.0);
@@ -163,6 +169,8 @@ void *log_full(int lid) {
 		ptr = (void*)((char*)ptr + sizeof(malloc_area));
 
 		partial_size += sizeof(malloc_area);
+		printf("AFTER MALLOC AREA partial_size %lu\n", partial_size);
+
 
 		// Sanity check
 		if ((char *)ckpt + partial_size != ptr){
@@ -174,6 +182,8 @@ void *log_full(int lid) {
 		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
 
 		partial_size += bitmap_blocks * BLOCK_SIZE;
+		printf("AFTER BITMAP BLOCKS partial_size %lu\n", partial_size);
+
 
 		// Sanity check
 		if ((char *)ckpt + partial_size != ptr){
