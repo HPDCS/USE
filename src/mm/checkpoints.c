@@ -106,7 +106,7 @@ void *log_full(int lid) {
 
 	ptr = ckpt;
 
-	size_t partial_size;
+	size_t partial_size = 0;
 
 	// Copy malloc_state in the ckpt
 	memcpy(ptr, recoverable_state[lid], sizeof(malloc_state));
