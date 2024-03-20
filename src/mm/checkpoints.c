@@ -96,6 +96,8 @@ void *log_full(int lid) {
 	recoverable_state[lid]->is_incremental = is_next_ckpt_incremental(); /// call routine for determining the type of checkpointing
 	size = get_log_size(recoverable_state[lid]);
 
+	printf("LOG_FULL size ckpt %lu\n", size);
+
 	ckpt = rsalloc(size);
 
 	if(ckpt == NULL) {
@@ -104,14 +106,20 @@ void *log_full(int lid) {
 
 	ptr = ckpt;
 
+	size_t partial_size;
+
 	// Copy malloc_state in the ckpt
 	memcpy(ptr, recoverable_state[lid], sizeof(malloc_state));
 	ptr = (void *)((char *)ptr + sizeof(malloc_state));
 	((malloc_state*)ckpt)->timestamp = current_lvt;
 
+	partial_size += sizeof(malloc_state);
+
 	// Copy the per-LP Seed State (to make the numerical library rollbackable and PWD)
 	memcpy(ptr, &LPS[lid]->seed, sizeof(seed_type));
 	ptr = (void *)((char *)ptr + sizeof(seed_type));
+
+	partial_size += sizeof(seed_type);
 
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
@@ -120,6 +128,7 @@ void *log_full(int lid) {
 		partial_log = log_incremental(lid, lvt(lid)); //TODO
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
+		partial_size += sizeof(void *);
 	}
     else{
        	statistics_post_lp_data(lid, STAT_CKPT_FULL, 1.0);
@@ -153,8 +162,25 @@ void *log_full(int lid) {
 		memcpy(ptr, m_area, sizeof(malloc_area));
 		ptr = (void*)((char*)ptr + sizeof(malloc_area));
 
+		partial_size += sizeof(malloc_area);
+
+		// Sanity check
+		if ((char *)ckpt + partial_size != ptr){
+			printf("CHECK AFTER MALLOC AREA\n");
+			rootsim_error(true, "Actual (full) ckpt size is wrong by %d bytes!\nlid = %d ckpt = %p size = %#x (%d), ptr = %p, ckpt + size = %p\n", (char *)ckpt + size - (char *)ptr, lid, ckpt, size, size, ptr, (char *)ckpt + size);
+		}
+
 		memcpy(ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
 		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
+
+		partial_size += bitmap_blocks * BLOCK_SIZE;
+
+		// Sanity check
+		if ((char *)ckpt + partial_size != ptr){
+			printf("CHECK AFTER BITMAP BLOCKS\n");
+			rootsim_error(true, "Actual (full) ckpt size is wrong by %d bytes!\nlid = %d ckpt = %p size = %#x (%d), ptr = %p, ckpt + size = %p\n", (char *)ckpt + size - (char *)ptr, lid, ckpt, size, size, ptr, (char *)ckpt + size);
+		}
+
 
 		/// if log is full
 		if (!recoverable_state[lid]->is_incremental) {
@@ -221,7 +247,7 @@ void *log_full(int lid) {
     autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
 
     __in_log_full = 0 ;
-    
+
 	return ckpt;
 }
 
