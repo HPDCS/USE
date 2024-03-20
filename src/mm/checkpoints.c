@@ -91,6 +91,8 @@ void *log_full(int lid) {
 	clock_timer checkpoint_timer;
 	clock_timer_start(checkpoint_timer);
 
+    __in_log_full =1 ;
+
 	recoverable_state[lid]->is_incremental = is_next_ckpt_incremental(); /// call routine for determining the type of checkpointing
 	size = get_log_size(recoverable_state[lid]);
 
@@ -113,7 +115,7 @@ void *log_full(int lid) {
 
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
-        //statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
+        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
        	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
 		partial_log = log_incremental(lid, lvt(lid)); //TODO
 		*((void ** )ptr) = partial_log;
@@ -218,6 +220,8 @@ void *log_full(int lid) {
 	
     autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
 
+    __in_log_full = 0 ;
+    
 	return ckpt;
 }
 
