@@ -347,6 +347,11 @@ void print_config(void){
     #if CSR_CONTEXT == 1
         printf("\t- CSR ASYNCH enabled.\n");
     #endif
+    #if BUDDY == 1
+        printf("\t- BUDDY SCHEME enabled.\n");
+    #else
+        printf("\t- BUDDY SCHEME disabled.\n");
+    #endif
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
 #endif
