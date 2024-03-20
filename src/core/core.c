@@ -481,7 +481,7 @@ void init_simulation(unsigned int thread_id){
 
 		/// init support for incremental state saving
 		if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-			init_incremental_checkpointing_support(pdes_config.ncores, pdes_config.nprocesses);
+			init_incremental_checkpointing_support(pdes_config.nprocesses);
 		}
 
 		if(pdes_config.enforce_locality){
