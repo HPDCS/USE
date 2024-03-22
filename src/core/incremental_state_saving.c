@@ -196,11 +196,11 @@ char * get_page_ptr(unsigned long addr) {
 	unsigned long long pg_addr;
 	char *ptr;
 
-	pg_addr = ((unsigned long long)addr) & (~ (PAGE_SIZE-1));
-	segid = SEGID(addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
-	subsegid = SEGID(addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
+	pg_addr = ((unsigned long) addr) & (~ (PAGE_SIZE-1));
+	segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
+	subsegid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_MMAP);
 	page_id = PAGEID((unsigned long) (mem_areas[current_lp]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[current_lp]);
-	printf("[lp %u] [get_page_ptr] buff[i] %lu -- pg_addr %lu segid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, page_id);
+	printf("[lp %u] [get_page_ptr] buff[i] %lu -- pg_addr %lu segid %lu subsegid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, subsegid, page_id);
 	cur_id = page_id;
     iss_states[current_lp].count_tracked++;
 	tgt_partition_size = 0;
@@ -213,6 +213,7 @@ char * get_page_ptr(unsigned long addr) {
 	iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
 #endif
 	
+	partition_id = get_lowest_page_from_partition_id(partition_id);
 	ptr = PAGEPTR(mem_areas[current_lp], page_id);
 
 	return ptr;
