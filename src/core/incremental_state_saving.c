@@ -298,6 +298,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
     unsigned int prev_end;
     unsigned int prev_first_dirty_end = end;
 
+    //TODO: add buddy scheme WITH protection → for each address in buffer do tree scan
 
 
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
@@ -397,6 +398,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 	if (data != NULL) {
 		len = data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
+		iss_states[cur_lp].current_incremental_log_size += len*PAGE_SIZE;
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
 
@@ -410,6 +412,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 		}
+		assert(iss_states[cur_lp].current_incremental_log_size == 0);
+
 	} else { printf("[log_incremental] no data\n");}
 
 
