@@ -197,8 +197,8 @@ char * get_page_ptr(unsigned long addr) {
 	char *ptr;
 
 	pg_addr = ((unsigned long) addr) & (~ (PAGE_SIZE-1));
-	segid = SEGID(pg_addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
-	subsegid = SEGID(pg_addr, (unsigned long) mem_areas[segid], NUM_PAGES_PER_MMAP);
+	segid = SEGID(addr, (unsigned long) mem_areas[0], NUM_PAGES_PER_SEGMENT);
+	subsegid = SEGID(addr, (unsigned long) mem_areas[segid], NUM_PAGES_PER_MMAP);
 	page_id = PAGEID((unsigned long) (mem_areas[segid]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[segid]);
 	printf("[lp %u] [get_page_ptr] buff[i] %lu -- pg_addr %lu segid %lu subsegid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, subsegid, page_id);
 	cur_id = page_id;
@@ -206,8 +206,6 @@ char * get_page_ptr(unsigned long addr) {
 	tgt_partition_size = 0;
 	partition_id = page_id;
 
-	unsigned int page = get_page_idx_from_ptr(current_lp, addr);
-	printf("[get_page_ptr] PAGE ID %u\n", page);
 
 #if BUDDY == 1
     update_tree(cur_id, partition_id, tgt_partition_size); //TODO: check this
