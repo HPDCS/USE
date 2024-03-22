@@ -197,7 +197,7 @@ char * get_page_ptr(unsigned long addr) {
 	char *ptr;
 
 	pg_addr = ((unsigned long) addr) & (~ (PAGE_SIZE-1));
-	segid = SEGID(addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
+	segid = SEGID(addr, (unsigned long) mem_areas[current_lp], PER_LP_PREALLOCATED_MEMORY);
 	subsegid = SEGID(addr, (unsigned long) mem_areas[segid], NUM_PAGES_PER_MMAP);
 	page_id = PAGEID((unsigned long) (mem_areas[segid]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[segid]);
 	printf("[lp %u] [get_page_ptr] buff[i] %lu -- pg_addr %lu segid %lu subsegid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, subsegid, page_id);
