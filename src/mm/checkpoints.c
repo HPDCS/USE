@@ -181,7 +181,7 @@ void *log_full(int lid) {
 		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
 
 		partial_size += bitmap_blocks * BLOCK_SIZE;
-		printf("AFTER BITMAP BLOCKS partial_size %lu\n", partial_size);
+		//printf("AFTER BITMAP BLOCKS partial_size %lu\n", partial_size);
 
 
 		// Sanity check
