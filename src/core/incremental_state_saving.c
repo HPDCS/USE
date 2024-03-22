@@ -206,6 +206,9 @@ char * get_page_ptr(unsigned long addr) {
 	tgt_partition_size = 0;
 	partition_id = page_id;
 
+	unsigned int page = get_page_idx_from_ptr(current_lp, addr);
+	printf("[get_page_ptr] PAGE ID %u\n", page);
+
 #if BUDDY == 1
     update_tree(cur_id, partition_id, tgt_partition_size); //TODO: check this
 	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
