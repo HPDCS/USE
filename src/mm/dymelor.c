@@ -307,7 +307,6 @@ void *do_malloc(unsigned int lid, malloc_state *mem_pool, size_t size, unsigned 
 
 		if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
             m_area->area = pool_get_memory(lid, num_chunks*size, numa_node);
-        	printf("DYMELOR DO MALLOC m_area->area size %lu\n", num_chunks*size);
 
         }
         else
