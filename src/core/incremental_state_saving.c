@@ -188,7 +188,7 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 }
 
 
-char * get_page_ptr(unsigned long addr, unsigned long segid) {
+char * get_page_ptr(unsigned long addr) {
 
 	int i;
 	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
