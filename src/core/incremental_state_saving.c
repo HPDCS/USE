@@ -196,6 +196,10 @@ char * get_page_ptr(unsigned long addr) {
 	char *ptr;
 
 	segid = SEGID(addr, (unsigned long) mem_areas[0], NUM_PAGES_PER_SEGMENT);
+
+	if (addr >= mem_areas[segid] && addr < mem_areas[segid] + MAX_MMAP*NUM_MMAP) printf("SEGMENTO GIUSTO\n");
+
+
 	subsegid = SEGID(addr, (unsigned long) mem_areas[segid], NUM_PAGES_PER_MMAP);
 	page_id = PAGEID((unsigned long) (mem_areas[segid]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[segid]);
 	printf("[lp %u] [get_page_ptr] buff[i] %lu segid %lu subsegid %lu \t page-id %u\n",current_lp, addr, segid, subsegid, page_id);
