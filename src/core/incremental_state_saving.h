@@ -33,8 +33,7 @@
 #define TRACKER_DUMP			(1U << 4) ///ioctl cmd for debugging purposes (serial only)
 #define TRACKER_SET_SEGSIZE		(1U << 5) ///ioctl cmd for setting segment size
 
-#define SEGID(addr, base, size) ({unsigned int id = ((addr-base)/PAGE_SIZE + size)/size - 1; id;})
-#define SEGID2(addr, base, size) ({unsigned int id = ((addr-base)/PAGE_SIZE + size)/size; id;})
+#define SEGID(addr, base, size) ({unsigned int id = (abs(addr-base)/PAGE_SIZE + size)/size - 1; id;})
 #define PAGEID(addr, base) ({unsigned int id = (unsigned int) (abs(addr- base)/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE); id;})
 #define PAGEPTR(addr, pageid) ({char *ptr = (char*)addr + (pageid-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; ptr;})
 
