@@ -111,7 +111,7 @@ void log_incremental_restore(partition_log *cur);
 void log_incremental_destroy_chain(partition_log *cur);
 
 tracking_data *get_fault_info(unsigned int lid);
-char* get_page_ptr(unsigned long addr, unsigned long segid);
+char* get_page_ptr(unsigned long addr);
 
 void init_segment_monitor_support(tracking_data *data);
 

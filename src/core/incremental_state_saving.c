@@ -191,16 +191,14 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 char * get_page_ptr(unsigned long addr, unsigned long segid) {
 
 	int i;
-	unsigned int page_id, cur_id, subsegid, tgt_partition_size, partition_id;
+	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
 
-	unsigned long long pg_addr;
 	char *ptr;
 
-	pg_addr = ((unsigned long) addr) & (~ (PAGE_SIZE-1));
-	//segid = SEGID(addr, (unsigned long) mem_areas[current_lp], NUM_PAGES_PER_SEGMENT);
-	subsegid = SEGID(pg_addr, (unsigned long) mem_areas[segid], NUM_PAGES_PER_MMAP);
+	segid = SEGID(addr, (unsigned long) mem_areas[0], NUM_PAGES_PER_SEGMENT);
+	subsegid = SEGID(addr, (unsigned long) mem_areas[segid], NUM_PAGES_PER_MMAP);
 	page_id = PAGEID((unsigned long) (mem_areas[segid]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[segid]);
-	printf("[lp %u] [get_page_ptr] buff[i] %lu -- pg_addr %lu segid %lu subsegid %lu \t page-id %u\n",current_lp, addr, pg_addr, segid, subsegid, page_id);
+	printf("[lp %u] [get_page_ptr] buff[i] %lu segid %lu subsegid %lu \t page-id %u\n",current_lp, addr, segid, subsegid, page_id);
 	cur_id = page_id;
     iss_states[current_lp].count_tracked++;
 	tgt_partition_size = 0;
@@ -214,7 +212,6 @@ char * get_page_ptr(unsigned long addr, unsigned long segid) {
 	iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
 #endif
 	
-	partition_id = get_lowest_page_from_partition_id(partition_id);
 	ptr = PAGEPTR(mem_areas[current_lp], page_id);
 
 	return ptr;
@@ -270,13 +267,13 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 /** incremental state saving facilities */
 
-partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long address, unsigned long segid) {
+partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long address) {
 
 	partition_log * cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 	cur_log->size = PAGE_SIZE;
 	cur_log->next = prev_log;
 	cur_log->ts = ts;
-	cur_log->addr = get_page_ptr(address, segid);
+	cur_log->addr = get_page_ptr(address);
 
 	return cur_log;
 }
@@ -404,8 +401,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
 
-			segid = data->segment_id;
-			cur_log = create_log(ts, prev_log, buff[i], segid);
+			cur_log = create_log(ts, prev_log, buff[i]);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log;
 			
