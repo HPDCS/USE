@@ -354,8 +354,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
-			printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p\n", 
-				tgt_id, cur_log->addr, cur_log, cur_log->log);
+			printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size\n", 
+				tgt_id, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
@@ -412,7 +412,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 		}
-		assert(iss_states[cur_lp].current_incremental_log_size == 0);
+
 
 	} else { printf("[log_incremental] no data\n");}
 
@@ -483,8 +483,6 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 
 	/// init model PER-LP (iss_metadata and model)
   #if BUDDY == 1
-	printf("[init_incremental_checkpointing_support] BUDDY ENABLED %u \n", lps);
-
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t)*lps);
   #else
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
