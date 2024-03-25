@@ -331,8 +331,6 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 	                first_dirty = cur_id;
 	                first_dirty_size = cur_partition_size;
 	                prev_first_dirty_end = prev_end;
-
-	                printf("[log_incremental] first_dirty %u \n", first_dirty);
 	        
             }
 
@@ -340,9 +338,6 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			  tgt_partition_size = cur_partition_size;
 			  tgt_id = cur_id;
 			}
-
-			printf("[log_incremental] tgt_partition_size %lu \t tgt_id %u\n", tgt_partition_size, tgt_id);
-		
 		
 
             if(!first_dirty) prev = cur_id;
@@ -364,8 +359,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
-			printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size\n", 
-				tgt_id, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
+			//printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size\n", 
+			//	tgt_id, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
