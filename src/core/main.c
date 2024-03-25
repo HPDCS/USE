@@ -50,7 +50,7 @@ void start_simulation() {
     unsigned int i;
 
     /// close device file 
-    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && pdes_config.iss_enabled_mprotection) {
         open_tracker_device("/dev/tracker", (O_RDONLY | O_NONBLOCK));
     }
 
@@ -97,7 +97,7 @@ int main(int argn, char *argv[]) {
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/pdes_config.ncores);
     statistics_fini();
 
-    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING && pdes_config.iss_enabled_mprotection) {
         close_tracker_device();
     }
 
