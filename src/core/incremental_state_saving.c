@@ -212,7 +212,7 @@ char * get_page_ptr(unsigned long addr) {
 #endif
 	
 	ptr = PAGEPTR(mem_areas[current_lp], page_id);
-	printf("[lp %u] [get_page_ptr] buff[i] %lu segid %lu subsegid %lu \t page-id %u \t ptr %p\n",current_lp, addr, segid, subsegid, page_id, ptr);
+	//printf("[lp %u] [get_page_ptr] buff[i] %lu segid %lu subsegid %lu \t page-id %u \t ptr %p\n",current_lp, addr, segid, subsegid, page_id, ptr);
 
 
 	return ptr;
@@ -416,8 +416,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log;	
 			
-			printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p \t size %lu\n", 
-				cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log, iss_states[cur_lp].current_incremental_log_size);
+			//printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p \t size %lu\n", 
+			//	cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log, iss_states[cur_lp].current_incremental_log_size);
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
