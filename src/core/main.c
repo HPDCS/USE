@@ -29,6 +29,7 @@ extern int reverse_execution_threshold;
 clock_timer simulation_clocks;
 timer exec_time;
 
+
 void *start_thread(){
 	
 	int tid = (int) __sync_fetch_and_add(&tid_ticket, 1);
@@ -48,7 +49,7 @@ void start_simulation() {
     int ret;
     unsigned int i;
 
-    /// open device file 
+    /// close device file 
     if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
         open_tracker_device("/dev/tracker", (O_RDONLY | O_NONBLOCK));
     }
@@ -85,6 +86,8 @@ int main(int argn, char *argv[]) {
 	start_simulation();
     double simduration = (double)timer_value_seconds(exec_time);
 
+    
+
     print_statistics();
 
     printf("Simulation ended (seconds): %12.2f\n", simduration);
@@ -93,6 +96,10 @@ int main(int argn, char *argv[]) {
     printf("EventsPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration);
     printf("EventsPerThreadPerSec: %12.2f\n", ((double)system_stats->events_committed)/simduration/pdes_config.ncores);
     statistics_fini();
+
+    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+        close_tracker_device();
+    }
 
     return 0;
 }

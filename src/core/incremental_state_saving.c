@@ -242,8 +242,18 @@ void open_tracker_device(const char *path, unsigned long mode) {
         abort();
     }
     ioctl(device_fd, TRACKER_SET_SEGSIZE, PER_LP_PREALLOCATED_MEMORY);
+
 }
 
+
+void close_tracker_device(void) {
+
+	if (close(device_fd) == -1) {
+		fprintf(stderr, "%s\n", strerror(errno));
+        abort();
+	}
+  
+}
 
 tracking_data *get_fault_info(unsigned int lid) {
 
