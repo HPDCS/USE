@@ -37,7 +37,7 @@ typedef struct _simulation_configuration {
 	unsigned int ckpt_autoperiod_bound;
 	unsigned int ckpt_forced_full_period;
 	unsigned char iss_enabled_mprotection;
-	unsigned int iss_signal_mprotect;
+	unsigned char iss_signal_mprotect;
 
 	unsigned int ongvt_period;
 	enum ongvt_mode ongvt_mode;

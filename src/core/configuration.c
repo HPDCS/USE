@@ -137,10 +137,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     case ISS_SIGNAL_MPROTECT:
       pdes_config.iss_signal_mprotect = 1;
+      break;
 
     case CKPT_FORCED_FULL_PERIOD_KEY:
       pdes_config.ckpt_forced_full_period = atoi(arg);
-    break;
+      break;
 
     case CKPT_FOSSIL_PERIOD_KEY:
       pdes_config.ckpt_collection_period = atoi(arg);
