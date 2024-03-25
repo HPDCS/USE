@@ -28,7 +28,7 @@ simulation_configuration pdes_config;
 #define EL_TH_THRESHOLD_CNT_KEY     364
 #define ISS_ENABLED                 365
 #define ISS_ENABLED_MPROTECTION     366
-#define ISS_SIGNAL_MPROTECT         367
+#define ISS_SIGNAL_MPROTECT         368
 
 #define CKPT_PERIOD_KEY             461
 #define CKPT_FOSSIL_PERIOD_KEY      462
