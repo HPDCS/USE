@@ -126,6 +126,11 @@ void iss_update_model(unsigned int cur_lp);
 float estimate_cost(size_t size, float probability);
 
 
+int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
+unsigned int get_lowest_page_from_partition_id(unsigned int page_id);
+void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id);
+
+
 /** syscalls wrapper */
 int guard_memory(unsigned int lid, unsigned long size);
 int unguard_memory(unsigned int lid, unsigned long size);

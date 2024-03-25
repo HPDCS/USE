@@ -37,16 +37,26 @@ int flush_local_tlb(unsigned long address, size_t size){
 
 int guard_memory(unsigned int lid, unsigned long size) {
 
-	if(!pdes_config.iss_enabled_mprotection) return -NO_PRTCT_ENABLED;
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
-	return track_memory((unsigned long) mem_areas[lid], size);
+
+	if(!pdes_config.iss_enabled_mprotection) {
+		unsigned int id = get_lowest_page_from_partition_id(1);
+		return mprotect(get_page_ptr_from_idx(lid, id ), size, PROT_READ);
+	}
+	else
+		return track_memory((unsigned long) mem_areas[lid], size);
 }
 
 int unguard_memory(unsigned int lid, unsigned long size) {
-
-	if(!pdes_config.iss_enabled_mprotection) return -NO_PRTCT_ENABLED;
+	
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
-	return untrack_memory((unsigned long) mem_areas[lid], size);
+
+	if(!pdes_config.iss_enabled_mprotection) {
+		unsigned int id = get_lowest_page_from_partition_id(1);
+		return mprotect(get_page_ptr_from_idx(lid,  id), size, PROT_READ | PROT_WRITE);
+	}
+	else 
+		return untrack_memory((unsigned long) mem_areas[lid], size);
 }
 
 int flush(unsigned int lid, unsigned long size) {
