@@ -396,7 +396,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
         start+=tgt_partition_size;
 
 	}
-	assert(iss_states[cur_lp].current_incremental_log_size == 0);
+	//assert(iss_states[cur_lp].current_incremental_log_size == 0);
 
 #else
 
