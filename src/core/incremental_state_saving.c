@@ -531,17 +531,21 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	bzero(iss_states+lp, sizeof(lp_iss_metadata));
   #endif
 
-	/// fill tracking_data struct
-	unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
-	set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
-		(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
-  #if VERBOSE == 1
-	printf("base_addr %lu subsegment_address %lu segid %lu\n", t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
-  #endif
+	if (pdes_config.iss_enabled_mprotection) {
+		/// fill tracking_data struct
+		unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+		set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
+			(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
+	  #if VERBOSE == 1
+		printf("base_addr %lu subsegment_address %lu segid %lu\n", t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
+	  #endif
+
 
 	/// register segment into the hashtable
 	init_segment_monitor_support(t_data[lp]);
+	}
 
+	
 	iss_first_run_model(current_lp); 
 
 
