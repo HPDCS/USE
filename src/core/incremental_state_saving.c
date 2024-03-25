@@ -408,7 +408,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 	if (data != NULL) {
 		len = data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
-		iss_states[cur_lp].current_incremental_log_size += len*PAGE_SIZE;
+		//iss_states[cur_lp].current_incremental_log_size += len*PAGE_SIZE;
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
 
