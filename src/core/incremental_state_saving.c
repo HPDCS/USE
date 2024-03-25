@@ -399,13 +399,12 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 		len = data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
 		iss_states[cur_lp].current_incremental_log_size += len*PAGE_SIZE;
-		printf("[log_incremental] len buffer %lu \t log_size %lu \n", len, iss_states[cur_lp].current_incremental_log_size);
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
 
 			cur_log = create_log(ts, prev_log, buff[i]);
 			cur_log->log = rsalloc(cur_log->size);
-			prev_log = cur_log;
+			prev_log = cur_log;	
 			
 			printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p \t size %lu\n", 
 				cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log, iss_states[cur_lp].current_incremental_log_size);
