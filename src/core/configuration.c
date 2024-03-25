@@ -136,7 +136,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
 
     case ISS_SIGNAL_MPROTECT:
-      pdes_config.iss_signal_mprotect     = 1;
+      pdes_config.iss_signal_mprotect = 1;
 
     case CKPT_FORCED_FULL_PERIOD_KEY:
       pdes_config.ckpt_forced_full_period = atoi(arg);
@@ -319,6 +319,7 @@ void print_config(void){
     printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
     printf("\t\t|- ckpt mode %u\n", pdes_config.checkpointing);
     printf("\t\t\t|- incremental with mprotect %u\n", pdes_config.iss_enabled_mprotection);
+    printf("\t\t\t|- incremental with signal handler %u\n", pdes_config.iss_signal_mprotect);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
