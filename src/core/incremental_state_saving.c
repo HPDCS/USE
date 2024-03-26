@@ -536,7 +536,8 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
 	if (pdes_config.iss_enabled_mprotection) {
 		/// fill tracking_data struct
-		unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+		//unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+		unsigned int segid = lp;
 		set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 			(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
 	  //#if VERBOSE == 1
