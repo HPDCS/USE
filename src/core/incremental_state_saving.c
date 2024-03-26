@@ -427,7 +427,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			//printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p \t size %lu\n", 
 			//	cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log, iss_states[cur_lp].current_incremental_log_size);
 
-			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			//iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 		}
 
