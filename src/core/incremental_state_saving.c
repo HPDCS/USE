@@ -238,8 +238,11 @@ void init_segment_monitor_support(tracking_data *data) {
 	assert(data != NULL);
 	assert(device_fd != -1);
 
-	printf("[init_segment_monitor_support] base_addr %lu subsegment_address %lu segid %ld\n", 
-		data->base_address, data->subsegment_address, data->segment_id);
+  #if VERBOSE == 1
+	printf(" [LP: %u] [init_segment_monitor_support] base_addr %lu subsegment_address %lu segid %ld\n", 
+		current_lp, data->base_address, data->subsegment_address, data->segment_id);
+  #endif
+
 
 	ioctl(device_fd, TRACKER_INIT, data);
 }
@@ -536,9 +539,9 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 		unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 		set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 			(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
-	  #if VERBOSE == 1
-		printf("[%u] base_addr %lu subsegment_address %lu segid %lu\n", lp, t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
-	  #endif
+	  //#if VERBOSE == 1
+		printf("[LP: %u] base_addr %lu subsegment_address %lu segid %lu\n", lp, t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
+	  //#endif
 
 
 	/// register segment into the hashtable
