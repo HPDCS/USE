@@ -186,7 +186,7 @@ void dirty(void* addr, size_t size){
 
 	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
 
-	untrack_memory((unsigned long) get_page_ptr_from_idx(current_lp, partition_id), tgt_partition_size*PAGE_SIZE);
+	unguard_memory(current_lp, tgt_partition_size*PAGE_SIZE);
 }
 
 
@@ -545,7 +545,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	init_segment_monitor_support(t_data[lp]);
 	}
 
-	
+
 	iss_first_run_model(current_lp); 
 
 
