@@ -384,7 +384,7 @@ static void _print_statistics(struct stats_t *stats) {
 	printf("    Full Checkpoints............................: %12llu (%4.2f%%)\n", (unsigned long long)stats->counter_checkpoints_full,percentage(stats->counter_checkpoints_full,stats->counter_checkpoints));
 	printf("    Full Checkpoint mem.........................: %12u B  %u pages\n", (unsigned int)stats->mem_checkpoint_full, ((unsigned int)stats->mem_checkpoint_full)/4096 + (((unsigned int)stats->mem_checkpoint_full%4096)!=0 ));
 	printf("    Incremental Checkpoints.....................: %12llu (%4.2f%%)\n", (unsigned long long)stats->counter_checkpoints_incr,percentage(stats->counter_checkpoints_incr,stats->counter_checkpoints));
-	printf("    Incremental Checkpoint mem..................: %12u B  %u pages\n", (unsigned int)stats->mem_checkpoint_incr, ((unsigned int)stats->mem_checkpoint_incr)/4096 + (((unsigned int)stats->mem_checkpoint_full%4096)!=0 ));
+	printf("    Incremental Checkpoint mem..................: %12u B  %u pages\n", (unsigned int)stats->mem_checkpoint_incr, ((unsigned int)stats->mem_checkpoint_incr)/4096 + (((unsigned int)stats->mem_checkpoint_incr%4096)!=0 ));
 	printf("    Save Full Checkpoint time...................: %12.2f clocks (%4.2f%%)\n",
 		stats->clock_checkpoint, percentage(stats->clock_checkpoint, stats->clock_checkpoint+stats->clock_checkpoint_incr));
 	printf("    Save Incremental Checkpoint time............: %12.2f clocks (%4.2f%%)\n",
