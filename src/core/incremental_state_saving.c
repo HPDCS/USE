@@ -537,7 +537,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 		set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 			(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
 	  #if VERBOSE == 1
-		printf("base_addr %lu subsegment_address %lu segid %lu\n", t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
+		printf("[%u] base_addr %lu subsegment_address %lu segid %lu\n", lp, t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
 	  #endif
 
 
