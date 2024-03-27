@@ -172,11 +172,17 @@ void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tg
 
 void dirty(void* addr, size_t size){
 	//printf("%u: lp %u %p\n", tid, current_lp, addr);
-	unsigned int page_id    	= get_page_idx_from_ptr(current_lp, addr);
-	unsigned int cur_id 		= page_id;
+	unsigned int page_id;
+	unsigned int cur_id;
+
+		page_id    	= get_page_idx_from_ptr(current_lp, addr);
+		cur_id 		= page_id;
+	
+	
     iss_states[current_lp].count_tracked++;
 	unsigned int tgt_partition_size = 0;
 	unsigned int partition_id = page_id;
+
 
 #if BUDDY == 1
 	update_tree(cur_id, partition_id, tgt_partition_size);
@@ -321,8 +327,6 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
     unsigned int prev_end;
     unsigned int prev_first_dirty_end = end;
 
-    //TODO: add buddy scheme WITH protection → for each address in buffer do tree scan
-
 
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
 
@@ -362,7 +366,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 		if(tgt_id){
             
-            //TODO: call get_fault_info and get_page_ptr for ckpt IF SIGNAL==0
+            
 			tgt_id = get_lowest_page_from_partition_id(tgt_id);
 			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
 			cur_log->size = tgt_partition_size*PAGE_SIZE;
@@ -377,7 +381,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
-//			assert(start == tgt_id);
+			assert(start == tgt_id);
 
 		} else {
 
@@ -404,7 +408,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
         start+=tgt_partition_size;
 
 	}
-	//assert(iss_states[cur_lp].current_incremental_log_size == 0);
+	assert(iss_states[cur_lp].current_incremental_log_size == 0);
 
 #else
 
@@ -416,7 +420,6 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 	if (data != NULL) {
 		len = data->len_buf;
 		buff = rsalloc(sizeof(unsigned long) * len);
-		//iss_states[cur_lp].current_incremental_log_size += len*PAGE_SIZE;
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
 
@@ -427,12 +430,11 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			//printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p \t size %lu\n", 
 			//	cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log, iss_states[cur_lp].current_incremental_log_size);
 
-			//iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 		}
 
 
-	} else { printf("[log_incremental] no data\n");}
+	}
 
 
 
