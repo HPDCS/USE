@@ -332,7 +332,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size %lu\n", 
 				i, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
 
-			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			//iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 		}
 	}
