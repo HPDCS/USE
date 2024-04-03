@@ -37,6 +37,7 @@ void rsfree(void *ptr){ free(ptr); }
 void* rsalloc(size_t len){ return malloc(len); }
 extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
+extern iss_func iss_log;
 
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
 void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id);
@@ -71,6 +72,7 @@ static int iss_test(void)
 	pdes_config.ckpt_forced_full_period = 5;
 	pdes_config.iss_enabled_mprotection = 1;
 	pdes_config.iss_signal_mprotect 	= 0;
+	pdes_config.enable_custom_alloc	= 1;
 
 	#if BUDDY == 1
 		printf("BUDDY SCHEME ENABLED\n");
@@ -146,8 +148,9 @@ static int iss_test(void)
 */
 
 
-
+#if BUDDY == 1
 	iss_first_run_model(current_lp); /// this protects pages
+#endif
 	guard_memory(current_lp, PAGE_SIZE);
 	*((char*)mem_areas[0]) = 1;
 
@@ -175,8 +178,9 @@ static int iss_test(void)
 
 	//tracking_data *data2 = get_fault_info(current_lp);
 	//if (data2 == NULL) return -NO_USER_DATA;
-
+#if BUDDY == 1
 	iss_update_model(current_lp);
+#endif
 
 	*((char*)mem_areas[0]) = 1;
 	/*assert(iss_states[0].partition_tree[1].access_count == 1);
@@ -198,9 +202,9 @@ static int iss_test(void)
 	assert(iss_states[0].partition_tree[page_id].access_count == 1);
 	assert(iss_states[0].partition_tree[page_id].valid == 1);*/
 
-
+#if BUDDY == 1
 	iss_update_model(current_lp);
-
+#endif
 	/*assert(iss_states[0].partition_tree[1].access_count == 2);
 	assert(iss_states[0].partition_tree[1].valid == 0);
 	assert(iss_states[0].partition_tree[page_id].access_count == 2);
@@ -209,7 +213,9 @@ static int iss_test(void)
 
 	guard_memory(current_lp, PAGE_SIZE);
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
+#if BUDDY == 1
 	iss_update_model(current_lp);
+#endif
 	guard_memory(current_lp, PAGE_SIZE);
 
 
@@ -220,8 +226,9 @@ static int iss_test(void)
 	
 
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
+#if BUDDY == 1
 	iss_update_model(current_lp);
-
+#endif
 
 	/*assert(iss_states[0].partition_tree[1].access_count == 4);
 	assert(iss_states[0].partition_tree[1].valid == 0);
@@ -230,14 +237,16 @@ static int iss_test(void)
 
 
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 1;
+#if BUDDY == 1
 	iss_update_model(current_lp);
-
+#endif
 	/*assert(iss_states[0].partition_tree[1].access_count == 4);
 	assert(iss_states[0].partition_tree[1].valid == 0);
 	assert(iss_states[0].partition_tree[page_id+1].access_count == 2);
 	assert(iss_states[0].partition_tree[page_id+1].valid == 1);*/
-
+#if BUDDY == 1
 	iss_update_model(current_lp);
+#endif
 	/*iss_states[current_lp].current_incremental_log_size = 0; // clean log size
 	assert(iss_states[0].partition_tree[1].access_count == 4);
 	assert(iss_states[0].partition_tree[1].valid == 0);
@@ -247,23 +256,27 @@ static int iss_test(void)
 
 	guard_memory(current_lp, 2*PAGE_SIZE);
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 2;
+#if BUDDY == 1
 	iss_update_model(current_lp);
+#endif
 	iss_states[current_lp].current_incremental_log_size = 0; // clean log size
 
 	guard_memory(current_lp, 2*PAGE_SIZE);
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 2;
+#if BUDDY == 1
 	iss_update_model(current_lp);
+#endif
 	iss_states[current_lp].current_incremental_log_size = 0; // clean log size
 
 	guard_memory(current_lp, 2*PAGE_SIZE);
 	*(((char*)mem_areas[0])+PAGE_SIZE) = 2;
 
-	partition_log *log = log_incremental(current_lp, 0.0);
+	partition_log *log = iss_log.iss_log_inc(current_lp, 0.0);
 	printf("log taken %p \t %lu\n", log, (unsigned long) log->addr);
 
-
+#if BUDDY == 1
 	iss_update_model(current_lp);
-	
+#endif
 	/*assert(iss_states[0].partition_tree[1].access_count == 7);
 	assert(iss_states[0].partition_tree[1].valid == 0);
 	assert(iss_states[0].partition_tree[page_id+1].access_count == 5);
