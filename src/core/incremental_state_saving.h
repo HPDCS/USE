@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include <segment.h>
+#include <bitmap.h>
 
 
 #define PROTECT_MEM 134 //this depends on what the kernel tells you when mounting the vtpmo module
@@ -95,6 +96,11 @@ typedef struct _iss_func {
 } iss_func;
 
 extern iss_func iss_log;
+
+#if BUDDY == 0
+extern bitmap **dirty_pages;
+#endif
+
 extern tracking_data **t_data;
 
 /* file descriptor of the device file */
