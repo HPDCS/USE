@@ -16,6 +16,11 @@ int device_fd;
 
 extern void **mem_areas; /// pointers to the lp segment
 
+iss_func iss_log;
+
+#if BUDDY == 0
+bitmap **dirty_pages;
+#endif
 
 __thread int __in_log_full = 0;
 
@@ -136,7 +141,7 @@ bool is_next_ckpt_incremental(void) {
 }
 
 #if BUDDY == 1
-void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tgt_partition_size) {
+void update_tree(unsigned int cur_id, unsigned int *partition_id, unsigned int *tgt_partition_size) {
 
     bool was_dirty = 0;
 	unsigned int cur_partition_size = 1;
@@ -159,41 +164,42 @@ void update_tree(unsigned int cur_id, unsigned int partition_id, unsigned int tg
             assert(tree[cur_id].access_count>=0);
             tree[cur_id].cost = estimate_cost(cur_partition_size, ((float)tree[cur_id].access_count) / ((float)iss_states[current_lp].iss_model_round+1) );
         }
+
+        if (pdes_config.iss_enabled_mprotection && !pdes_config.iss_signal_mprotect) break;
         
 		cur_partition_size<<=1;
 		cur_id>>=1;
 	}
 
 }
-#endif
 
 /** signal handler -- with mprotect() and with custom syscall and no page-fault hook */
 
 
 void dirty(void* addr, size_t size){
 	//printf("%u: lp %u %p\n", tid, current_lp, addr);
-	unsigned int page_id;
+	unsigned int page_id, segid, subsegid;
 	unsigned int cur_id;
 
-		page_id    	= get_page_idx_from_ptr(current_lp, addr);
-		cur_id 		= page_id;
+	page_id    	= get_page_idx_from_ptr(current_lp, addr);
+	cur_id 		= page_id;
 	
 	
     iss_states[current_lp].count_tracked++;
 	unsigned int tgt_partition_size = 0;
 	unsigned int partition_id = page_id;
 
-
-#if BUDDY == 1
-	update_tree(cur_id, partition_id, tgt_partition_size);
-#endif
+	update_tree(cur_id, &partition_id, &tgt_partition_size);
 
 	partition_id = get_lowest_page_from_partition_id(partition_id);
 
 	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
 
-	unguard_memory(current_lp, tgt_partition_size*PAGE_SIZE);
+	if (pdes_config.iss_signal_mprotect)
+		unguard_memory(current_lp, tgt_partition_size*PAGE_SIZE);
 }
+
+
 
 
 void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
@@ -202,6 +208,7 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 	(void)arg;
 	dirty(func->si_addr, 1);
 }
+#endif
 
 
 char * get_page_ptr(unsigned long addr) {
@@ -218,14 +225,6 @@ char * get_page_ptr(unsigned long addr) {
     iss_states[current_lp].count_tracked++;
 	tgt_partition_size = 0;
 	partition_id = page_id;
-
-
-#if BUDDY == 1
-    update_tree(cur_id, partition_id, tgt_partition_size); //TODO: check this
-	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
-#else
-	iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
-#endif
 	
 	ptr = PAGEPTR(mem_areas[current_lp], page_id);
 	//printf("[lp %u] [get_page_ptr] buff[i] %lu segid %lu subsegid %lu \t page-id %u \t ptr %p\n",current_lp, addr, segid, subsegid, page_id, ptr);
@@ -530,29 +529,31 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 */
 void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
-  #if BUDDY == 1
+#if BUDDY == 1
 	bzero(iss_states+lp, sizeof(lp_iss_metadata) + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t));
-  #else 
-	bzero(iss_states+lp, sizeof(lp_iss_metadata));
-  #endif
+#endif
 
 	if (pdes_config.iss_enabled_mprotection) {
+
+	#if BUDDY == 0
+		dirty_pages[lp] = allocate_bitmap(2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+	#endif
+
 		/// fill tracking_data struct
-		//unsigned int segid = SEGID(mem_areas[lp], mem_areas[0], NUM_PAGES_PER_SEGMENT);
 		unsigned int segid = lp;
 		set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
 			(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
-	  //#if VERBOSE == 1
+	  #if VERBOSE == 1
 		printf("[LP: %u] base_addr %lu subsegment_address %lu segid %lu\n", lp, t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
-	  //#endif
+	  #endif
 
 
-	/// register segment into the hashtable
-	init_segment_monitor_support(t_data[lp]);
+		/// register segment into the hashtable
+		init_segment_monitor_support(t_data[lp]);
+
 	}
 
-
+#if BUDDY == 1
 	iss_first_run_model(current_lp); 
-
-
+#endif
 }
