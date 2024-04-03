@@ -75,9 +75,6 @@ typedef struct __partition_tree_node{
 
 /// This struct keeps all metadata for incremental state saving of a model state
 typedef struct __per_lp_iss_metadata{
-  #if BUDDY == 1
-	//partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
-  #endif
 	ssize_t current_incremental_log_size;
 	int iss_counter;
     int iss_model_round;
@@ -118,7 +115,14 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp);
 
 /** methods for incremental state saving */
 bool is_next_ckpt_incremental();
+
+# if BUDDY == 1
 partition_log *log_incremental(unsigned int lid, simtime_t ts);
+#else
+partition_log *mark_dirty_pages_and_log(unsigned int lid, simtime_t ts);
+partition_log *log_incremental_no_tree(unsigned int cur_lp, simtime_t ts);
+#endif
+
 void log_incremental_restore(partition_log *cur);
 void log_incremental_destroy_chain(partition_log *cur);
 
@@ -127,6 +131,7 @@ char* get_page_ptr(unsigned long addr);
 
 void init_segment_monitor_support(tracking_data *data);
 
+#if BUDDY == 1
 
 void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg);
 void dirty(void *, size_t);
@@ -136,6 +141,7 @@ void iss_first_run_model(unsigned int current_lp);
 void iss_log_incremental_reset(unsigned int lp);
 void iss_update_model(unsigned int cur_lp);
 float estimate_cost(size_t size, float probability);
+#endif
 
 
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
@@ -151,7 +157,7 @@ int flush(unsigned int lid, unsigned long size);
 /** syscalls */
 int track_memory(unsigned long address, size_t size);
 int untrack_memory(unsigned long address, size_t size);
-int flush_local_tlb(unsigned long address, size_t size);
+int flush_local_tlb(unsigned int lid, size_t size);
 
 
 #endif
