@@ -89,6 +89,12 @@ typedef struct __per_lp_iss_metadata{
   #endif
 }lp_iss_metadata;
 
+
+typedef struct _iss_func {
+	partition_log *(*iss_log_inc)(unsigned int cur_lp, simtime_t ts);
+} iss_func;
+
+extern iss_func iss_log;
 extern tracking_data **t_data;
 
 /* file descriptor of the device file */
