@@ -79,6 +79,8 @@ extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
 extern __thread int __in_log_full;
 
+extern iss_func iss_log;
+
 void *log_full(int lid) {
 
 	void *ptr = NULL, *ckpt = NULL;
@@ -129,7 +131,8 @@ void *log_full(int lid) {
 		/// partial log
         statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
        	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
-		partial_log = log_incremental(lid, lvt(lid));
+		//partial_log = log_incremental(lid, lvt(lid));
+		partial_log = iss_log.iss_log_inc(lid, lvt(lid));
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 		partial_size += sizeof(void *);
@@ -285,10 +288,15 @@ void *log_state(int lid) {
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		size_t logsize = iss_states[lid].current_incremental_log_size;
 		ckpt = log_full(lid);
+	#if BUDDY == 1
 		iss_update_model(lid);
+	#endif
 		if(recoverable_state[lid]->is_incremental){
 			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
+			flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
+		#if BUDDY == 1
 			iss_log_incremental_reset(lid);
+		#endif
 		} else
 			iss_states[lid].current_incremental_log_size = logsize;
 
@@ -509,13 +517,12 @@ void log_restore(int lid, state_t *state_queue_node) {
 	statistics_post_lp_data(lid, STAT_RECOVERY, 1.0);
 	int res_um, res_tm;
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-		//INCR: untrack_memory(mem, size)
-		res_um = unguard_memory(lid, PER_LP_PREALLOCATED_MEMORY); //TODO: use actual parameters to define in incremental_state_saving.h
+		res_um = unguard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
 		
 		restore_full(lid, state_queue_node->log);
-		//todo: reset model
+	#if BUDDY == 1
         iss_log_incremental_reset(lid);
-		//INCR: track_memory(mem, size)
+    #endif
 		res_tm = guard_memory(lid, PER_LP_PREALLOCATED_MEMORY);
 	}
 }
