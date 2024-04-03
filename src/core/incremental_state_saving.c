@@ -466,9 +466,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
-			
-			if (!pdes_config.iss_signal_mprotect)
-				assert(start == tgt_id);
+			assert(start == tgt_id);
 
 		} else {
 
