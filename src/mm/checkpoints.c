@@ -98,8 +98,6 @@ void *log_full(int lid) {
 	recoverable_state[lid]->is_incremental = is_next_ckpt_incremental(); /// call routine for determining the type of checkpointing
 	size = get_log_size(recoverable_state[lid]);
 
-	printf("LOG_FULL size ckpt %lu\n", size);
-
 	ckpt = rsalloc(size);
 
 	if(ckpt == NULL) {
@@ -116,7 +114,6 @@ void *log_full(int lid) {
 	((malloc_state*)ckpt)->timestamp = current_lvt;
 
 	partial_size += sizeof(malloc_state);
-	printf("AFTER MALLOC STATE partial_size %lu\n", partial_size);
 
 	// Copy the per-LP Seed State (to make the numerical library rollbackable and PWD)
 	memcpy(ptr, &LPS[lid]->seed, sizeof(seed_type));
@@ -124,7 +121,6 @@ void *log_full(int lid) {
 
 	partial_size += sizeof(seed_type);
 
-	printf("AFTER SEED partial_size %lu\n", partial_size);
 
 
 	if(recoverable_state[lid]->is_incremental){
@@ -136,7 +132,6 @@ void *log_full(int lid) {
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 		partial_size += sizeof(void *);
-		printf("AFTER LOG INCREMENTAL partial_size %lu\n", partial_size);
 
 	}
     else{
@@ -172,14 +167,12 @@ void *log_full(int lid) {
 		ptr = (void*)((char*)ptr + sizeof(malloc_area));
 
 		partial_size += sizeof(malloc_area);
-		printf("AFTER MALLOC AREA partial_size %lu\n", partial_size);
 
 
 		memcpy(ptr, m_area->use_bitmap, bitmap_blocks * BLOCK_SIZE);
 		ptr = (void*)((char*)ptr + bitmap_blocks * BLOCK_SIZE);
 
 		partial_size += bitmap_blocks * BLOCK_SIZE;
-		printf("AFTER BITMAP BLOCKS partial_size %lu\n", partial_size);
 
 
 		/// if log is full
