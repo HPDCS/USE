@@ -153,8 +153,8 @@ void update_tree(unsigned int cur_id, unsigned int *partition_id, unsigned int *
         was_dirty = tree[cur_id].dirty == cur_dirty_ts;
 			
 		if(tree[cur_id].valid[0]){
-			tgt_partition_size = cur_partition_size;
-			partition_id = cur_id;
+			*tgt_partition_size = cur_partition_size;
+			*partition_id = cur_id;
 		}
         
         if(!was_dirty){
@@ -291,6 +291,8 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 	if (local_data != NULL) 
 		return local_data;
+
+	return local_data;
 }
 
 
@@ -302,15 +304,77 @@ partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long a
 	cur_log->size = PAGE_SIZE;
 	cur_log->next = prev_log;
 	cur_log->ts = ts;
-	cur_log->addr = get_page_ptr(address);
+	cur_log->addr = (void *) address;
 
 	return cur_log;
 }
 
 
+#if BUDDY == 0
+
+partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
+
+	partition_log *cur_log = NULL, *prev_log = NULL;
+	uint i;
+	
+	for (i = 0; i < dirty_pages[cur_lp]->actual_len; i++) {
+
+		if (get_bit(dirty_pages[cur_lp], i)) {
+
+			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
+			cur_log->size = PAGE_SIZE;
+			cur_log->next = prev_log;
+			cur_log->ts = ts;
+			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
+			cur_log->log = rsalloc(cur_log->size);
+			prev_log = cur_log; 
+
+			//printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size\n", 
+			//	tgt_id, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
+
+			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			memcpy(cur_log->log, cur_log->addr, cur_log->size);
+		}
+	}
+
+
+	return prev_log;
+
+
+}
+
+
+partition_log *mark_dirty_pages_and_log(unsigned int lid, simtime_t ts) {
+
+	tracking_data *data = get_fault_info(lid);
+	unsigned long len, page_id;
+	unsigned long *buff;
+	int i;
+	if (data != NULL) {
+		len = data->len_buf;
+		buff = rsalloc(sizeof(unsigned long) * len);
+		if (buff != NULL) buff = data->buff_addresses;
+		for (i = 0; i < len; i++) {
+
+			page_id = get_page_idx_from_ptr(lid,(void *) buff[i]);
+			if (!get_bit(dirty_pages[lid], page_id)) {
+				set_bit(dirty_pages[lid], page_id);
+				iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
+
+			}
+			
+		} ///end for
+
+
+	} ///end if data != NULL
+
+
+	return log_incremental_no_tree(lid, ts);
+	
+}
+#else
 partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 
-#if BUDDY == 1
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
 	unsigned int cur_partition_size, tgt_partition_size, cur_id, tgt_id, first_dirty_size = 0, first_dirty = 0;
@@ -325,6 +389,26 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
     unsigned int tmp = 0, last_computed = 0;
     unsigned int prev_end;
     unsigned int prev_first_dirty_end = end;
+
+    if (pdes_config.iss_enabled_mprotection && !pdes_config.iss_signal_mprotect) {
+
+    	tracking_data *data = get_fault_info(cur_lp);
+		unsigned long len;
+		unsigned long *buff;
+		int i;
+		if (data != NULL) {
+			len = data->len_buf;
+			buff = rsalloc(sizeof(unsigned long) * len);
+			if (buff != NULL) buff = data->buff_addresses;
+			for (i = 0; i < len; i++) {
+
+				dirty((void *) buff[i], 1);
+				
+			} ///end for
+
+		} ///end if data != NULL
+
+    } ///end if iss_enabled_mprotection
 
 
 	partition_node_tree_t *tree = &iss_states[cur_lp].partition_tree[0]; 
@@ -354,7 +438,8 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 			  tgt_partition_size = cur_partition_size;
 			  tgt_id = cur_id;
 			}
-		
+
+			if (pdes_config.iss_enabled_mprotection && !pdes_config.iss_signal_mprotect) break;
 
             if(!first_dirty) prev = cur_id;
 			cur_id >>= 1;
@@ -409,40 +494,11 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 	}
 	assert(iss_states[cur_lp].current_incremental_log_size == 0);
 
-#else
-
-	partition_log *cur_log = NULL, *prev_log = NULL;
-	tracking_data *data = get_fault_info(cur_lp);
-	unsigned long len, segid;
-	unsigned long *buff;
-	int i;
-	if (data != NULL) {
-		len = data->len_buf;
-		buff = rsalloc(sizeof(unsigned long) * len);
-		if (buff != NULL) buff = data->buff_addresses;
-		for (i = 0; i < len; i++) {
-
-			cur_log = create_log(ts, prev_log, buff[i]);
-			cur_log->log = rsalloc(cur_log->size);
-			prev_log = cur_log;	
-			
-			//printf("[log_incremental] CKPT \t addr %p \t long addr %lu \t cur_log %p \t log %p \t size %lu\n", 
-			//	cur_log->addr, (unsigned long)prev_log->addr , prev_log, prev_log->log, iss_states[cur_lp].current_incremental_log_size);
-
-			memcpy(cur_log->log, cur_log->addr, cur_log->size);
-		}
-
-
-	}
-
-
-
-#endif
-
 	
 	return prev_log;
 
 }
+#endif
 
 /**
 * This function restores the incremental ckpts
@@ -488,33 +544,50 @@ void log_incremental_destroy_chain(partition_log *cur){
 */
 void init_incremental_checkpointing_support(unsigned int lps) {
 
-	uint i;
 
   #if VERBOSE == 1
 	printf("[init_incremental_checkpointing_support] %u \n", lps);
   #endif
 
-	t_data = malloc(sizeof(tracking_data) * lps);
-	if (t_data != NULL) {
-	for (i = 0; i < lps; i++)
-		init_tracking_data(&t_data[i]);
+	if (pdes_config.iss_enabled_mprotection) {
+
+		uint i;
+
+		t_data = malloc(sizeof(tracking_data) * lps);
+		if (t_data != NULL) {
+		for (i = 0; i < lps; i++)
+			init_tracking_data(&t_data[i]);
+		}
 	}
 
 	/// init model PER-LP (iss_metadata and model)
-  #if BUDDY == 1
+#if BUDDY == 1
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps + (2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*sizeof(partition_node_tree_t)*lps);
-  #else
+#else
 	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
-  #endif
+#endif
+
 	iss_costs_model.mprotect_cost_per_page = 1;
 	iss_costs_model.log_cost_per_page = 100; 
 
+#if BUDDY == 1
 	/// if signaling mechanism is enabled
 	if (pdes_config.iss_signal_mprotect) {
 		struct sigaction action;
 		action.sa_sigaction = sigsev_tracer_for_dirty;
 		action.sa_flags = SA_SIGINFO;
 		sigaction(SIGSEGV, &action, NULL);
+	} 
+#endif
+
+	if (pdes_config.iss_enabled_mprotection) {
+		/// todo set function ptr
+		#if BUDDY == 1
+			iss_log.iss_log_inc = log_incremental;
+		#else
+			dirty_pages = rsalloc(lps * sizeof(bitmap));
+			iss_log.iss_log_inc = mark_dirty_pages_and_log;
+		#endif
 	}
 
 
