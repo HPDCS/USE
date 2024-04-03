@@ -275,7 +275,7 @@ void *log_state(int lid) {
 	#endif
 		if(recoverable_state[lid]->is_incremental){
 			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
-			flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
+			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
 		#if BUDDY == 1
 			iss_log_incremental_reset(lid);
 		#endif
