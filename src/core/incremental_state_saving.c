@@ -329,9 +329,10 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
-			printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size %lu\n", 
-				i, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
+			//printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size %lu\n", 
+			//	i, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
 
+			///TODO: check whether we need to decrement or not
 			//iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 		}
@@ -582,7 +583,7 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 	} 
 #endif
 
-	if (pdes_config.iss_enabled_mprotection) {
+	//if (pdes_config.iss_enabled_mprotection) {
 		/// todo set function ptr
 		#if BUDDY == 1
 			iss_log.iss_log_inc = log_incremental;
@@ -590,7 +591,7 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 			dirty_pages = rsalloc(lps * sizeof(bitmap));
 			iss_log.iss_log_inc = mark_dirty_pages_and_log;
 		#endif
-	}
+	//}
 
 
 
