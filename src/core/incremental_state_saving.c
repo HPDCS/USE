@@ -34,8 +34,8 @@ int untrack_memory(unsigned long address, size_t size){
 	return syscall(UNPROTECT_MEM,address, size);
 }
 
-int flush_local_tlb(unsigned long address, size_t size){
-	return syscall(FLUSH_LOCAL_TLB,address, size);
+int flush_local_tlb(unsigned int lid, size_t size){
+	return syscall(FLUSH_LOCAL_TLB, (unsigned long) mem_areas[lid], size);
 }
 
 /** syscalls' wrappers */
