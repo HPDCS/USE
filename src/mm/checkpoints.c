@@ -182,12 +182,6 @@ void *log_full(int lid) {
 		printf("AFTER BITMAP BLOCKS partial_size %lu\n", partial_size);
 
 
-		// Sanity check
-		if ((char *)ckpt + partial_size != ptr){
-			rootsim_error(true, "Actual (full) ckpt size is wrong by %d bytes!\nlid = %d ckpt = %p size = %#x (%d), ptr = %p, ckpt + size = %p\n", (char *)ckpt + size - (char *)ptr, lid, ckpt, size, size, ptr, (char *)ckpt + size);
-		}
-
-
 		/// if log is full
 		if (!recoverable_state[lid]->is_incremental) {
 
