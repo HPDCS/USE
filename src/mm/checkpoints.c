@@ -274,7 +274,7 @@ void *log_state(int lid) {
 		iss_update_model(lid);
 	#endif
 		if(recoverable_state[lid]->is_incremental){
-			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
+			if (guard_memory(lid, PER_LP_PREALLOCATED_MEMORY) < 0) printf("TRACK MEMORY FAILED\n"); 
 			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
 		#if BUDDY == 1
 			iss_log_incremental_reset(lid);
