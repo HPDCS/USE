@@ -356,7 +356,7 @@ partition_log *mark_dirty_pages_and_log(unsigned int lid, simtime_t ts) {
 		buff = rsalloc(sizeof(unsigned long) * len);
 		if (buff != NULL) buff = data->buff_addresses;
 		for (i = 0; i < len; i++) {
-
+			printf("BUFFER ADDRESS i %d \t address %lu\n", i, buff[i]);
 			page_id = get_page_idx_from_ptr(lid,(void *) buff[i]);
 			if (!get_bit(dirty_pages[lid], page_id)) {
 				set_bit(dirty_pages[lid], page_id);
