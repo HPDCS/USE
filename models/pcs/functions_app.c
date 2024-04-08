@@ -75,9 +75,9 @@ double generate_path_gain(void) {
 void deallocation(unsigned int me, lp_state_type *pointer, int ch, simtime_t lvt) {
 	channel *c;
 
-	printf("DEALLOCATION state %p\n", pointer);
+	//printf("DEALLOCATION state %p\n", pointer);
 	c = pointer->channels;
-	printf("DEALLOCATION channel %p\n", c);
+	//printf("DEALLOCATION channel %p\n", c);
 	while(c != NULL){
 		if(c->channel_id == ch)
 			break;
