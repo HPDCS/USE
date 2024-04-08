@@ -76,6 +76,7 @@ void deallocation(unsigned int me, lp_state_type *pointer, int ch, simtime_t lvt
 	channel *c;
 
 	c = pointer->channels;
+	printf("DEALLOCATION channel %p\n", c);
 	while(c != NULL){
 		if(c->channel_id == ch)
 			break;
