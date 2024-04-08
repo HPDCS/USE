@@ -327,7 +327,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->ts = ts;
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
 			cur_log->log = rsalloc(cur_log->size);
-			if (prev_log == NULL) prev_log = cur_log; 
+			prev_log = cur_log; 
 
 			//printf("[log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size %lu\n", 
 			//	i, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
@@ -339,7 +339,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 	}
 
 
-	return prev_log;
+	return cur_log;
 
 
 }
