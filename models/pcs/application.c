@@ -205,8 +205,6 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 	lp_state_type *state;
 	state = (lp_state_type*)ptr;
 
-	printf("PCS state %p\n", ptr);
-
 	if(state != NULL) {
 		state->lvt = now;
 		state->executed_events++;
@@ -394,6 +392,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 			state->complete_calls++;
 			printf(" BEFORE DEALLOC END_CALL %p\n", state);
 			deallocation(me, state, event_content->channel, now);
+			printf(" AFTER DEALLOC END_CALL %p\n", state);
 
 			break;
 
