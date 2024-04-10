@@ -7,11 +7,16 @@
 #include <errno.h>
 #include <argp.h> 
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include <core.h>
 #include <timer.h>
 #include <hpdcs_utils.h>
 #include <reverse.h>
 #include <statistics.h>
+
 
 __thread struct drand48_data seedT;
 
@@ -41,6 +46,10 @@ void start_simulation() {
     pthread_t p_tid[pdes_config.ncores-1];
     int ret;
     unsigned int i;
+
+    /// open device file 
+    if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+    }
 
     //Child threads
     for(i = 0; i < pdes_config.ncores - 1; i++) {
