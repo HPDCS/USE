@@ -69,6 +69,8 @@ set(src-core
         core/virtual_timer.c
         core/lp_lock.c
         core/gvt.c
+        core/incremental_state_saving.c
+        core/iss_model.c
         statistics/statistics.c
         mm/garbagecollector.c)
 
@@ -151,8 +153,6 @@ add_custom_command(
         DEPENDS kallsyms_lookup_name_exporter idt_patcher syscall_table_patcher
 )
 endif()
-
-
 
 
 
