@@ -478,6 +478,10 @@ void init_simulation(unsigned int thread_id){
 		numerical_init();
 		nodes_init();
 
+		/// init support for incremental state saving
+		if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+		}
+
 		if(pdes_config.enforce_locality){
 			pthread_barrier_init(&local_schedule_init_barrier, NULL, pdes_config.ncores);
 			init_metrics_for_window();
@@ -501,7 +505,13 @@ void init_simulation(unsigned int thread_id){
 		//if(tid != 0) continue;
 		current_lp = __sync_fetch_and_add(&lp_inizialized, 1);
 		if(current_lp >=  pdes_config.nprocesses) continue;
-		if(!pdes_config.serial) allocator_init_for_lp(current_lp);
+
+		if(!pdes_config.serial) {
+			allocator_init_for_lp(current_lp);
+			if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+			}
+		}
+
 		current_msg = list_allocate_node_buffer_from_list(current_lp, sizeof(msg_t), (struct rootsim_list*) freed_local_evts);
  		current_msg->sender_id 		= -1;//
  		current_msg->receiver_id 	= current_lp;//
