@@ -17,6 +17,7 @@
 #include <reverse.h>
 #include <statistics.h>
 
+#include <incremental_state_saving.h>
 
 __thread struct drand48_data seedT;
 
@@ -49,6 +50,7 @@ void start_simulation() {
 
     /// open device file 
     if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+        open_tracker_device("/dev/tracker", (O_RDONLY | O_NONBLOCK));
     }
 
     //Child threads
