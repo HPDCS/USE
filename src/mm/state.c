@@ -83,6 +83,7 @@ bool LogState(unsigned int lid) {
 			take_snapshot = true;
 			break;
 
+		case INCREMENTAL_STATE_SAVING:
 		case PERIODIC_STATE_SAVING:
 			if(LPS[lid]->from_last_ckpt >= LPS[lid]->ckpt_period) {
 				take_snapshot = true;
