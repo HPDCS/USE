@@ -1,5 +1,6 @@
 option(STATE_SWAPPING "STATE_SWAPPING" OFF)
 option(CSR_CONTEXT "CSR_CONTEXT" OFF)
+option(BUDDY "BUDDY" OFF)
 
 
 
@@ -20,6 +21,17 @@ add_compile_options(
 add_compile_options(
 -DREPORT=1 
 )
+
+#buddy-page option
+if(BUDDY)
+add_compile_options(
+-DBUDDY=1
+)
+else()
+add_compile_options(
+-DBUDDY=0
+)
+endif()
 
 #reversibility related options
 #option(REVERSIBLE "REVERSIBLE" OFF)
