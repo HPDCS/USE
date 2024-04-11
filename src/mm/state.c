@@ -352,7 +352,11 @@ void clean_checkpoint(unsigned int lid, simtime_t commit_horizon) {
 		to_state = list_prev(to_state);
 	}//to_state is the last checkpoint to keep
 	
-	if(to_state != NULL){// we need an additional state for OnGvt
+	while(
+		to_state != NULL && 
+		((malloc_state*)to_state->log)->is_incremental
+	)
+	{// we need an additional state for OnGvt
 		to_state = list_prev(to_state);
 	}
 	
