@@ -295,7 +295,7 @@ void init_incremental_checkpointing_support(unsigned int threads, unsigned int l
 
 	uint i;
 	printf("[init_incremental_checkpointing_support] %u \n", lps);
-	t_data = malloc(sizeof(tracking_data) * lps);
+	t_data = rsalloc(sizeof(tracking_data) * lps);
 	if (t_data != NULL) {
 	for (i = 0; i < lps; i++)
 		init_tracking_data(&t_data[i]);
