@@ -40,7 +40,7 @@ extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
 void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id);
-void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps);
+void init_incremental_checkpointing_support(unsigned int lps);
 bool is_next_ckpt_incremental(void);
 void init_incremental_checkpoint_support_per_lp(unsigned int lp);
 void iss_update_model(unsigned int cur_lp);
@@ -74,7 +74,7 @@ static int iss_test(void)
 
 	open_tracker_device("/dev/tracker", (O_RDONLY | O_NONBLOCK));
 
-	init_incremental_checkpointing_support(1, 1);
+	init_incremental_checkpointing_support(1);
 
 	
 	mem_areas[0] = mmap(the_address, MAX_MMAP, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS /*|MAP_FIXED*/, 0, 0);
