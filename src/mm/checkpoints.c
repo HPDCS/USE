@@ -79,6 +79,8 @@ extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
 extern __thread int __in_log_full;
 
+extern iss_func iss_log;
+
 void *log_full(int lid) {
 
 	void *ptr = NULL, *ckpt = NULL;
@@ -115,7 +117,7 @@ void *log_full(int lid) {
 		/// partial log
         //statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
        	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
-		partial_log = log_incremental(lid, lvt(lid)); //TODO
+		partial_log = iss_log.iss_log_inc(lid, lvt(lid));
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 	}
