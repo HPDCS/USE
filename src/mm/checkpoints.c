@@ -220,6 +220,8 @@ void *log_full(int lid) {
 	
     autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
 
+    __in_log_full = 0 ;
+    
 	return ckpt;
 }
 
