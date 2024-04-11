@@ -115,9 +115,9 @@ void *log_full(int lid) {
 
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
-        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
        	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
 		partial_log = iss_log.iss_log_inc(lid, lvt(lid));
+        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 	}
