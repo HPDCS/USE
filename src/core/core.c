@@ -511,6 +511,7 @@ void init_simulation(unsigned int thread_id){
 		if(!pdes_config.serial) {
 			allocator_init_for_lp(current_lp);
 			if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING){
+				init_incremental_checkpoint_support_per_lp(current_lp);
 			}
 		}
 
