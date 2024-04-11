@@ -248,13 +248,16 @@ void *log_state(int lid) {
 	void *ckpt;
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		size_t logsize = iss_states[lid].current_incremental_log_size;
-		//INCR: compute size to protect
 		ckpt = log_full(lid);
-		//INCR: todo update model
+	#if BUDDY == 1
 		iss_update_model(lid);
+	#endif
 		if(recoverable_state[lid]->is_incremental){
 			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
+			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
+		#if BUDDY == 1
 			iss_log_incremental_reset(lid);
+		#endif
 		} else
 			iss_states[lid].current_incremental_log_size = logsize;
 
@@ -488,8 +491,10 @@ void log_restore(int lid, state_t *state_queue_node) {
             cur = list_next(cur);
         }
 		restore_full(lid, state_queue_node->log);
-		//todo: reset model
+
+    #if BUDDY == 1
         iss_log_incremental_reset(lid);
+    #endif
 		//INCR: track_memory(mem, size)
 		res_tm = guard_memory(lid, PER_LP_PREALLOCATED_MEMORY);
 	}else
