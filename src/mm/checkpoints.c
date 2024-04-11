@@ -475,9 +475,18 @@ void log_restore(int lid, state_t *state_queue_node) {
 	statistics_post_lp_data(lid, STAT_RECOVERY, 1.0);
 	int res_um, res_tm;
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-		//INCR: untrack_memory(mem, size)
-		res_um = unguard_memory(lid, PER_LP_PREALLOCATED_MEMORY); //TODO: use actual parameters to define in incremental_state_saving.h
+
+		res_um = unguard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
 		
+		state_t *tgt = state_queue_node;
+        state_t *cur = tgt;
+        while(((malloc_state*)cur->log)->is_incremental){
+            cur = list_prev(cur);
+        }
+		while(cur != tgt){
+            restore_full(lid, cur->log);
+            cur = list_next(cur);
+        }
 		restore_full(lid, state_queue_node->log);
 		//todo: reset model
         iss_log_incremental_reset(lid);
