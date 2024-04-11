@@ -28,7 +28,7 @@ simulation_configuration pdes_config;
 #define EL_TH_THRESHOLD_CNT_KEY     364
 #define ISS_ENABLED                 365
 #define ISS_ENABLED_MPROTECTION     366
-#define ISS_SIGNAL_MPROTECT         367
+#define ISS_SIGNAL_MPROTECT         368
 
 #define CKPT_PERIOD_KEY             461
 #define CKPT_FOSSIL_PERIOD_KEY      462
@@ -133,12 +133,15 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
     case ISS_ENABLED_MPROTECTION:
       pdes_config.iss_enabled_mprotection = 1;
-      pdes_config.iss_signal_mprotect     = atoi(arg);
+      break;
+
+    case ISS_SIGNAL_MPROTECT:
+      pdes_config.iss_signal_mprotect = 1;
       break;
 
     case CKPT_FORCED_FULL_PERIOD_KEY:
       pdes_config.ckpt_forced_full_period = atoi(arg);
-    break;
+      break;
 
     case CKPT_FOSSIL_PERIOD_KEY:
       pdes_config.ckpt_collection_period = atoi(arg);
@@ -213,10 +216,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       if(pdes_config.ckpt_period < 1 || pdes_config.ckpt_collection_period < 1 || pdes_config.ckpt_forced_full_period < 1){
         printf("Please set a non-zero checkpoint period\n");
         argp_usage (state);  
-      }
-      if(pdes_config.iss_signal_mprotect && !pdes_config.iss_enabled_mprotection){
-        printf("Please enable iss_enabled_mprotection to use mprotect\n");
-        argp_usage (state);
       }
       if(pdes_config.el_dynamic_window && !pdes_config.enforce_locality){
         printf("Please enable enforce-locality to use dynamic window\n");
@@ -321,6 +320,7 @@ void print_config(void){
     printf("\t\t|- collection %u\n", pdes_config.ckpt_collection_period);
     printf("\t\t|- ckpt mode %u\n", pdes_config.checkpointing);
     printf("\t\t\t|- incremental with mprotect %u\n", pdes_config.iss_enabled_mprotection);
+    printf("\t\t\t|- incremental with signal handler %u\n", pdes_config.iss_signal_mprotect);
     printf("\t- ON_GVT MODE %u\n", pdes_config.ongvt_mode);
     printf("\t- ON_GVT PERIOD %u\n", pdes_config.ongvt_period);
     printf("\t- ENFORCE_LOCALITY %u\n", pdes_config.enforce_locality);
@@ -346,6 +346,11 @@ void print_config(void){
     #endif
     #if CSR_CONTEXT == 1
         printf("\t- CSR ASYNCH enabled.\n");
+    #endif
+    #if BUDDY == 1
+        printf("\t- BUDDY SCHEME enabled.\n");
+    #else
+        printf("\t- BUDDY SCHEME disabled.\n");
     #endif
 #if REPORT == 1
     printf("\t- REPORT prints enabled.\n");
