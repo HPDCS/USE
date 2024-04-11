@@ -514,7 +514,7 @@ partition_log *log_incremental(unsigned int cur_lp, simtime_t ts) {
 void log_incremental_restore(partition_log *cur) {
 
 	while(cur){
-		printf("[log_incremental_restore] cur %p -- addr %lu\n", cur, cur->addr);
+		printf("lp %u : [log_incremental_restore] cur %p -- addr %lu\n", current_lp, cur, cur->addr);
 		memcpy(cur->addr, cur->log, cur->size);
 		cur = cur->next;
 	}
