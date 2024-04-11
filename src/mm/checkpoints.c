@@ -38,6 +38,8 @@
 #include <statistics.h>
 #include <autockpt.h>
 
+#include <incremental_state_saving.h>
+
 
 /**
 * This function creates a full log of the current simulation states and returns a pointer to it.
@@ -214,7 +216,24 @@ void *log_full(int lid) {
 */
 void *log_state(int lid) {
 	statistics_post_lp_data(lid, STAT_CKPT, 1.0);
-	return log_full(lid);
+	void *ckpt;
+	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+		size_t logsize = iss_states[lid].current_incremental_log_size;
+		//INCR: compute size to protect
+		get_fault_info(lid); /// TODO: mark dirty pages
+		ckpt = log_full(lid);
+		//INCR: todo update model
+		iss_update_model(lid);
+		if(recoverable_state[lid]->is_incremental){
+			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
+			iss_log_incremental_reset(lid);
+		} else
+			iss_states[lid].current_incremental_log_size = logsize;
+
+	} else
+		ckpt = log_full(lid);
+	
+	return ckpt;
 }
 
 
@@ -417,7 +436,17 @@ void restore_full(int lid, void *ckpt) {
 */
 void log_restore(int lid, state_t *state_queue_node) {
 	statistics_post_lp_data(lid, STAT_RECOVERY, 1.0);
-	restore_full(lid, state_queue_node->log);
+	int res_um, res_tm;
+	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
+		//INCR: untrack_memory(mem, size)
+		res_um = unguard_memory(lid, PER_LP_PREALLOCATED_MEMORY); //TODO: use actual parameters to define in incremental_state_saving.h
+		
+		restore_full(lid, state_queue_node->log);
+		//todo: reset model
+        iss_log_incremental_reset(lid);
+		//INCR: track_memory(mem, size)
+		res_tm = guard_memory(lid, PER_LP_PREALLOCATED_MEMORY);
+	}
 }
 
 
