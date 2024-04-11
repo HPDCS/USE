@@ -249,7 +249,6 @@ void *log_state(int lid) {
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		size_t logsize = iss_states[lid].current_incremental_log_size;
 		//INCR: compute size to protect
-		get_fault_info(lid); /// TODO: mark dirty pages
 		ckpt = log_full(lid);
 		//INCR: todo update model
 		iss_update_model(lid);
