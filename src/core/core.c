@@ -46,6 +46,7 @@
 #include "metrics_for_window.h"
 #include "clock_constant.h"
 #include "state_swapping.h"
+#include "incremental_state_saving.h"
 
 #define MAIN_PROCESS		0 //main process id
 #define PRINT_REPORT_RATE	1000000000000000
