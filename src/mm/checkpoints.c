@@ -446,7 +446,8 @@ void log_restore(int lid, state_t *state_queue_node) {
         iss_log_incremental_reset(lid);
 		//INCR: track_memory(mem, size)
 		res_tm = guard_memory(lid, PER_LP_PREALLOCATED_MEMORY);
-	}
+	}else
+		restore_full(lid, state_queue_node->log);
 }
 
 
