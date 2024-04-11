@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include <segment.h>
+#include <bitmap.h>
 
 
 #define PROTECT_MEM 134 //this depends on what the kernel tells you when mounting the vtpmo module
@@ -33,9 +34,9 @@
 #define TRACKER_DUMP			(1U << 4) ///ioctl cmd for debugging purposes (serial only)
 #define TRACKER_SET_SEGSIZE		(1U << 5) ///ioctl cmd for setting segment size
 
-#define SEGID(addr, base, size) ({unsigned int id = ((addr-base)/PAGE_SIZE + size)/size - 1; id;})
-#define PAGEID(addr, base) ({unsigned int id = (unsigned int) ((addr- base)/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE); id;})
-
+#define SEGID(addr, base, size) ({unsigned int id = (abs(addr-base)/PAGE_SIZE + size)/size - 1; id;})
+#define PAGEID(addr, base) ({unsigned int id = (unsigned int) (abs(addr- base)/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE); id;})
+#define PAGEPTR(addr, pageid) ({char *ptr = (char*)addr + (pageid-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; ptr;})
 
 /* user data struct to pass data back and forth user/kernel space */
 typedef struct _tracking_data {
@@ -74,9 +75,6 @@ typedef struct __partition_tree_node{
 
 /// This struct keeps all metadata for incremental state saving of a model state
 typedef struct __per_lp_iss_metadata{
-  #if BUDDY == 1
-	//partition_node_tree_t partition_tree[2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE];
-  #endif
 	ssize_t current_incremental_log_size;
 	int iss_counter;
     int iss_model_round;
@@ -85,9 +83,20 @@ typedef struct __per_lp_iss_metadata{
     unsigned short cur_virtual_ts;
     char current_model;
   #if BUDDY == 1
-	partition_node_tree_t partition_tree[]; //todo: when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
+	partition_node_tree_t partition_tree[]; //when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
   #endif
 }lp_iss_metadata;
+
+
+typedef struct _iss_func {
+	partition_log *(*iss_log_inc)(unsigned int cur_lp, simtime_t ts);
+} iss_func;
+
+extern iss_func iss_log;
+
+#if BUDDY == 0
+extern bitmap **dirty_pages;
+#endif
 
 extern tracking_data **t_data;
 
@@ -98,7 +107,7 @@ extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 extern model_t iss_costs_model;	 /// runtime tuning of the cost model 
 
 /** methods for incremental state saving support */
-void init_incremental_checkpointing_support(unsigned int threads, unsigned int lps);
+void init_incremental_checkpointing_support(unsigned int lps);
 void init_tracking_data(tracking_data **);
 void set_tracking_data(tracking_data **data, unsigned long start, unsigned long addr, unsigned long end,
 										unsigned int segid, unsigned long len);
@@ -106,13 +115,23 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp);
 
 /** methods for incremental state saving */
 bool is_next_ckpt_incremental();
+
+# if BUDDY == 1
 partition_log *log_incremental(unsigned int lid, simtime_t ts);
+#else
+partition_log *mark_dirty_pages_and_log(unsigned int lid, simtime_t ts);
+partition_log *log_incremental_no_tree(unsigned int cur_lp, simtime_t ts);
+#endif
+
 void log_incremental_restore(partition_log *cur);
+void log_incremental_destroy_chain(partition_log *cur);
+
 tracking_data *get_fault_info(unsigned int lid);
-void mark_dirty_pages(unsigned long *buff, unsigned long size);
+char* get_page_ptr(unsigned long addr);
 
 void init_segment_monitor_support(tracking_data *data);
 
+#if BUDDY == 1
 
 void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg);
 void dirty(void *, size_t);
@@ -122,6 +141,12 @@ void iss_first_run_model(unsigned int current_lp);
 void iss_log_incremental_reset(unsigned int lp);
 void iss_update_model(unsigned int cur_lp);
 float estimate_cost(size_t size, float probability);
+#endif
+
+
+int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
+unsigned int get_lowest_page_from_partition_id(unsigned int page_id);
+void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id);
 
 
 /** syscalls wrapper */
@@ -132,7 +157,7 @@ int flush(unsigned int lid, unsigned long size);
 /** syscalls */
 int track_memory(unsigned long address, size_t size);
 int untrack_memory(unsigned long address, size_t size);
-int flush_local_tlb(unsigned long address, size_t size);
+int flush_local_tlb(unsigned int lid, size_t size);
 
 
 #endif
