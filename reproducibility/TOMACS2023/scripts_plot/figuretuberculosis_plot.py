@@ -11,10 +11,12 @@ def parse_filename(filename):
     tmp_string = tmp_list[0] + "-"
 
     for i in range(1, len(tmp_list)):
-
+        #print(tmp_list[i])
         tmp_string += (tmp_list[i].split('_')[1])
         if (tmp_list[i] == 'threads_1'):
+            continue
             tmp_string = tmp_string.replace('-1', '-seq')
+
         if i != len(tmp_list)-1:
             tmp_string += "-"
 
