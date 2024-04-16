@@ -144,7 +144,7 @@ def get_samples_from_file(filename, seconds):
 
     #print("overall:",overall_samples)
     #print("filter:",len(samples))
-    iterations = 2
+    iterations = 5#4 #2
     sigma = 2.5
 
     final_sample = []
