@@ -74,6 +74,7 @@ int unguard_memory(unsigned int lid, unsigned long size, unsigned int page_id) {
 		return mprotect(get_page_ptr_from_idx(lid, page_id), size, PROT_READ | PROT_WRITE);
 	}
 	else {
+		/// CASE WITH CUSTOM SYSCALL KLM AND NO PAGE FAULT HOOK
 		unsigned long id = page_id % NUM_PAGES_PER_SEGMENT; /// TO TEST!!!
 		return untrack_memory((unsigned long) (mem_areas[lid] + id), size);
 	}
@@ -297,14 +298,15 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
-				//printf("BUFFER ADDRESS i %d \t address %lu\n", i, buff[i]);
-				page_id = get_page_idx_from_ptr(cur_lp,(void *) buff[i]);				
+				printf("BUFFER ADDRESS i %d \t address %lu - %p\n", i, buff[i], (void *) buff[i]);
+				dirty((void *) buff[i], PAGE_SIZE);
+				/*page_id = get_page_idx_from_ptr(cur_lp,(void *) buff[i]);				
 				if (!get_bit(dirty_pages[cur_lp], page_id)) {
 					set_bit(dirty_pages[cur_lp], page_id);
 					iss_states[cur_lp].current_incremental_log_size += PAGE_SIZE;
    			 		iss_states[cur_lp].count_tracked++;
 
-				} ///end if get bit
+				} ///end if get bit*/
 				
 			} ///end for
 
