@@ -198,7 +198,7 @@ void dirty(void* addr, size_t size){
     iss_states[current_lp].count_tracked++;
 
 	if (!get_bit(dirty_pages[current_lp], page_id)) {
-		printf("BUFFER ADDRESS i %u \t address %llu - %p\n", page_id, (unsigned long long) addr, (void *) addr);
+		//printf("BUFFER ADDRESS i %u \t address %llu - %p\n", page_id, (unsigned long long) addr, (void *) addr);
 		set_bit(dirty_pages[current_lp], page_id);
 	}
 
@@ -290,6 +290,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
+				printf("BUFF[i] %lu -- %p\n" buff[i], (void *) buff[i]);
 				dirty((void *) buff[i], PAGE_SIZE);
 			} ///end for
 
