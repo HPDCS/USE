@@ -130,8 +130,9 @@ unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
 }
 
 void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
+	if (pdes_config.iss_signal_mprotect) id += PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-	//assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
+	assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
 	return ((char*)mem_areas[cur_lp]) + (id-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; 
 }
 
@@ -302,11 +303,8 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			if (!pdes_config.iss_signal_mprotect)
-				cur_log->addr = get_page_ptr_from_idx(cur_lp, i+(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE));
-			else
-				cur_log->addr = get_page_ptr_from_idx(cur_lp, i+(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE));
-			printf("BITMAP ADDRESS i %d \t address %lu - %p\n", i ,(unsigned long )cur_log->addr, (void *) cur_log->addr);
+			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
+			printf("BITMAP ADDRESS i %d --- %lu \t address %lu - %p\n", i , i+PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE, (unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
