@@ -289,7 +289,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			for (i = 0; i < len; i++) {
 				j += start;
 				dirty((void *) buff[j], PAGE_SIZE);
-				j++
+				j++;
 			} ///end for
 
 		} ///end if data != NULL
