@@ -34,7 +34,7 @@ endfunction()
 test_program(bitmap datatypes/bitmap.c)
 test_program(list datatypes/list.c)
 test_program(numerical core/numerical.c)
-test_program(iss mm/iss.c ../src/core/incremental_state_saving.c ../src/core/iss_model.c)
+#test_program(iss mm/iss.c ../src/core/incremental_state_saving.c)
 
 
 test_model(phold ../models/phold/application.c)

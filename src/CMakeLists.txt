@@ -82,7 +82,6 @@ set(src-core
         core/lp_lock.c
         core/gvt.c
         core/incremental_state_saving.c
-        core/iss_model.c
         statistics/statistics.c
         mm/garbagecollector.c)
 
