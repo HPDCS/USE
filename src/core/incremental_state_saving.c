@@ -74,8 +74,7 @@ int unguard_memory(unsigned int lid, unsigned long size, unsigned int page_id) {
 	}
 	else {
 		/// CASE WITH CUSTOM SYSCALL KLM AND NO PAGE FAULT HOOK
-		unsigned long id = page_id % NUM_PAGES_PER_SEGMENT; /// TO TEST!!!
-		return untrack_memory((unsigned long) (mem_areas[lid] + id), size);
+		return untrack_memory((unsigned long) (mem_areas[lid] + page_id*PAGE_SIZE), size);
 	}
 }
 
@@ -198,7 +197,7 @@ void dirty(void* addr, size_t size){
     iss_states[current_lp].count_tracked++;
 
 	if (!get_bit(dirty_pages[current_lp], page_id)) {
-		//printf("BUFFER ADDRESS i %u \t address %llu - %p\n", page_id, (unsigned long long) addr, (void *) addr);
+		printf("BUFFER ADDRESS i %u \t address %llu - %p\n", page_id, (unsigned long long) addr, (void *) addr);
 		set_bit(dirty_pages[current_lp], page_id);
 	}
 
@@ -290,7 +289,6 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
-				printf("BUFF[i] %lu -- %p\n", buff[i], (void *) buff[i]);
 				dirty((void *) buff[i], PAGE_SIZE);
 			} ///end for
 
@@ -307,7 +305,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
+			cur_log->addr = (char *) (mem_areas[cur_lp] + i*PAGE_SIZE); //get_page_ptr_from_idx(cur_lp, i);
 			printf("BITMAP ADDRESS i %d \t address %lu - %p\n", i , (unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
