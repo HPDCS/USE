@@ -189,7 +189,7 @@ void dirty(void* addr, size_t size){
 	unsigned int page_id;
 
 	page_id    	= get_page_idx_from_ptr(current_lp, addr);
-	page_id -= PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	if (!pdes_config.iss_signal_mprotect) page_id -= PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 
     iss_states[current_lp].count_tracked++;
 
@@ -302,7 +302,10 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			cur_log->addr = get_page_ptr_from_idx(cur_lp, i+PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+			if (!pdes_config.iss_signal_mprotect)
+				cur_log->addr = get_page_ptr_from_idx(cur_lp, i+(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE));
+			else
+				cur_log->addr = get_page_ptr_from_idx(cur_lp, i+(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE));
 			printf("BITMAP ADDRESS i %d \t address %lu - %p\n", i ,(unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
