@@ -69,7 +69,6 @@ int unguard_memory(unsigned int lid, unsigned long size, unsigned int page_id) {
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 
 	if(!pdes_config.iss_enabled_mprotection) {
-		unsigned int id = get_lowest_page_from_partition_id(1);
 		//printf("[unguard_memory lp %u] -- ptr %p -- size %lu\n", lid, get_page_ptr_from_idx(lid, id), size);
 		return mprotect(get_page_ptr_from_idx(lid, page_id), size, PROT_READ | PROT_WRITE);
 	}
@@ -80,10 +79,13 @@ int unguard_memory(unsigned int lid, unsigned long size, unsigned int page_id) {
 	}
 }
 
+
+
 int guard_all_memory(unsigned int lid) {
 
 	if(!pdes_config.iss_enabled_mprotection) {
 		unsigned int id = get_lowest_page_from_partition_id(1);
+		//id += PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ);
 	}
 	else {
@@ -95,6 +97,7 @@ int unguard_all_memory(unsigned int lid) {
 	
 	if(!pdes_config.iss_enabled_mprotection) {
 		unsigned int id = get_lowest_page_from_partition_id(1);
+		//id += PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ | PROT_WRITE);
 	}
 	else {
@@ -130,8 +133,9 @@ unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
 }
 
 void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
-	assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-	assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
+	//assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+	//assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
+	id += (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 	return ((char*)mem_areas[cur_lp]) + (id-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; 
 }
 
@@ -189,6 +193,7 @@ void dirty(void* addr, size_t size){
 	unsigned int page_id;
 
 	page_id    	= get_page_idx_from_ptr(current_lp, addr);
+	page_id -= (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 
     iss_states[current_lp].count_tracked++;
 
@@ -292,7 +297,8 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
 	} ///end if enabled mprotection
 		
-	for (i = start; i < end; i++) {
+	//for (i = start; i < end; i++) {
+	for (i = 0; i < dirty_pages[cur_lp]->actual_len; i++) {
 
 		if (get_bit(dirty_pages[cur_lp], i)) {
 
@@ -301,7 +307,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
-			printf("BITMAP ADDRESS i %d --- %lu \t address %lu - %p\n", i , i+PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE, (unsigned long )cur_log->addr, (void *) cur_log->addr);
+			printf("BITMAP ADDRESS i %d \t address %lu - %p\n", i , (unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
@@ -396,7 +402,8 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 	/// init tracking dirty memory mechanism
 	dirty_pages = rsalloc(lps * sizeof(bitmap));
 	for (i=0; i < lps; i++)
-		dirty_pages[i] = allocate_bitmap(2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+		dirty_pages[i] = allocate_bitmap(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+		//dirty_pages[i] = allocate_bitmap(2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 
 
 	/*unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
