@@ -488,14 +488,16 @@ void log_restore(int lid, state_t *state_queue_node) {
 		state_t *tgt = state_queue_node;
         state_t *cur = tgt;
         while(((malloc_state*)cur->log)->is_incremental){
+        	printf("[log_restore] log %p\n", cur->log);
             cur = list_prev(cur);
         }
 		while(cur != tgt){
             restore_full(lid, cur->log);
+            printf("[log_restore] after restore full %p\n", cur->log);
             cur = list_next(cur);
         }
 
-		//restore_full(lid, state_queue_node->log);
+		restore_full(lid, state_queue_node->log);
 
 		res_tm = guard_all_memory(lid);
         iss_log_incremental_reset(lid);
