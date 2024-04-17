@@ -275,7 +275,6 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 	uint i;
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
-	unsigned int j = 0;
 
 	if (pdes_config.iss_enabled_mprotection) {
 		tracking_data *data = get_fault_info(cur_lp);
@@ -287,9 +286,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
-				j += start;
-				dirty((void *) buff[j], PAGE_SIZE);
-				j++;
+				dirty((void *) buff[i], PAGE_SIZE);
 			} ///end for
 
 		} ///end if data != NULL
@@ -305,7 +302,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
-			printf("BITMAP ADDRESS i %d -- %ld \t address %lu - %p\n", i, i%NUM_PAGES_PER_SEGMENT ,(unsigned long )cur_log->addr, (void *) cur_log->addr);
+			printf("BITMAP ADDRESS i %d \t address %lu - %p\n", i ,(unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
