@@ -268,17 +268,6 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 /** incremental state saving facilities */
 
-partition_log *create_log(simtime_t ts, partition_log *prev_log, unsigned long address) {
-
-	partition_log * cur_log = (partition_log*) rsalloc(sizeof(partition_log));
-	cur_log->size = PAGE_SIZE;
-	cur_log->next = prev_log;
-	cur_log->ts = ts;
-	cur_log->addr = (void *) address;
-
-	return cur_log;
-}
-
 
 partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
@@ -323,6 +312,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
 			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
+			printf("BITMAP ADDRESS i %d \t address %lu - %p\n", i, (unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
