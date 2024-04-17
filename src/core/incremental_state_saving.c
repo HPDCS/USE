@@ -290,7 +290,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
-				printf("BUFF[i] %lu -- %p\n" buff[i], (void *) buff[i]);
+				printf("BUFF[i] %lu -- %p\n", buff[i], (void *) buff[i]);
 				dirty((void *) buff[i], PAGE_SIZE);
 			} ///end for
 
