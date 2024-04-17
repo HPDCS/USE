@@ -132,6 +132,8 @@ float estimate_cost(size_t size, float probability);
 #endif
 void iss_log_incremental_reset(unsigned int lp);
 
+extern unsigned long get_iss_size(unsigned int lp);
+extern void set_iss_size(unsigned int lp, unsigned long size);
 
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
 unsigned int get_lowest_page_from_partition_id(unsigned int page_id);

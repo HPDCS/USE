@@ -75,7 +75,6 @@
 * @todo must be declared static. This will entail changing the logic in gvt.c to save a state before rebuilding.
 */
 
-lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
 extern __thread int __in_log_full;
 
@@ -119,7 +118,8 @@ void *log_full(int lid) {
 	if(recoverable_state[lid]->is_incremental){
 		/// partial log
        	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
-        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
+        //statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
+        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double) get_iss_size(lid));
 		partial_log = iss_log.iss_log_inc(lid, lvt(lid));
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
@@ -252,7 +252,8 @@ void *log_state(int lid) {
 	statistics_post_lp_data(lid, STAT_CKPT, 1.0);
 	void *ckpt;
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
-		size_t logsize = iss_states[lid].current_incremental_log_size;
+		//size_t logsize = iss_states[lid].current_incremental_log_size;
+		size_t logsize = get_iss_size(lid);
 
 		ckpt = log_full(lid);
 
@@ -261,7 +262,8 @@ void *log_state(int lid) {
 			iss_log_incremental_reset(lid);
 			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
 		} else
-			iss_states[lid].current_incremental_log_size = logsize;
+			//iss_states[lid].current_incremental_log_size = logsize;
+			set_iss_size(lid, logsize);
 
 	} else
 		ckpt = log_full(lid);

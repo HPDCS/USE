@@ -25,6 +25,9 @@ lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
 __thread int __in_log_full = 0;
 
+unsigned long get_iss_size(unsigned int lp) { return iss_states[lp].current_incremental_log_size; }
+void set_iss_size(unsigned int lp, unsigned long size) { iss_states[lp].current_incremental_log_size = size; }
+
 void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 	assert(sig==SIGSEGV);
     assert(__in_log_full == 0);
