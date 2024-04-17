@@ -26,7 +26,7 @@
 
 #define NO_PRTCT_ENABLED 1
 
-#define BE_BUFF_SIZE NUM_MMAP
+#define BE_BUFF_SIZE 256
 
 
 #define TRACKER_INIT			(1U << 2) ///ioctl cmd for initialization of the support
@@ -82,9 +82,6 @@ typedef struct __per_lp_iss_metadata{
     int disabled;
     unsigned short cur_virtual_ts;
     char current_model;
-  #if BUDDY == 1
-	partition_node_tree_t partition_tree[]; //when alloc per_lp_iss_metadata add 2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE
-  #endif
 }lp_iss_metadata;
 
 
@@ -94,9 +91,7 @@ typedef struct _iss_func {
 
 extern iss_func iss_log;
 
-#if BUDDY == 0
 extern bitmap **dirty_pages;
-#endif
 
 extern tracking_data **t_data;
 
@@ -116,12 +111,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp);
 /** methods for incremental state saving */
 bool is_next_ckpt_incremental();
 
-# if BUDDY == 1
-partition_log *log_incremental(unsigned int lid, simtime_t ts);
-#else
-partition_log *mark_dirty_pages_and_log(unsigned int lid, simtime_t ts);
 partition_log *log_incremental_no_tree(unsigned int cur_lp, simtime_t ts);
-#endif
 
 void log_incremental_restore(partition_log *cur);
 void log_incremental_destroy_chain(partition_log *cur);
@@ -131,17 +121,16 @@ char* get_page_ptr(unsigned long addr);
 
 void init_segment_monitor_support(tracking_data *data);
 
+
+extern void dirty(void*, size_t);
+
 #if BUDDY == 1
-
-void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg);
-void dirty(void *, size_t);
-
 /** methods for model management */
 void iss_first_run_model(unsigned int current_lp); 
-void iss_log_incremental_reset(unsigned int lp);
 void iss_update_model(unsigned int cur_lp);
 float estimate_cost(size_t size, float probability);
 #endif
+void iss_log_incremental_reset(unsigned int lp);
 
 
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr);
@@ -151,7 +140,9 @@ void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id);
 
 /** syscalls wrapper */
 int guard_memory(unsigned int lid, unsigned long size);
-int unguard_memory(unsigned int lid, unsigned long size);
+int guard_all_memory(unsigned int lid);
+int unguard_memory(unsigned int lid, unsigned long size, unsigned int pageid);
+int unguard_all_memory(unsigned int lid);
 int flush(unsigned int lid, unsigned long size);
 
 /** syscalls */
