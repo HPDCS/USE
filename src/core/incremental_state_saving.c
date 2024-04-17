@@ -310,8 +310,8 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
-			printf("BITMAP ADDRESS i %d -- %ld \t address %lu - %p\n", i, i%(NUM_PAGES_PER_SEGMENT*2) ,(unsigned long )cur_log->addr, (void *) cur_log->addr);
+			cur_log->addr = get_page_ptr_from_idx(cur_lp, i%NUM_PAGES_PER_SEGMENT);
+			printf("BITMAP ADDRESS i %d -- %ld \t address %lu - %p\n", i, i%NUM_PAGES_PER_SEGMENT ,(unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
