@@ -194,8 +194,8 @@ void dirty(void* addr, size_t size){
     iss_states[current_lp].count_tracked++;
 
 	if (!get_bit(dirty_pages[current_lp], page_id)) {
+		printf("BUFFER ADDRESS i %u \t address %lu - %p\n", page_id, (unsigned long) addr, (void *) addr);
 		set_bit(dirty_pages[current_lp], page_id);
-		//fprintf(stderr, "[dirty] lp %u %p %u  --- %u\n", current_lp, addr, page_id, page_id % NUM_PAGES_PER_SEGMENT);
 	}
 
 	iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
@@ -287,7 +287,6 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
-				printf("BUFFER ADDRESS i %d \t address %lu - %p\n", i, buff[i], (void *) buff[i]);
 				dirty((void *) buff[i], PAGE_SIZE);
 				/*page_id = get_page_idx_from_ptr(cur_lp,(void *) buff[i]);				
 				if (!get_bit(dirty_pages[cur_lp], page_id)) {
