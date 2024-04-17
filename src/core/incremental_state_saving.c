@@ -275,7 +275,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 	uint i;
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
-
+	unsigned int j = 0;
 
 	if (pdes_config.iss_enabled_mprotection) {
 		tracking_data *data = get_fault_info(cur_lp);
@@ -287,15 +287,9 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
-				dirty((void *) buff[i], PAGE_SIZE);
-				/*page_id = get_page_idx_from_ptr(cur_lp,(void *) buff[i]);				
-				if (!get_bit(dirty_pages[cur_lp], page_id)) {
-					set_bit(dirty_pages[cur_lp], page_id);
-					iss_states[cur_lp].current_incremental_log_size += PAGE_SIZE;
-   			 		iss_states[cur_lp].count_tracked++;
-
-				} ///end if get bit*/
-				
+				j += start;
+				dirty((void *) buff[j], PAGE_SIZE);
+				j++
 			} ///end for
 
 		} ///end if data != NULL
