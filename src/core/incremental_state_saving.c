@@ -130,9 +130,8 @@ unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
 }
 
 void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
-	if (pdes_config.iss_signal_mprotect) id += PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
-	//assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-	//assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
+	assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+	assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
 	return ((char*)mem_areas[cur_lp]) + (id-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; 
 }
 
@@ -190,7 +189,6 @@ void dirty(void* addr, size_t size){
 	unsigned int page_id;
 
 	page_id    	= get_page_idx_from_ptr(current_lp, addr);
-	if (!pdes_config.iss_signal_mprotect) page_id -= PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 
     iss_states[current_lp].count_tracked++;
 
@@ -294,8 +292,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
 	} ///end if enabled mprotection
 		
-	for (i = 0; i < NUM_PAGES_PER_SEGMENT; i++) {
-	//for (i = start; i < end; i++) {
+	for (i = start; i < end; i++) {
 
 		if (get_bit(dirty_pages[cur_lp], i)) {
 
@@ -399,8 +396,7 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 	/// init tracking dirty memory mechanism
 	dirty_pages = rsalloc(lps * sizeof(bitmap));
 	for (i=0; i < lps; i++)
-		//dirty_pages[i] = allocate_bitmap(2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-		dirty_pages[i] = allocate_bitmap(NUM_PAGES_PER_SEGMENT);
+		dirty_pages[i] = allocate_bitmap(2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 
 
 	/*unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
