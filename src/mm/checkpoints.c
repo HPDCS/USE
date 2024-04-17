@@ -495,7 +495,7 @@ void log_restore(int lid, state_t *state_queue_node) {
             cur = list_next(cur);
         }
 
-		restore_full(lid, state_queue_node->log);
+		//restore_full(lid, state_queue_node->log);
 
 		res_tm = guard_all_memory(lid);
         iss_log_incremental_reset(lid);
