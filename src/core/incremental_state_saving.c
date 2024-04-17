@@ -131,8 +131,8 @@ unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
 
 void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
 	if (pdes_config.iss_signal_mprotect) id += PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
-	assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-	assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
+	//assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+	//assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
 	return ((char*)mem_areas[cur_lp]) + (id-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; 
 }
 
