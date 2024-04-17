@@ -21,8 +21,16 @@ iss_func iss_log;
 
 bitmap **dirty_pages;
 
+lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
+
 __thread int __in_log_full = 0;
 
+void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
+	assert(sig==SIGSEGV);
+    assert(__in_log_full == 0);
+	(void)arg;
+	dirty(func->si_addr, PAGE_SIZE);
+}
 
 /** syscalls */
 int track_memory(unsigned long address, size_t size){
@@ -45,23 +53,52 @@ int guard_memory(unsigned int lid, unsigned long size) {
 
 	if(!pdes_config.iss_enabled_mprotection) {
 		unsigned int id = get_lowest_page_from_partition_id(1);
-		return mprotect(get_page_ptr_from_idx(lid, id ), size, PROT_READ);
+		//printf("[guard_memory lp %u] -- ptr %p -- size %lu\n", lid, get_page_ptr_from_idx(lid, id), size);
+		return mprotect(get_page_ptr_from_idx(lid, id), size, PROT_READ);
 	}
-	else
+	else {
 		return track_memory((unsigned long) mem_areas[lid], size);
+	}
 }
 
-int unguard_memory(unsigned int lid, unsigned long size) {
+int unguard_memory(unsigned int lid, unsigned long size, unsigned int page_id) {
 	
 	assert(size <= PER_LP_PREALLOCATED_MEMORY);
 
 	if(!pdes_config.iss_enabled_mprotection) {
 		unsigned int id = get_lowest_page_from_partition_id(1);
-		return mprotect(get_page_ptr_from_idx(lid,  id), size, PROT_READ | PROT_WRITE);
+		//printf("[unguard_memory lp %u] -- ptr %p -- size %lu\n", lid, get_page_ptr_from_idx(lid, id), size);
+		return mprotect(get_page_ptr_from_idx(lid, page_id), size, PROT_READ | PROT_WRITE);
 	}
-	else 
-		return untrack_memory((unsigned long) mem_areas[lid], size);
+	else {
+		unsigned long id = page_id % NUM_PAGES_PER_SEGMENT; /// TO TEST!!!
+		return untrack_memory((unsigned long) (mem_areas[lid] + id), size);
+	}
 }
+
+int guard_all_memory(unsigned int lid) {
+
+	if(!pdes_config.iss_enabled_mprotection) {
+		unsigned int id = get_lowest_page_from_partition_id(1);
+		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ);
+	}
+	else {
+		return track_memory((unsigned long) mem_areas[lid], PER_LP_PREALLOCATED_MEMORY);
+	}
+}
+
+int unguard_all_memory(unsigned int lid) {
+	
+	if(!pdes_config.iss_enabled_mprotection) {
+		unsigned int id = get_lowest_page_from_partition_id(1);
+		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ | PROT_WRITE);
+	}
+	else {
+
+		return untrack_memory((unsigned long) mem_areas[lid], PER_LP_PREALLOCATED_MEMORY);
+	}
+}
+
 
 int flush(unsigned int lid, unsigned long size) {
 
@@ -144,61 +181,23 @@ bool is_next_ckpt_incremental(void) {
 
 
 void dirty(void* addr, size_t size){
-	//printf("%u: lp %u %p\n", tid, current_lp, addr);
-	unsigned int page_id, segid, subsegid;
-	unsigned int cur_id;
+	//fprintf(stderr, "[dirty] %u: lp %u %p\n", tid, current_lp, addr);
+	unsigned int page_id;
 
 	page_id    	= get_page_idx_from_ptr(current_lp, addr);
-	cur_id 		= page_id;
-	
-	
+
+
     iss_states[current_lp].count_tracked++;
-	unsigned int tgt_partition_size = 0;
-	unsigned int partition_id = page_id;
 
-	update_tree(cur_id, &partition_id, &tgt_partition_size);
+	if (!get_bit(dirty_pages[current_lp], page_id)) {
+		set_bit(dirty_pages[current_lp], page_id);
+		//fprintf(stderr, "[dirty] lp %u %p %u  --- %u\n", current_lp, addr, page_id, page_id % NUM_PAGES_PER_SEGMENT);
+	}
 
-	partition_id = get_lowest_page_from_partition_id(partition_id);
-
-	iss_states[current_lp].current_incremental_log_size += tgt_partition_size*PAGE_SIZE;
+	iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
 
 	if (pdes_config.iss_signal_mprotect)
-		unguard_memory(current_lp, tgt_partition_size*PAGE_SIZE);
-}
-
-
-
-
-void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
-	assert(sig==SIGSEGV);
-    assert(__in_log_full == 0);
-	(void)arg;
-	dirty(func->si_addr, 1);
-}
-#endif
-
-
-char * get_page_ptr(unsigned long addr) {
-
-	int i;
-	unsigned int page_id, cur_id, segid, subsegid, tgt_partition_size, partition_id;
-
-	char *ptr;
-
-	segid = SEGID(addr, (unsigned long) mem_areas[0], NUM_PAGES_PER_SEGMENT);
-	subsegid = SEGID(addr, (unsigned long) mem_areas[segid], NUM_PAGES_PER_MMAP);
-	page_id = PAGEID((unsigned long) (mem_areas[segid]+subsegid*PAGE_SIZE), (unsigned long) mem_areas[segid]);
-	cur_id = page_id;
-    iss_states[current_lp].count_tracked++;
-	tgt_partition_size = 0;
-	partition_id = page_id;
-	
-	ptr = PAGEPTR(mem_areas[current_lp], page_id);
-	//printf("[lp %u] [get_page_ptr] buff[i] %lu segid %lu subsegid %lu \t page-id %u \t ptr %p\n",current_lp, addr, segid, subsegid, page_id, ptr);
-
-
-	return ptr;
-
+		unguard_memory(current_lp, PAGE_SIZE, page_id);
 }
 
 
@@ -346,7 +345,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 void log_incremental_restore(partition_log *cur) {
 
 	while(cur){
-		printf("lp %u : [log_incremental_restore] cur %p -- addr %lu\n", current_lp, cur, cur->addr);
+		//printf("lp %u : [log_incremental_restore] cur %p -- addr %lu\n", current_lp, cur, cur->addr);
 		memcpy(cur->addr, cur->log, cur->size);
 		cur = cur->next;
 	}
@@ -371,6 +370,24 @@ void log_incremental_destroy_chain(partition_log *cur){
 }
 
 
+void iss_log_incremental_reset(unsigned int lp){
+
+    iss_states[lp].current_incremental_log_size = 0;
+    iss_states[lp].count_tracked = 0;
+    
+    
+    if(iss_states[lp].cur_virtual_ts == 65000){
+        iss_states[lp].cur_virtual_ts = 0;
+        //clear_bitmap(dirty_pages[lp]);
+    }
+
+    clear_bitmap(dirty_pages[lp]);
+    
+    iss_states[lp].cur_virtual_ts += 1;
+    
+
+}
+
 
 /** init incremental state saving support */
 
@@ -387,11 +404,32 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 	printf("[init_incremental_checkpointing_support] %u \n", lps);
   #endif
 
+	/// init model PER-LP (iss_metadata and model)
+	iss_states = (lp_iss_metadata*)rsalloc(sizeof(lp_iss_metadata)*lps);
+
+	uint i;
+
+	/// init tracking dirty memory mechanism
+	dirty_pages = rsalloc(lps * sizeof(bitmap));
+	for (i=0; i < lps; i++)
+		dirty_pages[i] = allocate_bitmap(2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+
+
+	/*unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	unsigned int end = 2*start;
+
+	do {
+		for(i=start; i < end; i++)
+			printf("start %u \t end %u \t i %u\t TO %lu\n", start, end, i, i % NUM_PAGES_PER_SEGMENT);
+	} while (0);*/
+
+	/// install log incremental handler
+	iss_log.iss_log_inc = log_incremental_no_tree;
+
+	// if klm is enabled alloc tracking_data struct
 	if (pdes_config.iss_enabled_mprotection) {
 
-		uint i;
-
-		t_data = malloc(sizeof(tracking_data) * lps);
+		t_data = rsalloc(sizeof(tracking_data) * lps);
 		if (t_data != NULL) {
 		for (i = 0; i < lps; i++)
 			init_tracking_data(&t_data[i]);
@@ -399,6 +437,7 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 	}
 
 
+	/// if signaling mechanism is enabled install signal handler
 	if (pdes_config.iss_signal_mprotect) {
 		struct sigaction action;
 		action.sa_sigaction = sigsev_tracer_for_dirty;
