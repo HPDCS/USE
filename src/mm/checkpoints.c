@@ -75,7 +75,7 @@
 * @todo must be declared static. This will entail changing the logic in gvt.c to save a state before rebuilding.
 */
 
-extern lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
+lp_iss_metadata *iss_states; /// runtime iss metadata for each lp
 
 extern __thread int __in_log_full;
 
@@ -93,7 +93,10 @@ void *log_full(int lid) {
 	clock_timer checkpoint_timer;
 	clock_timer_start(checkpoint_timer);
 
+    __in_log_full =1 ;
+
 	recoverable_state[lid]->is_incremental = is_next_ckpt_incremental(); /// call routine for determining the type of checkpointing
+	
 	size = get_log_size(recoverable_state[lid]);
 
 	ckpt = rsalloc(size);
@@ -221,7 +224,7 @@ void *log_full(int lid) {
     autockpt_update_ema_full_log(lid, (double)clock_timer_value(checkpoint_timer));
 
     __in_log_full = 0 ;
-    
+
 	return ckpt;
 }
 
@@ -250,16 +253,13 @@ void *log_state(int lid) {
 	void *ckpt;
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		size_t logsize = iss_states[lid].current_incremental_log_size;
+
 		ckpt = log_full(lid);
-	#if BUDDY == 1
-		iss_update_model(lid);
-	#endif
+
 		if(recoverable_state[lid]->is_incremental){
-			guard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
-			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
-		#if BUDDY == 1
+			guard_all_memory(lid); 
 			iss_log_incremental_reset(lid);
-		#endif
+			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
 		} else
 			iss_states[lid].current_incremental_log_size = logsize;
 
@@ -481,7 +481,7 @@ void log_restore(int lid, state_t *state_queue_node) {
 	int res_um, res_tm;
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 
-		res_um = unguard_memory(lid, PER_LP_PREALLOCATED_MEMORY); 
+		res_um = unguard_all_memory(lid); 
 		
 		state_t *tgt = state_queue_node;
         state_t *cur = tgt;
@@ -492,13 +492,12 @@ void log_restore(int lid, state_t *state_queue_node) {
             restore_full(lid, cur->log);
             cur = list_next(cur);
         }
+
 		restore_full(lid, state_queue_node->log);
 
-    #if BUDDY == 1
+		res_tm = guard_all_memory(lid);
         iss_log_incremental_reset(lid);
-    #endif
-		//INCR: track_memory(mem, size)
-		res_tm = guard_memory(lid, PER_LP_PREALLOCATED_MEMORY);
+
 	}else
 		restore_full(lid, state_queue_node->log);
 }
