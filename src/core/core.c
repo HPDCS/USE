@@ -557,7 +557,7 @@ void init_simulation(unsigned int thread_id){
 	}
 
 
-	if(tid == 0){
+	if(tid == 0 && do_sleep != 0){
 	    int ret;
 		if( (ret = pthread_create(&sleeper, NULL, do_sleep, NULL)) != 0) {
 	            fprintf(stderr, "%s\n", strerror(errno));
