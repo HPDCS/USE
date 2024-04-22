@@ -92,7 +92,7 @@ void *log_full(int lid) {
 	clock_timer checkpoint_timer;
 	clock_timer_start(checkpoint_timer);
 
-    __in_log_full =1 ;
+    __in_log_full = 1 ;
 
 	recoverable_state[lid]->is_incremental = is_next_ckpt_incremental(); /// call routine for determining the type of checkpointing
 	
@@ -256,7 +256,7 @@ void *log_state(int lid) {
 		size_t logsize = get_iss_size(lid);
 
 		ckpt = log_full(lid);
-
+        //printf(" [lp %u] [log_state] after log full %x\n",lid, ckpt);
 		if(recoverable_state[lid]->is_incremental){
 			guard_all_memory(lid); 
 			iss_log_incremental_reset(lid);
@@ -487,17 +487,19 @@ void log_restore(int lid, state_t *state_queue_node) {
 		
 		state_t *tgt = state_queue_node;
         state_t *cur = tgt;
+
         while(((malloc_state*)cur->log)->is_incremental){
-        	printf("[log_restore] log %p\n", cur->log);
+        	//printf(" [lp %u] [log_restore] while loop state %x \t log %x\n",lid, cur, (malloc_state*)cur->log);
             cur = list_prev(cur);
         }
 		while(cur != tgt){
             restore_full(lid, cur->log);
-            printf("[log_restore] after restore full %p\n", cur->log);
+        	//printf(" [lp %u] [log_restore] while after restore state %x \t log %x\n",lid, cur,(malloc_state*)cur->log);
             cur = list_next(cur);
         }
 
 		restore_full(lid, state_queue_node->log);
+
 
 		res_tm = guard_all_memory(lid);
         iss_log_incremental_reset(lid);
