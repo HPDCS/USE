@@ -32,7 +32,7 @@ void sigsev_tracer_for_dirty(int sig, siginfo_t *func, void *arg){
 	assert(sig==SIGSEGV);
     assert(__in_log_full == 0);
 	(void)arg;
-	dirty(func->si_addr, PAGE_SIZE);
+	dirty(func->si_addr, PAGE_SIZE, 0);
 }
 
 /** syscalls */
@@ -184,27 +184,28 @@ bool is_next_ckpt_incremental(void) {
 }
 
 
-/** signal handler -- with mprotect() and with custom syscall and no page-fault hook */
 
-
-void dirty(void* addr, size_t size){
-	//fprintf(stderr, "[dirty] %u: lp %u %p\n", tid, current_lp, addr);
+void dirty(void* addr, size_t size, unsigned int cur_lp){
+	//fprintf(stderr, "[dirty] %u: lp %u %p\n", tid, cur_lp, addr);
 	unsigned int page_id;
 
-	page_id    	= get_page_idx_from_ptr(current_lp, addr);
+	if (pdes_config.iss_signal_mprotect) 
+		cur_lp = current_lp;
+
+	page_id    	= get_page_idx_from_ptr(cur_lp, addr);
 	page_id -= (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 
-    iss_states[current_lp].count_tracked++;
 
-	if (!get_bit(dirty_pages[current_lp], page_id)) {
-		//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", current_lp, page_id, (unsigned long long) addr, (void *) addr);
-		set_bit(dirty_pages[current_lp], page_id);
+	if (!get_bit(dirty_pages[cur_lp], page_id)) {
+   		 iss_states[cur_lp].count_tracked++;
+		//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", cur_lp, page_id, (unsigned long long) addr, (void *) addr);
+		set_bit(dirty_pages[cur_lp], page_id);
+		iss_states[cur_lp].current_incremental_log_size += PAGE_SIZE;
 	}
 
-	iss_states[current_lp].current_incremental_log_size += PAGE_SIZE;
 
 	if (pdes_config.iss_signal_mprotect)
-		unguard_memory(current_lp, PAGE_SIZE, page_id);
+		unguard_memory(cur_lp, PAGE_SIZE, page_id);
 }
 
 
@@ -274,7 +275,7 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
-	partition_log *cur_log = NULL, *prev_log = NULL;
+	partition_log *cur_log = NULL, *prev_log = NULL, *chain_log = NULL;
 	uint i;
 	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end   = start*2;
@@ -289,7 +290,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			buff = rsalloc(sizeof(unsigned long) * len);
 			if (buff != NULL) buff = data->buff_addresses;
 			for (i = 0; i < len; i++) {
-				dirty((void *) buff[i], PAGE_SIZE);
+				dirty((void *) buff[i], PAGE_SIZE, cur_lp);
 			} ///end for
 
 		} ///end if data != NULL
@@ -305,19 +306,23 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			cur_log->addr = (char *) get_page_ptr_from_idx(cur_lp, i);
+			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
 			//printf("[lp %u] BITMAP ADDRESS i %d \t address %lu - %p\n", cur_lp, i , (unsigned long )cur_log->addr, (void *) cur_log->addr);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
-			//printf("[lp %u] [log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t size %lu\n", 
-			//	cur_lp, i, cur_log->addr, cur_log, cur_log->log, iss_states[cur_lp].current_incremental_log_size);
+			printf("[lp %u] [log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t ts %f \t size %lu\n", 
+				cur_lp, i, cur_log->addr, cur_log, cur_log->log, cur_log->ts, iss_states[cur_lp].current_incremental_log_size);
 
-			//iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
+
+
 		}
+
 	}
 
+	//if (prev_log != NULL) printf("[lp %u] [log_incremental_no_tree] log done %x\n", cur_lp, prev_log->log);
 	return prev_log;
 
 
@@ -334,7 +339,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 void log_incremental_restore(partition_log *cur) {
 
 	while(cur){
-		//printf("lp %u : [log_incremental_restore] cur %p -- addr %lu\n", current_lp, cur, cur->addr);
+		printf("lp %u : [log_incremental_restore] cur %x -- log %x \t ts %f \n", current_lp, cur, cur->log, cur->ts);
 		memcpy(cur->addr, cur->log, cur->size);
 		cur = cur->next;
 	}

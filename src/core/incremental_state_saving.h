@@ -122,7 +122,7 @@ char* get_page_ptr(unsigned long addr);
 void init_segment_monitor_support(tracking_data *data);
 
 
-extern void dirty(void*, size_t);
+extern void dirty(void*, size_t, unsigned int);
 
 #if BUDDY == 1
 /** methods for model management */
