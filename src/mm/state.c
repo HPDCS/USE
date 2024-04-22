@@ -285,6 +285,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 	
 	// Restore the simulation state and correct the state base pointer
 	
+	printf("[lp %u] [rollback] lvt time %f \t destination time %f \t state %x\n", lid, lvt(lid), destination_time, restore_state);
 	log_restore(lid, restore_state);
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
 	
