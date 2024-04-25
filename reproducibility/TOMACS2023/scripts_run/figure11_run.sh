@@ -33,7 +33,7 @@ f="$res/pcs_hs_lo-${MAX_THREADS}-$lp-$MIN-$r"
 echo $cur > $f.sh
 ./$cur > $f.dat
 
-cmd="$cmd --enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch --df-bound=17"
+cmd="$cmd --enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch --df-bound=17 --linear-pinning"
 cur="$cmd --ncores=${MAX_THREADS}"
 f="$res/pcs_hs_lo_re_df-${MAX_THREADS}-$lp-$MIN-$r"
 echo $cur > $f.sh

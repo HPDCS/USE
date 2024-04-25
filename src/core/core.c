@@ -205,14 +205,18 @@ void set_affinity(unsigned int tid){
 	cpu_set_t mask;
 
 	CPU_ZERO(&mask);
-
+	
+	/*
 	if(pdes_config.linear_pinning){
+            if(tid == 0) printf("LINEAR PINNING\n");
 		current_cpu = tid;
 		CPU_SET(current_cpu, &mask);
 	}
-	else{
+	else*/
+	{
 		cpu_per_node = N_CPU/num_numa_nodes;
 		current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+		current_cpu = tid;
 		CPU_SET(cores_on_numa[current_cpu], &mask);
 		current_cpu = cores_on_numa[current_cpu];
 	}
@@ -223,7 +227,7 @@ void set_affinity(unsigned int tid){
 	}
 	
 	current_numa_node = get_current_numa_node();
-	printf("Thread %2u set to CPU %2u on NUMA node %2u\n", tid, cores_on_numa[current_cpu], current_numa_node);
+	printf("Thread %2u set to CPU %2u(%2u) on NUMA node %2u\n", tid, current_cpu, sched_getcpu(), current_numa_node);
 	
 }
 
@@ -299,6 +303,8 @@ void numa_init(){
 		printf("NUMA machine with %u nodes.\n", (unsigned int)  numa_num_configured_nodes());
 		numa_available_bool = true;
 		num_numa_nodes = numa_num_configured_nodes();
+		if(pdes_config.linear_pinning)
+			num_numa_nodes=2;
 	}
 	else{
 		printf("UMA machine.\n");
@@ -341,6 +347,9 @@ void numa_init(){
 		}
 	}
 
+	for (int k=0; k < N_CPU; k++) {
+		printf("%d\n", cores_on_numa[k]);
+	}
 
 
 }

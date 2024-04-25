@@ -114,7 +114,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       pdes_config.enable_committer_threads = 0;
       break;
     case ENABLE_LINEAR_PINNING_KEY:
-      pdes_config.linear_pinning = 0;
+      pdes_config.linear_pinning = 1;
       break;
 
     case CKPT_PERIOD_KEY:
