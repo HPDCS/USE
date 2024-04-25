@@ -43,6 +43,8 @@ simulation_configuration pdes_config;
 #define DISTRIBUTED_FETCH_KEY       763
 #define DISTRIBUTED_FETCH_BOUND_KEY 764
 
+#define ENABLE_LINEAR_PINNING_KEY 	    864
+
 
 const char *argp_program_version = "USE 1.0";
 const char *argp_program_bug_address = "<romolo.marotta@gmail.com>";
@@ -57,6 +59,7 @@ static struct argp_option options[] = {
   {"wall-timeout",        WALLCLOCK_TIMEOUT_KEY    , "SECONDS" ,  0                  ,  "End the simulation after SECONDS elapsed"   , 0 },
   {"observe-period",      OBS_PERIOD_KEY           , "MS"      ,  0                  ,  "Period in ms to check througput"    , 0 },
   {"disable-committer-threads",  DISABLE_COMMITTER_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Disable committer threads"   , 0 },
+  {"linear-pinning",      ENABLE_LINEAR_PINNING_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "enable linear-pinning between threads and cpus"   , 0 },
   
   {"ckpt-period",         CKPT_PERIOD_KEY          , "#EVENTS" ,  0                  ,  "Number of events to be forward-executed before taking a full-snapshot"   , 0 },
   {"ckpt-fossil-period",  CKPT_FOSSIL_PERIOD_KEY   , "#EVENTS" ,  0                  ,  "Number of events to be executed before collection committed snapshot"   , 0 },
@@ -109,6 +112,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
     case DISABLE_COMMITTER_KEY:
       pdes_config.enable_committer_threads = 0;
+      break;
+    case ENABLE_LINEAR_PINNING_KEY:
+      pdes_config.linear_pinning = 0;
       break;
 
     case CKPT_PERIOD_KEY:

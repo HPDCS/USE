@@ -203,17 +203,19 @@ unsigned int cores_on_numa[N_CPU];
 void set_affinity(unsigned int tid){
 	unsigned int cpu_per_node;
 	cpu_set_t mask;
-	cpu_per_node = N_CPU/num_numa_nodes;
-	
-	
-	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
-	
 
 	CPU_ZERO(&mask);
-	CPU_SET(cores_on_numa[current_cpu], &mask);
 
-	current_cpu = cores_on_numa[current_cpu];
-	
+	if(pdes_config.linear_pinning){
+		current_cpu = tid;
+		CPU_SET(current_cpu, &mask);
+	}
+	else{
+		cpu_per_node = N_CPU/num_numa_nodes;
+		current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+		CPU_SET(cores_on_numa[current_cpu], &mask);
+		current_cpu = cores_on_numa[current_cpu];
+	}
 	int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask);
 	if(err < 0) {
 		printf("Unable to set CPU affinity: %s\n", strerror(errno));

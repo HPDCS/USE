@@ -5,7 +5,7 @@ source autoconf.sh
 RUN="0 1 2 3 4 5"
 LPS="4096"
 MIN="420"
-
+MAX_THREADS="32"
 
 
 for r in $RUN; do
