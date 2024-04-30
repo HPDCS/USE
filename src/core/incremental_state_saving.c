@@ -200,7 +200,6 @@ void dirty(void* addr, size_t size, unsigned int cur_lp){
 	if (!get_bit(dirty_pages[cur_lp], page_id)) {
 		//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", cur_lp, page_id, (unsigned long long) addr, (void *) addr);
 		set_bit(dirty_pages[cur_lp], page_id);
-		if (page_id >= dirty_pages[cur_lp]->max_idx) dirty_pages[cur_lp]->max_idx = page_id;
 		iss_states[cur_lp].current_incremental_log_size += PAGE_SIZE;
 	}
 

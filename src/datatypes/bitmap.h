@@ -74,6 +74,7 @@ static inline void set_bit(bitmap* ptr, unsigned int pos){
     unsigned int  index = pos/CHAR_BIT;
     unsigned int  b_pos = pos%CHAR_BIT;
     unsigned char b_val = 1 << b_pos;
+    if (pos >= ptr->max_idx) ptr->max_idx = pos;
     ptr->bits[index] |= b_val; 
 }
 
@@ -102,6 +103,7 @@ static inline void reset_bit(bitmap* ptr, unsigned int pos){
     unsigned int  index = pos/CHAR_BIT;
     unsigned int  b_pos = pos%CHAR_BIT;
     unsigned char b_val = ~(1 << b_pos);
+    if (pos == ptr->max_idx) ptr->max_idx = 0;
     ptr->bits[index] &= b_val; 
 }
 
