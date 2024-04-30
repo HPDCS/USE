@@ -106,7 +106,11 @@ skip_switch:
 		new_state.lvt = lvt(lid);
 		new_state.last_event = LPS[lid]->bound;
 		new_state.state = LPS[lid]->state;
-
+  #if VERBOSE == 1
+		printf("[lp %u] LOG STATE %x \t lvt %f \t last event %x \t from last ckpt %d\n", 
+			lid, new_state.log, new_state.lvt, new_state.last_event, LPS[lid]->from_last_ckpt);
+  #endif
+		
 		new_state.num_executed_frames	= LPS[lid]->num_executed_frames		;
 
 		// We take as the buffer state the last one associated with a SetState() call, if any
@@ -284,9 +288,17 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 //	}
 	
 	// Restore the simulation state and correct the state base pointer
-	
+  #if VERBOSE == 1
 	printf("[lp %u] [rollback] lvt time %f \t destination time %f \t state %x\n", lid, lvt(lid), destination_time, restore_state);
+  #endif
+
 	log_restore(lid, restore_state);
+
+  #if VERBOSE == 1
+	printf("[lp %u] LOG RESTORE STATE %x \t lvt %f \t last event %x \t from last ckpt %d\n", 
+			lid, restore_state->log, restore_state->lvt, restore_state->last_event, LPS[lid]->from_last_ckpt);
+  #endif
+
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
 	
 	last_restored_event = restore_state->last_event;
