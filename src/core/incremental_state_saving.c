@@ -195,16 +195,14 @@ void dirty(void* addr, size_t size, unsigned int cur_lp){
 		cur_lp = current_lp;
 
 	page_id    	= get_page_idx_from_ptr(cur_lp, addr);
-	page_id -= (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-
+    iss_states[cur_lp].count_tracked++;
 
 	if (!get_bit(dirty_pages[cur_lp], page_id)) {
-   		 iss_states[cur_lp].count_tracked++;
 		//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", cur_lp, page_id, (unsigned long long) addr, (void *) addr);
 		set_bit(dirty_pages[cur_lp], page_id);
+		if (page_id >= dirty_pages[cur_lp]->max_idx) dirty_pages[cur_lp]->max_idx = page_id;
 		iss_states[cur_lp].current_incremental_log_size += PAGE_SIZE;
 	}
-
 
 	if (pdes_config.iss_signal_mprotect)
 		unguard_memory(cur_lp, PAGE_SIZE, page_id);
@@ -297,8 +295,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
 	} ///end if enabled mprotection
 		
-	//for (i = start; i < end; i++) {
-	for (i = 0; i < dirty_pages[cur_lp]->actual_len; i++) {
+	for (i = 0; i < dirty_pages[cur_lp]->max_idx; i++) {
 
 		if (get_bit(dirty_pages[cur_lp], i)) {
 
@@ -306,18 +303,28 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
-			//printf("[lp %u] BITMAP ADDRESS i %d \t address %lu - %p\n", cur_lp, i , (unsigned long )cur_log->addr, (void *) cur_log->addr);
+			cur_log->addr = (char*)mem_areas[cur_lp] + i*PAGE_SIZE;//get_page_ptr_from_idx(cur_lp, i);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
+
+  #if VERBOSE == 1
+			printf("[lp %u] BITMAP ADDRESS i %d \t address %lu - %p is address in page %lu \n", cur_lp, i , 
+				(unsigned long )cur_log->addr, (void *) cur_log->addr,
+				((unsigned long )cur_log->addr >= (unsigned long) mem_areas[cur_lp] + i*PAGE_SIZE && 
+					(unsigned long )cur_log->addr <= (unsigned long) mem_areas[cur_lp] + i*PAGE_SIZE + PAGE_SIZE));
+  #endif
+			
+
+  #if VERBOSE == 1
 			printf("[lp %u] [log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t ts %f \t size %lu\n", 
 				cur_lp, i, cur_log->addr, cur_log, cur_log->log, cur_log->ts, iss_states[cur_lp].current_incremental_log_size);
+  #endif
+
 
 			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
-
-
+			reset_bit(dirty_pages[cur_lp], i);
 		}
 
 	}
@@ -378,7 +385,7 @@ void iss_log_incremental_reset(unsigned int lp){
         //clear_bitmap(dirty_pages[lp]);
     }
 
-    clear_bitmap(dirty_pages[lp]);
+    //clear_bitmap(dirty_pages[lp]);
     
     iss_states[lp].cur_virtual_ts += 1;
     
