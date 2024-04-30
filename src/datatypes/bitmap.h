@@ -22,6 +22,7 @@
 typedef struct __bitmap{
     unsigned int virtual_len; /// request bitmap length
     unsigned int actual_len;  /// multiple of CHAR_BIT
+    unsigned int max_idx;
     unsigned char bits[];     /// array of chars storing the bitmap
 } bitmap;
 
@@ -44,12 +45,13 @@ static inline bitmap* allocate_bitmap(unsigned int len){
     bytes       += actual_len<len;
     actual_len   = bytes * CHAR_BIT;
 
-    tmp = (bitmap*) aligned_alloc(CACHE_LINE_SIZE, bytes+2*sizeof(unsigned int));
+    tmp = (bitmap*) aligned_alloc(CACHE_LINE_SIZE, bytes+3*sizeof(unsigned int));
     
     bzero(tmp, bytes+2*sizeof(unsigned int));
     
     tmp->virtual_len = len;
     tmp->actual_len  = actual_len;
+    tmp->max_idx     = 0;
     
     return tmp;
 }
