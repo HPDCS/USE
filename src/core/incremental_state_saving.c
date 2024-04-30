@@ -120,8 +120,11 @@ int get_page_idx_from_ptr(unsigned int cur_lp, void *addr){
 	assert(pg_addr >= base_addr);
 	assert(pg_addr <  (base_addr+PER_LP_PREALLOCATED_MEMORY));
 	unsigned long long offset = pg_addr - base_addr;
+	//printf("[lp %u] pg_addr % NUM_PAGES_PER_SEGMENT %lu\n", cur_lp, pg_addr % PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 	assert(offset < PER_LP_PREALLOCATED_MEMORY);
-	return (unsigned int) offset/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	//printf("[lp %u] [get_page_idx_from_ptr] address %lu - %p \t offset %lu -- %u -- %u -- bitmap length %lu\n", 
+	//	cur_lp, (unsigned long long)addr, addr, offset, offset/PAGE_SIZE, offset/NUM_PAGES_PER_SEGMENT, dirty_pages[cur_lp]->actual_len);
+	return (unsigned int) offset/PAGE_SIZE;
 }
 
 unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
@@ -132,10 +135,9 @@ unsigned int get_lowest_page_from_partition_id(unsigned int page_id){
 }
 
 void* get_page_ptr_from_idx(unsigned int cur_lp, unsigned int id){
-	//assert(id>=PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-	//assert(id<PER_LP_PREALLOCATED_MEMORY*2/PAGE_SIZE);
-	id += (PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-	return ((char*)mem_areas[cur_lp]) + (id-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; 
+	assert(id>=0);
+	assert(id<PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+	return ((char*)mem_areas[cur_lp] + id*PAGE_SIZE); 
 }
 
 /** methods to initialize iss support and set tracking_data struct */ 
@@ -258,7 +260,7 @@ tracking_data *get_fault_info(unsigned int lid) {
 	local_data->end_address = (unsigned long) (mem_areas[lid]+MAX_MMAP*NUM_MMAP);
 	local_data->len_buf = (unsigned long) NUM_PAGES_PER_MMAP;
 	if(local_data->buff_addresses == NULL) local_data->buff_addresses = rsalloc(local_data->len_buf * sizeof(unsigned long));
-	segid = lid;//SEGID(mem_areas[lid], mem_areas[0], NUM_PAGES_PER_SEGMENT);
+	segid = lid;
 	
 
 	ioctl(device_fd, TRACKER_GET, local_data);
@@ -275,14 +277,12 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
-	partition_log *cur_log = NULL, *prev_log = NULL, *chain_log = NULL;
+	partition_log *cur_log = NULL, *prev_log = NULL;
 	uint i;
-	unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
-	unsigned int end   = start*2;
-
+	
 	if (pdes_config.iss_enabled_mprotection) {
 		tracking_data *data = get_fault_info(cur_lp);
-		unsigned long len, page_id;
+		unsigned long len;
 		unsigned long *buff;
 		int i;
 		if (data != NULL) {
@@ -339,7 +339,9 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 void log_incremental_restore(partition_log *cur) {
 
 	while(cur){
+	 #if VERBOSE == 1	
 		printf("lp %u : [log_incremental_restore] cur %x -- log %x \t ts %f \n", current_lp, cur, cur->log, cur->ts);
+	 #endif	
 		memcpy(cur->addr, cur->log, cur->size);
 		cur = cur->next;
 	}
@@ -356,6 +358,7 @@ void log_incremental_restore(partition_log *cur) {
 void log_incremental_destroy_chain(partition_log *cur){
 	partition_log *next = NULL;
 	while(cur){
+		//printf("lp %u : [log_incremental_destroy_chain] cur %x -- log %x \t ts %f \n", current_lp, cur, cur->log, cur->ts);
 		next = cur->next;
 		rsfree(cur->log);
 		rsfree(cur);
@@ -407,15 +410,14 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 	dirty_pages = rsalloc(lps * sizeof(bitmap));
 	for (i=0; i < lps; i++)
 		dirty_pages[i] = allocate_bitmap(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
-		//dirty_pages[i] = allocate_bitmap(2*PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 
 
 	/*unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	unsigned int end = 2*start;
 
 	do {
-		for(i=start; i < end; i++)
-			printf("start %u \t end %u \t i %u\t TO %lu\n", start, end, i, i % NUM_PAGES_PER_SEGMENT);
+		for(i=0; i < dirty_pages[0]->actual_len; i++)
+			printf("start %u \t end %u \t i %u\t TO %lu\n", start, end, i, ((unsigned long) (mem_areas[0] + i*PAGE_SIZE) - (unsigned long) mem_areas[0]) / PAGE_SIZE);
 	} while (0);*/
 
 	/// install log incremental handler
@@ -454,7 +456,6 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	bzero(iss_states+lp, sizeof(lp_iss_metadata));
 
 	iss_states[lp].cur_virtual_ts = 1;
-	iss_states[lp].current_incremental_log_size = PAGE_SIZE;
 
 	/// if klm is enabled setup tracking_data struct entries 
 	if (pdes_config.iss_enabled_mprotection) {
