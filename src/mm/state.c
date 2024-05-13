@@ -106,15 +106,17 @@ skip_switch:
 		new_state.lvt = lvt(lid);
 		new_state.last_event = LPS[lid]->bound;
 		new_state.state = LPS[lid]->state;
-  #if VERBOSE == 1
-		printf("[lp %u] LOG STATE %x \t lvt %f \t last event %x \t from last ckpt %d\n", 
-			lid, new_state.log, new_state.lvt, new_state.last_event, LPS[lid]->from_last_ckpt);
-  #endif
 		
 		new_state.num_executed_frames	= LPS[lid]->num_executed_frames		;
 
 		// We take as the buffer state the last one associated with a SetState() call, if any
 		new_state.base_pointer = LPS[lid]->current_base_pointer;
+
+#if VERBOSE == 1
+		printf("[lp %u] LOG STATE state %x \t log %x \t lvt %f \t last event %x \n", 
+			lid, new_state, new_state.log, new_state.lvt, 
+			new_state.last_event);
+ #endif
 
 		// list_insert() makes a copy of the payload
 		(void)list_insert_tail(lid, LPS[lid]->queue_states, &new_state);
@@ -288,26 +290,28 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 //	}
 	
 	// Restore the simulation state and correct the state base pointer
-  #if VERBOSE == 1
-	printf("[lp %u] [rollback] lvt time %f \t destination time %f \t state %x\n", lid, lvt(lid), destination_time, restore_state);
-  #endif
+  //#if VERBOSE == 1
+	printf("[lp %u] [rollback] lvt time %f \t destination time %f \t restore state %x\n", lid, lvt(lid), destination_time, restore_state);
+  //#endif
 
 	log_restore(lid, restore_state);
 
-  #if VERBOSE == 1
-	printf("[lp %u] LOG RESTORE STATE %x \t lvt %f \t last event %x \t from last ckpt %d\n", 
-			lid, restore_state->log, restore_state->lvt, restore_state->last_event, LPS[lid]->from_last_ckpt);
-  #endif
+  //#if VERBOSE == 1
+	printf("[lp %u] LOG RESTORE STATE %x \t log %x \t lvt %f \t last event %x \t from last ckpt %d\n", 
+			lid, restore_state, restore_state->log, restore_state->lvt, restore_state->last_event, LPS[lid]->from_last_ckpt);
+  //#endif
 
-	LPS[lid]->current_base_pointer 	= restore_state->base_pointer 			;
+	LPS[lid]->current_base_pointer 	= restore_state->base_pointer ;
 	
 	last_restored_event = restore_state->last_event;
 	reprocessed_events = silent_execution(lid, LPS[lid]->current_base_pointer, last_restored_event, destination_time, tie_breaker);
 	// THE BOUND HAS BEEN RESTORED BY THE SILENT EXECUTION
 	
-	if(LPS[lid]->state == LP_STATE_ONGVT || destination_time == INFTY)
+	if(LPS[lid]->state == LP_STATE_ONGVT || destination_time == INFTY) {
 		statistics_post_lp_data(lid, STAT_EVENT_SILENT_FOR_GVT, (double)reprocessed_events);
+	}
     else{
+    	//printf("[lp %u] SILENT REPROCESSED %u\n", lid, reprocessed_events);
         statistics_post_lp_data(lid, STAT_EVENT_SILENT, (double)reprocessed_events); 
     }
 	//The bound variable is set in silent_execution.
@@ -328,6 +332,7 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
         }
     }
 
+   
 	LPS[lid]->state = restore_state->state;
 }
 
