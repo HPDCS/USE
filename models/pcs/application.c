@@ -231,7 +231,7 @@ void ProcessEvent(unsigned int me, simtime_t now, int event_type, event_content_
 				exit(EXIT_FAILURE);
 			}
 
-			malloc(20*4096);
+			state->dummy_state =  malloc(20*4096);
 
 			SetState(state);
 

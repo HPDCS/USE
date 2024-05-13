@@ -125,6 +125,8 @@ typedef struct _lp_state_type{
 	struct _channel *channels;
 	int dummy;
 	bool dummy_flag;
+
+	void *dummy_state;
 } lp_state_type;
 
 
