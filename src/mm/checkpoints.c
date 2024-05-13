@@ -254,14 +254,21 @@ void *log_state(int lid) {
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		//size_t logsize = iss_states[lid].current_incremental_log_size;
 		size_t logsize = get_iss_size(lid);
-
+		
+		if (pdes_config.iss_enabled_mprotection && !pdes_config.iss_signal_mprotect) 
+			mark_dirty_pages(lid);
+		
 		ckpt = log_full(lid);
         //printf(" [lp %u] [log_state] after log full %x\n",lid, ckpt);
 		if(recoverable_state[lid]->is_incremental){
+			//printf("[lp %u] LOG INCREMENTAL log %x \t lvt %f \n", 
+			//		lid, ckpt, lvt(lid));
 			guard_all_memory(lid); 
 			iss_log_incremental_reset(lid);
 			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
 		} else
+			//printf("[lp %u] LOG FULL log %x \t lvt %f \n", 
+			//		lid, ckpt, lvt(lid));
 			//iss_states[lid].current_incremental_log_size = logsize;
 			set_iss_size(lid, logsize);
 
@@ -489,7 +496,8 @@ void log_restore(int lid, state_t *state_queue_node) {
         state_t *cur = tgt;
 
         while(((malloc_state*)cur->log)->is_incremental){
-        	//printf(" [lp %u] [log_restore] while loop state %x \t log %x\n",lid, cur, (malloc_state*)cur->log);
+        	printf(" [lp %u] [log_restore] while loop state %x \t log %x \t cur->lvt %f \t state lvt %f\n",lid, cur, (malloc_state*)cur->log,
+        		cur->lvt, state_queue_node->lvt);
             cur = list_prev(cur);
         }
 		while(cur != tgt){
@@ -497,7 +505,7 @@ void log_restore(int lid, state_t *state_queue_node) {
         	//printf(" [lp %u] [log_restore] while after restore state %x \t log %x\n",lid, cur,(malloc_state*)cur->log);
             cur = list_next(cur);
         }
-
+        
 		restore_full(lid, state_queue_node->log);
 
 
