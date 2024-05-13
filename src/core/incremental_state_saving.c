@@ -84,7 +84,6 @@ int guard_all_memory(unsigned int lid) {
 
 	if(!pdes_config.iss_enabled_mprotection) {
 		unsigned int id = get_lowest_page_from_partition_id(1);
-		//id += PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ);
 	}
 	else {
@@ -96,11 +95,9 @@ int unguard_all_memory(unsigned int lid) {
 	
 	if(!pdes_config.iss_enabled_mprotection) {
 		unsigned int id = get_lowest_page_from_partition_id(1);
-		//id += PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ | PROT_WRITE);
 	}
 	else {
-
 		return untrack_memory((unsigned long) mem_areas[lid], PER_LP_PREALLOCATED_MEMORY);
 	}
 }
@@ -198,13 +195,13 @@ void dirty(void* addr, size_t size, unsigned int cur_lp){
     iss_states[cur_lp].count_tracked++;
 
 	if (!get_bit(dirty_pages[cur_lp], page_id)) {
+		iss_states[cur_lp].current_incremental_log_size += size;
 		//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", cur_lp, page_id, (unsigned long long) addr, (void *) addr);
 		set_bit(dirty_pages[cur_lp], page_id);
-		iss_states[cur_lp].current_incremental_log_size += PAGE_SIZE;
 	}
 
 	if (pdes_config.iss_signal_mprotect)
-		unguard_memory(cur_lp, PAGE_SIZE, page_id);
+		unguard_memory(cur_lp, size, page_id);
 }
 
 
@@ -262,9 +259,6 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 	ioctl(device_fd, TRACKER_GET, local_data);
 
-	if (local_data != NULL) 
-		return local_data;
-
 	return local_data;
 }
 
@@ -272,27 +266,31 @@ tracking_data *get_fault_info(unsigned int lid) {
 /** incremental state saving facilities */
 
 
+void mark_dirty_pages(unsigned int cur_lp) {
+
+	tracking_data *data = get_fault_info(cur_lp);
+	unsigned long len;
+	unsigned long *buff;
+	int j;
+	if (data != NULL) {
+
+		len = data->len_buf;
+		//buff = rsalloc(sizeof(unsigned long) * len);
+		if (data->buff_addresses != NULL && buff != NULL) buff = data->buff_addresses;
+
+		for (j = 0; j < len; j++) {
+			dirty((void *) data->buff_addresses[j], PAGE_SIZE, cur_lp);
+		} ///end for
+		
+	} ///end if data != NULL
+
+} 
+
 partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
 	partition_log *cur_log = NULL, *prev_log = NULL;
 	uint i;
 	
-	if (pdes_config.iss_enabled_mprotection) {
-		tracking_data *data = get_fault_info(cur_lp);
-		unsigned long len;
-		unsigned long *buff;
-		int i;
-		if (data != NULL) {
-			len = data->len_buf;
-			buff = rsalloc(sizeof(unsigned long) * len);
-			if (buff != NULL) buff = data->buff_addresses;
-			for (i = 0; i < len; i++) {
-				dirty((void *) buff[i], PAGE_SIZE, cur_lp);
-			} ///end for
-
-		} ///end if data != NULL
-
-	} ///end if enabled mprotection
 		
 	for (i = 0; i < dirty_pages[cur_lp]->max_idx; i++) {
 
@@ -327,6 +325,8 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 		}
 
 	}
+
+	if (cur_lp, dirty_pages[cur_lp]->max_idx < cur_lp, dirty_pages[cur_lp]->actual_len) reset_bit(dirty_pages[cur_lp],dirty_pages[cur_lp]->max_idx);
 
 	//if (prev_log != NULL) printf("[lp %u] [log_incremental_no_tree] log done %x\n", cur_lp, prev_log->log);
 	return prev_log;
@@ -384,7 +384,16 @@ void iss_log_incremental_reset(unsigned int lp){
         //clear_bitmap(dirty_pages[lp]);
     }
 
-    //clear_bitmap(dirty_pages[lp]);
+    if (pdes_config.iss_enabled_mprotection) {
+		tracking_data *local_data = t_data[lp];
+		unsigned long len;
+		uint i;
+   		len = local_data->len_buf;
+
+	    for (i = 0; i < len; i++) {
+	    	if (local_data->buff_addresses != NULL) local_data->buff_addresses[i] = 0;
+	    }
+	}
     
     iss_states[lp].cur_virtual_ts += 1;
     
