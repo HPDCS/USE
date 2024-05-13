@@ -286,13 +286,14 @@ void mark_dirty_pages(unsigned int cur_lp) {
 
 } 
 
+
 partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
 	partition_log *cur_log = NULL, *prev_log = NULL;
 	uint i;
 	
-		
-	for (i = 0; i < dirty_pages[cur_lp]->max_idx; i++) {
+
+	for (i = 0; i <= dirty_pages[cur_lp]->max_idx; i++) {
 
 		if (get_bit(dirty_pages[cur_lp], i)) {
 
