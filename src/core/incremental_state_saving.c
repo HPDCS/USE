@@ -300,7 +300,7 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			cur_log->addr = (char*)mem_areas[cur_lp] + i*PAGE_SIZE;//get_page_ptr_from_idx(cur_lp, i);
+			cur_log->addr = ((char*)mem_areas[cur_lp] + i*PAGE_SIZE);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
