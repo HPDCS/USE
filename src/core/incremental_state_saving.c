@@ -145,7 +145,7 @@ void init_tracking_data(tracking_data **data) {
 	(*data)->subsegment_address 	= 0UL;
 	(*data)->end_address 			= 0UL;
 	(*data)->segment_id 			= 0UL;
-	(*data)->len_buf 				= NUM_PAGES_PER_SEGMENT;
+	(*data)->len_buf 				= PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
 	(*data)->buff_addresses 		= rsalloc((*data)->len_buf * sizeof(unsigned long)); 
 }
 
@@ -182,21 +182,31 @@ bool is_next_ckpt_incremental(void) {
 
 
 
-void dirty(void* addr, size_t size, unsigned int cur_lp){
+void dirty(void* addr, size_t size, int cur_lp){
 	//fprintf(stderr, "[dirty] %u: lp %u %p\n", tid, cur_lp, addr);
 	unsigned int page_id;
 
 	if (pdes_config.iss_signal_mprotect) 
 		cur_lp = current_lp;
-
+	
 	page_id    	= get_page_idx_from_ptr(cur_lp, addr);
-    iss_states[cur_lp].count_tracked++;
 
 	if (!get_bit(dirty_pages[cur_lp], page_id)) {
+    	iss_states[cur_lp].count_tracked++;
 		iss_states[cur_lp].current_incremental_log_size += size;
-		//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", cur_lp, page_id, (unsigned long long) addr, (void *) addr);
+
+  #if VERBOSE == 1
+
+		printf("[lp %u] [dirty] BITMAP ADDRESS i %u \t address %llu - %p \t mem_areas %lu \t is address in page %lu \n", 
+			cur_lp, page_id, (unsigned long long) addr, (void *) addr, 
+			((unsigned long) mem_areas[cur_lp] + page_id*PAGE_SIZE), 
+			((unsigned long )addr >= (unsigned long) mem_areas[cur_lp] + page_id*PAGE_SIZE && 
+					(unsigned long )addr <= (unsigned long) mem_areas[cur_lp] + page_id*PAGE_SIZE + PAGE_SIZE));
+  #endif
+
 		set_bit(dirty_pages[cur_lp], page_id);
 	}
+
 
 	if (pdes_config.iss_signal_mprotect)
 		unguard_memory(cur_lp, size, page_id);
@@ -241,7 +251,7 @@ void close_tracker_device(void) {
   
 }
 
-tracking_data *get_fault_info(unsigned int lid) {
+tracking_data *get_fault_info(int lid) {
 
 	tracking_data *local_data = t_data[lid];
 	unsigned long len;
@@ -249,10 +259,10 @@ tracking_data *get_fault_info(unsigned int lid) {
 	unsigned long segid;
 	local_data->base_address = (unsigned long) mem_areas[0];
 	local_data->subsegment_address = (unsigned long) mem_areas[lid];
-	local_data->end_address = (unsigned long) (mem_areas[lid]+MAX_MMAP*NUM_MMAP);
-	local_data->len_buf = (unsigned long) NUM_PAGES_PER_MMAP;
+	local_data->end_address = (unsigned long) (mem_areas[lid]+PER_LP_PREALLOCATED_MEMORY - 1);
+	local_data->len_buf = (unsigned long) PER_LP_PREALLOCATED_MEMORY;
 	if(local_data->buff_addresses == NULL) local_data->buff_addresses = rsalloc(local_data->len_buf * sizeof(unsigned long));
-	segid = lid;
+	local_data->segment_id = (unsigned long)lid;
 	
 
 	ioctl(device_fd, TRACKER_GET, local_data);
@@ -264,7 +274,7 @@ tracking_data *get_fault_info(unsigned int lid) {
 /** incremental state saving facilities */
 
 
-void mark_dirty_pages(unsigned int cur_lp) {
+void mark_dirty_pages(int cur_lp) {
 
 	if (iss_states[cur_lp].first_log) return; ///skip init forced log
 
@@ -334,8 +344,9 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
   #endif
 
 
-			iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			if (iss_states[cur_lp].current_incremental_log_size > 0) iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
 			memcpy(cur_log->log, cur_log->addr, cur_log->size);
+			
 			reset_bit(dirty_pages[cur_lp], i);
 		}
 
@@ -477,6 +488,11 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
 	iss_states[lp].cur_virtual_ts = 1;
 	iss_states[lp].first_log = 1;
+
+
+	dirty_pages[lp] = allocate_bitmap(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
+	//printf("[lp %u] mem_areas[lp] %lu \n", lp, mem_areas[lp]);
+
 
 	/// if klm is enabled setup tracking_data struct entries 
 	if (pdes_config.iss_enabled_mprotection) {

@@ -77,11 +77,12 @@ typedef struct __partition_tree_node{
 typedef struct __per_lp_iss_metadata{
 	ssize_t current_incremental_log_size;
 	int iss_counter;
-    int iss_model_round;
+    int empty_klm_buffer;
     int count_tracked;
     int disabled;
     unsigned short cur_virtual_ts;
     char current_model;
+    unsigned int first_log;
 }lp_iss_metadata;
 
 
@@ -104,6 +105,7 @@ extern model_t iss_costs_model;	 /// runtime tuning of the cost model
 /** methods for incremental state saving support */
 void init_incremental_checkpointing_support(unsigned int lps);
 void init_tracking_data(tracking_data **);
+void reset_tracking_data(tracking_data **);
 void set_tracking_data(tracking_data **data, unsigned long start, unsigned long addr, unsigned long end,
 										unsigned int segid, unsigned long len);
 void init_incremental_checkpoint_support_per_lp(unsigned int lp);
@@ -116,13 +118,13 @@ partition_log *log_incremental_no_tree(unsigned int cur_lp, simtime_t ts);
 void log_incremental_restore(partition_log *cur);
 void log_incremental_destroy_chain(partition_log *cur);
 
-tracking_data *get_fault_info(unsigned int lid);
+tracking_data *get_fault_info(int lid);
 char* get_page_ptr(unsigned long addr);
 
 void init_segment_monitor_support(tracking_data *data);
 
-extern void mark_dirty_pages(unsigned int);
-void dirty(void*, size_t, unsigned int);
+extern void mark_dirty_pages(int);
+void dirty(void*, size_t, int);
 
 #if BUDDY == 1
 /** methods for model management */
