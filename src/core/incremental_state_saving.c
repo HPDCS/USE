@@ -50,19 +50,6 @@ int flush_local_tlb(unsigned int lid, size_t size){
 
 /** syscalls' wrappers */
 
-int guard_memory(unsigned int lid, unsigned long size) {
-
-	assert(size <= PER_LP_PREALLOCATED_MEMORY);
-
-	if(!pdes_config.iss_enabled_mprotection) {
-		unsigned int id = get_lowest_page_from_partition_id(1);
-		//printf("[guard_memory lp %u] -- ptr %p -- size %lu\n", lid, get_page_ptr_from_idx(lid, id), size);
-		return mprotect(get_page_ptr_from_idx(lid, id), size, PROT_READ);
-	}
-	else {
-		return track_memory((unsigned long) mem_areas[lid], size);
-	}
-}
 
 int unguard_memory(unsigned int lid, unsigned long size, unsigned int page_id) {
 	
@@ -83,7 +70,6 @@ int unguard_memory(unsigned int lid, unsigned long size, unsigned int page_id) {
 int guard_all_memory(unsigned int lid) {
 
 	if(!pdes_config.iss_enabled_mprotection) {
-		unsigned int id = get_lowest_page_from_partition_id(1);
 		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ);
 	}
 	else {
@@ -94,7 +80,6 @@ int guard_all_memory(unsigned int lid) {
 int unguard_all_memory(unsigned int lid) {
 	
 	if(!pdes_config.iss_enabled_mprotection) {
-		unsigned int id = get_lowest_page_from_partition_id(1);
 		return mprotect((void *)mem_areas[lid], PER_LP_PREALLOCATED_MEMORY, PROT_READ | PROT_WRITE);
 	}
 	else {
@@ -114,13 +99,13 @@ int flush(unsigned int lid, unsigned long size) {
 int get_page_idx_from_ptr(unsigned int cur_lp, void *addr){
 	unsigned long long base_addr = (unsigned long long)(mem_areas[cur_lp]);
 	unsigned long long pg_addr = ((unsigned long long)addr) & (~ (PAGE_SIZE-1));
+	//printf("[lp %u] pg_addr % NUM_PAGES_PER_SEGMENT %lu\n", cur_lp, pg_addr % PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 	assert(pg_addr >= base_addr);
 	assert(pg_addr <  (base_addr+PER_LP_PREALLOCATED_MEMORY));
 	unsigned long long offset = pg_addr - base_addr;
-	//printf("[lp %u] pg_addr % NUM_PAGES_PER_SEGMENT %lu\n", cur_lp, pg_addr % PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 	assert(offset < PER_LP_PREALLOCATED_MEMORY);
 	//printf("[lp %u] [get_page_idx_from_ptr] address %lu - %p \t offset %lu -- %u -- %u -- bitmap length %lu\n", 
-	//	cur_lp, (unsigned long long)addr, addr, offset, offset/PAGE_SIZE, offset/NUM_PAGES_PER_SEGMENT, dirty_pages[cur_lp]->actual_len);
+	//	cur_lp, (unsigned long long)addr, addr, offset, offset/PAGE_SIZE, offset/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE, dirty_pages[cur_lp]->actual_len);
 	return (unsigned int) offset/PAGE_SIZE;
 }
 
@@ -327,7 +312,6 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
 	}
 
-	if (cur_lp, dirty_pages[cur_lp]->max_idx < cur_lp, dirty_pages[cur_lp]->actual_len) reset_bit(dirty_pages[cur_lp],dirty_pages[cur_lp]->max_idx);
 
 	//if (prev_log != NULL) printf("[lp %u] [log_incremental_no_tree] log done %x\n", cur_lp, prev_log->log);
 	return prev_log;
@@ -424,17 +408,9 @@ void init_incremental_checkpointing_support(unsigned int lps) {
 
 	/// init tracking dirty memory mechanism
 	dirty_pages = rsalloc(lps * sizeof(bitmap));
-	for (i=0; i < lps; i++)
-		dirty_pages[i] = allocate_bitmap(PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 
-
-	/*unsigned int start = PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
-	unsigned int end = 2*start;
-
-	do {
-		for(i=0; i < dirty_pages[0]->actual_len; i++)
-			printf("start %u \t end %u \t i %u\t TO %lu\n", start, end, i, ((unsigned long) (mem_areas[0] + i*PAGE_SIZE) - (unsigned long) mem_areas[0]) / PAGE_SIZE);
-	} while (0);*/
+	printf("PER_LP_PREALLOCATED_MEMORY %lu \t NUM_PAGES_PER_SEGMENT %lu \t NUM_PAGES_PER_MMAP %lu \t MAX_MMAP*NUM_MMAP %lu\n",
+	 PER_LP_PREALLOCATED_MEMORY, NUM_PAGES_PER_SEGMENT, NUM_PAGES_PER_MMAP, MAX_MMAP*NUM_MMAP);
 
 	/// install log incremental handler
 	iss_log.iss_log_inc = log_incremental_no_tree;
@@ -476,9 +452,8 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	/// if klm is enabled setup tracking_data struct entries 
 	if (pdes_config.iss_enabled_mprotection) {
 		/// fill tracking_data struct
-		unsigned int segid = lp;
 		set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
-			(unsigned long) mem_areas[lp] + MAX_MMAP*NUM_MMAP, segid, NUM_PAGES_PER_SEGMENT);
+			(unsigned long) mem_areas[lp] + PER_LP_PREALLOCATED_MEMORY - 1, lp, PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE);
 	  #if VERBOSE == 1
 		printf("[LP: %u] base_addr %lu subsegment_address %lu segid %lu\n", lp, t_data[lp]->base_address, t_data[lp]->subsegment_address, t_data[lp]->segment_id);
 	  #endif
