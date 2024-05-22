@@ -265,6 +265,8 @@ tracking_data *get_fault_info(unsigned int lid) {
 
 void mark_dirty_pages(unsigned int cur_lp) {
 
+	if (iss_states[cur_lp].first_log) return; ///skip init forced log
+
 	tracking_data *data = get_fault_info(cur_lp);
 	unsigned long len;
 	unsigned long *buff;
@@ -459,6 +461,7 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 	bzero(iss_states+lp, sizeof(lp_iss_metadata));
 
 	iss_states[lp].cur_virtual_ts = 1;
+	iss_states[lp].first_log = 1;
 
 	/// if klm is enabled setup tracking_data struct entries 
 	if (pdes_config.iss_enabled_mprotection) {
