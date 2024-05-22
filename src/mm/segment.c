@@ -95,15 +95,16 @@ void *get_segment(GID_t gid, unsigned int numa_node, void ***pages) {
 		for(j=0;j<MAX_MMAP/PAGE_SIZE;j++,h++)
 			(*pages)[h] = (char *)the_address+h*PAGE_SIZE;
 
+		if (pdes_config.iss_enabled_mprotection) {
+			for (j=0; j < MAX_MMAP/PAGE_SIZE; j+=PAGE_SIZE)
+				*((char *)mmapped[i] + j) = 'x';
+		}
+
 		the_address = (char *)the_address + MAX_MMAP;
 
 
 	}
 
-	if (pdes_config.iss_enabled_mprotection) {
-		for (i=0; i < PER_LP_PREALLOCATED_MEMORY; i+=NUM_PAGES_PER_SEGMENT)
-			*((char *)mmapped[0] + i) = 'x';
-	}
 
 	return mmapped[0];
 }
