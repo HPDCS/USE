@@ -168,8 +168,9 @@ bool is_next_ckpt_incremental(void) {
 	if (pdes_config.checkpointing == PERIODIC_STATE_SAVING)  
 		return false;
 
-	/// if too many iss do a full ckpt
-	if (iss_states[current_lp].iss_counter++ == pdes_config.ckpt_forced_full_period) {
+
+	/// if klm buffer is emtpy or if too many iss do a full ckpt
+	if (iss_states[current_lp].empty_klm_buffer == 1 || iss_states[current_lp].iss_counter++ == pdes_config.ckpt_forced_full_period) {
 		/// its time to take a full snapshot
 		iss_states[current_lp].iss_counter = 0; 
 		return false;
@@ -274,14 +275,26 @@ void mark_dirty_pages(unsigned int cur_lp) {
 	if (data != NULL) {
 
 		len = data->len_buf;
-		//buff = rsalloc(sizeof(unsigned long) * len);
+		printf("[lp %u] mark_dirty_pages lenght of buffer %lu - %lu\n", cur_lp, len, len * sizeof(unsigned long));
+		if (len != 0) buff = rsalloc(sizeof(unsigned long) * len);
 		if (data->buff_addresses != NULL && buff != NULL) buff = data->buff_addresses;
-
+		if (len == 0) {
+			printf("%u VUOTO (%u)\n", cur_lp, tid);
+			//iss_states[cur_lp].empty_klm_buffer = 1;
+			//return;
+		}
 		for (j = 0; j < len; j++) {
-			dirty((void *) data->buff_addresses[j], PAGE_SIZE, cur_lp);
+			printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", cur_lp, j, data->buff_addresses[j], (void *) data->buff_addresses[j]);
+
+			dirty((void *) buff[j], PAGE_SIZE, cur_lp);
 		} ///end for
+
+		printf("[lp %u] dirty iss_states[cur_lp].count_tracked %u\n",cur_lp, iss_states[cur_lp].count_tracked);
+
 		
 	} ///end if data != NULL
+
+
 
 } 
 
@@ -290,8 +303,11 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 
 	partition_log *cur_log = NULL, *prev_log = NULL;
 	uint i;
-	
 
+	if (pdes_config.iss_enabled_mprotection && !pdes_config.iss_signal_mprotect) 
+			mark_dirty_pages(cur_lp); 
+
+	
 	for (i = 0; i <= dirty_pages[cur_lp]->max_idx; i++) {
 
 		if (get_bit(dirty_pages[cur_lp], i)) {
@@ -300,16 +316,15 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 			cur_log->size = PAGE_SIZE;
 			cur_log->next = prev_log;
 			cur_log->ts = ts;
-			cur_log->addr = ((char*)mem_areas[cur_lp] + i*PAGE_SIZE);
+			cur_log->addr = get_page_ptr_from_idx(cur_lp, i);
 			cur_log->log = rsalloc(cur_log->size);
 			prev_log = cur_log; 
 
 
   #if VERBOSE == 1
-			printf("[lp %u] BITMAP ADDRESS i %d \t address %lu - %p is address in page %lu \n", cur_lp, i , 
-				(unsigned long )cur_log->addr, (void *) cur_log->addr,
-				((unsigned long )cur_log->addr >= (unsigned long) mem_areas[cur_lp] + i*PAGE_SIZE && 
-					(unsigned long )cur_log->addr <= (unsigned long) mem_areas[cur_lp] + i*PAGE_SIZE + PAGE_SIZE));
+			printf("[lp %u] BITMAP ADDRESS i %d \t address %lu - %p \t mem_areas %lu - %p - (%lu) \n", cur_lp, i , 
+				(unsigned long )cur_log->addr, (void *) cur_log->addr,((unsigned long )mem_areas[cur_lp] + i*PAGE_SIZE), 
+				((void *) mem_areas[cur_lp] + i*PAGE_SIZE), (unsigned long) (mem_areas[0] + cur_lp*NUM_PAGES_PER_SEGMENT*PAGE_SIZE) );
   #endif
 			
 
@@ -476,7 +491,15 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 		/// register segment into the hashtable
 		init_segment_monitor_support(t_data[lp]);
 
+		iss_states[lp].empty_klm_buffer = 0; ///init field
+
+		if (tid == 1) {
+			if (device_fd != -1) ioctl(device_fd, TRACKER_DUMP);
+		}
+
 	}
+
+	if (pdes_config.iss_signal_mprotect) iss_states[lp].empty_klm_buffer = 0; ///always 0 
 
 
 }
