@@ -149,6 +149,18 @@ void init_tracking_data(tracking_data **data) {
 	(*data)->buff_addresses 		= rsalloc((*data)->len_buf * sizeof(unsigned long)); 
 }
 
+void reset_tracking_data(tracking_data **data) {
+
+	unsigned long len;
+	uint i;
+
+	len = (*data)->len_buf;
+
+    for (i = 0; i < len; i++) {
+    	if ((*data)->buff_addresses != NULL) (*data)->buff_addresses[i] = 0UL;
+    }
+
+}
 
 
 bool is_next_ckpt_incremental(void) {
@@ -360,29 +372,28 @@ void log_incremental_destroy_chain(partition_log *cur){
 
 void iss_log_incremental_reset(unsigned int lp){
 
+
     iss_states[lp].current_incremental_log_size = 0;
     iss_states[lp].count_tracked = 0;
     
     
     if(iss_states[lp].cur_virtual_ts == 65000){
         iss_states[lp].cur_virtual_ts = 0;
-        //clear_bitmap(dirty_pages[lp]);
     }
 
-    if (pdes_config.iss_enabled_mprotection) {
-		tracking_data *local_data = t_data[lp];
-		unsigned long len;
-		uint i;
-   		len = local_data->len_buf;
+    if (!iss_states[lp].first_log && pdes_config.iss_enabled_mprotection) {
+		
+		if (t_data[lp] != NULL) reset_tracking_data(&t_data[lp]);
 
-	    for (i = 0; i < len; i++) {
-	    	if (local_data->buff_addresses != NULL) local_data->buff_addresses[i] = 0;
-	    }
+		if (iss_states[lp].empty_klm_buffer) iss_states[lp].empty_klm_buffer = 0;
+
 	}
     
     iss_states[lp].cur_virtual_ts += 1;
-    
 
+	if (iss_states[lp].first_log) iss_states[lp].first_log = 0;
+
+    
 }
 
 
