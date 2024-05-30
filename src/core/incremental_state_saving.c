@@ -145,7 +145,7 @@ void init_tracking_data(tracking_data **data) {
 	(*data)->subsegment_address 	= 0UL;
 	(*data)->end_address 			= 0UL;
 	(*data)->segment_id 			= 0UL;
-	(*data)->len_buf 				= PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE;
+	(*data)->len_buf 				= BE_BUFF_SIZE;
 	(*data)->buff_addresses 		= rsalloc((*data)->len_buf * sizeof(unsigned long)); 
 }
 
@@ -253,21 +253,30 @@ void close_tracker_device(void) {
 
 tracking_data *get_fault_info(int lid) {
 
+	assert(t_data[lid] != NULL);
+
 	tracking_data *local_data = t_data[lid];
+
 	unsigned long len;
 	unsigned long *buff;
 	unsigned long segid;
 	local_data->base_address = (unsigned long) mem_areas[0];
 	local_data->subsegment_address = (unsigned long) mem_areas[lid];
 	local_data->end_address = (unsigned long) (mem_areas[lid]+PER_LP_PREALLOCATED_MEMORY - 1);
-	local_data->len_buf = (unsigned long) PER_LP_PREALLOCATED_MEMORY;
+	local_data->len_buf = (unsigned long) BE_BUFF_SIZE; ///request at most 256 addresses
 	if(local_data->buff_addresses == NULL) local_data->buff_addresses = rsalloc(local_data->len_buf * sizeof(unsigned long));
 	local_data->segment_id = (unsigned long)lid;
 	
 
 	ioctl(device_fd, TRACKER_GET, local_data);
 
-	return local_data;
+	//printf("[lp %u] [get_fault_info] address segment %p - segid %lu \n", lid, (void *)local_data->subsegment_address, local_data->segment_id);
+
+	//printf("[lp %u] AFTER IOCTL GET len_buf %lu \n", lid, local_data->len_buf);
+
+	t_data[lid] = local_data;
+
+	return t_data[lid];
 }
 
 
@@ -276,7 +285,7 @@ tracking_data *get_fault_info(int lid) {
 
 void mark_dirty_pages(int cur_lp) {
 
-	if (iss_states[cur_lp].first_log) return; ///skip init forced log
+	if (iss_states[cur_lp].first_log == 1) return; ///skip init forced log
 
 	tracking_data *data = get_fault_info(cur_lp);
 	unsigned long len;
@@ -285,7 +294,7 @@ void mark_dirty_pages(int cur_lp) {
 	if (data != NULL) {
 
 		len = data->len_buf;
-		printf("[lp %u] mark_dirty_pages lenght of buffer %lu - %lu\n", cur_lp, len, len * sizeof(unsigned long));
+		//printf("[lp %u] [mark_dirty_pages] lenght of buffer %lu - %lu\n", cur_lp, len, len * sizeof(unsigned long));
 		if (len != 0) buff = rsalloc(sizeof(unsigned long) * len);
 		if (data->buff_addresses != NULL && buff != NULL) buff = data->buff_addresses;
 		if (len == 0) {
@@ -294,14 +303,16 @@ void mark_dirty_pages(int cur_lp) {
 			//return;
 		}
 		for (j = 0; j < len; j++) {
-			printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p\n", cur_lp, j, data->buff_addresses[j], (void *) data->buff_addresses[j]);
+			//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p - %p \t page id %u  \n", 
+			//	cur_lp, j, buff[j], (void *) buff[j], get_page_ptr_from_idx(cur_lp, get_page_idx_from_ptr(cur_lp,(void *) buff[j])), get_page_idx_from_ptr(cur_lp,(void *) buff[j]));
 
 			dirty((void *) buff[j], PAGE_SIZE, cur_lp);
 		} ///end for
 
-		printf("[lp %u] dirty iss_states[cur_lp].count_tracked %u\n",cur_lp, iss_states[cur_lp].count_tracked);
+		//printf("[lp %u] dirty iss_states[cur_lp].count_tracked %u current_incremental_log_size %lu \n",cur_lp, 
+		//	iss_states[cur_lp].count_tracked, iss_states[cur_lp].current_incremental_log_size);
 
-		
+	
 	} ///end if data != NULL
 
 
@@ -509,9 +520,10 @@ void init_incremental_checkpoint_support_per_lp(unsigned int lp){
 
 		iss_states[lp].empty_klm_buffer = 0; ///init field
 
-		if (tid == 1) {
-			if (device_fd != -1) ioctl(device_fd, TRACKER_DUMP);
-		}
+		set_tracking_data(&t_data[lp], (unsigned long) mem_areas[0], (unsigned long) mem_areas[lp],
+			(unsigned long) mem_areas[lp] + PER_LP_PREALLOCATED_MEMORY - 1, lp, BE_BUFF_SIZE);
+	  
+
 
 	}
 
