@@ -254,27 +254,26 @@ void *log_state(int lid) {
 	if (pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 		size_t logsize = get_iss_size(lid);
 
-		
 		ckpt = log_full(lid);
 		if(recoverable_state[lid]->is_incremental){
 
 	#if VERBOSE == 1
-			printf("[lp %u] LOG INCREMENTAL state %x \t log %x \t lvt %f \n", 
+			printf("[lp %u] LOG INCREMENTAL state %p \t log %p \t lvt %f \n", 
 					lid, recoverable_state[lid], ckpt, lvt(lid));
 	#endif
 
-			guard_all_memory(lid); 
-			if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
-			iss_log_incremental_reset(lid);
 			
 		} else {
 
 	#if VERBOSE == 1
-			printf("[lp %u] LOG FULL state %x \t log %x \t lvt %f \n", 
+			printf("[lp %u] LOG FULL state %p \t log %p \t lvt %f \n", 
 					lid, recoverable_state[lid], ckpt, lvt(lid));
 	#endif
 			set_iss_size(lid, logsize);
 		}
+
+		iss_log_incremental_reset(lid);
+		guard_all_memory(lid); 
 
 	} else
 		ckpt = log_full(lid);
@@ -495,7 +494,6 @@ void log_restore(int lid, state_t *state_queue_node) {
 	if(pdes_config.checkpointing == INCREMENTAL_STATE_SAVING) {
 
 		res_um = unguard_all_memory(lid); 
-		//if (pdes_config.iss_enabled_mprotection) flush_local_tlb(lid, PER_LP_PREALLOCATED_MEMORY);
 		
 		state_t *tgt = state_queue_node;
         state_t *cur = tgt;
