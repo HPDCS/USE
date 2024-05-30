@@ -19,7 +19,6 @@
 #include <dymelor.h>
 #include <numerical.h>
 #include <timer.h>
-#include <state.h>
 
 #include <reverse.h>
 #include <statistics.h>
@@ -284,6 +283,8 @@ void LPs_metada_init() {
 		LPS[i]->ema_silent_event_granularity = 0.0;
 		LPS[i]->ema_take_snapshot_time		 = 0.0;
 		LPS[i]->ema_rollback_probability	 = 0.0;
+
+		LPS[i]->old_wt						 = UNDEFINED_WT;
 	}
 	
 	for(; i<(LP_BIT_MASK_SIZE) ; i++)
@@ -703,6 +704,7 @@ void thread_loop(unsigned int thread_id) {
 			goto end_loop;
 		}
 
+
 		empty_fetch = 0;
 		// Here we have the lock on the LP //
 		// Locally (within the thread) copy lp and ts to processing event
@@ -710,6 +712,13 @@ void thread_loop(unsigned int thread_id) {
 		current_lvt = current_msg->timestamp;	// Local Virtual Time
 		current_evt_state   = current_msg->state;
 		current_evt_monitor = current_msg->monitor;
+
+		if (pdes_config.iss_enabled_mprotection) {
+			if (tid != LPS[current_lp]->old_wt) /// only flush when a different wt locks the LP
+				LPS[current_lp]->old_wt = tid;
+				flush_local_tlb(current_lp, PER_LP_PREALLOCATED_MEMORY);
+		}
+
 
 	  #if DEBUG == 1
 		assertf(current_evt_state == ELIMINATED, "got eliminatated message %p\n", current_msg);
