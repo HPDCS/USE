@@ -88,6 +88,8 @@ typedef struct _LP_state {
 	unsigned int consecutive_forward_count;
 	unsigned int consecutive_rollbacks_count;
 
+	unsigned int old_wt; /// worker threads that previously locked the lp
+
 } LP_state;
 
 
