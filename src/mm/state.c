@@ -112,14 +112,15 @@ skip_switch:
 		// We take as the buffer state the last one associated with a SetState() call, if any
 		new_state.base_pointer = LPS[lid]->current_base_pointer;
 
-#if VERBOSE == 1
-		printf("[lp %u] LOG STATE state %x \t log %x \t lvt %f \t last event %x \n", 
-			lid, new_state, new_state.log, new_state.lvt, 
-			new_state.last_event);
- #endif
 
 		// list_insert() makes a copy of the payload
 		(void)list_insert_tail(lid, LPS[lid]->queue_states, &new_state);
+
+ #if VERBOSE == 1
+		printf("[lp %u] LOG STATE state %p \t log %p \t lvt %f \t last event %p base pointer %p\n", 
+			lid, new_state, new_state.log, new_state.lvt, 
+			new_state.last_event, new_state.base_pointer);
+ #endif
 
 	}
 
@@ -290,16 +291,16 @@ void rollback(unsigned int lid, simtime_t destination_time, unsigned int tie_bre
 //	}
 	
 	// Restore the simulation state and correct the state base pointer
-  //#if VERBOSE == 1
-	printf("[lp %u] [rollback] lvt time %f \t destination time %f \t restore state %x\n", lid, lvt(lid), destination_time, restore_state);
-  //#endif
+  #if VERBOSE == 1
+	printf("[lp %u] [rollback] lvt time %f \t destination time %f \t restore state %p \t log %p\n", lid, lvt(lid), destination_time, restore_state, restore_state->log);
+  #endif
 
 	log_restore(lid, restore_state);
 
-  //#if VERBOSE == 1
-	printf("[lp %u] LOG RESTORE STATE %x \t log %x \t lvt %f \t last event %x \t from last ckpt %d\n", 
-			lid, restore_state, restore_state->log, restore_state->lvt, restore_state->last_event, LPS[lid]->from_last_ckpt);
-  //#endif
+  #if VERBOSE == 1
+	printf("[lp %u] LOG RESTORE STATE %p \t log %p \t lvt %f \t last event %p \t from last ckpt %d \t base pointer %p\n", 
+			lid, restore_state, restore_state->log, restore_state->lvt, restore_state->last_event, LPS[lid]->from_last_ckpt, restore_state->base_pointer);
+  #endif
 
 	LPS[lid]->current_base_pointer 	= restore_state->base_pointer ;
 	
