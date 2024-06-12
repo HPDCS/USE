@@ -38,12 +38,21 @@
 #define PAGEID(addr, base) ({unsigned int id = (unsigned int) (abs(addr- base)/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE); id;})
 #define PAGEPTR(addr, pageid) ({char *ptr = (char*)addr + (pageid-PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE)*PAGE_SIZE; ptr;})
 
+
+
+struct init_data {
+	unsigned long segment_size;
+	int num_objects;
+};
+
+
 /* user data struct to pass data back and forth user/kernel space */
 typedef struct _tracking_data {
 	unsigned long base_address; 		/// base address of segment
 	unsigned long subsegment_address; 	/// base address of subsegment
 	unsigned long end_address;			/// end address of segment
 	unsigned long segment_id;			/// segment id
+	unsigned long total_lenght;
 	unsigned long *buff_addresses;		/// buffer of addresses
 	unsigned long len_buf;				/// requested buffer's lenght
 } tracking_data;	

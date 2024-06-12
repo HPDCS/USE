@@ -105,7 +105,7 @@ int get_page_idx_from_ptr(unsigned int cur_lp, void *addr){
 	unsigned long long offset = pg_addr - base_addr;
 	assert(offset < PER_LP_PREALLOCATED_MEMORY);
 	//printf("[lp %u] [get_page_idx_from_ptr] address %lu - %p \t offset %lu -- %u -- %u -- bitmap length %lu\n", 
-	//	cur_lp, (unsigned long long)addr, addr, offset, offset/PAGE_SIZE, offset/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE, dirty_pages[cur_lp]->actual_len);
+	//	cur_lp, (unsigned long long)addr, addr,// offset, offset/PAGE_SIZE, offset/PAGE_SIZE + PER_LP_PREALLOCATED_MEMORY/PAGE_SIZE, dirty_pages[cur_lp]->actual_len);
 	return (unsigned int) offset/PAGE_SIZE;
 }
 
@@ -160,6 +160,9 @@ void reset_tracking_data(tracking_data **data) {
     	if ((*data)->buff_addresses != NULL) (*data)->buff_addresses[i] = 0UL;
     }
 
+    (*data)->len_buf = 0;
+    (*data)->total_lenght = 0;
+
 }
 
 
@@ -207,7 +210,6 @@ void dirty(void* addr, size_t size, int cur_lp){
 		set_bit(dirty_pages[cur_lp], page_id);
 	}
 
-
 	if (pdes_config.iss_signal_mprotect)
 		unguard_memory(cur_lp, size, page_id);
 }
@@ -232,12 +234,16 @@ void init_segment_monitor_support(tracking_data *data) {
 
 void open_tracker_device(const char *path, unsigned long mode) {
 
+	struct init_data *init = malloc(sizeof(struct init_data));
+	init->segment_size = PER_LP_PREALLOCATED_MEMORY;
+	init->num_objects = pdes_config.nprocesses;
+
 	device_fd = open(path, mode);
     if (device_fd == -1) {
         fprintf(stderr, "%s\n", strerror(errno));
         abort();
     }
-    ioctl(device_fd, TRACKER_SET_SEGSIZE, PER_LP_PREALLOCATED_MEMORY);
+    ioctl(device_fd, TRACKER_SET_SEGSIZE, init);
 
 }
 
@@ -293,7 +299,7 @@ void mark_dirty_pages(int cur_lp) {
 	int j;
 	if (data != NULL) {
 
-		len = data->len_buf;
+		len = data->total_lenght;
 		//printf("[lp %u] [mark_dirty_pages] lenght of buffer %lu - %lu\n", cur_lp, len, len * sizeof(unsigned long));
 		if (len != 0) buff = rsalloc(sizeof(unsigned long) * len);
 		if (data->buff_addresses != NULL && buff != NULL) buff = data->buff_addresses;
@@ -303,6 +309,7 @@ void mark_dirty_pages(int cur_lp) {
 			//return;
 		}
 		for (j = 0; j < len; j++) {
+			//printf("[lp %u] address %lu \n", cur_lp, data->buff_addresses[j]);
 			//printf("[lp %u] BUFFER ADDRESS i %u \t address %llu - %p - %p \t page id %u  \n", 
 			//	cur_lp, j, buff[j], (void *) buff[j], get_page_ptr_from_idx(cur_lp, get_page_idx_from_ptr(cur_lp,(void *) buff[j])), get_page_idx_from_ptr(cur_lp,(void *) buff[j]));
 
@@ -328,9 +335,8 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
 	if (pdes_config.iss_enabled_mprotection && !pdes_config.iss_signal_mprotect) 
 			mark_dirty_pages(cur_lp); 
 
-	
 	for (i = 0; i <= dirty_pages[cur_lp]->max_idx; i++) {
-
+			
 		if (get_bit(dirty_pages[cur_lp], i)) {
 
 			cur_log = (partition_log*) rsalloc(sizeof(partition_log));
@@ -349,14 +355,15 @@ partition_log * log_incremental_no_tree(unsigned int cur_lp, simtime_t ts) {
   #endif
 			
 
+
+
+			//if (iss_states[cur_lp].current_incremental_log_size > 0) iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
+			memcpy(cur_log->log, cur_log->addr, cur_log->size);
+
   #if VERBOSE == 1
 			printf("[lp %u] [log_incremental] CKPT tgt_id %u \t addr %p \t cur_log %p \t log %p \t ts %f \t size %lu\n", 
 				cur_lp, i, cur_log->addr, cur_log, cur_log->log, cur_log->ts, iss_states[cur_lp].current_incremental_log_size);
   #endif
-
-
-			if (iss_states[cur_lp].current_incremental_log_size > 0) iss_states[cur_lp].current_incremental_log_size -= cur_log->size;
-			memcpy(cur_log->log, cur_log->addr, cur_log->size);
 			
 			reset_bit(dirty_pages[cur_lp], i);
 		}
@@ -382,7 +389,7 @@ void log_incremental_restore(partition_log *cur) {
 
 	while(cur){
 	 #if VERBOSE == 1	
-		printf("lp %u : [log_incremental_restore] cur %x -- log %x \t ts %f \n", current_lp, cur, cur->log, cur->ts);
+		printf("lp %u : [log_incremental_restore] addr %p -  cur %p -- log %p \t ts %f \n", current_lp, cur->addr, cur, cur->log, cur->ts);
 	 #endif	
 		memcpy(cur->addr, cur->log, cur->size);
 		cur = cur->next;
@@ -400,7 +407,7 @@ void log_incremental_restore(partition_log *cur) {
 void log_incremental_destroy_chain(partition_log *cur){
 	partition_log *next = NULL;
 	while(cur){
-		//printf("lp %u : [log_incremental_destroy_chain] cur %x -- log %x \t ts %f \n", current_lp, cur, cur->log, cur->ts);
+		//printf("lp %u : [log_incremental_destroy_chain] cur %p -- addr %p -- log %p \t ts %f \n", current_lp, cur, cur->addr, cur->log, cur->ts);
 		next = cur->next;
 		rsfree(cur->log);
 		rsfree(cur);
