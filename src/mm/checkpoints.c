@@ -80,6 +80,8 @@ extern __thread int __in_log_full;
 
 extern iss_func iss_log;
 
+extern lp_iss_metadata *iss_states;
+
 void *log_full(int lid) {
 
 	void *ptr = NULL, *ckpt = NULL;
@@ -119,8 +121,9 @@ void *log_full(int lid) {
 		/// partial log
        	statistics_post_lp_data(lid, STAT_CKPT_INCR, 1.0);
         //statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double)iss_states[lid].current_incremental_log_size);
-        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double) get_iss_size(lid));
 		partial_log = iss_log.iss_log_inc(lid, lvt(lid));
+        statistics_post_lp_data(lid, STAT_CKPT_MEM_INCR, (double) get_iss_size(lid));
+        //printf("[lp %u] SIZE OF ISS LOG %f\n", lid, (double)iss_states[lid].current_incremental_log_size);
 		*((void ** )ptr) = partial_log;
 		ptr = (void *) ((char *) ptr + sizeof(void *));
 	}
