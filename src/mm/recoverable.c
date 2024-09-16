@@ -113,7 +113,7 @@ size_t get_log_size(malloc_state *logged_state){
 		if (pdes_config.iss_mode == DDYMELOR) {
 			log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->dirty_areas * sizeof(malloc_area) + logged_state->bitmap_size + logged_state->dirty_bitmap_size + logged_state->total_inc_size;
 		} else {
-			log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + sizeof(void *);
+			log_size = sizeof(malloc_state) + sizeof(seed_type) + logged_state->busy_areas * sizeof(malloc_area) + logged_state->bitmap_size + logged_state->total_log_size + sizeof(void *);
 		}
 	}
 
