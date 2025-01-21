@@ -56,8 +56,8 @@ endforeach()
 
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
-SETUP_TARGET_FOR_COVERAGE_LCOV(
-        NAME coverage                 # New target name
-        EXECUTABLE ctest -C ${ROOT_DIR}/CTestTestfile.cmake # Executable in PROJECT_BINARY_DIR
-)
+#SETUP_TARGET_FOR_COVERAGE_LCOV(
+#        NAME coverage                 # New target name
+#        EXECUTABLE ctest -C ${ROOT_DIR}/CTestTestfile.cmake # Executable in PROJECT_BINARY_DIR
+#)
 ENDIF()

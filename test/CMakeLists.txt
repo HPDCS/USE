@@ -38,6 +38,7 @@ test_program(numerical core/numerical.c)
 test_model(phold ../models/phold/application.c)
 test_model(phold_count ../models/phold_count/application.c)
 test_model(pcs ../models/pcs/application.c ../models/pcs/functions_app.c)
+test_model(pcs-parsir ../models/pcs-parsir/application.c ../models/pcs-parsir/topology.c)
 test_model(tuberculosis ../models/tuberculosis/application.c ../models/tuberculosis/guy.c ../models/tuberculosis/guy_init.c ../models/tuberculosis/guy_list.c ../models/tuberculosis/parameters.c)
 
 add_dependencies(phold clock_constant)
