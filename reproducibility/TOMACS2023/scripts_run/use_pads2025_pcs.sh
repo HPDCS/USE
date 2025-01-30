@@ -69,34 +69,3 @@ for time in $time_list; do
 	done
 done
 done
-
-
-exit
-
-for time in $time_list; do
-	for lp in $lp_list; do
-		for r in $run_list; do
-			runtime_options="--ncores=1 --nprocesses=$lp -w $time"
-			filename=$FOLDER/seq-1-$lp-$time-$r
-			cmdfile="$filename.sh"
-			filename="$filename.dat"
-			EX1="./use-release/test/test_pcs ${runtime_options} ${model_configuration}"
-			N=0 
-			echo $EX1 > $cmdfile
-			while [[ $(grep -c "Simulation ended" $filename) -eq 0 ]]
-			do
-				echo $BEGIN
-				echo "CURRENT TEST STARTED AT $(date +%d)/$(date +%m)/$(date +%Y) - $(date +%H):$(date +%M)"
-				echo $filename
-				echo $EX1
-				#break
-				{ timeout $(($time*2)) $EX1; } &> $filename
-				if test $N -ge $MAX_RETRY ; then echo break; break; fi
-				N=$(( N+1 ))
-			done  
-			echo $EX1 >> $filename
-			#echo $f2 >> $filename
-			#echo $f3 >> $filename
-		done
-	done
-done
