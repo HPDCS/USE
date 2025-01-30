@@ -1,3 +1,0 @@
-#define THREADS (1) 
-#define OBJECTS (3000)
-#define LOOKAHEAD (1.0)

@@ -2,14 +2,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ROOT-Sim.h>
 
 #include "application.h"
-#include "setup.h"
+
+#define OBJECTS (pdes_config.nprocesses)
+#define LOOKAHEAD (1.0)
+
+
+#define Random(a, b) Random()
+#define Expent(x, a, b) Expent(x)
+
+
 #include "memory.h"
 
-lp_state_type* states[OBJECTS];
-
-#define state states[me]
 
 #define UNBALANCE
 
@@ -27,6 +33,49 @@ lp_state_type* states[OBJECTS];
 #else
 #define SET_MEMORY(addr,value, me) *(addr) = (value)
 #endif
+
+
+
+
+
+
+typedef struct model_parameters{
+	double scaling; 
+}
+model_parameters;
+
+
+
+
+
+bool OnGVT(unsigned int me, lp_state_type *snapshot) { return false; }
+
+
+struct argp_option model_options[] = {
+  {"scaling",            1000, "DOUBLE", 0, "scaling factor (default 1.0)"               , 0 },
+  { 0, 0, 0, 0, 0, 0} 
+};
+
+model_parameters args = {
+	.scaling = 1.0,
+};
+
+error_t model_parse_opt(int key, char *arg, struct argp_state *state){
+	(void)state;
+	switch(key){
+		case 1000:
+			args.scaling = strtod(arg, NULL);
+	    case ARGP_KEY_END:
+    		break;
+	}
+	return 0;
+}
+
+
+
+
+
+
 
 
 int add_car(unsigned int me, elem * head, elem * tail, elem * car, double time){
@@ -63,7 +112,7 @@ elem * del_car(int me, elem * head, elem * tail){
 
 }
 
-void traversal(unsigned int me, elem * head, elem * tail){
+void traversal(lp_state_type *state, unsigned int me, elem * head, elem * tail){
 
 
 	int i = 0;
@@ -111,6 +160,8 @@ void ProcessEvent(unsigned int me, double now, int event_type, void *event_conte
 	enum car_type type;
 	double car_type_probability;
 	elem * car;
+	lp_state_type *state;
+	state = (lp_state_type*)ptr;
 
 	//just bypassing compile time indications
 	//on unused parameters
@@ -135,6 +186,8 @@ void ProcessEvent(unsigned int me, double now, int event_type, void *event_conte
 				printf("out of memory at startup\n");
 				exit(EXIT_FAILURE);
 			}
+			SetState(state);
+			bzero(state, sizeof(lp_state_type));
 
 			state->event_count = 0;
 
@@ -229,7 +282,7 @@ type_done_left:
 
 			SET_MEMORY(&(car->residence),timestamp,me);
 			add_car(me,&(state->right_head),&(state->right_tail),car, now);
-			traversal(me, &(state->right_head),&(state->right_tail));
+			traversal(state, me, &(state->right_head),&(state->right_tail));
 			ScheduleNewEvent(me, timestamp, CAR_LEAVING_RIGHT, NULL, 0);
 
 			dest = me + 1; 
@@ -268,7 +321,7 @@ type_done_left:
 			}
 			free(car);
 
-			traversal(me, &(state->right_head),&(state->right_tail));
+			traversal(state, me, &(state->right_head),&(state->right_tail));
 #endif
 
 			break;
@@ -299,7 +352,7 @@ type_done_left:
 			if (timestamp < now + LOOKAHEAD) timestamp = now + LOOKAHEAD;
 			SET_MEMORY(&(car->residence),timestamp,me);
 			add_car(me,&(state->left_head),&(state->left_tail),car, now);
-			traversal(me,&(state->left_head),&(state->left_tail));
+			traversal(state, me,&(state->left_head),&(state->left_tail));
 			ScheduleNewEvent(me, timestamp, CAR_LEAVING_LEFT, NULL, 0);
 
 			temp = (int)me - 1; 
@@ -326,7 +379,7 @@ type_done_left:
 			}
 			free(car);
 
-			traversal(me,&(state->left_head),&(state->left_tail));
+			traversal(state, me,&(state->left_head),&(state->left_tail));
 
 			break;
 
