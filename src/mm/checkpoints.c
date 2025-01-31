@@ -257,6 +257,7 @@ void restore_full(int lid, void *ckpt) {
 
 	restored_areas = 0;
 	ptr = ckpt;
+
 	original_num_areas = recoverable_state[lid]->num_areas;
 	new_area = recoverable_state[lid]->areas;
 
@@ -416,6 +417,10 @@ void restore_full(int lid, void *ckpt) {
 * @param queue_node a pointer to the simulation state which must be restored in the logical process
 */
 void log_restore(int lid, state_t *state_queue_node) {
+	if(!state_queue_node) {
+		printf("trying to install a NULL state\n");
+		exit(1);
+	}
 	statistics_post_lp_data(lid, STAT_RECOVERY, 1.0);
 	restore_full(lid, state_queue_node->log);
 }
