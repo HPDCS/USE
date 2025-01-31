@@ -10,15 +10,13 @@
 typedef double simtime_t;
 //typedef int bool;
 
-#define false 0
-#define true 1
 
 #define _130KM_THRESOLD_DISTANCE (40) // expressed as meters
 #define _130KM_ADMITTED_CARS_PER_LINE  (int)(1000/40)
 #define LINES (3)
 #define _130KM_MAX_CAR_COUNT (_130KM_ADMITTED_CARS_PER_LINE * LINES)
 #define SCALING_FACTOR (args.scaling) // set this as you want
-#define INITIAL_CARS   (int)(_130KM_MAX_CAR_COUNT * SCALING_FACTOR)
+#define INITIAL_CARS   ((int)(_130KM_MAX_CAR_COUNT * SCALING_FACTOR))
 
 #define TA (LOOKAHEAD*12)//here we are just halfing the below mentioned looakhead
 //#define TA (LOOKAHEAD*6)//LOOKAHEAD IS EXPRESSING 5 SECONDS and TA is expressing

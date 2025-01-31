@@ -17,22 +17,8 @@
 #include "memory.h"
 
 
-#define UNBALANCE
-
-
 //this is a macro for setting up multiple mmapped zones at distance displacement, e.g. 2<<11
-#ifdef NUMA_UBIQUITOUS 
-#define displacement (1<<21)
-#define SET_MEMORY(addr, value, me) \
-    do { \
-        *(addr) = (value); \
-        for (int _i = 1; _i < (MEM_NODES); ++_i){ \
-                *((typeof(addr))((char*)(addr) + _i * (displacement))) = *(addr); \
-        } \
-    } while(0)
-#else
 #define SET_MEMORY(addr,value, me) *(addr) = (value)
-#endif
 
 
 
@@ -40,7 +26,8 @@
 
 
 typedef struct model_parameters{
-	double scaling; 
+	double scaling;
+	int unbalanced;
 }
 model_parameters;
 
@@ -53,19 +40,25 @@ bool OnGVT(unsigned int me, lp_state_type *snapshot) { return false; }
 
 struct argp_option model_options[] = {
   {"scaling",            1000, "DOUBLE", 0, "scaling factor (default 1.0)"               , 0 },
+  {"enable-unbalancing",       1006, 0, 0, "Enable unbalancing (default false)"               , 0 },
   { 0, 0, 0, 0, 0, 0} 
 };
 
 model_parameters args = {
 	.scaling = 1.0,
+	.unbalanced = 0,
 };
 
 error_t model_parse_opt(int key, char *arg, struct argp_state *state){
 	(void)state;
 	switch(key){
-		case 1000:
-			args.scaling = strtod(arg, NULL);
-	    case ARGP_KEY_END:
+	case 1000:
+		args.scaling = strtod(arg, NULL);
+		break;
+	case 1006:
+		args.unbalanced = 1;
+		break;
+    case ARGP_KEY_END:
     		break;
 	}
 	return 0;
@@ -211,15 +204,30 @@ void ProcessEvent(unsigned int me, double now, int event_type, void *event_conte
 			state->right_load = 0;
 			state->left_load = 0;
 			
+
+			if(me == 0) {
+			printf("OBJECTS %d\n", OBJECTS);
+			printf("_130KM_MAX_CAR_COUNT %d\n", _130KM_MAX_CAR_COUNT);
+			printf("SCALING_FACTOR %f\n", SCALING_FACTOR);
+			printf("INITIAL CARS %d\n", INITIAL_CARS);
+			if(args.unbalanced)
+				printf("INITIAL LOW CARS %d\n", INITIAL_CARS>>1);
+			}
+
 			i = 0;
 
-#ifdef UNBALANCE
-if(me < (OBJECTS >> 1)) i = 0; else i = (INITIAL_CARS >> 1); 
-#endif
+			if(args.unbalanced){
+				if(me < (OBJECTS >> 1)) i = 0; 
+				else i = (INITIAL_CARS >> 1); 
+			}
+
+
 			for (;i<INITIAL_CARS;i++){
 
 				//setup of the initial events 
-				timestamp = 0.001 * Expent(TA,s1,s2);
+				//timestamp = 0.001 * Expent(TA,s1,s2);
+				//timestamp = Expent(TA,s1,s2);
+				timestamp = 0.001+(TA/2)*Random(s1,s2);
 
 				car_type_probability =  Random(s1,s2);
 				if(car_type_probability <= PHIGH) { type = HIGH; goto type_done_right;}
@@ -232,13 +240,19 @@ type_done_right:
 			}
 
 			i = 0; 
-#ifdef UNBALANCE
-if(me < (OBJECTS >> 1)) i = 0; else i = (INITIAL_CARS >> 1); 
-#endif
+
+			if(args.unbalanced){
+				if(me < (OBJECTS >> 1)) i = 0; 
+				else i = (INITIAL_CARS >> 1); 
+			}
+
 			for (;i<INITIAL_CARS;i++){
 
 				//setup of the initial events 
-				timestamp = 0.001 * Expent(TA,s1,s2);
+				//timestamp = 0.001 * Expent(TA,s1,s2);
+				//timestamp = Expent(TA,s1,s2);
+				timestamp = 0.001+(TA/2)*Random(s1,s2);
+
 				car_type_probability =  Random(s1,s2);
 				if(car_type_probability <= PHIGH) { type = HIGH; goto type_done_left;}
 				if(car_type_probability > PHIGH && car_type_probability <= PREGULAR) { type = REGULAR; goto type_done_left;}
@@ -286,25 +300,27 @@ type_done_left:
 			ScheduleNewEvent(me, timestamp, CAR_LEAVING_RIGHT, NULL, 0);
 
 			dest = me + 1; 
-#ifdef UNBALANCE
-			if ((me < (OBJECTS >> 1)) && (dest >= (OBJECTS >> 1))) {
-				//you can add whathever probability of routing the car out of the more loaded area
-				dest = 0;
-			}
-			else{
-				//you can add whathever probability of routing the car out of the less loaded area
-				if (dest >= OBJECTS) dest = OBJECTS >> 1;
-			}
-			ScheduleNewEvent(dest, timestamp, CAR_TRAVERSAL_RIGHT, (char*)&type, sizeof(enum car_type));
-#else
-			if (dest < OBJECTS) {
+
+			if(args.unbalanced){
+				if ((me < (OBJECTS >> 1)) && (dest >= (OBJECTS >> 1))) {
+					//you can add whathever probability of routing the car out of the more loaded area
+					dest = 0;
+				}
+				else{
+					//you can add whathever probability of routing the car out of the less loaded area
+					if (dest >= OBJECTS) dest = OBJECTS >> 1;
+				}
 				ScheduleNewEvent(dest, timestamp, CAR_TRAVERSAL_RIGHT, (char*)&type, sizeof(enum car_type));
 			}
-			else{
-				dest = 0;
-				ScheduleNewEvent(dest, timestamp, CAR_TRAVERSAL_RIGHT, (char*)&type, sizeof(enum car_type));
+			else {
+				if (dest < OBJECTS) {
+					ScheduleNewEvent(dest, timestamp, CAR_TRAVERSAL_RIGHT, (char*)&type, sizeof(enum car_type));
+				}
+				else{
+					dest = 0;
+					ScheduleNewEvent(dest, timestamp, CAR_TRAVERSAL_RIGHT, (char*)&type, sizeof(enum car_type));
+				}
 			}
-#endif
 
 			break;	
 

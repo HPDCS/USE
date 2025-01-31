@@ -272,7 +272,7 @@ void ProcessEvent(unsigned int me, double now, int event_type, void *the_event_c
 
 			// Start the simulation
 			for(i = 0 ; i < init_calls; i++){
-				timestamp = (simtime_t) (0.02 * Random(s1,s2));
+				timestamp = (simtime_t) (0.2 * Random(s1,s2));
 				ScheduleNewEvent(me, timestamp, START_CALL, NULL, 0);
 				//printf("INIT: scheduled new START_CALL at time %e\n",timestamp);
 			}

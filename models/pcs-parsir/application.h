@@ -28,7 +28,7 @@ int getindex(void);
 #define CHECK_FADING_TIME	10
 #define COMPLETE_CALLS		5000
 #ifndef TA
-#define TA			0.4 
+#define TA			0.8
 #endif
 #define TA_DURATION		120
 
