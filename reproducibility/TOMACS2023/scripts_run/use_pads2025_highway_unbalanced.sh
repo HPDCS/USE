@@ -4,12 +4,12 @@ COMPILE=1
 TA=$1
 THREADS=$2
 
-model_configuration="--scaling=${TA} --ckpt-autonomic-period"
+model_configuration="--scaling=${TA} --enable-unbalancing --ckpt-autonomic-period"
 memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
 locality_options="--enforce-locality --el-locked-size=2 --el-evicted-size=2 --el-dyn-window"
 
 
-FOLDER="results/highway-$TA"
+FOLDER="results/highway-unbalanced-$TA"
 exe_list="highway_lo_re_df"
 
 time_list="60"

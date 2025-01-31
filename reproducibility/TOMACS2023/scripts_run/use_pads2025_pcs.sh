@@ -14,7 +14,7 @@ exe_list="pcs_lo_re_df"
 
 time_list="60"
 lp_list="$3"
-run_list="0 1 2 3 4 5 6 7 8 9 10"
+run_list="0 1 2 3 4 5 6 7 8 9"
 
 MAX_RETRY="2"
 
@@ -32,7 +32,7 @@ for exe in $exe_list; do
 		done
 	done
 done
-echo $tot_time 
+echo expected running time $tot_time
 
 for exe in $exe_list; do
 for time in $time_list; do
