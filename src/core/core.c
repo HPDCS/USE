@@ -206,8 +206,8 @@ void set_affinity(unsigned int tid){
 	cpu_per_node = N_CPU/num_numa_nodes;
 	
 	
-	current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
-	
+	//current_cpu = ((tid % num_numa_nodes) * cpu_per_node + (tid/((unsigned int)num_numa_nodes)))%N_CPU;
+	current_cpu = tid;
 
 	CPU_ZERO(&mask);
 	CPU_SET(cores_on_numa[current_cpu], &mask);

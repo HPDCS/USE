@@ -99,11 +99,16 @@ extern __thread unsigned int diff_lp;
 
 
 static inline int am_i_committer(){
-	int enough_cpu = N_CPU >= 16;
+	int enough_cpu = pdes_config.ncores >= 8;
     return 
       pdes_config.enable_committer_threads && 
       enough_cpu && 
-      (tid == (N_CPU-1) || tid == (N_CPU/2 -1));
+      //(tid == (N_CPU-1) || tid == (N_CPU/2 -1));
+      (
+        (N_CPU == 96 && (tid == 7 || tid == 19 || tid == 49 || tid == 73))
+                          // 24       48          72             96
+      );       
+
 }
 
 
