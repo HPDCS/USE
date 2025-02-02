@@ -105,8 +105,8 @@ static inline int am_i_committer(){
       enough_cpu && 
       //(tid == (N_CPU-1) || tid == (N_CPU/2 -1));
       (
-        (N_CPU == 96 && (tid == 7 || tid == 19 || tid == 49 || tid == 73))
-                          // 24       48          72             96
+        ((tid == 7 || tid == 19 || tid == 49 || tid == 73))
+           // 24       48          72             96
       );       
 
 }

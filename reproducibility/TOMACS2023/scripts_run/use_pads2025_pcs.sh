@@ -5,7 +5,8 @@ TA=$1
 THREADS=$2
 
 model_configuration="--ta=${TA} --duration=120 --handoff-rate=300 --ch=5000 --ckpt-autonomic-period"
-memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
+#memory_options="--enable-custom-alloc --enable-mbind --numa-rebalance --distributed-fetch"
+memory_options="--enable-custom-alloc --enable-mbind --distributed-fetch"
 locality_options="--enforce-locality --el-locked-size=2 --el-evicted-size=2 --el-dyn-window"
 
 
@@ -14,7 +15,8 @@ exe_list="pcs_lo_re_df"
 
 time_list="60"
 lp_list="$3"
-run_list="0 1 2 3 4 5 6 7 8 9"
+#run_list="0 1 2 3 4 5 6 7 8 9"
+run_list="0" # 1 2 3 4" # 5 6 7 8 9"
 
 MAX_RETRY="2"
 

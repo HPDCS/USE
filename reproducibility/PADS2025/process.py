@@ -36,6 +36,7 @@ for type in ['committed', 'executed']:
 		f = open(f"{unit}_{type}.dat")
 		for line in f.readlines():
 			if "seq" in line: continue 
+			#print(line)
 			test, data = line.strip().replace('./', '').split('/')
 			test_fam, load = test.split('-')[0], test.split('-')[-1]
 			load = translate[test_fam][load]
@@ -53,13 +54,18 @@ labels = {
 	'highway-unbalanced':"Unbalanced Highway"
 }
 
+
+trans_load = {'heavy':'medium', 'strong':'heavy', 'lightweight':'light'}
+
 for test in ['pcs', 'highway', 'highway-unbalanced']:
 	for load in ['heavy', 'strong', 'lightweight']:
+
 		f = open(f"{test}-{load}.dat", "w")
 		for th in [8,16,24,32,40,48,56,64,72,80,88,96]:
 			tmp = []
 			for unit in ['ppc', 'x86']:
 				for type in ['executed', 'committed']:
+					if len(results[type][unit][test][load][th]) > 1 and results[type][unit][test][load][th][0] == 0: del results[type][unit][test][load][th][0]
 					avg = sum(results[type][unit][test][load][th])/len(results[type][unit][test][load][th])
 					if type == 'executed' : avg /= 60
 					tmp+=[avg]
@@ -71,12 +77,13 @@ for test in ['pcs', 'highway', 'highway-unbalanced']:
 		set output 'use-{test}-{load}.png'
 		set xlabel "#CPUs"
 		set ylabel "Throughput (events per sec.)"
-		set title "{labels[test]} {load} - USE"
+		set title "{labels[test]} {trans_load[load]} - USE"
 		set grid ytics
 
 		set style data histogram
 		set style fill solid 1.0 border rgb "black"  # Yellow bars
 		set boxwidth 0.6
+		set key horizontal
 
 		set yrange [000000:*]
 
