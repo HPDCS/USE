@@ -100,6 +100,7 @@ LP_state **LPS = NULL;
 //used to check termination conditions
 volatile bool stop = false;
 volatile bool stop_timer = false;
+volatile bool stop_GVT_timer = false;
 volatile unsigned int lp_inizialized = 0;
 pthread_t sleeper;//pthread_t p_tid[number_of_threads];//
 
@@ -550,6 +551,9 @@ void init_simulation(unsigned int thread_id){
 	            fprintf(stderr, "%s\n", strerror(errno));
 	            abort();
 	    }
+	    if(pdes_config.gvt_timeout != 0){
+	    	printf("The Simulation will run up to GVT:%f\n", pdes_config.gvt_timeout);
+	    }
 	}
 
 
@@ -639,7 +643,9 @@ void thread_loop(unsigned int thread_id) {
 	///* START SIMULATION *///
 	while (  
 		(
-			 (pdes_config.timeout == 0 && !stop) || (pdes_config.timeout != 0 && !stop_timer)
+			 	(pdes_config.timeout 	 == 0 && pdes_config.gvt_timeout == 0.0 && !stop) 
+			 || (pdes_config.timeout     != 0 && pdes_config.gvt_timeout == 0.0 && !stop_timer) 
+			 || (pdes_config.timeout     == 0 && pdes_config.gvt_timeout != 0.0 && !stop_GVT_timer)
 		) 
 		&& !sim_error
 	) 
@@ -936,7 +942,7 @@ end_loop:
 		
 		//LOCAL LISTS PRUNING
 		nbc_prune();
-
+		stop_GVT_timer = gvt >= pdes_config.gvt_timeout;
 		//PRINT REPORT
 #if VERBOSE > 0
 		if(tid == MAIN_PROCESS) {
@@ -972,7 +978,7 @@ end_loop:
 	if(sim_error){
 		printf(RED("[%u] Execution ended for an error\n"), tid);
 	} 
-	else if (stop || stop_timer){
+	else if (stop || stop_timer || stop_GVT_timer ){
 	    if(pdes_config.ongvt_mode == MS_PERIODIC_ONGVT)
 		    while(!end_ipi);
     

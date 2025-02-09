@@ -12,6 +12,7 @@ simulation_configuration pdes_config;
 #define N_CORES_KEY                 'c'
 #define N_PROCESSES_KEY             'p'
 #define WALLCLOCK_TIMEOUT_KEY       'w' 
+#define GVTCLOCK_TIMEOUT_KEY        'g' 
 
 #define OBS_PERIOD_KEY              256
 
@@ -55,6 +56,7 @@ static struct argp_option options[] = {
   {"ncores",              N_CORES_KEY              , "CORES"   ,  0                  ,  "Number of threads to be used"               , 0 },
   {"nprocesses",          N_PROCESSES_KEY          , "LPS"     ,  0                  ,  "Number of simulation objects"               , 0 },
   {"wall-timeout",        WALLCLOCK_TIMEOUT_KEY    , "SECONDS" ,  0                  ,  "End the simulation after SECONDS elapsed"   , 0 },
+  {"gvt-timeout",         GVTCLOCK_TIMEOUT_KEY     , "VIRTUAL UNIT" ,  0             ,  "End the simulation at a givebn GVT elapsed"   , 0 },
   {"observe-period",      OBS_PERIOD_KEY           , "MS"      ,  0                  ,  "Period in ms to check througput"    , 0 },
   {"disable-committer-threads",  DISABLE_COMMITTER_KEY, 0         ,  OPTION_ARG_OPTIONAL,  "Disable committer threads"   , 0 },
   
@@ -103,6 +105,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
     case WALLCLOCK_TIMEOUT_KEY:
       pdes_config.timeout = atoi(arg);
+      break;
+    case GVTCLOCK_TIMEOUT_KEY:
+      pdes_config.gvt_timeout =  strtod(arg, NULL);
       break;
     case OBS_PERIOD_KEY:
       pdes_config.observe_period = atoi(arg);
@@ -189,6 +194,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
+      if(pdes_config.timeout > 0 && pdes_config.gvt_timeout > 0){
+        printf("Please set either the wallclock ot the gvt timeout\n");
+        argp_usage (state);  
+      }
       if(pdes_config.ckpt_period < 1 || pdes_config.ckpt_collection_period < 1){
         printf("Please set a non-zero checkpoint period\n");
         argp_usage (state);  
@@ -255,6 +264,7 @@ void configuration_init(void){
   pdes_config.observe_period = 500;
 
   pdes_config.timeout = 0;
+  pdes_config.gvt_timeout = 0.0;
   
   pdes_config.ongvt_period = 0;
   pdes_config.ongvt_mode = 0;
